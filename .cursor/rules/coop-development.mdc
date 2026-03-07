@@ -1,0 +1,55 @@
+# Coop Development Rule
+
+## Purpose
+
+Guide all agents and subagents to implement Coop consistently with project scope from `260305 Luiz X Afo Coffee.md`.
+
+## Repository Model
+
+- This is a `pnpm` + `turborepo` monorepo.
+- Keep package boundaries explicit:
+  - `packages/extension`
+  - `packages/pwa`
+  - `packages/anchor`
+  - `packages/shared`
+  - `packages/contracts`
+  - `packages/org-os`
+  - `skills/*`
+
+## Development Priorities
+
+- MVP first: capture -> process -> share loops.
+- Local-first storage before cloud-first patterns.
+- Keep sync boundaries explicit (local, membrane, cold storage).
+- Chromium extension is primary UX; PWA is voice-first companion.
+
+## Build and Dependency Order
+
+- Core order:
+  1. `@coop/shared`
+  2. `@coop/extension`, `@coop/pwa`, `@coop/anchor`
+  3. `@coop/contracts`, `@coop/org-os` consumed by `@coop/anchor`
+- Update `turbo.json` if package dependency flow changes.
+
+## Technical Conventions
+
+- UI stack: React + Vite.
+- Backend stack: Node/Bun + Fastify + WebSocket.
+- Contracts: Solidity + Foundry.
+- Formatting/linting: Biome.
+- Storage baseline: IndexedDB local layer.
+
+## Standards and References
+
+- Architecture reference: `docs/architecture.md`
+- Component implementation source: `docs/coop-component-plans.md`
+- Agent execution entrypoint: `.cursor/plans/MASTERPLAN.md`
+- Skills source list: `CLAUDE.md`
+- Upstream standards: `03 Libraries/organizational-os`
+- Federation hub reference: `03 Libraries/regen-coordination-os`
+
+## Safety
+
+- Do not commit secrets, API keys, or private keys.
+- Prefer small, scoped changes mapped to a single plan file.
+- If uncertain, prioritize preserving existing package contracts over refactors.
