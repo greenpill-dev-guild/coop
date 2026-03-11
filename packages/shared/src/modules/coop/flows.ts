@@ -1,7 +1,4 @@
 import type * as Y from 'yjs';
-import { createUnavailableOnchainState } from './onchain';
-import { buildMemoryProfileSeed } from './pipeline';
-import { buildReviewBoard, updateMemoryProfileFromArtifacts } from './publish';
 import {
   type Artifact,
   type CaptureMode,
@@ -17,16 +14,7 @@ import {
   inviteCodeSchema,
   memberSchema,
   setupInsightsSchema,
-} from './schema';
-import {
-  createBootstrapSyncRoomConfig,
-  createCoopDoc,
-  createSyncRoomConfig,
-  isBootstrapSyncRoomConfig,
-  readCoopState,
-  toSyncRoomBootstrap,
-  updateCoopState,
-} from './sync';
+} from '../../contracts/schema';
 import {
   createId,
   decodeBase64Url,
@@ -36,7 +24,19 @@ import {
   slugify,
   toDeterministicAddress,
   truncateWords,
-} from './utils';
+} from '../../utils';
+import { createUnavailableOnchainState } from '../onchain/onchain';
+import { buildMemoryProfileSeed } from './pipeline';
+import { buildReviewBoard, updateMemoryProfileFromArtifacts } from './publish';
+import {
+  createBootstrapSyncRoomConfig,
+  createCoopDoc,
+  createSyncRoomConfig,
+  isBootstrapSyncRoomConfig,
+  readCoopState,
+  toSyncRoomBootstrap,
+  updateCoopState,
+} from './sync';
 
 export interface CreateCoopInput {
   coopName: string;

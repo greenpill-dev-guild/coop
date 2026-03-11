@@ -6,7 +6,7 @@ import {
   type ArchiveScope,
   type OnchainState,
   archiveDelegationMaterialSchema,
-} from './schema';
+} from '../../contracts/schema';
 
 export interface ArchiveDelegationRequest {
   issuerUrl: string;

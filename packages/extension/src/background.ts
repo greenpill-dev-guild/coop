@@ -44,12 +44,18 @@ import {
   upsertLocalIdentity,
   verifyInviteCodeProof,
 } from '@coop/shared';
+import {
+  isLocalEnhancementEnabled,
+  resolveArchiveGatewayUrl,
+  resolveConfiguredArchiveMode,
+} from './runtime/config';
 import type {
   DashboardResponse,
   RuntimeActionResponse,
   RuntimeRequest,
   RuntimeSummary,
 } from './runtime/messages';
+import { type CaptureSnapshot, extractPageSnapshot, isSupportedUrl } from './runtime/tab-capture';
 
 const db = createCoopDb('coop-extension');
 
@@ -59,14 +65,6 @@ type RuntimeHealth = {
   syncError: boolean;
   lastCaptureError?: string;
   lastSyncError?: string;
-};
-
-type CaptureSnapshot = {
-  title: string;
-  metaDescription?: string;
-  headings: string[];
-  paragraphs: string[];
-  previewImageUrl?: string;
 };
 
 const stateKeys = {
@@ -81,38 +79,18 @@ const defaultRuntimeHealth: RuntimeHealth = {
   syncError: false,
 };
 
-const configuredArchiveMode =
-  (import.meta.env.VITE_COOP_ARCHIVE_MODE as 'live' | 'mock' | undefined) ??
-  (import.meta.env.VITE_STORACHA_ISSUER_URL ? 'live' : 'mock');
+const configuredArchiveMode = resolveConfiguredArchiveMode(
+  import.meta.env.VITE_COOP_ARCHIVE_MODE,
+  import.meta.env.VITE_STORACHA_ISSUER_URL,
+);
 const configuredArchiveIssuerUrl = import.meta.env.VITE_STORACHA_ISSUER_URL;
 const configuredArchiveIssuerToken = import.meta.env.VITE_STORACHA_ISSUER_TOKEN;
-const configuredArchiveGatewayUrl =
-  import.meta.env.VITE_STORACHA_GATEWAY_URL ?? 'https://storacha.link';
-const prefersLocalEnhancement = import.meta.env.VITE_COOP_LOCAL_ENHANCEMENT !== 'off';
-
-function extractPageSnapshot(): CaptureSnapshot {
-  const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
-    .map((node) => node.textContent?.trim() ?? '')
-    .filter(Boolean)
-    .slice(0, 8);
-  const paragraphs = Array.from(document.querySelectorAll('p'))
-    .map((node) => node.textContent?.trim() ?? '')
-    .filter(Boolean)
-    .slice(0, 12);
-  return {
-    title: document.title,
-    metaDescription:
-      document.querySelector('meta[name="description"]')?.getAttribute('content') ?? undefined,
-    headings,
-    paragraphs,
-    previewImageUrl:
-      document.querySelector('meta[property="og:image"]')?.getAttribute('content') ?? undefined,
-  };
-}
-
-function isSupportedUrl(url?: string) {
-  return Boolean(url?.startsWith('http://') || url?.startsWith('https://'));
-}
+const configuredArchiveGatewayUrl = resolveArchiveGatewayUrl(
+  import.meta.env.VITE_STORACHA_GATEWAY_URL,
+);
+const prefersLocalEnhancement = isLocalEnhancementEnabled(
+  import.meta.env.VITE_COOP_LOCAL_ENHANCEMENT,
+);
 
 async function getCoops() {
   const docs = await db.coopDocs.toArray();
@@ -265,7 +243,9 @@ async function getDashboard(): Promise<DashboardResponse> {
   };
 }
 
-async function collectCandidate(tab: chrome.tabs.Tab): Promise<TabCandidate | null> {
+async function collectCandidate(
+  tab: chrome.tabs.Tab,
+): Promise<{ candidate: TabCandidate; snapshot: CaptureSnapshot } | null> {
   if (!tab.id || !tab.url || !isSupportedUrl(tab.url)) {
     return null;
   }
@@ -280,17 +260,20 @@ async function collectCandidate(tab: chrome.tabs.Tab): Promise<TabCandidate | nu
   }
 
   return {
-    id: createId('candidate'),
-    tabId: tab.id,
-    windowId: tab.windowId ?? 0,
-    url: tab.url,
-    canonicalUrl: tab.url,
-    title: result.title || tab.title || tab.url,
-    domain: new URL(tab.url).hostname.replace(/^www\./, ''),
-    favicon: tab.favIconUrl,
-    excerpt: result.metaDescription ?? result.paragraphs[0],
-    tabGroupHint: undefined,
-    capturedAt: nowIso(),
+    candidate: {
+      id: createId('candidate'),
+      tabId: tab.id,
+      windowId: tab.windowId ?? 0,
+      url: tab.url,
+      canonicalUrl: tab.url,
+      title: result.title || tab.title || tab.url,
+      domain: new URL(tab.url).hostname.replace(/^www\./, ''),
+      favicon: tab.favIconUrl,
+      excerpt: result.metaDescription ?? result.paragraphs[0],
+      tabGroupHint: undefined,
+      capturedAt: nowIso(),
+    },
+    snapshot: result,
   };
 }
 
@@ -311,26 +294,18 @@ async function runCaptureCycle() {
     }
 
     try {
-      const candidate = await collectCandidate(tab);
-      if (!candidate) {
+      const collected = await collectCandidate(tab);
+      if (!collected) {
         continue;
       }
-      const tabId = tab.id;
-      if (tabId === undefined) {
-        continue;
-      }
-
-      const [{ result }] = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: extractPageSnapshot,
-      });
+      const { candidate, snapshot } = collected;
       candidates.push(candidate);
       await db.tabCandidates.put(candidate);
 
-      if (coops.length > 0 && result) {
+      if (coops.length > 0) {
         const { extract, drafts } = runPassivePipeline({
           candidate,
-          page: result,
+          page: snapshot,
           coops,
           inferenceAdapter,
         });

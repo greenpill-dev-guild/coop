@@ -1,4 +1,4 @@
-import type { SoundEvent, SoundPreferences } from './schema';
+import type { SoundEvent, SoundPreferences } from '../../contracts/schema';
 
 export interface ToneStep {
   frequency: number;
@@ -40,6 +40,8 @@ export function soundPattern(event: SoundEvent): ToneStep[] {
         { frequency: 740, durationMs: 70, gain: 0.06, type: 'square' },
         { frequency: 1047, durationMs: 90, gain: 0.07, type: 'triangle' },
       ];
+    default:
+      return [];
   }
 }
 

@@ -12,7 +12,7 @@ import {
   type TabCandidate,
   artifactCategorySchema,
   localEnhancementAvailabilitySchema,
-} from './schema';
+} from '../../contracts/schema';
 import {
   canonicalizeUrl,
   clamp,
@@ -22,7 +22,7 @@ import {
   hashText,
   truncateWords,
   unique,
-} from './utils';
+} from '../../utils';
 
 export interface PageSignalInput {
   candidate: TabCandidate;

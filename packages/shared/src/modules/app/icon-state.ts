@@ -1,4 +1,4 @@
-import type { ExtensionIconState } from './schema';
+import type { ExtensionIconState } from '../../contracts/schema';
 
 export interface IconStateInput {
   pendingDrafts: number;

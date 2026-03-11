@@ -4,8 +4,8 @@ import type {
   CoopSharedState,
   ReviewBoardGroup,
   ReviewDraft,
-} from './schema';
-import { createId, extractDomain, groupBy, nowIso, unique } from './utils';
+} from '../../contracts/schema';
+import { createId, extractDomain, groupBy, nowIso, unique } from '../../utils';
 
 export function createSiblingArtifacts(input: {
   draft: ReviewDraft;

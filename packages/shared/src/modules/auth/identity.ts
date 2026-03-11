@@ -3,8 +3,8 @@ import {
   createWebAuthnCredential,
   toWebAuthnAccount,
 } from 'viem/account-abstraction';
-import { type LocalPasskeyIdentity, localPasskeyIdentitySchema } from './schema';
-import { createId, hashText, nowIso, toDeterministicAddress } from './utils';
+import { type LocalPasskeyIdentity, localPasskeyIdentitySchema } from '../../contracts/schema';
+import { createId, hashText, nowIso, toDeterministicAddress } from '../../utils';
 
 function createDeviceBoundWarning(displayName: string) {
   return `${displayName}'s passkey is stored on this device profile. Clearing extension data may remove access to this account.`;

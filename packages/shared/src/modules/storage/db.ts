@@ -7,8 +7,8 @@ import type {
   ReviewDraft,
   SoundPreferences,
   TabCandidate,
-} from './schema';
-import { createCoopDoc, encodeCoopDoc, hydrateCoopDoc, readCoopState } from './sync';
+} from '../../contracts/schema';
+import { createCoopDoc, encodeCoopDoc, hydrateCoopDoc, readCoopState } from '../coop/sync';
 
 export interface CoopDocRecord {
   id: string;

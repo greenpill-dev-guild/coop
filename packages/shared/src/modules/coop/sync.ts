@@ -6,8 +6,8 @@ import {
   type SyncRoomBootstrap,
   type SyncRoomConfig,
   coopSharedStateSchema,
-} from './schema';
-import { createId, hashText } from './utils';
+} from '../../contracts/schema';
+import { createId, hashText } from '../../utils';
 
 const ROOT_KEY = 'coop';
 export const defaultSignalingUrls: string[] = [];

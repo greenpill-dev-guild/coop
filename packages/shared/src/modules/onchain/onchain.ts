@@ -4,9 +4,9 @@ import { createPimlicoClient } from 'permissionless/clients/pimlico';
 import { http, type Account, createPublicClient, zeroAddress } from 'viem';
 import type { WebAuthnAccount } from 'viem/account-abstraction';
 import { celo, celoSepolia } from 'viem/chains';
-import { restorePasskeyAccount } from './auth';
-import { type AuthSession, type OnchainState, onchainStateSchema } from './schema';
-import { toDeterministicAddress, toDeterministicBigInt } from './utils';
+import { type AuthSession, type OnchainState, onchainStateSchema } from '../../contracts/schema';
+import { toDeterministicAddress, toDeterministicBigInt } from '../../utils';
+import { restorePasskeyAccount } from '../auth/auth';
 
 type CoopChainKey = OnchainState['chainKey'];
 

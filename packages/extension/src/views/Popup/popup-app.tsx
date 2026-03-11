@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type DashboardResponse, sendRuntimeMessage } from '../runtime/messages';
+import { type DashboardResponse, sendRuntimeMessage } from '../../runtime/messages';
 
 export function PopupApp() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);

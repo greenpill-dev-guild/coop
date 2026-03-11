@@ -1,13 +1,13 @@
 import { createWebAuthnCredential, toWebAuthnAccount } from 'viem/account-abstraction';
-import { createDeviceBoundWarning, createMember } from './flows';
 import {
   type AuthSession,
   type LocalPasskeyIdentity,
   type Member,
   authSessionSchema,
   localPasskeyIdentitySchema,
-} from './schema';
-import { nowIso, toDeterministicAddress } from './utils';
+} from '../../contracts/schema';
+import { nowIso, toDeterministicAddress } from '../../utils';
+import { createDeviceBoundWarning, createMember } from '../coop/flows';
 
 export function resolvePasskeyRpId(explicitRpId?: string) {
   if (explicitRpId) {

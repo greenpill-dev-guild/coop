@@ -1,6 +1,5 @@
 import {
   type AuthSession,
-  type CaptureMode,
   type CoopSharedState,
   type InviteCode,
   type ReviewDraft,
@@ -18,12 +17,17 @@ import {
   writeCoopState,
 } from '@coop/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { playCoopSound } from '../runtime/audio';
-import { type DashboardResponse, sendRuntimeMessage } from '../runtime/messages';
+import { playCoopSound } from '../../runtime/audio';
+import {
+  parseConfiguredSignalingUrls,
+  resolveConfiguredChain,
+  resolveConfiguredOnchainMode,
+} from '../../runtime/config';
+import { type DashboardResponse, sendRuntimeMessage } from '../../runtime/messages';
+import { type CreateFormState, initialCreateForm, toSetupInsights } from './setup-insights';
 
 const tabs = ['Loose Chickens', 'Roost', 'Coops', 'Feed', 'Review Board', 'Settings'] as const;
 type PanelTab = (typeof tabs)[number];
-type CoopChainKey = 'celo' | 'celo-sepolia';
 
 type SyncBinding = {
   doc: ReturnType<typeof createCoopDoc>;
@@ -33,105 +37,14 @@ type SyncBinding = {
   timer?: number;
 };
 
-const configuredChain = ((import.meta.env.VITE_COOP_CHAIN as CoopChainKey | undefined) ??
-  'celo-sepolia') as CoopChainKey;
-const configuredOnchainMode =
-  (import.meta.env.VITE_COOP_ONCHAIN_MODE as 'live' | 'mock' | undefined) ??
-  (import.meta.env.VITE_PIMLICO_API_KEY ? 'live' : 'mock');
-const configuredSignalingUrls = (import.meta.env.VITE_COOP_SIGNALING_URLS as string | undefined)
-  ?.split(',')
-  .map((value) => value.trim())
-  .filter(Boolean);
-
-type CreateFormState = {
-  coopName: string;
-  purpose: string;
-  creatorDisplayName: string;
-  seedContribution: string;
-  captureMode: CaptureMode;
-  summary: string;
-  capitalCurrent: string;
-  capitalPain: string;
-  capitalImprove: string;
-  impactCurrent: string;
-  impactPain: string;
-  impactImprove: string;
-  governanceCurrent: string;
-  governancePain: string;
-  governanceImprove: string;
-  knowledgeCurrent: string;
-  knowledgePain: string;
-  knowledgeImprove: string;
-};
-
-const initialCreateForm: CreateFormState = {
-  coopName: '',
-  purpose: '',
-  creatorDisplayName: '',
-  seedContribution: '',
-  captureMode: 'manual',
-  summary: '',
-  capitalCurrent: '',
-  capitalPain: '',
-  capitalImprove: '',
-  impactCurrent: '',
-  impactPain: '',
-  impactImprove: '',
-  governanceCurrent: '',
-  governancePain: '',
-  governanceImprove: '',
-  knowledgeCurrent: '',
-  knowledgePain: '',
-  knowledgeImprove: '',
-};
-
-function toSetupInsights(form: CreateFormState) {
-  return {
-    summary: form.summary,
-    crossCuttingPainPoints: [
-      form.capitalPain,
-      form.impactPain,
-      form.governancePain,
-      form.knowledgePain,
-    ]
-      .filter(Boolean)
-      .slice(0, 4),
-    crossCuttingOpportunities: [
-      form.capitalImprove,
-      form.impactImprove,
-      form.governanceImprove,
-      form.knowledgeImprove,
-    ]
-      .filter(Boolean)
-      .slice(0, 4),
-    lenses: [
-      {
-        lens: 'capital-formation',
-        currentState: form.capitalCurrent,
-        painPoints: form.capitalPain,
-        improvements: form.capitalImprove,
-      },
-      {
-        lens: 'impact-reporting',
-        currentState: form.impactCurrent,
-        painPoints: form.impactPain,
-        improvements: form.impactImprove,
-      },
-      {
-        lens: 'governance-coordination',
-        currentState: form.governanceCurrent,
-        painPoints: form.governancePain,
-        improvements: form.governanceImprove,
-      },
-      {
-        lens: 'knowledge-garden-resources',
-        currentState: form.knowledgeCurrent,
-        painPoints: form.knowledgePain,
-        improvements: form.knowledgeImprove,
-      },
-    ],
-  };
-}
+const configuredChain = resolveConfiguredChain(import.meta.env.VITE_COOP_CHAIN);
+const configuredOnchainMode = resolveConfiguredOnchainMode(
+  import.meta.env.VITE_COOP_ONCHAIN_MODE,
+  import.meta.env.VITE_PIMLICO_API_KEY,
+);
+const configuredSignalingUrls = parseConfiguredSignalingUrls(
+  import.meta.env.VITE_COOP_SIGNALING_URLS,
+);
 
 async function downloadText(filename: string, value: string) {
   const url = URL.createObjectURL(new Blob([value], { type: 'text/plain;charset=utf-8' }));

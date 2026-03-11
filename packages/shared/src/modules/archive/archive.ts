@@ -1,5 +1,5 @@
-import type { ArchiveBundle, ArchiveReceipt, CoopSharedState } from './schema';
-import { createId, extractDomain, nowIso, toPseudoCid } from './utils';
+import type { ArchiveBundle, ArchiveReceipt, CoopSharedState } from '../../contracts/schema';
+import { createId, extractDomain, nowIso, toPseudoCid } from '../../utils';
 
 export function createArchiveBundle(input: {
   scope: ArchiveBundle['scope'];

@@ -1,4 +1,9 @@
-import type { ArchiveReceipt, Artifact, CoopSharedState, ReviewDraft } from './schema';
+import type {
+  ArchiveReceipt,
+  Artifact,
+  CoopSharedState,
+  ReviewDraft,
+} from '../../contracts/schema';
 
 export function exportReviewDraftJson(draft: ReviewDraft) {
   return JSON.stringify(
