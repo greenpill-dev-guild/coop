@@ -1,847 +1,2038 @@
-# Coop Architecture vNext
+# Coop V1 Build Plan
 
-**Status**: Review draft
-**Created**: 2026-03-09
-**Purpose**: Finalize a concise, build-ready spec for the first Coop implementation
-**Primary Pillars**: Knowledge Garden, Capital Formation
-
----
-
-## 1. Product Definition
-
-Coop is a P2P browser-native knowledge garden for local capital formation.
-
-The first product is not a general coordination OS. It is a focused system that helps members gather context from the web, capture thoughts from the phone, form a shared knowledge membrane across one or more coops, and turn that knowledge into funding opportunities and draft capital artifacts.
-
-The core loop is:
-
-1. A member joins one or more coops.
-2. Their extension passively tracks relevant browser context locally.
-3. Their receiver PWA captures thoughts, transcripts, and lightweight context on the phone.
-4. Their extension node releases, structures, and routes that context into the appropriate coops.
-5. Anchor nodes run lightweight recurring jobs and deeper inference to surface insights and funding leads.
+**Status**: Canonical v1 plan  
+**Updated**: 2026-03-11  
+**Build Context**: PL Genesis hackathon prototype  
+**Document Role**: Single source of truth for the first Coop implementation
 
 ---
 
-## 2. Primary Decisions
+## 1. Product Summary
 
-- `Knowledge Garden` and `Capital Formation` are the two primary build pillars.
-- `Impact` and `Coordination` remain present as supporting lenses over the shared graph.
-- The canonical architecture is `P2P`.
-- An `anchor` is still a browser extension node, not a separate product class.
-- The `PWA is the receiver` for a member's node by default.
-- The extension is the member's primary node, primary local store, and primary publish surface.
-- Cloud inference is `anchor-only by default` to keep the system simple.
-- Every coop should map to a Green Goods garden and a coop smart account.
-- Long-memory knowledge should close the loop into Storacha/Filecoin.
-- Members are expected to be in `multiple coops`.
-- Dissemination to one or more coops should feel passive and low-friction.
-- The spec should define only what is being built, not a large ring of deferred systems.
+Coop is a browser-first, local-first knowledge commons for communities that already generate valuable context but struggle to turn it into shared memory and coordinated action.
 
----
+The core problem is not lack of information. It is fragmentation.
 
-## 3. Member, Node, and Receiver Model
+Communities already have:
 
-### 3.1 Member Model
+- loose tabs
+- scattered notes
+- meeting transcripts
+- research links
+- half-formed ideas
+- funding leads
 
-A member may belong to multiple coops at once.
+What they usually do not have is a membrane that gathers those fragments, helps members review them in context, and turns them into shared knowledge and funding-ready next steps.
 
-They should not need separate browsing behavior for each coop. The product should let them keep working normally while Coop performs local relevance filtering and suggests where knowledge belongs.
+That fragmentation directly inhibits opportunity:
 
-### 3.2 Extension Node
+- useful research disappears before it becomes shared evidence
+- communities repeat work because context stays trapped in private tabs or documents
+- promising leads never become coordinated next steps
+- collective memory weakens between calls and working sessions
+- capital formation becomes harder because evidence is not assembled when needed
 
-The extension is the primary node for a member.
+Coop v1 exists to close that gap with a tight first loop:
 
-It is responsible for:
+1. a community runs a setup ritual
+2. a trusted member creates a coop
+3. members join and seed initial context
+4. the extension rounds up relevant tabs locally
+5. members review drafts and explicitly push them into shared coop memory
+6. the coop leaves with live shared context, a real Safe address, and clearer next actions
 
-- local tab awareness
-- local storage
-- local candidate queue
-- routing captured context into coops
-- running or delegating processing jobs
-- presenting the main review and publish UI
+This is not yet the full Coop OS vision. It is the first working loop that proves:
 
-### 3.3 Receiver PWA
+- browser-native capture
+- collaborative memory formation
+- passkey-first group identity
+- live local-first sync
+- the beginning of capital formation
 
-The PWA is a receiver for the member's node.
+### 1.1 One-Line Product Framing
 
-Default flow:
+Coop turns loose tabs into shared intelligence and fundable next steps.
 
-- the PWA captures thoughts, voice, and lightweight context
-- the PWA sends that context toward the paired extension node
-- the extension node stores, processes, and publishes it into the coop membrane
+The supporting pitch line for v1 is:
 
-The PWA may cache drafts or pending captures while offline, but the extension remains the primary local home for a member's durable node state in v1.
+Coop helps you get your chickens in order without defaulting to the major cloud AI platforms.
 
-### 3.4 Diode Relationship
+### 1.2 Working Brand Direction
 
-The default relationship is directional:
+The working brand is `Coop Town` until the final domain is locked.
 
-- browser context and coop publishing are centered in the extension
-- mobile thoughts and transcripts flow from the receiver PWA back to the extension
-- the extension returns summary state, review status, and sync status back to the PWA
+The tone should be:
 
-This keeps the mental model simple:
+- playful on the surface
+- serious in the core promise
+- memorable without becoming gimmicky
 
-- `extension = node`
-- `PWA = receiver`
+Chicken metaphors should make the product easier to understand:
 
----
+- tabs are `Loose Chickens`
+- the review queue is the `Roost`
+- the shared feed is the `Coop Feed`
+- creating a coop is `Launching the Coop`
+- a success sound is the `Rooster Call`
 
-## 4. Coop Runtime Model
-
-### 4.1 Coop
-
-A coop is a scoped shared membrane containing:
-
-- members
-- artifact feed
-- artifact graph
-- routing rules
-- review state
-- anchor permissions
-
-### 4.2 Node Types
-
-There are two node modes in v1:
-
-- `standard node`: capture, receive, review, and sync
-- `anchor node`: an approved extension node that can run recurring jobs and optional cloud-backed inference
-
-### 4.3 Anchor Model
-
-Anchor nodes are still extension peers.
-
-They are allowed to:
-
-- run recurring lightweight jobs
-- run deeper inference when configured
-- keep more stable sync participation while the browser is open
-- surface insights back into the coop feed
-
-Anchor nodes are not assumed to be always online servers. They are stronger peers.
+The metaphor must clarify the value, not obscure it.
 
 ---
 
-## 5. Monorepo Shape
+## 2. V1 Goals And Demo Success Criteria
 
-Coop should keep a monorepo shape that is consistent with the Green Goods pattern: thin runtime packages and one strong shared package.
+### 2.1 Primary Goals
 
-### 5.1 Top-Level Structure
+V1 must prove that Coop can:
+
+1. onboard a community through a clear setup ritual
+2. create a coop with real shared identity and real synced state
+3. let members join without a wallet-extension-first experience
+4. passively observe relevant browsing context locally
+5. turn that context into reviewable drafts
+6. let members explicitly push selected knowledge into one or more coops
+7. live-sync published artifacts across members
+8. make the shared result legible enough to support a funding-ready next step
+
+### 2.2 Demo-Critical Proof Points
+
+The hackathon demo must show:
+
+1. the landing page narrative and ritual guide
+2. coop creation
+3. trusted and regular member invite flows
+4. passive tab capture creating review drafts
+5. review and explicit push into selected coops
+6. live sync of published artifacts between two members
+7. a simple weekly review surface grouped by category and member
+8. a real coop Safe address
+9. playful but controlled sound and feedback moments
+
+### 2.3 Product Success Criteria
+
+The first implementation is successful if:
+
+- the product story is clear within one landing-page scroll
+- the first-run flow is understandable without a live walkthrough
+- privacy boundaries are obvious
+- the extension does meaningful local work before anything is shared
+- the shared coop feed feels live and collaborative
+- the architecture can absorb future mobile capture, archive publishing, and garden actions without a rewrite
+
+---
+
+## 3. Locked Scope And Non-Goals
+
+The following decisions are locked for v1.
+
+### 3.1 Locked Scope
+
+- `packages/app` exists, but for v1 it only ships the landing page experience
+- the extension is the primary runtime and primary product surface
+- the public product story lives on one shared domain through `packages/app`
+- the landing page is responsive and must work on mobile, but there is no separate mobile receiver app flow in v1
+- sync is live in v1 through `Yjs`
+- shared state is local-first and peer-oriented
+- capture can be manual or scheduled
+- capture cadence is global to the extension, not per coop
+- automatic capture only creates drafts and never auto-publishes
+- privacy is enforced through explicit push into coop shared state
+- the primary inference story is browser-local, not cloud-first
+- Coop does not provide built-in third-party LLM inference integrations in v1
+- identity is passkey-first
+- a wallet extension is not part of the intended user flow
+- coop creation includes real Safe creation
+- trusted-node capability is a role, not a separate account system
+- the weekly review surface exists in v1 as a read-only grouped board
+- published artifacts and coop snapshots can be archived explicitly through Storacha/Filecoin
+- Coop OS modularity exists in code and docs, not as an end-user skill picker
+- top-level builder docs ship in the first scaffold
+
+### 3.2 Explicit V1 Non-Goals
+
+These are not part of the locked prototype loop:
+
+- mobile receiver shell
+- mobile voice capture
+- transcript capture on mobile
+- local file or folder ingest
+- PDF library ingest
+- app-level capture outside the browser
+- self-hosted signaling infrastructure
+- full React Flow editing
+- automatic archival of raw browsing exhaust
+- full archive browsing and retrieval UI
+- encrypted archive workflows for sensitive content
+- full Green Goods garden binding
+- built-in API-key-based LLM integrations
+- autonomous agent execution
+- session-key based transactions
+- end-user skill management UI
+
+The app package should keep future expansion in mind, but v1 only builds the landing page.
+
+---
+
+## 4. System Principles
+
+### 4.1 Thin Runtimes, Strong Shared Package
+
+Coop should follow the strongest Green Goods pattern:
+
+- thin runtime packages
+- one strong shared package
+- explicit contracts for integrations
+- small dependency surface where possible
+
+### 4.2 Explicit Push Privacy Model
+
+The privacy boundary is simple:
+
+- passive observation can happen locally
+- structuring and relevance scoring can happen locally
+- higher-level local refinement can happen in the browser
+- nothing enters shared coop state until the member explicitly pushes it
+
+If members want to use external LLMs, Coop should help them export structured data cleanly rather than embedding cloud inference into the product.
+
+### 4.3 Extension = Node
+
+In v1, the extension is the primary node and the local home for:
+
+- browsing context
+- capture queue
+- review queue
+- routing suggestions
+- coop membership state
+- publish actions
+- cadence settings
+
+### 4.4 App = Public Landing Surface
+
+In v1, the app package serves one role:
+
+- the public landing page that explains, persuades, and onboards
+
+It should not silently grow into a second product surface during the hackathon.
+
+### 4.5 Coop OS = Internal Modular Substrate
+
+Coop is not shipping a visible skill system in v1, but it should establish the internal pattern for future modularity:
+
+- typed identity actions
+- typed capital actions
+- typed archive actions
+- typed garden actions
+- runtime packages calling shared action modules
+
+This keeps the long-term Coop OS direction intact without pulling that UX into the first build.
+
+---
+
+## 5. Repository Shape And Tooling Baseline
+
+### 5.1 Target Monorepo Shape
 
 ```text
 docs/
 packages/
-  extension/
   app/
+  extension/
   shared/
-package.json
 README.md
+package.json
+bun.lock
 ```
 
 ### 5.2 Package Responsibilities
 
 ```text
 packages/
-  extension/   # primary member node: popup, sidepanel, background, content capture, local store, anchor runtime
-  app/         # receiver PWA: thought capture, voice capture, pairing, review inbox
-  shared/      # source of truth for schema, sync, routing, workflows, onchain adapters, storage adapters
+  app/         # responsive landing page only for v1
+  extension/   # extension node: capture, review, publish, sync, settings
+  shared/      # schemas, types, state contracts, sync contracts, adapters, UI primitives
+docs/          # builder-facing Docusaurus documentation
 ```
 
-There is no standalone anchor package in v1. Anchor behavior lives inside the extension runtime and shared workflows.
+### 5.3 Tooling Baseline
 
-### 5.3 Shared Source Layout
+Coop should align with the Green Goods stack where it helps:
 
-```text
-packages/shared/
-  src/
-    components/
-    types/
-    stores/
-    workflows/
-    modules/
-    skills/
-    hooks/
-    configs/
-    i18n/
-    utils/
-```
-
-### 5.4 Shared Package Rule
-
-`packages/shared` should be the source of truth for:
-
-- artifact types
-- coop event types
-- routing contracts
-- sync contracts
-- icon state contracts
-- onchain contracts and garden bindings
-- storacha and snapshot pointer contracts
-- shared UI primitives
-- member and coop state machines
-- reusable skills and workflows
-
-Each runtime package should stay thin and call into shared logic.
-
-### 5.5 Dependency Policy
-
-The build should use a minimal stack.
-
-Rules:
-
-- prefer native browser APIs first
-- add a library only when it removes real complexity or risk
-- prefer libraries already proven in Green Goods when they fit the problem
-- use one small library per concern instead of layering overlapping tools
-- avoid large component systems and heavy framework abstractions by default
-
-### 5.6 Preferred Core Stack
-
-#### Core App Runtime
-
+- `bun` workspaces
 - `typescript`
-- `react`
-- `react-dom`
-- `vite`
-
-This should remain the baseline for the extension and the PWA.
-
-#### Styling
-
-- `tailwindcss` for fast layout and spacing
-- native CSS variables for theme tokens
-- native CSS transitions and small SVG animation for icon state
-
-Do not bring in a large UI kit by default. Start with native elements and a thin shared component layer in `packages/shared`.
-
-#### Local-First Storage
-
-- `dexie`
-- `y-indexeddb`
-
-Use `Dexie` as the primary local browser database for candidate queues, artifact caches, coop membership state, and receiver inbox state.
-
-Use `y-indexeddb` to persist the shared Yjs membrane locally.
-
-This is the smallest strong local-first combination for v1:
-
-- `Dexie` gives a clean browser persistence layer without dropping into raw IndexedDB code
-- `Yjs + y-indexeddb` gives durable shared-state sync without adding a second replication system
-
-#### Validation and Contracts
-
-- `zod` for artifact, event, and routing schemas
-
-Use runtime validation at the membrane boundary and at any anchor ingress point.
-
-#### Lightweight App State
-
-- React local state first
-- `zustand` only for shared runtime state that clearly escapes component scope
-
-Do not introduce a larger client state framework unless the product genuinely outgrows this.
-
-#### PWA and Pairing
-
-- `vite-plugin-pwa`
-- `qrcode.react`
-
-Use the plugin for installability and offline basics. Use QR for fast receiver pairing.
-
-#### Extension Capture
-
-- `@mozilla/readability`
-
-Use it for tab extraction instead of inventing a custom parser for readable content.
-
-#### Data Sharing and Sync
-
-- `yjs`
-- `y-webrtc`
-- `y-indexeddb`
-- `ws` only as an optional relay path
-
-The preferred direction is a Yjs-backed coop membrane with direct peer sync first and relay assist only when needed.
-
-#### Helper Runtime
-
-- `fastify`
-
-Only use this where direct P2P or local browser capability is not sufficient.
-
-#### Inference
-
-- one official cloud SDK only, anchor-only by default
-
-Preferred choices:
-
-- `openai`
-- `@anthropic-ai/sdk`
-
-Pick one primary cloud inference SDK for v1 and avoid multi-provider complexity unless a concrete need appears.
-
-#### Onchain Capital and Storage
-
-- `viem`
-- `permissionless`
-- `@storacha/client`
-- `multiformats`
-
-Use `viem` as the chain client baseline. Use `permissionless` for account-abstraction flows and Pimlico integration. Use Storacha plus multiformats for snapshot and archive handling.
-
-#### Testing
-
-- `vitest`
-- `@testing-library/react`
-- `msw`
-- `fake-indexeddb`
-- `@playwright/test`
-
-Use package-local unit tests by default. Only add a root E2E test folder if the Playwright surface grows enough to justify it.
-
-Testing should stay lightweight and layered:
-
-- use `Vitest` for shared workflows, schema contracts, routing logic, icon state, and onchain/storage adapters
-- use `React Testing Library` for popup, sidepanel, and receiver component behavior
-- use `MSW` for cloud inference, relay, and chain-adjacent request mocking
-- use `fake-indexeddb` for fast local-storage tests in Node
-- use `Playwright` for the real extension plus PWA pairing and publish flows
-
-### 5.7 Borrow from Green Goods, Avoid Green Goods Bloat
-
-Green Goods is a useful reference for a few proven dependencies:
-
 - `react`
 - `vite`
 - `tailwindcss`
-- `dexie`
-- `qrcode.react`
+- `vitest`
+- `@playwright/test`
 - `zod`
-- `zustand`
-- `fastify`
+- `dexie`
+- `yjs`
+- `y-webrtc`
+- `y-indexeddb`
+- `@mozilla/readability`
 - `viem`
 - `permissionless`
-- `@storacha/client`
+- Docusaurus
 
-But Coop should avoid pulling in the heavier parts of the Green Goods stack unless a concrete v1 requirement emerges.
+### 5.4 Dependency Rules
 
-Do not default to adding:
-
-- large Radix surface area
-- wallet libraries
-- large query/caching frameworks
-- Storybook-first component work
-- analytics or product telemetry dependencies
-- chain tooling in the core runtime path
-
-The first implementation should stay browser-native, small, and understandable.
+- prefer native browser APIs first
+- reuse Green Goods patterns where they clearly fit
+- add libraries only when they reduce complexity or risk
+- keep most product logic in `packages/shared`
+- avoid UI frameworks that would slow down iteration
 
 ---
 
-## 6. Data Model
+## 6. Stage 0: Environment Setup And Scaffold
 
-### 6.1 Core Objects
+Stage 0 is a dedicated build phase. It is not optional.
 
-- `Member`
-- `Coop`
-- `Node`
-- `Artifact`
-- `Link`
-- `FeedEvent`
-- `RoutingDecision`
-- `Job`
-- `GardenBinding`
-- `SmartAccount`
-- `CapitalAction`
-- `SnapshotPointer`
+### 6.1 Root Workspace Setup
 
-### 6.2 Artifact Types
+Create root scripts for:
 
-- `Resource`
-- `Thought`
-- `Transcript`
-- `Insight`
-- `Evidence`
-- `Opportunity`
-- `FundingLead`
-- `ApplicationDraft`
-- `Task`
+- `dev`
+- `build`
+- `test`
+- `test:e2e`
+- `lint`
+- `format`
 
-### 6.3 Link Types
+Recommended default ports:
 
-- `derived_from`
-- `supports`
-- `relevant_to`
-- `needs`
-- `funds`
-- `mentions`
-- `published_to`
-- `archived_as`
-- `executed_by`
+- app: `3001`
+- extension dev assets: `3002`
+- docs: `3003`
 
-### 6.4 Graph Constraint
+### 6.2 Package Bootstrapping
 
-The graph is a typed relationship layer first.
+Initialize:
 
-V1 requires:
+- `packages/app`
+- `packages/extension`
+- `packages/shared`
+- top-level `docs`
 
-- artifact creation
-- link creation
-- filtered feed views
-- per-coop relevance views
+### 6.3 App Scaffold
 
-V1 does not require a large collaborative graph editor.
+Before product work, the app must:
 
-### 6.5 Capital and Archive Objects
+- boot as a responsive landing page
+- support desktop and mobile layouts of the same landing experience
+- expose shared theme tokens and base layout primitives
 
-- `GardenBinding`: maps a coop to its Green Goods garden addresses and configuration
-- `SmartAccount`: stores the coop smart-account address, signer policy, and session-capability metadata
-- `CapitalAction`: a reviewable proposed action that may become an attestation, proposal, disbursement, or other chain interaction
-- `SnapshotPointer`: stores the export hash plus archive references such as Storacha/Filecoin identifiers and related public links
+There is no separate mobile receiver route in v1.
 
----
+### 6.4 Extension Scaffold
 
-## 7. Knowledge Garden
+Before feature work, the extension must have:
 
-Knowledge Garden is the memory layer of the coop.
+- MV3 manifest
+- background service worker
+- side panel
+- popup
+- message passing skeleton
+- shared build configuration
 
-Its job is to:
+### 6.5 Shared Package Scaffold
 
-- gather relevant resources from open tabs, drops, thoughts, and transcripts
-- summarize and classify them
-- attach tags and extracted entities
-- link them to existing artifacts
-- surface reusable context for later funding work
+Before runtime features, `packages/shared` must contain:
 
-Outputs include:
+- schema folder
+- type contracts
+- sync contracts
+- adapter interfaces
+- state helpers
+- small shared UI primitives
 
-- summaries
-- tags
-- extracted entities
-- related artifacts
-- insight drafts
-- evidence snippets
+### 6.6 Testing Scaffold
 
----
+Stage 0 must also include:
 
-## 8. Capital Formation
+- Vitest config
+- shared test setup
+- fake IndexedDB support
+- MSW mocks for inference and onchain adapters
+- Playwright config
 
-Capital Formation is the conversion layer from shared context into funding readiness.
+### 6.7 Docs Scaffold
 
-Its job is to:
+Set up the top-level Docusaurus site with starter pages for:
 
-- identify potential funding leads
-- match coop knowledge to those leads
-- assemble missing evidence and next questions
-- produce draft capital artifacts
-- map those artifacts into Green Goods capital surfaces
-- prepare reviewable onchain actions
+- getting started
+- architecture
+- packages
+- flows
+- integrations
 
-Outputs include:
+### 6.8 Stage 0 Completion Criteria
 
-- funding leads
-- opportunity matches
-- evidence bundles
-- application outlines
-- outreach drafts
-- missing-information checklists
-- Garden action drafts
-- treasury action drafts
-- attestation drafts
-- archive-backed evidence references
+Stage 0 is complete when:
 
-### 8.1 Offchain to Onchain Funnel
-
-The v1 spec should make the funnel explicit:
-
-1. members gather resources, thoughts, transcripts, and field evidence
-2. the coop membrane structures them into artifacts and links
-3. anchor jobs surface funding leads, evidence bundles, and capital recommendations
-4. the coop reviews and approves a capital action
-5. the anchor prepares the corresponding onchain transaction or attestation
-6. the result and its evidence pointer are written back into the coop feed
-
-The point is not generic wallet activity. The point is to convert community knowledge into fundable, accountable capital flows.
-
-### 8.2 Green Goods Garden Binding
-
-Each coop should map to a Green Goods garden.
-
-That binding gives the coop a capital surface for:
-
-- `Octant` vault participation
-- `Gardens` conviction voting flows
-- `Cookie Jar` style disbursement and spend proposals
-- Green Goods attestations and evidence references
-
-The garden binding should be created or attached as part of coop setup so that capital artifacts already know where they can land.
-
-### 8.3 Coop Smart Account and Pimlico
-
-Each coop should also map to a coop smart account.
-
-V1 should use:
-
-- `viem` for chain interactions
-- `permissionless` for account-abstraction flows
-- `Pimlico` for bundling and sponsorship
-
-The coop smart account is controlled by:
-
-- the approved coop anchor node runtime
-- the coop's configured human signers
-
-The anchor node should be able to:
-
-- prepare and submit low-risk allowlisted actions
-- hold a constrained session capability when explicitly installed
-- draft higher-risk actions for human approval
-- write execution results back into the coop feed
-
-Human signers remain the approval boundary for:
-
-- smart account creation or rotation
-- signer changes
-- treasury-sensitive actions
-- any action outside the v1 allowlist
-
-### 8.4 Anchor Capital Jobs
-
-Anchor capital jobs should feel agentic, but they can stay as recurring workflows rather than a heavy autonomous-agent design.
-
-Useful v1 jobs:
-
-- funding lead matching
-- evidence gap detection
-- application draft assembly
-- archive readiness check
-- onchain action draft generation
-
-These jobs should always produce reviewable artifacts, not opaque background state changes.
+- the workspace installs cleanly
+- app, extension, and docs each boot in dev mode
+- shared imports cleanly into app and extension
+- at least one unit test and one Playwright smoke test run
+- the repo has one canonical planning doc and working docs navigation
 
 ---
 
-## 9. Multi-Coop Dissemination
+## 7. Technical Architecture Overview
 
-Multi-coop membership is a first-class behavior, not an edge case.
+### 7.1 Runtime Split
 
-### 9.1 Default Behavior
+The runtime split for v1 is:
 
-A member should be able to belong to multiple coops and keep one normal browsing flow.
+- landing page in `packages/app`
+- browser runtime in `packages/extension`
+- product logic and contracts in `packages/shared`
+- builder docs in `docs`
 
-The extension should:
+### 7.2 Data Layers
 
-- maintain one local candidate pool
-- score or suggest which coops a candidate belongs to
-- allow one-click publish to one or more suggested coops
-- avoid making the member repeat the same capture flow for each coop
+Coop has four distinct data layers.
 
-### 9.2 Routing Rule
+#### Local-Only Data
 
-The system should route based on:
+Lives in the extension and never syncs unless explicitly pushed:
 
-- member membership
-- coop relevance rules
-- local tags or context
-- artifact history
+- raw tab candidates
+- readable page extracts
+- local relevance scores
+- draft queues
+- local settings
+- inference caches
 
-### 9.3 Publish Rule
+Primary store:
 
-Nothing should be silently published. The passive part is the filtering and suggestion, not the final release.
+- `Dexie`
 
----
+#### Shared Synced Data
 
-## 10. P2P Membrane and Storage
+Lives in a coop Yjs document:
 
-### 10.1 Canonical Model
+- coop profile
+- coop soul
+- rituals
+- memberships
+- invite metadata
+- published artifacts
+- weekly review projections
+- capability status
 
-The product is specified as P2P:
+Primary stack:
 
-- each coop has a scoped membrane
-- extension nodes and receiver PWAs sync into that membrane
-- anchor nodes help keep the membrane lively
+- `Yjs`
+- `y-webrtc`
+- `y-indexeddb`
 
-### 10.2 Practical v1 Truth
+#### Onchain Anchors
 
-V1 may use relay-assisted P2P where needed.
+Lives onchain or is derived from onchain state:
+
+- coop Safe address
+- signer status
+- future Garden or archive linkage
+
+#### Long-Term Archive
+
+Built in v1, but only for explicit archive actions:
+
+- approved artifact payloads
+- coop snapshot bundles
+- Storacha upload receipts
+- Filecoin status lookups for archived items
+
+Raw tab exhaust and unpublished drafts must never be archived automatically.
+
+### 7.3 Extension Runtime Constraints
+
+The MV3 background runtime is event-driven and will not behave like a durable server process.
 
 That means:
 
-- direct peer sync where possible
-- helper fanout or relay when direct connectivity is unreliable
-- optional helper runtime for cloud-backed inference ingress
+- scheduled work must use browser alarms, not in-memory timers
+- queue state must be persisted
+- capture state must survive worker restarts
+- long-running flows must be resumable
 
-The implementation may simplify transport, but it should keep the event and artifact contracts portable toward fuller P2P sync later.
+The extension should treat the background service worker as orchestration, not as durable storage.
 
-### 10.3 Local Storage
+### 7.4 Side Panel Architecture
 
-The extension stores in `Dexie`:
+The side panel is the main Coop UI in v1 because it:
 
-- candidate tabs
-- member node state
-- coop subscriptions
-- artifact cache
-- graph cache
-- sync state
+- stays close to the browsing context
+- can remain open while the user navigates
+- makes review and push feel contextual
 
-The shared membrane is persisted locally with `y-indexeddb`.
+The popup should remain small and act as a launcher, not a second app.
 
-The PWA stores in `Dexie`:
+### 7.5 Local Model Execution Placement
 
-- pending captures
-- temporary receiver cache
-- pairing state
-- review inbox cache
+If WebLLM is used in v1, it should run in a dedicated worker owned by a long-lived extension UI context such as the side panel.
 
-### 10.4 Long Memory
+It should not be treated as a natural fit for the MV3 background service worker because:
 
-Live coop state and long memory are separate concerns.
+- the service worker is event-driven and can terminate when idle
+- model loading is large relative to normal extension background work
+- WebGPU and model initialization should be treated as optional progressive enhancement
 
-- the live membrane is for active capture, sync, routing, and review
-- long memory is for durable, curated snapshots that outlive any one node
+The background service worker should orchestrate capture and queueing. The side panel or another long-lived extension page should own any optional local-model runtime.
 
-Long memory should be deterministic and portable.
+For the hackathon build, the safest default is:
 
-V1 long-memory output should include:
+- heuristics-first pipeline always enabled
+- WebLLM behind capability detection
+- WebLLM model loaded only when the member enables or triggers local enhancement
 
-- Markdown and JSON snapshot exports
-- artifact indexes
-- evidence bundles
-- capital action references
-- a `SnapshotPointer` containing export hash and archive references
+This means the default Coop AI stack in v1 is:
 
-### 10.5 Storacha and Filecoin
+- heuristics and deterministic normalization for passive mode
+- light local classifiers and similarity models for passive enhancement
+- WebLLM for browser-local higher-level synthesis and refinement
 
-Storacha and Filecoin close the storage loop for coop knowledge.
+Third-party LLM usage, if any, should happen outside Coop through explicit export.
+
+---
+
+## 8. Landing Page Specification
+
+### 8.1 Landing Page Goals
+
+The landing page must do three jobs:
+
+1. explain the problem and value clearly
+2. guide communities through the setup ritual before coop creation
+3. drive extension install and create/join flows
+
+### 8.2 Section Order
+
+The landing page should use this sequence:
+
+1. `Hero`
+2. `Problem`
+3. `How Coop Works`
+4. `Setup Ritual`
+5. `Prompt Copy`
+6. `Privacy And Push`
+7. `Extension States`
+8. `Weekly Review`
+9. `Footer CTA`
+
+### 8.3 Hero
+
+The hero should:
+
+- present Coop in one short sentence
+- connect loose tabs to coordinated opportunity
+- lead with `Start setup ritual`
+- keep `Install extension` as the secondary CTA
+- use one strong abstract illustration that combines browser fragments, coop structure, and flocking/chicken motifs
+
+### 8.4 Problem
+
+The problem section must explicitly connect fragmented knowledge to missed opportunity.
+
+It should communicate:
+
+- research disappears in private tabs
+- notes are scattered across tools and people
+- communities lose continuity between calls
+- evidence is not assembled in time to support funding or coordination
+
+### 8.5 How Coop Works
+
+This section should explain the v1 loop in simple language:
+
+1. your community runs a setup ritual
+2. members browse and Coop rounds up relevant context
+3. members review drafts and push useful knowledge into shared coop memory
+4. the coop leaves with a clearer shared picture and next steps
+
+### 8.6 Setup Ritual Illustration
+
+This is the most important content block on the page.
+
+It should visually show:
+
+- a community call moment
+- four planning lenses
+- note capture becoming structured coop memory
+- the bridge from discussion to extension setup
+
+The visual does not need polished brand art yet, but it must feel intentional and non-generic.
+
+### 8.7 Prompt Copy
+
+The page should include a copyable prompt for the community call.
+
+That output is required for coop creation.
+
+The page should recommend tested tools for synthesis:
+
+- GPT
+- Gemini
+
+These are optional external aids for the setup ritual only, not built-in Coop integrations.
+
+Manual editing of the output is allowed before the create flow.
+
+### 8.8 Privacy And Push
+
+This section must clearly explain:
+
+- Coop can notice relevant context locally
+- Coop can help structure it before sharing
+- nothing enters shared coop memory until a member explicitly pushes it
+
+This section should be visually calm and plainspoken.
+
+### 8.9 Extension States
+
+This section should preview:
+
+- what the icon means
+- manual versus automatic capture cadence
+- how review drafts appear
+- how a user pushes knowledge into a coop
+
+### 8.10 Weekly Review
+
+This section should preview the outcome:
+
+- a shared feed
+- grouped artifacts
+- visibility into who contributed what
+- a lightweight weekly review board
+
+### 8.11 Footer CTA
+
+The footer should provide:
+
+- start setup ritual
+- install extension
+- create coop
+- join coop
+- docs link
+
+### 8.12 Frontend Standards
+
+The landing page must:
+
+- use semantic section structure
+- support keyboard navigation
+- keep motion lightweight and intentional
+- degrade cleanly on mobile
+- use accessible contrast
+- avoid flat generic visuals
+- keep tokens easy for a designer to replace later
+
+---
+
+## 9. Ritual, Soul, And Initial Coop Memory
+
+The meeting notes made one thing clear: the coop should not start as an empty container.
+
+It needs a small set of initial artifacts that give it character, context, and behavioral shape.
+
+### 9.1 Cardinal Coop Elements
+
+Every coop should be initialized around six cardinal elements:
+
+- `Purpose`: what the coop is for
+- `People`: who is part of it and what trust level exists
+- `Soul`: how the community describes itself and what counts as signal
+- `Rituals`: when the group reviews, syncs, and updates the coop
+- `Memory`: the seed knowledge the coop starts with
+- `Opportunity`: the kinds of action or capital formation the coop wants to support
+
+### 9.2 Setup Ritual Lenses
+
+The setup ritual is a structured community call across four lenses:
+
+- `Capital Formation`
+- `Impact Reporting`
+- `Governance & Coordination`
+- `Knowledge Garden & Resources`
+
+Each lens answers three prompts:
+
+- `How do we do this now?`
+- `What is not working well?`
+- `What should improve?`
+
+### 9.3 Setup Input Contract
+
+Creating a coop is hard-gated on setup insights.
+
+The minimum acceptable setup payload should include:
+
+- all four lenses
+- at least one current-state note for each lens
+- at least one pain point for each lens
+- at least one improvement direction for each lens
+- a short overall summary
+
+This can be created by AI from call notes, but the result should be editable before submission.
+
+### 9.4 Initial Shared Artifacts
+
+Coop creation should generate four initial shared artifacts.
+
+#### `Setup Insights`
+
+The normalized result of the four-lens ritual.
+
+Contains:
+
+- per-lens responses
+- top cross-cutting pain points
+- top cross-cutting opportunities
+
+#### `Coop Soul`
+
+A short artifact that gives the coop character.
+
+Contains:
+
+- short purpose statement
+- tone and working style
+- what the coop treats as useful signal
+- what kinds of artifacts matter most
+- one short “why this coop exists” paragraph
+
+#### `Rituals`
+
+A structured artifact describing recurring human review moments.
+
+Contains:
+
+- weekly review cadence
+- named meeting moments such as `Coop updates`
+- who is expected to review or facilitate
+- the default capture review posture
+
+This is the v1 equivalent of the earlier `rituals.md` idea, but stored as typed shared data that can also render as markdown-like content.
+
+#### `Seed Contributions`
+
+The initial knowledge contributions from members.
+
+Contains:
+
+- the creator’s first seed entry
+- each joining member’s short seed thought
+- optional initial links
+
+### 9.5 Why These Artifacts Matter
+
+These artifacts give the coop enough context to:
+
+- classify browsing context better
+- explain itself on the landing and extension surfaces
+- make weekly review feel grounded
+- avoid the “empty workspace” problem
+
+---
+
+## 10. Extension Product Specification
+
+### 10.1 Extension Role
+
+The extension is the primary member node in v1.
+
+It is responsible for:
+
+- tab awareness
+- local capture queue
+- local synthesis
+- review queue
+- coop routing suggestions
+- shared publishing
+- sync participation
+- settings and notifications
+
+The extension is primarily a read-and-review surface in v1.
+
+It should help members understand what has happened and what is worth pushing, not introduce heavy graph-editing or freeform workspace manipulation.
+
+### 10.2 Primary UI Surfaces
+
+The extension uses:
+
+- `sidePanel` as the main interface
+- `popup` as a compact status and launcher
+- `background/service worker` for cadence and observation logic
+
+### 10.3 Main Side Panel Areas
+
+The side panel should include:
+
+- `Loose Chickens`
+- `Roost`
+- `Coops`
+- `Feed`
+- `Review Board`
+- `Settings`
+
+### 10.4 Popup Behavior
+
+The popup should show:
+
+- current icon state text
+- pending draft count
+- sync state summary
+- quick open into the side panel
+
+It must not become a second full app.
+
+### 10.5 Capture Cadence
+
+Capture mode is global for the browser profile in v1.
+
+Modes:
+
+- `Manual`
+- `Every 30 min`
+- `Every 60 min`
+
+The extension should use browser alarms for scheduled scans.
+
+The manual round-up path is the demo-critical happy path.
+
+Scheduled cadence should exist in v1, but it can remain lighter-weight than the manual click-to-synthesize flow if implementation time gets tight.
+
+### 10.6 Passive Capture Posture
+
+The extension should run in the user’s existing browser profile.
+
+It must not require:
+
+- a separate research browser profile
+- manual tab grouping before capture works
+- manually telling the extension which tab group to inspect
+
+It may use window or tab-group context when available, but it cannot depend on that context being curated by the user.
+
+### 10.7 Side Panel State Model
+
+The side panel needs to clearly show:
+
+- active coop context
+- total local drafts waiting for review
+- last capture cycle
+- whether local enhancement is available
+- whether the extension is offline or missing permission
+
+---
+
+## 11. Extension Icon States And Notifications
+
+### 11.1 Icon States
+
+The icon state model is intentionally small.
+
+- `Idle`
+- `Watching`
+- `Review Needed`
+- `Error/Offline`
+
+### 11.2 State Meanings
+
+- `Idle`: extension is available and there is nothing urgent
+- `Watching`: passive capture or scheduled review cycle is active
+- `Review Needed`: one or more drafts are waiting for user review
+- `Error/Offline`: sync, permission, or inference issue needs attention
+
+Every icon state must also appear as visible text inside the extension.
+
+### 11.3 Sound Design Rules
+
+Sound is part of the product identity, but it must be controlled.
+
+- keep most automatic background events silent by default
+- use sound mainly for user-triggered or high-clarity moments
+- let users mute easily
+- respect reduced-motion and reduced-sound preferences
+
+### 11.4 Required V1 Sound Events
+
+- coop created successfully -> rooster call
+- successful publish -> soft cluck
+- settings sound test -> squeaky-chicken style novelty sound
+
+### 11.5 Audio Asset Operations
+
+V1 audio sourcing, licensing, naming, and repo layout should follow:
+
+`docs/coop-audio-and-asset-ops.md`
+
+### 11.6 Not In Default Audio Path
+
+Do not auto-play sound for:
+
+- passive tab detection
+- scheduled scans
+- small sync events
+- low-importance status changes
+
+The playful moments should feel like reward states, not ambient interruption.
+
+---
+
+## 12. Identity, Trust, And Onchain Model
+
+### 12.1 Identity Direction
+
+Identity is passkey-first for everyone in the intended v1 UX.
+
+The product should assume:
+
+- users do not install a wallet extension to use Coop
+- passkeys are the primary authentication path
+- trusted capability is a role on top of the same identity layer
+
+### 12.2 Account Abstraction Pattern
+
+Use the Green Goods-style sender abstraction as the implementation pattern:
+
+- one shared auth union, even if v1 only exposes passkey in the UX
+- auth mode determines the active transaction sender
+- passkey mode resolves to a smart-account-backed sender
+- runtime code should call shared sender interfaces, not special-case passkey logic everywhere
+
+The minimal auth shape should account for:
+
+- `passkey`
+- `wallet`
+- optional embedded or future modes
+
+The minimal implementation pattern should include:
+
+- one shared auth context carrying credential and account state
+- one shared primary-address selector
+- one transaction-sender factory
+
+Even if v1 only exposes passkey in the product flow, the implementation should still keep the sender abstraction boundary and shared address-selection logic.
+
+### 12.3 Passkey Persistence Reality
+
+The spec must account for device and browser persistence limitations.
+
+For v1:
+
+- passkey session data may be stored locally
+- only the minimal credential material required to reconstruct the account should be stored locally
+- the extension must warn when identity is device-bound
+- clearing browser data or removing local credential state may remove access to that account
+- this warning should appear in docs and in identity settings
+- normal sign-out should preserve the local passkey credential by default so the same device can restore the same account later
+- destructive account deletion must be a separate explicit action
+
+Do not pretend passkeys fully solve recovery in v1.
+
+### 12.4 Coop Safe Creation
+
+Creating a coop should create a real Safe on `Optimism Sepolia`.
 
 The intended flow is:
 
-1. a coop approves a curated snapshot or evidence bundle
-2. the anchor node packages the snapshot for archival
-3. Storacha stores the archive and returns content-addressed references
-4. the coop records the resulting archive pointer in shared state
-5. capital artifacts and onchain actions can reference that archive pointer as durable evidence
+1. creator authenticates with passkey
+2. Coop derives the creator’s account-abstraction identity
+3. create flow deploys a Safe with that identity as the initial owner
+4. resulting Safe address is written into shared coop state
 
-This creates a durable bridge from browser-native knowledge capture to local-first shared memory to onchain capital formation.
+This gives the demo a real group account without forcing wallet-extension UX.
 
-### 10.6 Storage Boundary
+### 12.5 Trusted Members
 
-Secrets never belong in the shared membrane or in archived long-memory output.
+Trusted members are a permission level, not a different account system.
 
-Shared state and archives may contain:
+Trusted members can eventually support:
 
-- public artifact content
-- public metadata
-- public archive pointers
-- public transaction references
+- invite management
+- onchain preparation
+- future signer promotion
+- archive delegation and archive status upkeep
 
-Secrets must stay local to approved anchor runtimes.
+For v1:
 
----
+- trusted members join through the same passkey-first flow
+- trusted status is recorded immediately in shared state
+- actual Safe signer promotion is optional and not required for demo success
+- if signer promotion is not implemented, trusted members remain `trustedCandidates`
 
-## 11. Intake Model
+This avoids forcing a second signer flow into the critical path.
 
-### 11.1 Passive Browser Intake
+### 12.6 RP ID And Domain Constraint
 
-The extension should feel passive without becoming invasive.
+Passkey setup depends on a stable relying-party identity.
 
-Passive intake means:
+For v1:
 
-- observe tab metadata locally
-- maintain a candidate set
-- mark the node as having new material
-- avoid full extraction until the member triggers capture
+- production passkeys should be tied to the final production domain
+- local development should use an explicit dev RP ID strategy
+- the chosen RP ID must be documented early because changing it later can break passkey recovery on some platforms
 
-### 11.2 Triggered Capture
+### 12.7 Onchain Capability Boundaries
 
-The popup should expose:
+Human approval remains the default boundary for:
 
-- `Capture current tab`
-- `Sweep current window`
-- `Capture suggested tabs`
-- `Capture thought`
-- `Open Coop`
+- signer changes
+- fund movement
+- garden ownership changes
+- archive publishing receipts with financial implications
 
-The sidepanel should expose:
-
-- candidate review
-- coop routing review
-- artifact linking
-- publish actions
-
-### 11.3 Receiver Intake
-
-The PWA should support:
-
-- quick thought capture
-- voice memo or transcript capture
-- lightweight context tagging
-- send-to-extension or send-to-coop flow
+Session keys and autonomous actions are future work.
 
 ---
 
-## 12. Anchor Inference Model
+## 13. Sync, Privacy, And Access Model
 
-This needs to be explicit.
+### 13.1 Shared Sync Stack
 
-### 12.1 Default Rule
+Use:
 
-Only anchor nodes run cloud-backed inference by default.
+- `Yjs`
+- `y-webrtc`
+- `y-indexeddb`
 
-Standard nodes:
+### 13.2 Local Persistence
 
-- capture
-- cache
-- sync
-- run lightweight local heuristics if available
+Use `Dexie` for:
 
-Anchor nodes:
+- tab candidates
+- draft queues
+- settings
+- cached artifact views
+- local membership indexes
+- capture and review metadata that should survive service-worker restarts
 
-- run recurring jobs
-- run stronger cloud inference if configured
-- write insights and capital suggestions back into the coop
+### 13.3 What Syncs Versus What Stays Local
 
-### 12.2 Why This Default
+The coop document should only contain shared memory, not raw browsing exhaust.
 
-This keeps v1 simpler in four ways:
+#### Shared
 
-- fewer API key flows
-- fewer cost-control problems
-- clearer trust boundaries
-- easier product reasoning
+- coop profile
+- soul
+- rituals
+- membership list
+- invite metadata
+- published artifacts
+- review-board groupings
+- capability status
 
-### 12.3 Anchor Integration Boundary
+#### Local Only
 
-Anchor runtimes are the default place for:
+- raw open-tab snapshots
+- readable content extracts
+- draft-generation intermediates
+- per-user heuristics and caches
+- unpublished thoughts
 
-- cloud inference credentials
-- Pimlico configuration and sponsorship credentials
-- Storacha upload credentials
+### 13.4 Room Bootstrap And Access Control
 
-Those capabilities should be exposed to the coop through reviewable jobs and action drafts, not as general-purpose remote control.
+Because v1 uses public signaling and peer sync, access control must be explicit.
 
-### 12.4 Future Expansion
+The coop should generate:
 
-Later, any node may opt into anchor mode if:
+- `coopId`
+- `roomSecret`
+- `inviteSigningSecret`
 
-- the member configures cloud access
-- the coop allows it
-- the node advertises anchor capability
+The sync room identifier should be derived locally from `coopId + roomSecret`, not stored as a guessable literal string.
 
-But this is not the default for the first build.
+Invite payloads should include:
 
-### 12.5 Agentic Loop
+- coop id
+- coop display name
+- invite id
+- invite type
+- expiry timestamp
+- room bootstrap material
+- signature or MAC derived from the invite signing secret
 
-The system should feel agentic, but the implementation can stay simple.
+This gives v1 a clear bootstrap model even without a traditional backend.
 
-The default loop is closer to recurring jobs plus event triggers than a chatbot:
+### 13.5 Revocation Model
 
-- new capture arrives
-- anchor classifies and links it
-- anchor suggests coop routing if needed
-- anchor checks for funding relevance
-- anchor publishes insights back into the feed
+V1 revocation is prospective, not perfect.
 
-Examples of recurring jobs:
+That means:
 
-- candidate digestion
-- funding lead scan
-- evidence bundle refresh
-- unread receiver ingest sweep
+- expired invites fail local validation
+- revoked unused invites fail local validation
+- rotating the room secret invalidates unused invites that depend on old bootstrap data
+- already-joined members remain members until explicitly removed and the room secret is rotated
 
----
+This limitation should be documented. It is acceptable for the hackathon prototype.
 
-## 13. Icon, Cadence, and Notifications
+### 13.6 Network Philosophy
 
-This is part of the product, not polish.
+Coop remains:
 
-### 13.1 Cadence
+- local-first
+- peer-oriented
+- collaborative without a central data backend
 
-Recommended default:
+The prototype does not need permanent high-availability relay infrastructure.
 
-- metadata scan every `90 seconds` while the browser is active
-- dirty-flag updates on tab open, close, title change, and URL change
-- pause recurring scans after `5 minutes` of browser inactivity
-- resume on focus or explicit click
+It needs reliable two-peer happy-path sync in the demo.
 
-No continuous full extraction and no continuous AI processing.
+### 13.7 Archive Privacy Boundary
 
-### 13.2 Mascot State Model
+The shared Yjs membrane and the long-term archive are not the same trust boundary.
 
-The Coop icon is a chicken face with green hair, eyes, and a beak.
+For v1:
 
-Use the mascot itself to communicate state:
+- Yjs shared state is coop-scoped collaborative memory
+- Storacha/Filecoin archive is explicit long-term publication or backup
+- only approved artifacts or coop snapshots may cross into the archive layer
+- drafts, raw readable extracts, and passive browsing exhaust must never be archived automatically
 
-- `Idle`: normal green hair, still eyes
-- `Candidates`: amber or yellow hair accent, subtle badge
-- `Processing`: blue hair pulse, slight eye movement
-- `Ready`: bright green hair, alert eyes
-- `Attention`: red hair accent or red badge
-
-Animation should stay minimal and low-cost. Use small SVG or CSS state changes, not heavy animation loops.
-
-### 13.3 Notification Policy
-
-Notify only for meaningful transitions:
-
-- sweep completed with new artifacts
-- funding lead detected
-- receiver capture synced
-- publish or review needed
-
-Do not notify for every tab mutation.
+This distinction should be visible in both docs and product language.
 
 ---
 
-## 14. Build Order
+## 14. Inference, Review, And Publish Model
 
-1. Define shared artifact, link, feed, routing, and icon-state contracts in `packages/shared`.
-2. Build the extension node flow: popup, sidepanel, candidate queue, sweep, publish.
-3. Build the receiver PWA flow: pairing, thought capture, transcript capture, receiver sync.
-4. Implement `Dexie` local persistence and Yjs membrane sync with `y-webrtc` and `y-indexeddb`.
-5. Implement multi-coop routing and publish suggestions.
-6. Implement anchor-only recurring inference jobs for Knowledge Garden.
-7. Add Capital Formation transforms on top of the knowledge graph.
-8. Bind each coop to a Green Goods garden and coop smart account.
-9. Add Pimlico-backed allowlisted smart-account execution for review-approved actions.
-10. Add Storacha/Filecoin long-memory snapshot publishing and archive pointers.
-11. Add helper relay or helper inference runtime only where P2P is insufficient.
+### 14.1 Capture Sources In V1
+
+V1 focuses on browser tabs and web pages only.
+
+Do not expand scope to:
+
+- local file ingest
+- folder ingest
+- app-level capture
+- transcript processing
+
+### 14.2 Capture Pipeline
+
+The extension should:
+
+1. observe open tabs locally in the user’s normal browser profile, including the currently open set on startup
+2. capture raw metadata such as title, URL, domain, favicon, timestamps, window context, and tab-group context when available
+3. exclude unsupported browser-internal pages
+4. attempt readable extraction where possible
+5. build bounded normalized extracts for downstream scoring
+6. queue candidates locally
+
+### 14.3 Normalization Stages
+
+The tab-to-memory path should be modeled as explicit staged objects.
+
+#### `TabCandidate`
+
+Raw capture object.
+
+Contains:
+
+- tab and window identifiers
+- URL and canonical URL candidate
+- title
+- domain
+- favicon
+- timestamps
+- browser context such as tab-group or window hints
+- lightweight excerpt when available
+
+#### `ReadablePageExtract`
+
+Normalized readable representation used for scoring and summarization.
+
+Contains:
+
+- canonical URL
+- cleaned title
+- domain
+- meta description when available
+- top headings
+- lead paragraphs
+- selected salient text blocks
+- text hash
+- optional extracted preview image URL
+
+If a page is too large, the extract should be bounded by deterministic selection rules rather than trying to pass the entire page forward.
+
+#### `CoopInterpretation`
+
+The per-coop interpretation object derived from the readable extract.
+
+Contains:
+
+- target coop id
+- relevance score
+- matched ritual lenses
+- category candidates
+- tag candidates
+- rationale for why this matters
+- suggested next step
+- archive-worthiness hint
+
+One readable extract may generate multiple coop interpretations.
+
+#### `ReviewDraft`
+
+The editable member-facing draft that can be pushed into shared memory.
+
+It is derived from one interpretation and one source extract, then exposed in the `Roost`.
+
+### 14.4 Heuristics-First Local Pass
+
+The baseline structuring path must work without WebLLM.
+
+Required baseline steps:
+
+- canonicalize the URL and domain
+- run readability extraction where possible
+- bound the text using deterministic rules
+- weight title, description, headings, and repeated terms
+- match against coop setup insights, soul, rituals, and prior artifact vocabulary
+- score source-domain affinity
+- generate extractive tags and category candidates
+- build a template-based `whyItMatters`
+- build a template-based `suggestedNextStep`
+- rank likely target coops
+
+This heuristics-first pass is the guaranteed fallback and should be treated as a complete product path, not as a degraded error state.
+
+### 14.5 Passive Lightweight Model Layer
+
+The passive path can use a lighter browser-local model layer without depending on a generative LLM.
+
+Recommended v1 use cases for this layer:
+
+- zero-shot or multi-label coop routing
+- ritual-lens classification
+- artifact category suggestion
+- tag suggestion
+- entity extraction
+- similarity against exemplar accepted artifacts
+
+The recommended implementation direction is a small browser-local pipeline using Transformers.js and ONNX Runtime Web.
+
+This layer is a better fit for passive mode than WebLLM because it is narrower, cheaper, and easier to keep bounded.
+
+### 14.6 WebLLM-First Local Synthesis Pass
+
+WebLLM is a progressive enhancement.
+
+Use it only when:
+
+- WebGPU or supported browser capabilities are available
+- model download and initialization are acceptable
+- the side panel or another long-lived extension page can host the runtime
+
+WebLLM should receive:
+
+- `ReadablePageExtract`
+- coop context from setup insights, soul, rituals, and memory profile
+- any candidate target coop shortlist from heuristics
+
+WebLLM should return structured JSON that maps to `CoopInterpretation` or `ReviewDraft`.
+
+All WebLLM outputs must be validated with Zod before they are accepted into local queues.
+
+WebLLM is best used for:
+
+- better summaries
+- better tag suggestions
+- better category cleanup
+- stronger rationale text
+- better target-coop ranking
+
+#### Recommended V1 Model Ladder
+
+Given the currently documented WebLLM model families, the most practical path for a Chromium extension on typical desktop hardware is:
+
+1. `Qwen2 0.5B` as the widest-compatibility starter model
+2. `Qwen2 1.5B` as the better-quality tier for stronger desktops
+3. `Gemma-2B` as an optional alternative if evaluation shows better category or tag quality for Coop’s prompts
+
+The currently documented larger families such as 7B-class models and Llama 3 are better treated as out of scope for the extension-local path in v1 because of model size, initialization cost, and GPU pressure.
+
+This recommendation is an implementation inference from the current WebLLM-supported model families and sizes, not a claim from the docs that one model is universally best.
+
+#### Recommended V1 WebLLM Usage Pattern
+
+If WebLLM is enabled:
+
+- use one short system prompt focused on classification and structuring, not open-ended chat
+- prefer JSON-mode output mapped to the `CoopInterpretation` or `ReviewDraft` schema
+- keep context bounded to the normalized extract plus compact coop context
+- avoid running WebLLM on every tab automatically
+- use it on the highest-scoring candidates or as a user-triggered refinement step
+
+This keeps the local-model path useful without letting it dominate the runtime budget.
+
+#### Product Positioning Decision
+
+Coop can credibly position itself in v1 as:
+
+- peer-to-peer
+- browser-native
+- local-first
+- AI-assisted without requiring cloud inference by default
+
+For the hackathon, the stronger selling point is the browser-local stack:
+
+- passive normalization and classification in-browser
+- WebLLM-powered local synthesis and refinement
+- Yjs peer sync
+- explicit archive to Storacha/Filecoin
+
+Coop should explicitly position itself as avoiding dependency on the major cloud AI platforms for its core loop.
+
+### 14.7 External Analysis Export And Portability
+
+Coop should make it easy for members to take structured data out of the product when they want to analyze it elsewhere.
+
+This is a portability feature, not a built-in inference integration.
+
+V1 should support:
+
+- copy structured artifact data as JSON
+- copy compact text bundles for pasting into external tools
+- download single artifacts as JSON
+- download coop snapshots as JSON
+- download archive receipts and metadata
+
+Recommended export scopes:
+
+- one `ReviewDraft`
+- one published `Artifact`
+- one weekly review bundle
+- one coop snapshot
+
+Rules:
+
+- exports should contain structured fields, not raw hidden app state
+- raw passive browsing exhaust should not be exported by default
+- exports should favor open formats that work with copy/paste and local files
+- Coop does not manage external provider credentials or prompts in v1
+
+### 14.8 Review Draft Shape
+
+Every review draft should include:
+
+- title
+- summary
+- sources
+- tags
+- category
+- why it matters
+- suggested next step
+- suggested target coops
+- confidence or rationale
+- optional preview image
+
+The review draft is the key boundary object between noisy local capture and shared coop memory.
+
+### 14.9 Publish Boundary
+
+No draft enters shared coop memory until the user explicitly pushes it.
+
+Users should be able to:
+
+- edit draft metadata
+- choose one or more target coops
+- approve the push
+
+### 14.10 Multi-Coop Publish Semantics
+
+This must be locked for v1.
+
+If a user pushes one reviewed draft into multiple coops, Coop creates one published artifact per target coop.
+
+Those sibling artifacts share:
+
+- a common `originId`
+- shared source metadata
+- shared creation timestamp lineage
+
+They do not share one global mutable artifact object across coops.
+
+This is simpler because each coop owns its own Yjs document and its own feed.
+
+### 14.11 Shared Review Model
+
+The meeting notes pointed toward a Git-like review flow, but v1 should keep this light.
+
+Use this state model:
+
+- `draft` -> local only
+- `published` -> pushed into shared feed
+- `reviewed` -> discussed in a coop review moment
+- `actioned` -> linked to a next step, opportunity, or capital draft
+
+V1 does not require quorum approval before publish. The social review happens through the shared board and weekly ritual.
+
+### 14.12 Shared Memory Loop And Calibration
+
+The coop should get better at matching and structuring over time.
+
+That reinforcement loop should combine:
+
+- setup insights
+- coop soul
+- ritual definitions
+- accepted published artifacts
+- review outcomes
+- archive events
+- weekly review curation
+
+V1 should introduce a shared derived object called `CoopMemoryProfile`.
+
+It should contain:
+
+- recurring high-signal domains
+- recurring high-signal tags
+- category frequency and recency
+- matched ritual-lens weights
+- exemplar accepted artifacts
+- archive-worthy patterns
+
+This shared profile belongs in the coop membrane and should update when:
+
+- new artifacts are published
+- artifacts are marked reviewed or actioned
+- weekly review surfaces promote or prune tags and patterns
+
+Each member node should combine:
+
+- shared `CoopMemoryProfile`
+- current coop setup context
+- local recent browsing history
+- local acceptance and rejection history
+
+Only the shared calibration data should sync. Private negative signals and browsing traces should remain local.
+
+### 14.13 Archive Flow
+
+Archive is an explicit post-publish step in v1.
+
+Only two archive scopes are supported:
+
+- `artifact`: archive one published artifact payload
+- `snapshot`: archive a coop bundle such as feed items plus soul, rituals, and weekly review projection
+
+The preferred v1 archive flow is:
+
+1. member publishes an artifact or opens the weekly review archive action
+2. client builds a JSON or CAR-ready payload locally
+3. client uploads directly to Storacha using delegated capability
+4. client stores an `ArchiveReceipt` in shared coop state
+5. a trusted node or later manual action queries Filecoin status and updates the receipt
+
+Archive upload should happen from the client when possible.
+
+The trusted-node role is best used for:
+
+- issuing limited upload delegation
+- sponsoring or owning the coop archive space
+- later querying Filecoin inclusion status
+
+Archive is not a synonym for sync. It is a deliberate long-term storage action.
+
+#### Trusted-Node Delegation Baseline
+
+The cleanest v1 Storacha setup is a delegated architecture:
+
+- the coop archive space is owned by a trusted-node-controlled identity
+- trusted nodes have their own agent DIDs
+- a delegation issuer re-delegates limited capabilities to trusted-node clients
+- uploads go directly from the client to Storacha
+
+The minimal delegated capability set should cover:
+
+- `space/blob/add`
+- `space/index/add`
+- `upload/add`
+- `filecoin/offer`
+
+Recommended delegation rules for v1:
+
+- only trusted nodes receive archive delegation
+- delegations should be short-lived
+- the extension should request or refresh delegation only when an archive action is attempted
+- archive receipts must record which delegation issuer granted the upload capability
+
+This gives the hackathon build direct browser upload without forcing every member to own a Storacha space.
 
 ---
 
-## 15. Acceptance Criteria
+## 15. Weekly Review Surface
 
-The spec is satisfied when:
+### 15.1 Purpose
 
-- a member can create or join a coop from the extension
-- the extension behaves as the primary member node
-- the PWA behaves as the paired receiver
-- passive tab awareness works without heavy extraction
-- one click can sweep useful context into one or more coops
-- multi-coop routing suggestions are visible
-- the icon clearly signals node state
-- receiver captures can sync back into the member's node flow
-- an anchor node can run recurring inference jobs
-- the system produces structured knowledge artifacts
-- the system produces at least one capital-formation output grounded in coop knowledge
-- each coop can bind to a Green Goods garden and a coop smart account
-- the system can prepare at least one reviewable onchain capital action through the smart-account flow
-- approved evidence or snapshot bundles can be archived through Storacha/Filecoin and referenced back from coop state
+The weekly review surface is how the coop makes its shared knowledge legible during calls or syncs.
+
+### 15.2 V1 Scope
+
+V1 includes a read-only mini board.
+
+It is not a full graph editor.
+
+### 15.3 Grouping Model
+
+The board groups items by:
+
+- category
+- member
+
+### 15.4 Why This Matters
+
+This creates enough visual structure for:
+
+- weekly syntheses
+- `Coop updates` during calls
+- clear visibility into who shared what
+- visible movement from raw capture to shared insight
 
 ---
 
-## 16. Final Constraint
+## 16. Core User Flows
 
-This document should remain dense, concrete, and build-focused.
+### 16.1 Community Setup Ritual
 
-If a detail does not help define:
+1. A community opens the landing page on desktop.
+2. They run a call using the four ritual lenses.
+3. They synthesize the discussion into a setup payload.
+4. A trusted member installs the extension.
+5. That member starts `Create Coop`.
 
-- the member flow
-- the node and receiver flow
-- the shared artifact model
-- the anchor inference model
-- the monorepo structure
-- or the acceptance criteria
+Creating a coop without setup insights is not allowed.
 
-it does not belong in the v1 build spec.
+### 16.2 Create Coop
+
+Required inputs:
+
+- coop name
+- short purpose
+- creator display name
+- normalized setup insights
+- initial capture mode
+
+Create flow behavior:
+
+1. validate setup insights
+2. initialize local coop state
+3. generate room bootstrap secrets
+4. initialize shared Yjs state
+5. establish creator membership
+6. create the coop Safe on Optimism Sepolia
+7. generate initial artifacts:
+   - Setup Insights
+   - Coop Soul
+   - Rituals
+   - creator Seed Contribution
+8. play launch animation and rooster sound
+9. land the creator in the coop feed
+
+First-run outcome should immediately show:
+
+- coop name
+- creator role
+- Safe address
+- sync state
+- initial artifacts
+- where capture drafts will appear
+
+### 16.3 Invite And Join
+
+V1 uses two invite types:
+
+- `trusted`
+- `member`
+
+Recommended defaults:
+
+- trusted: `48 hours`
+- member: `7 days`
+
+Joining requires:
+
+- invite code
+- display name
+- short seed contribution
+
+Join outcome:
+
+- member is added to shared state
+- invite usage is recorded
+- seed contribution becomes a shared seed artifact
+- trusted joiners are marked trusted immediately
+- trusted joiners may remain pending signer promotion
+
+### 16.4 Capture, Review, And Push
+
+1. extension observes relevant tabs locally
+2. local pipeline extracts and scores content
+3. user sees drafts in `Roost`
+4. user edits metadata if needed
+5. user selects one or more target coops
+6. user pushes the draft
+7. one published artifact is created per target coop
+8. connected members see the artifact appear live
+
+---
+
+## 17. Shared Contracts And Data Model
+
+`packages/shared` should be the source of truth for the following contracts.
+
+### 17.1 Core Runtime Types
+
+- `AuthMode`
+- `CoopProfile`
+- `CoopSoul`
+- `RitualDefinition`
+- `SetupInsights`
+- `CoopMemoryProfile`
+- `SeedContribution`
+- `Member`
+- `MemberRole`
+- `CoopMembership`
+- `InviteCode`
+- `InviteBootstrap`
+- `CaptureMode`
+- `ExtensionIconState`
+- `TabCandidate`
+- `ReadablePageExtract`
+- `CoopInterpretation`
+- `ReviewDraft`
+- `Artifact`
+- `ArtifactOrigin`
+- `ArchiveReceipt`
+- `ArchiveBundle`
+- `ArchiveScope`
+- `ArchiveStatus`
+- `ReviewBoardGroup`
+- `SyncRoomConfig`
+- `OnchainState`
+
+### 17.2 Action And Adapter Types
+
+- `IdentityAction`
+- `CapitalAction`
+- `ArchiveAction`
+- `GardenAction`
+- `SyncTransport`
+- `InferenceAdapter`
+- `WalletAdapter`
+
+The `InferenceAdapter` contract should target local inference paths in v1.
+
+Do not implement cloud-provider adapters as part of the initial product loop.
+
+### 17.3 Capability State Model
+
+Every action capability should support:
+
+- `unavailable`
+- `stubbed`
+- `ready`
+- `executed`
+- `failed`
+
+### 17.4 Artifact Categories
+
+V1 should support at minimum:
+
+- `setup-insight`
+- `coop-soul`
+- `ritual`
+- `seed-contribution`
+- `resource`
+- `thought`
+- `insight`
+- `evidence`
+- `opportunity`
+- `funding-lead`
+- `next-step`
+
+### 17.5 Artifact Fields
+
+Published artifacts should include:
+
+- `id`
+- `originId`
+- `targetCoopId`
+- `title`
+- `summary`
+- `sources`
+- `tags`
+- `category`
+- `whyItMatters`
+- `suggestedNextStep`
+- `previewImageUrl`
+- `createdBy`
+- `createdAt`
+- `reviewStatus`
+- `archiveStatus`
+- `archiveReceiptIds`
+
+### 17.6 Archive Receipt Fields
+
+Archive receipts should include:
+
+- `id`
+- `scope`
+- `targetCoopId`
+- `artifactIds` or bundle references
+- `rootCid`
+- `shardCids`
+- `pieceCids` when available
+- `gatewayUrl`
+- `uploadedAt`
+- `filecoinStatus`
+- `delegationIssuer`
+
+### 17.7 Minimal Coop Memory Profile
+
+The first implementation of `CoopMemoryProfile` should stay deliberately small.
+
+It should include:
+
+- `version`
+- `updatedAt`
+- `topDomains`
+- `topTags`
+- `categoryStats`
+- `ritualLensWeights`
+- `exemplarArtifactIds`
+- `archiveSignals`
+
+Recommended minimal shapes:
+
+- `topDomains`: domain, acceptCount, reviewedCount, lastAcceptedAt
+- `topTags`: tag, acceptCount, lastAcceptedAt
+- `categoryStats`: category, publishCount, actionedCount
+- `ritualLensWeights`: lens, weight
+- `exemplarArtifactIds`: small capped list of artifact ids by category or lens
+- `archiveSignals`: archivedTagCounts, archivedDomainCounts
+
+The v1 memory profile should not include:
+
+- raw browsing history
+- rejected private drafts from individual members
+- embeddings
+- vector search infrastructure
+- freeform long text blobs
+
+The memory profile is meant to tune matching and review quality, not become a second knowledge store.
+
+---
+
+## 18. Coop OS Modules And Future Action Stubs
+
+V1 should establish modular typed future capability areas in code.
+
+These are not end-user “skills” in the UI.
+
+### 18.1 Required Action Families
+
+- `IdentityAction`
+- `CapitalAction`
+- `ArchiveAction`
+- `GardenAction`
+
+### 18.2 Why This Exists In V1
+
+This keeps the architecture extensible for:
+
+- Green Goods garden binding
+- Filecoin or Storacha publishing
+- capital actions and treasury flows
+- future autonomous or semi-autonomous workflows
+
+### 18.3 V1 UI Rule
+
+These modules should appear in code, docs, and internal architecture, but not as a visible skill launcher for end users.
+
+---
+
+## 19. Builder Docs Plan
+
+The top-level Docusaurus site should ship with lightweight builder documentation.
+
+### 19.1 Initial Docs Pages
+
+- `Getting Started`
+- `Architecture`
+- `Packages`
+- `Create / Join / Push Flows`
+- `Identity And Passkeys`
+- `Sync And Privacy Model`
+- `Inference And Memory Loop`
+- `Export And Portability`
+- `Archive And Long-Term Storage`
+- `Notifications And Sound`
+- `Coop OS Action Stubs`
+- `Hackathon Demo Flow`
+
+### 19.2 Documentation Rule
+
+The repo should move toward:
+
+- one canonical build plan
+- docs pages for implementation details
+- fewer orphan planning notes
+
+---
+
+## 20. Testing Strategy
+
+### 20.1 Unit Tests
+
+Cover:
+
+- auth-mode selection and primary-address resolution
+- setup insight validation
+- invite generation and expiry
+- invite bootstrap validation
+- room secret derivation
+- capture mode logic
+- icon-state transitions
+- local coop matching
+- bounded readable extract selection
+- heuristics-only review draft shaping
+- WebLLM unavailable fallback behavior
+- draft shaping
+- shared memory-profile updates
+- multi-coop sibling artifact creation
+- archive receipt generation and shaping
+- Yjs document hydration
+- capability status transitions
+
+### 20.2 Component Tests
+
+Cover:
+
+- landing page section rendering
+- prompt copy behavior
+- create-coop gating on setup insights
+- join-coop flow
+- review queue interaction
+- explicit push into selected coops
+- export structured draft and artifact data
+- explicit archive action on published artifacts
+- sound toggle behavior
+- identity warning behavior for passkey-backed accounts
+- sign-out behavior that preserves local credential state unless the user explicitly deletes the account
+
+### 20.3 End-To-End Tests
+
+Playwright should cover:
+
+1. landing page renders on desktop and mobile layouts
+2. create coop flow
+3. second member joins via invite
+4. passive capture produces drafts
+5. review and push into selected coops
+6. live sync between two extension contexts
+7. Safe address creation and display
+8. weekly review grouping renders correctly
+9. archive one artifact or coop snapshot and record the receipt
+10. export one artifact or snapshot as structured data
+
+Real passkey network flows should not be the only coverage surface. Follow the Green Goods testing posture:
+
+- use unit tests and mocked integration tests for Pimlico and passkey setup
+- use virtual-authenticator coverage where it helps local browser behavior
+- do not block v1 on proving live third-party passkey infrastructure in every E2E run
+
+### 20.4 Test Philosophy
+
+Prioritize coverage on:
+
+- workflow logic
+- privacy and publish boundaries
+- sync behavior
+- critical onboarding paths
+
+Do not spend early testing budget on decorative UI details.
+
+---
+
+## 21. Delivery Phases
+
+### 21.1 Stage 0: Scaffold
+
+Deliver:
+
+- Bun workspace
+- package bootstraps
+- extension shell
+- landing page shell
+- shared contracts skeleton
+- docs scaffold
+- test harness
+
+### 21.2 Stage 1: Public Surface
+
+Deliver:
+
+- desktop-first landing page
+- responsive mobile landing layout
+- visual identity baseline
+- setup ritual section
+- prompt copy section
+
+### 21.3 Stage 2: Coop Core
+
+Deliver:
+
+- create coop
+- join coop
+- passkey-first identity path
+- Safe creation
+- synced shared state
+- initial soul and ritual artifacts
+
+### 21.4 Stage 3: Capture And Publish
+
+Deliver:
+
+- local passive capture
+- local synthesis
+- review queue
+- explicit push into selected coops
+- shared feed
+
+### 21.5 Stage 4: Review And Polish
+
+Deliver:
+
+- mini weekly review board
+- export actions for draft, artifact, and coop snapshot data
+- manual archive of approved artifacts and coop snapshots
+- archive receipts persisted in shared state
+- icon states
+- sound moments
+- docs expansion
+- end-to-end validation
+- demo polish
+
+---
+
+## 22. Explicit Future Direction After V1
+
+After the core loop is solid, the most aligned next areas are:
+
+- mobile receiver shell
+- mobile voice capture
+- local file and folder ingest
+- richer board and review flows
+- richer archive browsing and retrieval UX
+- encrypted archive workflows
+- automated archive cadence and snapshot policies
+- optional external-tool automations built on exported data
+- Green Goods garden binding
+- session-key and agent-assisted actions
+- broader Coop OS runtime reuse across more surfaces
+
+These should not be allowed to creep into the hackathon critical path.
+
+---
+
+## 23. Risks And Mitigations
+
+### 23.1 Passkey + Safe Integration Risk
+
+Risk:
+
+- account abstraction or signer management details may be more complex than expected
+
+Mitigation:
+
+- isolate the sender path behind shared interfaces
+- keep signer promotion outside the demo-critical path
+- keep the product UX wallet-extension-free even if a developer fallback is used during implementation
+
+### 23.2 Sync Access-Control Risk
+
+Risk:
+
+- peer sync works, but membership control is ambiguous
+
+Mitigation:
+
+- lock room bootstrap secrets and invite validation early
+- document that v1 uses secrecy-based room access, not full server-enforced ACLs
+- keep the room-rotation path explicit
+
+### 23.3 WebLLM Performance Risk
+
+Risk:
+
+- local model loading may be slow or inconsistent across devices
+
+Mitigation:
+
+- make heuristics the required default
+- treat WebLLM as optional enhancement
+- keep the product coherent even when only lightweight local models are available
+
+### 23.4 Archive Privacy And Persistence Risk
+
+Risk:
+
+- archived data is much more durable and potentially public than coop-scoped sync state
+
+Mitigation:
+
+- archive only explicit published artifacts or snapshots
+- never archive raw browsing exhaust
+- document the archive boundary clearly
+- keep encrypted archive flows out of the critical path unless they are actually implemented
+
+### 23.5 Extension Runtime Risk
+
+Risk:
+
+- MV3 worker lifecycle causes dropped in-memory state
+
+Mitigation:
+
+- persist queue and cadence state in Dexie or extension storage
+- use alarms instead of assuming a long-lived process
+- keep background orchestration resumable
+
+### 23.6 Scope Creep Risk
+
+Risk:
+
+- the team drifts into building mobile, file ingest, or agent systems before the core loop works
+
+Mitigation:
+
+- treat this document as the locked scope
+- keep the app package landing-only for v1
+- protect the demo-critical path first
+
+---
+
+## 24. Canonical Implementation Summary
+
+If an implementer only remembers a few things from this document, they should remember these:
+
+1. Coop v1 is a browser-first knowledge membrane for fragmented community context.
+2. The app package is only the landing page in v1.
+3. The extension is the primary node and primary product surface.
+4. The coop must not begin empty; it starts with setup insights, soul, rituals, and seed contributions.
+5. Capture can be passive, but sharing is always explicit.
+6. Identity is passkey-first, with real Safe creation on Optimism Sepolia.
+7. Tab capture must move through explicit staged objects: `TabCandidate` -> `ReadablePageExtract` -> `CoopInterpretation` -> `ReviewDraft` -> `Artifact`.
+8. The coop should calibrate over time through a shared memory profile, while private browsing traces remain local.
+9. Sync is live, local-first, and peer-oriented, with clear invite bootstrap material.
+10. Multi-coop publish creates sibling artifacts, not one shared mutable artifact across coops.
+11. Storacha/Filecoin archive is explicit and limited to approved artifacts or snapshots.
+12. Coop should export structured data cleanly instead of embedding third-party cloud inference into the product.
+13. Sounds are playful but controlled.
+14. Builder docs and test coverage are part of the v1 build, not cleanup work for later.

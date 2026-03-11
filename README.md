@@ -19,13 +19,14 @@ What is usually missing is the membrane that turns scattered knowledge into shar
 
 Coop exists to close that gap.
 
-The first version of Coop is a paired browser extension and app that helps members:
+The first version of Coop is a paired landing page and browser extension that helps members:
 
 - passively notice relevant context while browsing
-- capture thoughts and transcripts in the moment
+- round up relevant tabs into a review queue
 - route knowledge into one or more coops
-- structure shared evidence into a knowledge garden
-- convert that knowledge into reviewable capital actions
+- structure shared evidence into a shared coop memory
+- archive approved artifacts or snapshots into Storacha/Filecoin
+- export structured coop data for use in outside tools
 
 ## Hackathon Context
 
@@ -68,13 +69,13 @@ Coop is being built on top of ideas that have been forming across the wider rege
 
 In that sense, Coop is the browser-native coordination membrane around Green Goods. It is designed to help a community gather knowledge offchain, structure it collaboratively, and then push the right artifacts into Green Goods capital surfaces such as gardens, smart accounts, conviction voting, cookie-jar style flows, and related treasury mechanisms.
 
-## Repo Structure
+## Planned Repo Structure
 
 ```text
 docs/
 packages/
-  extension/
   app/
+  extension/
   shared/
 package.json
 README.md
@@ -84,13 +85,10 @@ README.md
 
 ## Core Documents
 
-- [docs/coop-os-architecture-vnext.md](docs/coop-os-architecture-vnext.md) — current hackathon build spec
-- [docs/architecture.md](docs/architecture.md) — broader architecture overview
-- [docs/coop-component-plans.md](docs/coop-component-plans.md) — component planning notes
+- [docs/coop-os-architecture-vnext.md](docs/coop-os-architecture-vnext.md) — canonical Coop v1 build plan
+- [docs/coop-design-direction.md](docs/coop-design-direction.md) — initial visual direction, palette, and asset usage guide
+- [docs/coop-audio-and-asset-ops.md](docs/coop-audio-and-asset-ops.md) — audio sourcing, licensing, naming, and asset handoff guide
 
-## Quick Start
+## Current State
 
-```bash
-pnpm install
-pnpm dev
-```
+This branch is currently in planning mode. The implementation scaffold, Bun workspace, package structure, branding direction, and asset-handling rules are defined in the docs above.
