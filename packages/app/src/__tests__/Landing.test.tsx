@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { App } from './App';
+import { App } from '../views/Landing';
 
 describe('landing page', () => {
   it('renders the locked v1 sections and copies the ritual prompt', async () => {

@@ -90,6 +90,32 @@ describe('create, join, and publish flows', () => {
     expect('roomSecret' in invite.bootstrap).toBe(false);
   });
 
+  it('rejects a tampered invite bootstrap payload', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+    const invite = generateInviteCode({
+      state: created.state,
+      createdBy: created.creator.id,
+      type: 'member',
+    });
+
+    const tampered = {
+      ...invite,
+      bootstrap: {
+        ...invite.bootstrap,
+        coopDisplayName: 'Tampered Forest Coop',
+      },
+    };
+
+    expect(verifyInviteCodeProof(tampered, created.state.syncRoom.inviteSigningSecret)).toBe(false);
+  });
+
   it('bootstraps a coop from the invite payload so a second profile can join', () => {
     const created = createCoop({
       coopName: 'Forest Coop',
@@ -148,6 +174,54 @@ describe('create, join, and publish flows', () => {
         member: created.creator,
       }),
     ).toThrow(/already a member/i);
+  });
+
+  it('rejects duplicate passkey credential ids even when the address differs', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+      creator: {
+        id: 'member-creator',
+        displayName: 'June',
+        role: 'creator',
+        authMode: 'passkey',
+        address: '0x1111111111111111111111111111111111111111',
+        joinedAt: new Date().toISOString(),
+        identityWarning: 'Device bound.',
+        passkeyCredentialId: 'credential-1',
+      },
+    });
+    const invite = generateInviteCode({
+      state: created.state,
+      createdBy: created.creator.id,
+      type: 'member',
+    });
+
+    expect(() =>
+      joinCoop({
+        state: {
+          ...created.state,
+          invites: [invite],
+        },
+        invite,
+        displayName: 'Mina',
+        seedContribution: 'Trying to reuse the same passkey credential.',
+        member: {
+          id: 'member-joiner',
+          displayName: 'Mina',
+          role: 'member',
+          authMode: 'passkey',
+          address: '0x2222222222222222222222222222222222222222',
+          joinedAt: new Date().toISOString(),
+          identityWarning: 'Device bound.',
+          passkeyCredentialId: 'credential-1',
+        },
+      }),
+    ).toThrow(/already linked to a coop member/i);
   });
 
   it('creates sibling artifacts per target coop when a draft is pushed', () => {

@@ -20,7 +20,27 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     globals: true,
     coverage: {
-      reporter: ['text', 'html'],
+      provider: 'v8',
+      all: true,
+      include: [
+        'packages/app/src/**/*.{ts,tsx}',
+        'packages/extension/src/runtime/**/*.{ts,tsx}',
+        'packages/shared/src/**/*.{ts,tsx}',
+      ],
+      exclude: [
+        '**/*.d.ts',
+        '**/*.test.{ts,tsx}',
+        '**/__tests__/**',
+        'packages/**/src/**/index.ts',
+        'packages/**/src/**/main.tsx',
+      ],
+      reporter: ['text', 'html', 'json-summary'],
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        statements: 85,
+        branches: 70,
+      },
     },
   },
 });

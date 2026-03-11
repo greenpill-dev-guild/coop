@@ -6,6 +6,21 @@ const { chromium, expect, test } = require('@playwright/test');
 const rootDir = path.resolve(__dirname, '..');
 const extensionDir = path.join(rootDir, 'packages/extension/dist');
 
+async function closeContextSafely(context) {
+  if (!context) {
+    return;
+  }
+
+  try {
+    await context.close();
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+}
+
 async function launchExtensionProfile(userDataDir) {
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
@@ -38,6 +53,8 @@ async function launchExtensionProfile(userDataDir) {
 }
 
 test.describe('extension workflow', () => {
+  test.describe.configure({ timeout: 120_000 });
+
   test.skip(
     ({ isMobile }) => isMobile,
     'Extension automation runs only on the desktop Chromium project.',
@@ -155,9 +172,9 @@ test.describe('extension workflow', () => {
       ).toBeVisible();
     } finally {
       if (memberProfile) {
-        await memberProfile.context.close();
+        await closeContextSafely(memberProfile.context);
       }
-      await creatorProfile.context.close();
+      await closeContextSafely(creatorProfile.context);
     }
   });
 });

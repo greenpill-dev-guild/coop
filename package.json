@@ -11,6 +11,7 @@
     "dev:signaling": "node ./scripts/y-webrtc-signaling.mjs",
     "build": "bun run --filter @coop/shared build && bun run --filter @coop/app build && bun run --filter @coop/extension build",
     "test": "vitest run",
+    "test:coverage": "mkdir -p coverage/.tmp && vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "biome check .",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@playwright/test": "^1.52.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -32,7 +34,7 @@
     "react-dom": "^19.0.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^3.0.8",
+    "vitest": "^3.2.4",
     "ws": "^8.19.0"
   }
 }
