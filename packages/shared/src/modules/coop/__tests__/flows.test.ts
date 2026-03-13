@@ -5,6 +5,7 @@ import {
   createStateFromInviteBootstrap,
   generateInviteCode,
   joinCoop,
+  parseInviteCode,
   verifyInviteCodeProof,
 } from '../flows';
 import {
@@ -403,6 +404,16 @@ describe('create, join, and publish flows', () => {
     expect(updatedWatershed?.artifacts.at(-1)?.createdBy).toBe(peerCoop.state.members[0]?.id);
     expect(updatedForest?.artifacts.length).toBe(created.state.artifacts.length + 1);
     expect(updatedWatershed?.artifacts.length).toBe(peerCoop.state.artifacts.length + 1);
+  });
+
+  it('throws a clear error when parseInviteCode receives garbage input', () => {
+    expect(() => parseInviteCode('not-valid-base64!!')).toThrow(
+      'Invite code is malformed or corrupted.',
+    );
+  });
+
+  it('throws a clear error when parseInviteCode receives empty input', () => {
+    expect(() => parseInviteCode('')).toThrow('Invite code is malformed or corrupted.');
   });
 
   it('fails multi-coop publish when the authenticated person is not a member of every target coop', () => {

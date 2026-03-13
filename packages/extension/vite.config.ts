@@ -77,6 +77,8 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
+      sourcemap: 'hidden',
+      target: 'es2022',
       rollupOptions: {
         input: {
           sidepanel: path.resolve(__dirname, 'sidepanel.html'),

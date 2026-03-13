@@ -33,13 +33,16 @@ import {
   agentObservationSchema,
   agentPlanSchema,
   anchorCapabilitySchema,
+  authSessionSchema,
   encryptedSessionMaterialSchema,
   executionGrantSchema,
   grantLogEntrySchema,
   privilegedActionLogEntrySchema,
+  receiverDeviceIdentitySchema,
   sessionCapabilityLogEntrySchema,
   sessionCapabilitySchema,
   skillRunSchema,
+  soundPreferencesSchema,
   trustedNodeArchiveConfigSchema,
   uiPreferencesSchema,
 } from '../../contracts/schema';
@@ -305,7 +308,9 @@ export async function setSoundPreferences(db: CoopDexie, value: SoundPreferences
 
 export async function getSoundPreferences(db: CoopDexie): Promise<SoundPreferences | null> {
   const record = await db.settings.get('sound-preferences');
-  return (record?.value as SoundPreferences | undefined) ?? null;
+  if (!record?.value) return null;
+  const result = soundPreferencesSchema.safeParse(record.value);
+  return result.success ? result.data : null;
 }
 
 export async function setUiPreferences(db: CoopDexie, value: UiPreferences) {
@@ -333,7 +338,9 @@ export async function setAuthSession(db: CoopDexie, value: AuthSession | null) {
 
 export async function getAuthSession(db: CoopDexie): Promise<AuthSession | null> {
   const record = await db.settings.get('auth-session');
-  return (record?.value as AuthSession | undefined) ?? null;
+  if (!record?.value) return null;
+  const result = authSessionSchema.safeParse(record.value);
+  return result.success ? result.data : null;
 }
 
 export async function setAnchorCapability(db: CoopDexie, value: AnchorCapability) {
@@ -484,7 +491,9 @@ export async function getReceiverDeviceIdentity(
   db: CoopDexie,
 ): Promise<ReceiverDeviceIdentity | null> {
   const record = await db.settings.get('receiver-device-identity');
-  return (record?.value as ReceiverDeviceIdentity | undefined) ?? null;
+  if (!record?.value) return null;
+  const result = receiverDeviceIdentitySchema.safeParse(record.value);
+  return result.success ? result.data : null;
 }
 
 // --- Action Policy persistence (stored in settings) ---

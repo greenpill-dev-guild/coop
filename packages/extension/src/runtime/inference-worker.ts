@@ -159,11 +159,15 @@ self.onmessage = (event: MessageEvent<InferenceWorkerRequest>) => {
 
   switch (msg.type) {
     case 'init':
-      ensureModel().catch(() => {});
+      ensureModel().catch((e) => {
+        self.postMessage({ type: 'status', status: 'failed', error: String(e) });
+      });
       break;
 
     case 'refine':
-      handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch(() => {});
+      handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch((e) => {
+        self.postMessage({ type: 'refine-error', id: msg.id, error: String(e) });
+      });
       break;
 
     case 'cancel':

@@ -89,16 +89,19 @@ function decodeAgentSigner(value: string) {
   const normalized = value.trim();
   const candidates = [() => bytesFromBase64(normalized), () => bytesFromHex(normalized)];
 
+  let lastError: unknown;
   for (const candidate of candidates) {
     try {
       const bytes = candidate();
       if (bytes.byteLength > 0) {
         return Ed25519.decode(new Uint8Array(bytes));
       }
-    } catch {}
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  throw new Error('Trusted-node archive agent private key is invalid.');
+  throw new Error('Trusted-node archive agent private key is invalid.', { cause: lastError });
 }
 
 function resolveDelegationAbilities(

@@ -41,10 +41,53 @@ import {
   upsertReceiverPairing,
   upsertReceiverSyncEnvelope,
 } from '@coop/shared';
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReceiverShareHandoff } from './share-handoff';
 import { BoardView } from './views/Board';
 import { App as LandingPage } from './views/Landing';
+
+export class ErrorBoundary extends React.Component<
+  { fallback?: React.ReactNode; children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { fallback?: React.ReactNode; children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        this.props.fallback ?? (
+          <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'system-ui' }}>
+            <h2>Something went wrong</h2>
+            <p style={{ color: '#666', marginBottom: '1rem' }}>{this.state.error.message}</p>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ error: null });
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.375rem',
+                border: '1px solid #ccc',
+                background: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const emptySignalingUrls: string[] = [];
 
@@ -1316,7 +1359,15 @@ export function RootApp({
   }, [captures, hatchedCaptureId]);
 
   useEffect(() => {
-    const signalingUrls = JSON.parse(pairingSignalingKey) as string[];
+    let signalingUrls: string[] = [];
+    try {
+      const parsed = JSON.parse(pairingSignalingKey);
+      if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
+        signalingUrls = parsed;
+      }
+    } catch {
+      // pairingSignalingKey may be empty or malformed — fall back to empty
+    }
     const nextBindingKey =
       pairingId && pairingRoomId ? `${pairingId}:${pairingRoomId}:${pairingSignalingKey}` : null;
 

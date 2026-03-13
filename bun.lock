@@ -42,11 +42,8 @@
         "@coop/shared": "workspace:*",
         "@huggingface/transformers": "^3.8.1",
         "@mlc-ai/web-llm": "^0.2.79",
-        "@rhinestone/module-sdk": "^0.4.0",
-        "permissionless": "^0.3.4",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
-        "viem": "^2.25.0",
       },
     },
     "packages/shared": {

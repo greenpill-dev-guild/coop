@@ -101,6 +101,7 @@ export function connectReceiverSyncProviders(
   doc: Y.Doc,
   roomId: string,
   signalingUrls: string[] = [],
+  password?: string,
 ) {
   if (typeof window === 'undefined') {
     return {
@@ -123,6 +124,7 @@ export function connectReceiverSyncProviders(
     try {
       webrtc = new WebrtcProvider(roomId, doc, {
         signaling: usableSignalingUrls,
+        password: password ?? roomId,
         maxConns: 6,
       });
     } catch {

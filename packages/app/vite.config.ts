@@ -10,6 +10,10 @@ export default defineConfig({
       '@coop/shared': path.resolve(__dirname, '../shared/src/index.ts'),
     },
   },
+  build: {
+    sourcemap: 'hidden',
+    target: 'es2022',
+  },
   server: {
     port: 3001,
     host: '0.0.0.0',

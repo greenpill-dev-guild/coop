@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { RootApp } from './app';
+import { ErrorBoundary, RootApp } from './app';
 import { bootstrapCoopBoardHandoff } from './board-handoff';
 import { bootstrapReceiverPairingHandoff } from './pairing-handoff';
 import { bootstrapReceiverShareHandoff } from './share-handoff';
@@ -24,10 +24,12 @@ const initialShareInput = bootstrapReceiverShareHandoff(window);
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <RootApp
-      initialBoardSnapshot={initialBoardSnapshot}
-      initialPairingInput={initialPairingInput}
-      initialShareInput={initialShareInput}
-    />
+    <ErrorBoundary>
+      <RootApp
+        initialBoardSnapshot={initialBoardSnapshot}
+        initialPairingInput={initialPairingInput}
+        initialShareInput={initialShareInput}
+      />
+    </ErrorBoundary>
   </React.StrictMode>,
 );

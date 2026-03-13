@@ -5477,9 +5477,20 @@ chrome.alarms.onAlarm.addListener(async () => {
   await syncAgentObservations();
 });
 
-chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendResponse) => {
   void (async () => {
     await ensureDefaults();
+
+    const isExtensionContext = !sender.tab && sender.id === chrome.runtime.id;
+    const isAllowedBridgeMessage = message.type === 'ingest-receiver-capture';
+
+    if (!isExtensionContext && !isAllowedBridgeMessage) {
+      sendResponse({
+        ok: false,
+        error: 'Unauthorized sender.',
+      } satisfies RuntimeActionResponse);
+      return;
+    }
 
     switch (message.type) {
       case 'get-auth-session':

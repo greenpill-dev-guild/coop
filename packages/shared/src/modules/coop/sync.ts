@@ -24,6 +24,7 @@ const sharedKeys = [
   'memoryProfile',
   'syncRoom',
   'onchainState',
+  'greenGoods',
 ] as const;
 
 export function deriveSyncRoomId(coopId: string, roomSecret: string) {
@@ -137,6 +138,7 @@ export function connectSyncProviders(doc: Y.Doc, room: SyncRoomConfig) {
   try {
     webrtc = new WebrtcProvider(room.roomId, doc, {
       signaling: room.signalingUrls,
+      password: room.roomSecret,
       maxConns: 8,
     });
   } catch {

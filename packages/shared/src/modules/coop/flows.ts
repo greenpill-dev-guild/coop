@@ -457,17 +457,21 @@ export function generateInviteCode(input: {
 }
 
 export function parseInviteCode(code: string) {
-  const decoded = JSON.parse(decodeBase64Url(code));
-  return inviteCodeSchema.parse({
-    id: decoded.inviteId,
-    type: decoded.inviteType,
-    expiresAt: decoded.expiresAt,
-    code,
-    bootstrap: decoded,
-    createdAt: nowIso(),
-    createdBy: 'external',
-    usedByMemberIds: [],
-  });
+  try {
+    const decoded = JSON.parse(decodeBase64Url(code));
+    return inviteCodeSchema.parse({
+      id: decoded.inviteId,
+      type: decoded.inviteType,
+      expiresAt: decoded.expiresAt,
+      code,
+      bootstrap: decoded,
+      createdAt: nowIso(),
+      createdBy: 'external',
+      usedByMemberIds: [],
+    });
+  } catch {
+    throw new Error('Invite code is malformed or corrupted.');
+  }
 }
 
 export function validateInvite(input: { invite: InviteCode; now?: Date }) {

@@ -57,6 +57,56 @@ describe('shared contracts and sync hydration', () => {
     expect(state.memoryProfile.version).toBe(1);
   });
 
+  it('round-trips greenGoods state through Yjs encoding', () => {
+    const created = createCoop({
+      coopName: 'Garden Coop',
+      purpose: 'Coordinate bioregional stewardship.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'Field notes and funding leads.',
+      setupInsights: {
+        summary: 'A concise but valid setup payload for sync testing.',
+        crossCuttingPainPoints: ['Context drifts'],
+        crossCuttingOpportunities: ['Shared state stays typed'],
+        lenses: [
+          {
+            lens: 'capital-formation',
+            currentState: 'Links are scattered.',
+            painPoints: 'Funding context disappears.',
+            improvements: 'Route leads into shared state.',
+          },
+          {
+            lens: 'impact-reporting',
+            currentState: 'Reporting is rushed.',
+            painPoints: 'Evidence gets dropped.',
+            improvements: 'Collect evidence incrementally.',
+          },
+          {
+            lens: 'governance-coordination',
+            currentState: 'Calls happen weekly.',
+            painPoints: 'Actions slip.',
+            improvements: 'Review actions through the board.',
+          },
+          {
+            lens: 'knowledge-garden-resources',
+            currentState: 'Resources live in tabs.',
+            painPoints: 'Research repeats.',
+            improvements: 'Persist high-signal references.',
+          },
+        ],
+      },
+      greenGoods: { enabled: true },
+    });
+
+    const update = encodeCoopDoc(created.doc);
+    const hydrated = hydrateCoopDoc(update);
+    const state = readCoopState(hydrated);
+
+    expect(state.greenGoods?.enabled).toBe(true);
+    expect(state.greenGoods?.status).toBe('requested');
+    expect(state.greenGoods?.domains.length).toBeGreaterThan(0);
+  });
+
   it('surfaces degraded sync health when signaling is unavailable', () => {
     expect(summarizeSyncTransportHealth(undefined).syncError).toBe(true);
 

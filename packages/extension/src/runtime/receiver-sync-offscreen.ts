@@ -270,9 +270,6 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
         continue;
       }
       binding.reportedIssues.add(issueKey);
-      console.warn(
-        `[receiver-sync] Skipping malformed room entry ${issue.captureId}: ${issue.reason}`,
-      );
       void reportReceiverSyncRuntime({
         lastError: `Malformed room entry ${issue.captureId}: ${issue.reason}`,
       });
