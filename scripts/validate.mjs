@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { loadRootEnv } from './load-root-env.mjs';
+
+loadRootEnv();
 
 const suites = {
   lint: {
@@ -36,6 +39,11 @@ const suites = {
       },
     ],
   },
+  'e2e:agent-loop': {
+    description:
+      'Focused Playwright flow for the operator-console agent dashboard and manual trusted-node cycle.',
+    steps: [{ label: 'e2e:agent-loop', command: ['bun', 'run', 'test:e2e:agent-loop'] }],
+  },
   'unit:flow-board': {
     description:
       'Targeted Vitest coverage for the board graph, board handoff, archive receipts, and archive-worthy state transitions.',
@@ -43,7 +51,7 @@ const suites = {
   },
   'unit:archive-live': {
     description:
-      'Targeted Vitest coverage for anchor gating, live archive failure handling, follow-up refresh, operator log rendering, and issuer validation.',
+      'Targeted Vitest coverage for anchor gating, trusted-node archive delegation, follow-up refresh, and operator log rendering.',
     steps: [{ label: 'unit:archive-live', command: ['bun', 'run', 'test:unit:archive-live'] }],
   },
   'e2e:flow-board': {
@@ -65,14 +73,24 @@ const suites = {
       'Targeted Vitest coverage for onchain schema normalization, chain config resolution, and Pimlico/Safe helpers.',
     steps: [{ label: 'unit:onchain-config', command: ['bun', 'run', 'test:unit:onchain-config'] }],
   },
+  'unit:session-key': {
+    description:
+      'Targeted Vitest coverage for Smart Session scope validation, typed action metadata, expiry/revocation logic, and encrypted local signer storage.',
+    steps: [{ label: 'unit:session-key', command: ['bun', 'run', 'test:unit:session-key'] }],
+  },
   'probe:onchain-live': {
     description:
       'Optional live Safe probe on Ethereum Sepolia by default. Skips cleanly when probe env vars are absent.',
     steps: [{ label: 'probe:onchain-live', command: ['bun', 'run', 'probe:onchain-live'] }],
   },
+  'probe:session-key-live': {
+    description:
+      'Optional Smart Session probe on Ethereum Sepolia/Arbitrum that enables a bounded session, executes an allowed Green Goods action, confirms a rejection path, and revokes the session.',
+    steps: [{ label: 'probe:session-key-live', command: ['bun', 'run', 'probe:session-key-live'] }],
+  },
   'probe:archive-live': {
     description:
-      'Optional live archive probe that checks issuer health and delegation when the required env vars are present.',
+      'Archive probe that issues local trusted-node delegation material from repo-root env or an in-process fallback.',
     steps: [{ label: 'probe:archive-live', command: ['bun', 'run', 'probe:archive-live'] }],
   },
   smoke: {
@@ -117,10 +135,89 @@ const suites = {
       'Arbitrum/Sepolia Safe validation: lint, targeted onchain tests, build, then an optional Sepolia-first live probe.',
     includes: ['lint', 'unit:onchain-config', 'build', 'probe:onchain-live'],
   },
+  'session-key-live': {
+    description:
+      'Smart Session validation: lint, targeted onchain/session-key tests, build, then an opt-in live Sepolia-first Smart Session rehearsal.',
+    includes: [
+      'lint',
+      'unit:onchain-config',
+      'unit:session-key',
+      'build',
+      'probe:session-key-live',
+    ],
+  },
   'archive-live': {
     description:
-      'Archive live-path validation: lint, targeted archive/issuer tests, build, then an optional issuer delegation probe.',
+      'Archive live-path validation: lint, targeted archive tests, build, then a trusted-node delegation probe using root env or an in-process fallback.',
     includes: ['lint', 'unit:archive-live', 'build', 'probe:archive-live'],
+  },
+  'unit:local-inference': {
+    description:
+      'Targeted Vitest coverage for local inference provider selection, capability detection, refine shaping, worker bridge, and heuristic fallback.',
+    steps: [
+      { label: 'unit:local-inference', command: ['bun', 'run', 'test:unit:local-inference'] },
+    ],
+  },
+  'unit:agent-loop': {
+    description:
+      'Targeted Vitest coverage for agent contracts, skill registry loading, provider fallback, and operator-console agent controls.',
+    steps: [{ label: 'unit:agent-loop', command: ['bun', 'run', 'test:unit:agent-loop'] }],
+  },
+  'local-inference': {
+    description: 'Local inference validation: lint, targeted inference unit tests, build.',
+    includes: ['lint', 'unit:local-inference', 'build'],
+  },
+  'unit:agent-policy': {
+    description:
+      'Targeted Vitest coverage for action policies, bundles, replay protection, approval queue, and bounded execution.',
+    steps: [{ label: 'unit:agent-policy', command: ['bun', 'run', 'test:unit:agent-policy'] }],
+  },
+  'agent-policy': {
+    description: 'Agent policy validation: lint, targeted policy unit tests, build.',
+    includes: ['lint', 'unit:agent-policy', 'build'],
+  },
+  'unit:delegated-execution': {
+    description:
+      'Targeted Vitest coverage for delegated execution grants, enforcement, audit logging, and operator console rendering.',
+    steps: [
+      {
+        label: 'unit:delegated-execution',
+        command: ['bun', 'run', 'test:unit:delegated-execution'],
+      },
+    ],
+  },
+  'delegated-execution': {
+    description:
+      'Delegated execution validation: lint, targeted grant unit tests, policy tests, build.',
+    includes: ['lint', 'unit:delegated-execution', 'unit:agent-policy', 'build'],
+  },
+  'agent-loop': {
+    description:
+      'Trusted-node agent validation: lint, targeted loop tests, local inference, policy/grant checks, and extension build.',
+    includes: [
+      'lint',
+      'unit:agent-loop',
+      'unit:local-inference',
+      'unit:agent-policy',
+      'unit:delegated-execution',
+      'build',
+      'e2e:agent-loop',
+    ],
+  },
+  'production-readiness': {
+    description:
+      'Final pre-demo production slice: lint, build, targeted agent/onchain/session tests, extension and receiver E2E, plus mobile app coverage.',
+    includes: [
+      'lint',
+      'build',
+      'unit:agent-loop',
+      'unit:onchain-config',
+      'unit:session-key',
+      'e2e:extension',
+      'e2e:receiver-sync',
+      'e2e:agent-loop',
+      'e2e:app:mobile',
+    ],
   },
   full: {
     description: 'Full local validation pass used before demos or bigger merges.',
