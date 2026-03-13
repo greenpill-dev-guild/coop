@@ -252,6 +252,52 @@ import { validateReviewDraftPublish, validateReviewDraftUpdate } from './runtime
 import { type CaptureSnapshot, extractPageSnapshot, isSupportedUrl } from './runtime/tab-capture';
 
 const db = createCoopDb('coop-extension');
+let dbReadyPromise: Promise<void> | null = null;
+
+function isPrimaryKeyUpgradeError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.name === 'UpgradeError' &&
+    /changing primary key|Not yet support for changing primary key/i.test(error.message)
+  );
+}
+
+async function ensureDbReady() {
+  if (dbReadyPromise) {
+    await dbReadyPromise;
+    return;
+  }
+
+  dbReadyPromise = (async () => {
+    try {
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      return;
+    } catch (error) {
+      if (!isPrimaryKeyUpgradeError(error)) {
+        throw error;
+      }
+    }
+
+    console.warn(
+      '[coop-extension] IndexedDB schema is incompatible with this build. Resetting local db.',
+    );
+    try {
+      db.close();
+    } catch {
+      // no-op
+    }
+    await db.delete();
+    await db.open();
+  })().finally(() => {
+    dbReadyPromise = null;
+  });
+
+  await dbReadyPromise;
+}
 
 type RuntimeHealth = {
   offline: boolean;
@@ -5451,6 +5497,7 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
+  await ensureDbReady();
   await ensureDefaults();
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
@@ -5461,6 +5508,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await ensureDbReady();
   await ensureDefaults();
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
@@ -5470,6 +5518,7 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 chrome.alarms.onAlarm.addListener(async () => {
+  await ensureDbReady();
   const captureMode = await getLocalSetting(stateKeys.captureMode, 'manual');
   if (captureMode !== 'manual') {
     await runCaptureCycle();
@@ -5479,6 +5528,7 @@ chrome.alarms.onAlarm.addListener(async () => {
 
 chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResponse) => {
   void (async () => {
+    await ensureDbReady();
     await ensureDefaults();
 
     switch (message.type) {
