@@ -254,17 +254,17 @@ test('landing page renders the locked v1 narrative', async ({ page }) => {
   await page.goto('/');
 
   await expect(
-    page.getByRole('heading', { name: /turn loose tabs into shared intelligence/i }),
+    page.getByRole('heading', { name: /turn knowledge into opportunity/i }),
   ).toBeVisible();
   await expect(
     page.getByRole('heading', { name: /fragmented knowledge becomes missed opportunity/i }),
   ).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: /run one structured community call/i }),
+    page.getByRole('heading', { name: /the v1 loop is short on purpose/i }),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: /passive capture stays local/i })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: /preview the outcome before you install anything/i }),
+    page.getByRole('heading', { name: /see the coop in action before you install anything/i }),
   ).toBeVisible();
 });
 
@@ -274,20 +274,22 @@ test('landing page stays legible on mobile', async ({ page, isMobile }) => {
   await page.goto('/');
 
   await expect(
-    page.getByRole('heading', { name: /turn loose tabs into shared intelligence/i }),
+    page.getByRole('heading', { name: /turn knowledge into opportunity/i }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Setup ritual', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /copy ritual prompt/i })).toBeVisible();
+  await expect(
+    page.locator('main').getByRole('link', { name: 'Start quick hatch', exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: /copy helper prompt/i })).toBeVisible();
 });
 
 test('receiver route exposes the egg capture shell and inbox link', async ({ page }) => {
   await page.goto('/receiver');
 
-  await expect(page.getByRole('heading', { name: /capture into the nest/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /hatch something/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /start recording/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /take photo/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /attach file/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Inbox', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Roost', exact: true })).toBeVisible();
 });
 
 test('@flow-board board route renders a coop snapshot with archive storytelling', async ({
@@ -300,13 +302,13 @@ test('@flow-board board route renders a coop snapshot with archive storytelling'
 
   await expect(page.getByRole('heading', { name: 'Board Coop' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/board/${snapshot.coopId}$`));
-  await expect(page.getByText('Storacha / Filecoin trail')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /saved proof trail/i })).toBeVisible();
   const boardSurface = page.getByTestId('coop-board-surface');
   await expect(boardSurface.getByText('forest-notes.txt').first()).toBeVisible();
   await expect(boardSurface.getByText('captured by').first()).toBeVisible();
   await expect(boardSurface.getByText('draft seeded from capture').first()).toBeVisible();
   await expect(boardSurface.getByText('published to coop').first()).toBeVisible();
-  await expect(page.getByText('Artifact preservation', { exact: true })).toBeVisible();
-  await expect(page.getByText('Root CID')).toBeVisible();
-  await expect(page.getByRole('link', { name: /inspect bundle/i }).first()).toBeVisible();
+  await expect(page.getByText(/what the coop kept/i)).toBeVisible();
+  await expect(page.getByText('Save ID')).toBeVisible();
+  await expect(page.getByRole('link', { name: /open saved bundle/i }).first()).toBeVisible();
 });

@@ -109,13 +109,22 @@ async function launchExtensionProfile(userDataDir) {
   };
 }
 
+async function openOptionalSetup(page) {
+  const optionalSetup = page.locator('details.collapsible-card').first();
+  const isOpen = await optionalSetup.evaluate((element) => element.hasAttribute('open'));
+  if (!isOpen) {
+    await optionalSetup.locator('summary').click();
+  }
+}
+
 async function launchCoop(page, input) {
-  await page.getByRole('button', { name: 'Coops' }).click();
+  await page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
   await page.fill('#coop-name', input.coopName);
   await page.fill('#coop-purpose', input.purpose);
   await page.fill('#creator-name', input.creatorName ?? 'Ari');
   await page.fill('#summary', input.summary);
   await page.fill('#seed-contribution', input.seedContribution);
+  await openOptionalSetup(page);
   await page.fill('#capitalCurrent', input.capitalCurrent);
   await page.fill('#capitalPain', input.capitalPain);
   await page.fill('#capitalImprove', input.capitalImprove);
@@ -128,12 +137,12 @@ async function launchCoop(page, input) {
   await page.fill('#knowledgeCurrent', input.knowledgeCurrent);
   await page.fill('#knowledgePain', input.knowledgePain);
   await page.fill('#knowledgeImprove', input.knowledgeImprove);
-  await page.getByRole('button', { name: /launch the coop/i }).click();
+  await page.getByRole('button', { name: /(launch the coop|start this coop)/i }).click();
 
   await expect(page.getByText(/coop created\./i)).toBeVisible({
     timeout: 30000,
   });
-  await page.getByRole('button', { name: 'Coops' }).click();
+  await page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
   await expect(page.getByRole('heading', { name: input.coopName })).toBeVisible({
     timeout: 30000,
   });
@@ -201,14 +210,16 @@ test.describe('receiver pairing and sync', () => {
         knowledgeImprove: 'Make multi-coop publishing a first-class action.',
       });
 
-      await creatorProfile.page.getByRole('button', { name: 'Coops' }).click();
+      await creatorProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
       await creatorProfile.page.selectOption('#active-coop-select', { label: 'Receiver Coop' });
       await expect(creatorProfile.page.getByRole('heading', { name: 'Receiver Coop' })).toBeVisible(
         {
           timeout: 15000,
         },
       );
-      await creatorProfile.page.getByRole('button', { name: /generate receiver pairing/i }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(generate receiver pairing|generate nest code)/i })
+        .click();
 
       const deepLink = await creatorProfile.page.locator('#receiver-pairing-link').inputValue();
       expect(deepLink).toContain('/pair#payload=');
@@ -218,12 +229,16 @@ test.describe('receiver pairing and sync', () => {
       await creatorProfile.page.close();
 
       await appPage.goto(deepLinkUrl.toString());
-      await expect(appPage.getByRole('heading', { name: /pair your nest/i })).toBeVisible({
+      await expect(
+        appPage.getByRole('heading', { name: /(pair your nest|find your coop)/i }),
+      ).toBeVisible({
         timeout: 15000,
       });
       await expect(appPage).toHaveURL(/\/pair\?bridge=off$/);
-      await appPage.getByRole('button', { name: /accept pairing/i }).click();
-      await expect(appPage.getByRole('heading', { name: /capture into the nest/i })).toBeVisible({
+      await appPage.getByRole('button', { name: /(accept pairing|join this coop)/i }).click();
+      await expect(
+        appPage.getByRole('heading', { name: /(capture into the nest|hatch something)/i }),
+      ).toBeVisible({
         timeout: 15000,
       });
       await expect(appPage.locator('input[type="file"]')).toHaveCount(2, {
@@ -286,9 +301,9 @@ test.describe('receiver pairing and sync', () => {
           transport: expect.stringMatching(/^(websocket|webrtc)$/),
           lastIngestSuccessAt: expect.any(String),
         });
-      await reviewPage.getByRole('button', { name: 'Meeting Mode' }).click();
+      await reviewPage.getByRole('button', { name: /^(Meeting Mode|Flock Meeting)$/i }).click();
       await expect(reviewPage.getByText('field-note.txt').first()).toBeVisible({ timeout: 20000 });
-      await expect(reviewPage.getByRole('heading', { name: /private intake/i })).toBeVisible();
+      await expect(reviewPage.locator('#meeting-cadence')).toBeVisible({ timeout: 15000 });
 
       await reviewPage.fill('#meeting-cadence', 'Weekly orchard review');
       await reviewPage.fill(
@@ -299,22 +314,30 @@ test.describe('receiver pairing and sync', () => {
         '#meeting-posture',
         'Start private, move to candidate review, then publish only what the group wants shared.',
       );
-      await reviewPage.getByRole('button', { name: /save ritual settings/i }).click();
-      await expect(reviewPage.getByText(/meeting settings updated/i)).toBeVisible({
+      await reviewPage
+        .getByRole('button', { name: /(save ritual settings|save meeting rhythm)/i })
+        .click();
+      await expect(
+        reviewPage.getByText(/(meeting settings updated|flock meeting rhythm updated)/i),
+      ).toBeVisible({
         timeout: 15000,
       });
 
       await reviewPage
         .locator('.draft-card')
         .filter({ hasText: 'field-note.txt' })
-        .getByRole('button', { name: /convert to candidate/i })
+        .getByRole('button', { name: /(convert to candidate|move to hatching)/i })
         .click();
       await expect(
-        reviewPage.getByText(/receiver intake moved into candidate review/i),
+        reviewPage.getByText(
+          /(receiver intake moved into candidate review|pocket coop find moved into hatching review)/i,
+        ),
       ).toBeVisible({
         timeout: 15000,
       });
-      await expect(reviewPage.getByRole('button', { name: /mark ready/i })).toBeVisible({
+      await expect(
+        reviewPage.getByRole('button', { name: /(mark ready|ready to share)/i }),
+      ).toBeVisible({
         timeout: 15000,
       });
 
@@ -340,26 +363,30 @@ test.describe('receiver pairing and sync', () => {
         .first()
         .fill('Publish this note into both coops and use it in the next weekly ritual.');
       await reviewPage.getByRole('button', { name: /add forest signals/i }).click();
-      await reviewPage.getByRole('button', { name: /mark ready/i }).click();
-      await expect(reviewPage.getByText(/draft moved into the ready-to-publish lane/i)).toBeVisible(
-        {
-          timeout: 15000,
-        },
-      );
-
-      await reviewPage.getByRole('button', { name: /push into coop/i }).click();
-      await expect(reviewPage.getByText(/draft pushed into shared coop memory/i)).toBeVisible({
+      await reviewPage.getByRole('button', { name: /(mark ready|ready to share)/i }).click();
+      await expect(
+        reviewPage.getByText(
+          /(draft moved into the ready-to-publish lane|draft is ready to share)/i,
+        ),
+      ).toBeVisible({
         timeout: 15000,
       });
 
-      await reviewPage.getByRole('button', { name: 'Feed' }).click();
-      await expect(reviewPage.getByText('Community field note')).toBeVisible({
+      await reviewPage.getByRole('button', { name: /(push into|share with) coop/i }).click();
+      await expect(
+        reviewPage.getByText(/draft (pushed into shared coop memory|shared with the coop feed)/i),
+      ).toBeVisible({
+        timeout: 15000,
+      });
+
+      await reviewPage.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await expect(reviewPage.getByText('Community field note', { exact: true })).toBeVisible({
         timeout: 15000,
       });
 
       await reviewPage.selectOption('#active-coop-select', { label: 'Forest Signals' });
-      await reviewPage.getByRole('button', { name: 'Feed' }).click();
-      await expect(reviewPage.getByText('Community field note')).toBeVisible({
+      await reviewPage.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await expect(reviewPage.getByText('Community field note', { exact: true })).toBeVisible({
         timeout: 15000,
       });
     } finally {

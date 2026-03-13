@@ -77,6 +77,14 @@ async function closeContextSafely(context) {
   }
 }
 
+async function openOptionalSetup(page) {
+  const optionalSetup = page.locator('details.collapsible-card').first();
+  const isOpen = await optionalSetup.evaluate((element) => element.hasAttribute('open'));
+  if (!isOpen) {
+    await optionalSetup.locator('summary').click();
+  }
+}
+
 async function launchExtensionProfile(userDataDir) {
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
@@ -149,6 +157,7 @@ test.describe('extension workflow', () => {
         '#seed-contribution',
         'I bring loose research tabs and funding opportunities.',
       );
+      await openOptionalSetup(creatorProfile.page);
       await creatorProfile.page.fill('#capitalCurrent', 'Funding links live in scattered docs.');
       await creatorProfile.page.fill('#capitalPain', 'Good grant context keeps disappearing.');
       await creatorProfile.page.fill('#capitalImprove', 'Surface fundable leads in shared review.');
@@ -161,18 +170,22 @@ test.describe('extension workflow', () => {
       await creatorProfile.page.fill('#knowledgeCurrent', 'Resources live in browser tabs.');
       await creatorProfile.page.fill('#knowledgePain', 'People repeat the same research.');
       await creatorProfile.page.fill('#knowledgeImprove', 'Create a shared knowledge commons.');
-      await creatorProfile.page.getByRole('button', { name: /launch the coop/i }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(launch the coop|start this coop)/i })
+        .click();
 
       await expect(creatorProfile.page.getByText(/coop created\./i)).toBeVisible({
         timeout: 30000,
       });
-      await creatorProfile.page.getByRole('button', { name: 'Coops' }).click();
+      await creatorProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
       await expect(
         creatorProfile.page.getByRole('heading', { name: 'Coop Town Test' }),
       ).toBeVisible();
       await expect(creatorProfile.page.getByText(/0x[a-fA-F0-9]{40}/).first()).toBeVisible();
 
-      await creatorProfile.page.getByRole('button', { name: /create member invite/i }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(create|make) member invite/i })
+        .click();
       const inviteCode = await creatorProfile.page.locator('#invite-code').inputValue();
 
       memberProfile = await launchExtensionProfile(memberUserDataDir);
@@ -180,16 +193,20 @@ test.describe('extension workflow', () => {
       await memberProfile.page.fill('#join-code', inviteCode);
       await memberProfile.page.fill('#join-name', 'Mina');
       await memberProfile.page.fill('#join-seed', 'I bring review energy and member context.');
-      await memberProfile.page.getByRole('button', { name: /join coop/i }).click();
+      await memberProfile.page.getByRole('button', { name: /join( this)? coop/i }).click();
 
       await expect(
-        memberProfile.page.getByText(/member joined and seed contribution published/i),
+        memberProfile.page.getByText(
+          /member joined and (seed contribution published|starter note saved)/i,
+        ),
       ).toBeVisible();
-      await memberProfile.page.getByRole('button', { name: 'Coops' }).click();
+      await memberProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
       await expect(memberProfile.page.getByText('Mina')).toBeVisible();
 
       await creatorProfile.page.getByRole('button', { name: 'Loose Chickens' }).click();
-      await creatorProfile.page.getByRole('button', { name: /manual round-up/i }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(manual round-up|round up now)/i })
+        .click();
       await creatorProfile.page.getByRole('button', { name: 'Roost' }).click();
       const firstDraftTitleInput = creatorProfile.page
         .locator('.draft-card input[id^="title-"]')
@@ -198,45 +215,52 @@ test.describe('extension workflow', () => {
         timeout: 15000,
       });
       await expect(
-        creatorProfile.page.getByRole('button', { name: /push into coop/i }).first(),
+        creatorProfile.page.getByRole('button', { name: /(push into|share with) coop/i }).first(),
       ).toBeVisible({
         timeout: 15000,
       });
       const publishedTitle = await firstDraftTitleInput.inputValue();
       await creatorProfile.page
-        .getByRole('button', { name: /push into coop/i })
+        .getByRole('button', { name: /(push into|share with) coop/i })
         .first()
         .click();
       await expect(
-        creatorProfile.page.getByText(/draft pushed into shared coop memory/i),
+        creatorProfile.page.getByText(
+          /draft (pushed into shared coop memory|shared with the coop feed)/i,
+        ),
       ).toBeVisible();
 
-      await memberProfile.page.getByRole('button', { name: 'Feed' }).click();
+      await memberProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
       if (publishedTitle) {
         await expect(memberProfile.page.getByText(publishedTitle.trim())).toBeVisible({
           timeout: 15000,
         });
       }
 
-      await creatorProfile.page.getByRole('button', { name: 'Settings' }).click();
-      await creatorProfile.page.getByRole('button', { name: /archive latest artifact/i }).click();
+      await creatorProfile.page.getByRole('button', { name: /^(Settings|Nest Tools)$/i }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(archive latest artifact|save latest find)/i })
+        .click();
       await expect(
-        creatorProfile.page.getByText(/archive receipt created and stored/i),
+        creatorProfile.page.getByText(
+          /(archive receipt created and stored|saved proof created and stored)/i,
+        ),
       ).toBeVisible();
 
-      await creatorProfile.page.getByRole('button', { name: 'Feed' }).click();
-      const boardPagePromise = creatorProfile.context.waitForEvent('page');
-      await creatorProfile.page
-        .getByRole('link', { name: /open board/i })
+      await creatorProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      const boardUrl = await creatorProfile.page
+        .getByRole('link', { name: /open.*board/i })
         .first()
-        .click();
-      const boardPage = await boardPagePromise;
+        .getAttribute('href');
+      expect(boardUrl).toBeTruthy();
+      const boardPage = await creatorProfile.context.newPage();
+      await boardPage.goto(boardUrl);
       await boardPage.waitForLoadState('domcontentloaded');
       await expect(boardPage.getByRole('heading', { name: 'Coop Town Test' })).toBeVisible({
         timeout: 15000,
       });
       const boardSurface = boardPage.getByTestId('coop-board-surface');
-      await expect(boardPage.getByText('Storacha / Filecoin trail')).toBeVisible({
+      await expect(boardPage.getByRole('heading', { name: /saved proof trail/i })).toBeVisible({
         timeout: 15000,
       });
       await expect(boardSurface.getByText(publishedTitle.trim()).first()).toBeVisible({
@@ -252,6 +276,134 @@ test.describe('extension workflow', () => {
       if (memberProfile) {
         await closeContextSafely(memberProfile.context);
       }
+      await closeContextSafely(creatorProfile.context);
+    }
+  });
+
+  test('@agent-loop shows the agent console and completes a trusted-node agent cycle', async () => {
+    execSync(
+      'VITE_COOP_ONCHAIN_MODE=mock VITE_COOP_ARCHIVE_MODE=mock VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444 bun run --filter @coop/extension build',
+      {
+        cwd: rootDir,
+        stdio: 'inherit',
+      },
+    );
+
+    const creatorUserDataDir = path.join(os.tmpdir(), `coop-agent-loop-${Date.now()}`);
+    const creatorProfile = await launchExtensionProfile(creatorUserDataDir);
+
+    try {
+      const creatorAppPage = await creatorProfile.context.newPage();
+      await creatorAppPage.goto('http://127.0.0.1:3001/manual-roundup-fixture.html');
+      await creatorProfile.page.bringToFront();
+
+      await creatorProfile.page.fill('#coop-name', 'Agent Loop Coop');
+      await creatorProfile.page.fill(
+        '#coop-purpose',
+        'Turn ecological signals into shared funding opportunities and review-ready briefs.',
+      );
+      await creatorProfile.page.fill('#creator-name', 'Ari');
+      await creatorProfile.page.fill(
+        '#summary',
+        'We want a trusted-node loop that turns local signals into ecological opportunity briefs.',
+      );
+      await creatorProfile.page.fill(
+        '#seed-contribution',
+        'I bring watershed funding leads and operator review context.',
+      );
+      await openOptionalSetup(creatorProfile.page);
+      await creatorProfile.page.fill(
+        '#capitalCurrent',
+        'Funding research is scattered across tabs.',
+      );
+      await creatorProfile.page.fill('#capitalPain', 'High-signal opportunities are easy to miss.');
+      await creatorProfile.page.fill(
+        '#capitalImprove',
+        'Generate concise, review-ready funding briefs.',
+      );
+      await creatorProfile.page.fill('#impactCurrent', 'Impact evidence is reviewed ad hoc.');
+      await creatorProfile.page.fill('#impactPain', 'Shared context is stale by the time we meet.');
+      await creatorProfile.page.fill(
+        '#impactImprove',
+        'Keep opportunity context fresh in weekly review.',
+      );
+      await creatorProfile.page.fill(
+        '#governanceCurrent',
+        'Trusted members coordinate review manually.',
+      );
+      await creatorProfile.page.fill(
+        '#governancePain',
+        'Follow-up actions disappear after the meeting.',
+      );
+      await creatorProfile.page.fill(
+        '#governanceImprove',
+        'Let the operator console queue bounded actions.',
+      );
+      await creatorProfile.page.fill(
+        '#knowledgeCurrent',
+        'Bioregional research lives in open tabs.',
+      );
+      await creatorProfile.page.fill('#knowledgePain', 'The same research gets repeated.');
+      await creatorProfile.page.fill(
+        '#knowledgeImprove',
+        'Cluster themes into reusable shared memory.',
+      );
+      await creatorProfile.page
+        .getByRole('button', { name: /(launch the coop|start this coop)/i })
+        .click();
+
+      await expect(creatorProfile.page.getByText(/coop created\./i)).toBeVisible({
+        timeout: 30000,
+      });
+
+      await creatorProfile.page.getByRole('button', { name: 'Loose Chickens' }).click();
+      await creatorProfile.page
+        .getByRole('button', { name: /(manual round-up|round up now)/i })
+        .click();
+      await expect(creatorProfile.page.getByText(/round-up complete(d)?\./i)).toBeVisible({
+        timeout: 15000,
+      });
+
+      await creatorProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await expect(
+        creatorProfile.page.getByRole('heading', { name: /^(Agent Skills|Helper Runs)$/i }),
+      ).toBeVisible();
+      await expect(
+        creatorProfile.page.getByRole('heading', {
+          name: /^(Agent Observations|What Helpers Noticed)$/i,
+        }),
+      ).toBeVisible();
+      await expect(creatorProfile.page.getByText('opportunity-extractor')).toBeVisible();
+
+      await creatorProfile.page
+        .getByRole('button', { name: /(run agent cycle|check the helpers)/i })
+        .click();
+      await expect(creatorProfile.page.getByText(/agent cycle requested\./i)).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(creatorProfile.page.getByText('capital-formation-brief-output')).toBeVisible({
+        timeout: 30000,
+      });
+
+      await creatorProfile.page.getByRole('button', { name: 'Roost' }).click();
+      await expect
+        .poll(
+          async () =>
+            creatorProfile.page
+              .locator('input[id^="title-"]')
+              .evaluateAll((elements) =>
+                elements.some((element) =>
+                  /capital formation brief/i.test(
+                    element instanceof HTMLInputElement ? element.value : '',
+                  ),
+                ),
+              ),
+          {
+            timeout: 30000,
+          },
+        )
+        .toBe(true);
+    } finally {
       await closeContextSafely(creatorProfile.context);
     }
   });
