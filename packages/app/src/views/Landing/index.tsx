@@ -64,9 +64,16 @@ export function App() {
   const copyStateText = useMemo(() => (copied ? 'Copied' : 'Copy helper prompt'), [copied]);
 
   async function copyPrompt() {
-    await navigator.clipboard.writeText(ritualPrompt);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    if (!navigator.clipboard?.writeText) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(ritualPrompt);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // clipboard permission denied — no-op for copy button
+    }
   }
 
   return (

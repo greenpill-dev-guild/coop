@@ -141,7 +141,8 @@ export function connectSyncProviders(doc: Y.Doc, room: SyncRoomConfig) {
       password: room.roomSecret,
       maxConns: 8,
     });
-  } catch {
+  } catch (error) {
+    console.warn('WebRTC provider failed to initialize:', error);
     webrtc = undefined;
   }
 

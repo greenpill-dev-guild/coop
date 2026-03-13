@@ -85,4 +85,17 @@ describe('sessionCapabilityChanged', () => {
     });
     expect(sessionCapabilityChanged(a, b)).toBe(true);
   });
+
+  it('treats undefined and null as equivalent for optional fields', () => {
+    const base = makeCapability();
+    const withNulls = {
+      ...makeCapability(),
+      lastValidationFailure: null as unknown as undefined,
+      revokedAt: null as unknown as string | undefined,
+      lastUsedAt: null as unknown as string | undefined,
+      enableSignature: null as unknown as string | undefined,
+      permissionId: null as unknown as string | undefined,
+    };
+    expect(sessionCapabilityChanged(base, withNulls)).toBe(false);
+  });
 });

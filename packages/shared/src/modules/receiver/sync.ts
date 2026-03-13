@@ -127,7 +127,8 @@ export function connectReceiverSyncProviders(
         password: password ?? roomId,
         maxConns: 6,
       });
-    } catch {
+    } catch (error) {
+      console.warn('Receiver WebRTC provider failed to initialize:', error);
       webrtc = undefined;
     }
   }

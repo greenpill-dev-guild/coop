@@ -32,16 +32,19 @@ export function sessionCapabilityChanged(
     | 'permissionId'
   >,
 ): boolean {
+  // Normalize optional fields: Zod .optional() produces undefined for absent
+  // fields, but Dexie/IndexedDB may store null. Coerce both to null so that
+  // undefined !== null does not falsely report a change.
   return (
     a.status !== b.status ||
     a.updatedAt !== b.updatedAt ||
     a.usedCount !== b.usedCount ||
-    a.lastValidationFailure !== b.lastValidationFailure ||
-    a.statusDetail !== b.statusDetail ||
-    a.revokedAt !== b.revokedAt ||
-    a.lastUsedAt !== b.lastUsedAt ||
-    a.moduleInstalledAt !== b.moduleInstalledAt ||
-    a.enableSignature !== b.enableSignature ||
-    a.permissionId !== b.permissionId
+    (a.lastValidationFailure ?? null) !== (b.lastValidationFailure ?? null) ||
+    (a.statusDetail ?? null) !== (b.statusDetail ?? null) ||
+    (a.revokedAt ?? null) !== (b.revokedAt ?? null) ||
+    (a.lastUsedAt ?? null) !== (b.lastUsedAt ?? null) ||
+    (a.moduleInstalledAt ?? null) !== (b.moduleInstalledAt ?? null) ||
+    (a.enableSignature ?? null) !== (b.enableSignature ?? null) ||
+    (a.permissionId ?? null) !== (b.permissionId ?? null)
   );
 }

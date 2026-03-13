@@ -38,6 +38,7 @@ import {
   buildSmartSession,
   checkSessionCapabilityEnabled,
   completeAgentPlan,
+  coopSharedStateSchema,
   createActionBundle,
   createActionLogEntry,
   createAgentObservation,
@@ -945,7 +946,7 @@ async function getRuntimeHealth() {
       'contextMenus',
       'notifications',
     ],
-    origins: ['http://*/*', 'https://*/*'],
+    origins: ['http://127.0.0.1/*', 'http://localhost/*'],
   }));
   const offline = typeof navigator !== 'undefined' ? navigator.onLine === false : false;
   const stored = await getLocalSetting<RuntimeHealth>(
@@ -5640,11 +5641,18 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         await setLocalSetting(stateKeys.activeCoopId, message.payload.coopId);
         sendResponse({ ok: true } satisfies RuntimeActionResponse);
         return;
-      case 'persist-coop-state':
-        await saveState(message.payload.state);
+      case 'persist-coop-state': {
+        const parsed = coopSharedStateSchema.safeParse(message.payload.state);
+        if (!parsed.success) {
+          console.warn('persist-coop-state validation failed:', parsed.error.issues);
+          sendResponse({ ok: false, error: 'Invalid coop state' } satisfies RuntimeActionResponse);
+          return;
+        }
+        await saveState(parsed.data);
         await refreshBadge();
         sendResponse({ ok: true } satisfies RuntimeActionResponse);
         return;
+      }
       case 'report-sync-health':
         await setRuntimeHealth({
           syncError: message.payload.syncError,

@@ -221,7 +221,16 @@ const suites = {
   },
   full: {
     description: 'Full local validation pass used before demos or bigger merges.',
-    includes: ['lint', 'unit', 'build', 'landing', 'e2e:extension', 'e2e:receiver-sync'],
+    includes: [
+      'lint',
+      'unit',
+      'build',
+      'landing',
+      'e2e:extension',
+      'e2e:receiver-sync',
+      'e2e:agent-loop',
+      'e2e:flow-board',
+    ],
   },
 };
 

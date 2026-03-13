@@ -6,8 +6,8 @@ describe('assertHexString', () => {
     expect(assertHexString('0xabcdef1234')).toBe('0xabcdef1234');
   });
 
-  it('accepts an empty hex string (0x)', () => {
-    expect(assertHexString('0x')).toBe('0x');
+  it('rejects an empty hex string (0x)', () => {
+    expect(() => assertHexString('0x')).toThrow(/hex string/i);
   });
 
   it('accepts a full 40-char address', () => {

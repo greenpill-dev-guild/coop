@@ -16,7 +16,7 @@ export function createId(prefix = 'coop') {
 }
 
 export function assertHexString(value: string, fieldName?: string): `0x${string}` {
-  if (typeof value !== 'string' || !value.startsWith('0x') || !/^0x[0-9a-fA-F]*$/.test(value)) {
+  if (typeof value !== 'string' || !value.startsWith('0x') || !/^0x[0-9a-fA-F]+$/.test(value)) {
     throw new Error(
       fieldName
         ? `Expected ${fieldName} to be a hex string (0x-prefixed), got: ${value.slice(0, 20)}`

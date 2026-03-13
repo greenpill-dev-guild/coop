@@ -276,11 +276,21 @@ test.describe('receiver pairing and sync', () => {
         'receiver capture injection',
       );
       await expect(
-        appPage.locator('.nest-item-card strong').filter({ hasText: 'field-note.txt' }).first(),
-      ).toBeVisible({
-        timeout: 15000,
-      });
-      await appPage.waitForTimeout(4000);
+        appPage.locator('.nest-item-card').filter({ hasText: 'field-note.txt' }).first(),
+      ).toBeVisible({ timeout: 15000 });
+      await expect
+        .poll(
+          async () => {
+            const cardCount = await appPage.locator('.nest-item-card').count();
+            const hasFile = await appPage
+              .locator('.nest-item-card strong')
+              .filter({ hasText: 'field-note.txt' })
+              .count();
+            return cardCount >= 1 && hasFile >= 1;
+          },
+          { timeout: 15000 },
+        )
+        .toBe(true);
 
       const reviewPage = await creatorProfile.context.newPage();
       await reviewPage.goto(`chrome-extension://${creatorProfile.extensionId}/sidepanel.html`);
