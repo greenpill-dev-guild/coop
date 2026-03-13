@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "popup.html", "sidepanel.html"]
+  "include": ["src", "offscreen.html", "popup.html", "sidepanel.html"]
 }

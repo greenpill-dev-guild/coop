@@ -49,7 +49,22 @@ export function exportArchiveReceiptTextBundle(receipt: ArchiveReceipt) {
     `Gateway: ${receipt.gatewayUrl}`,
     `Filecoin status: ${receipt.filecoinStatus}`,
     `Delegation issuer: ${receipt.delegationIssuer}`,
-  ].join('\n');
+    receipt.delegation ? `Delegation mode: ${receipt.delegation.mode}` : null,
+    receipt.delegation?.issuerUrl ? `Delegation source: ${receipt.delegation.issuerUrl}` : null,
+    receipt.pieceCids.length > 0 ? `Piece CIDs: ${receipt.pieceCids.join(', ')}` : null,
+    receipt.filecoinInfo?.aggregates.length
+      ? `Aggregates: ${receipt.filecoinInfo.aggregates.map((item) => item.aggregate).join(', ')}`
+      : null,
+    receipt.filecoinInfo?.deals.length
+      ? `Deals: ${receipt.filecoinInfo.deals.map((deal) => deal.dealId ?? 'pending').join(', ')}`
+      : null,
+    receipt.followUp?.lastRefreshedAt
+      ? `Last follow-up refresh: ${receipt.followUp.lastRefreshedAt}`
+      : null,
+    receipt.followUp?.lastError ? `Last follow-up error: ${receipt.followUp.lastError}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export function exportCoopSnapshotJson(state: CoopSharedState) {

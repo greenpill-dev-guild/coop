@@ -5,6 +5,31 @@ const { chromium, expect, test } = require('@playwright/test');
 
 const rootDir = path.resolve(__dirname, '..');
 const extensionDir = path.join(rootDir, 'packages/extension/dist');
+const closeTimeoutMs = 5000;
+
+function withTimeout(promise, timeoutMs, label = 'operation') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]);
+}
+
+function isBenignCloseError(error) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  if (error.code === 'ENOENT') {
+    return true;
+  }
+
+  return (
+    error instanceof Error &&
+    /Target page, context or browser has been closed|Browser has been closed/i.test(error.message)
+  );
+}
 
 async function closeContextSafely(context) {
   if (!context) {
@@ -12,12 +37,43 @@ async function closeContextSafely(context) {
   }
 
   try {
-    await context.close();
+    await Promise.allSettled(
+      context.pages().map((page) =>
+        withTimeout(page.close(), closeTimeoutMs, 'extension e2e page.close').catch((error) => {
+          if (!isBenignCloseError(error)) {
+            throw error;
+          }
+        }),
+      ),
+    );
+
+    await withTimeout(
+      context.close({ reason: 'extension e2e teardown' }),
+      closeTimeoutMs,
+      'extension e2e context.close',
+    );
   } catch (error) {
-    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+    if (isBenignCloseError(error)) {
       return;
     }
-    throw error;
+
+    const browser = context.browser();
+    if (!browser) {
+      throw error;
+    }
+
+    try {
+      await withTimeout(
+        browser.close({ reason: 'force extension e2e teardown' }),
+        closeTimeoutMs,
+        'extension e2e browser.close fallback',
+      );
+    } catch (browserError) {
+      if (isBenignCloseError(browserError)) {
+        return;
+      }
+      throw browserError;
+    }
   }
 }
 
@@ -60,7 +116,7 @@ test.describe('extension workflow', () => {
     'Extension automation runs only on the desktop Chromium project.',
   );
 
-  test('creates a coop, joins from a second profile, syncs state, rounds up a tab, and archives a result', async () => {
+  test('@flow-board creates a coop, publishes memory, archives a result, and opens the board', async () => {
     execSync(
       'VITE_COOP_ONCHAIN_MODE=mock VITE_COOP_ARCHIVE_MODE=mock VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444 bun run --filter @coop/extension build',
       {
@@ -76,7 +132,7 @@ test.describe('extension workflow', () => {
 
     try {
       const creatorAppPage = await creatorProfile.context.newPage();
-      await creatorAppPage.goto('http://127.0.0.1:3001');
+      await creatorAppPage.goto('http://127.0.0.1:3001/manual-roundup-fixture.html');
       await creatorProfile.page.bringToFront();
 
       await creatorProfile.page.fill('#coop-name', 'Coop Town Test');
@@ -107,9 +163,7 @@ test.describe('extension workflow', () => {
       await creatorProfile.page.fill('#knowledgeImprove', 'Create a shared knowledge commons.');
       await creatorProfile.page.getByRole('button', { name: /launch the coop/i }).click();
 
-      await expect(
-        creatorProfile.page.locator('.summary-card strong').filter({ hasText: 'Coop Town Test' }),
-      ).toBeVisible({
+      await expect(creatorProfile.page.getByText(/coop created\./i)).toBeVisible({
         timeout: 30000,
       });
       await creatorProfile.page.getByRole('button', { name: 'Coops' }).click();
@@ -136,20 +190,19 @@ test.describe('extension workflow', () => {
 
       await creatorProfile.page.getByRole('button', { name: 'Loose Chickens' }).click();
       await creatorProfile.page.getByRole('button', { name: /manual round-up/i }).click();
-      await expect(creatorProfile.page.getByText(/manual round-up completed/i)).toBeVisible({
+      await creatorProfile.page.getByRole('button', { name: 'Roost' }).click();
+      const firstDraftTitleInput = creatorProfile.page
+        .locator('.draft-card input[id^="title-"]')
+        .first();
+      await expect(firstDraftTitleInput).toHaveValue('Funding roundup for Coop Town Test', {
         timeout: 15000,
       });
-
-      await creatorProfile.page.getByRole('button', { name: 'Roost' }).click();
       await expect(
         creatorProfile.page.getByRole('button', { name: /push into coop/i }).first(),
       ).toBeVisible({
         timeout: 15000,
       });
-      const publishedTitle = await creatorProfile.page
-        .locator('.draft-card input[id^="title-"]')
-        .first()
-        .inputValue();
+      const publishedTitle = await firstDraftTitleInput.inputValue();
       await creatorProfile.page
         .getByRole('button', { name: /push into coop/i })
         .first()
@@ -170,6 +223,31 @@ test.describe('extension workflow', () => {
       await expect(
         creatorProfile.page.getByText(/archive receipt created and stored/i),
       ).toBeVisible();
+
+      await creatorProfile.page.getByRole('button', { name: 'Feed' }).click();
+      const boardPagePromise = creatorProfile.context.waitForEvent('page');
+      await creatorProfile.page
+        .getByRole('link', { name: /open board/i })
+        .first()
+        .click();
+      const boardPage = await boardPagePromise;
+      await boardPage.waitForLoadState('domcontentloaded');
+      await expect(boardPage.getByRole('heading', { name: 'Coop Town Test' })).toBeVisible({
+        timeout: 15000,
+      });
+      const boardSurface = boardPage.getByTestId('coop-board-surface');
+      await expect(boardPage.getByText('Storacha / Filecoin trail')).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(boardSurface.getByText(publishedTitle.trim()).first()).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(boardSurface.getByText('published to coop').first()).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(boardSurface.getByText('archived in').first()).toBeVisible({
+        timeout: 15000,
+      });
     } finally {
       if (memberProfile) {
         await closeContextSafely(memberProfile.context);

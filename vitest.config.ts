@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@coop/shared/contracts': path.resolve(__dirname, 'packages/shared/src/contracts/index.ts'),
       '@coop/shared': path.resolve(__dirname, 'packages/shared/src/index.ts'),
     },
   },
@@ -15,6 +16,7 @@ export default defineConfig({
     include: [
       'packages/app/src/**/*.test.{ts,tsx}',
       'packages/extension/src/**/*.test.{ts,tsx}',
+      'packages/issuer/**/*.test.{ts,tsx}',
       'packages/shared/src/**/*.test.{ts,tsx}',
     ],
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],

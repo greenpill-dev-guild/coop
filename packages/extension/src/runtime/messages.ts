@@ -1,14 +1,20 @@
 import type {
+  AnchorCapability,
   ArchiveReceipt,
   Artifact,
   AuthSession,
   CaptureMode,
   CoopSharedState,
   ExtensionIconState,
+  IntegrationMode,
   InviteType,
   LocalPasskeyIdentity,
   Member,
   OnchainState,
+  PrivilegedActionLogEntry,
+  ReceiverCapture,
+  ReceiverPairingRecord,
+  ReceiverSyncEnvelope,
   ReviewDraft,
   SoundEvent,
   SoundPreferences,
@@ -36,12 +42,49 @@ export interface DashboardResponse {
   soundPreferences: SoundPreferences;
   authSession?: AuthSession | null;
   identities: LocalPasskeyIdentity[];
+  receiverPairings: ReceiverPairingRecord[];
+  receiverIntake: ReceiverCapture[];
+  operator: {
+    anchorCapability: AnchorCapability | null;
+    anchorActive: boolean;
+    anchorDetail: string;
+    actionLog: PrivilegedActionLogEntry[];
+    archiveMode: IntegrationMode;
+    onchainMode: IntegrationMode;
+    liveArchiveAvailable: boolean;
+    liveArchiveDetail: string;
+    liveOnchainAvailable: boolean;
+    liveOnchainDetail: string;
+  };
+}
+
+export interface ReceiverSyncConfigResponse {
+  pairings: ReceiverPairingRecord[];
+}
+
+export interface ReceiverSyncRuntimeStatus {
+  loadedAt?: string;
+  lastRefreshedAt?: string;
+  lastBindingCreatedAt?: string;
+  lastBindingDisconnectedAt?: string;
+  lastDocUpdateAt?: string;
+  lastEnvelopeCount?: number;
+  lastIngestAttemptAt?: string;
+  lastIngestSuccessAt?: string;
+  lastError?: string;
+  transport?: 'none' | 'indexeddb-only' | 'webrtc' | 'websocket';
+  hasWebSocket?: boolean;
+  hasRtcPeerConnection?: boolean;
+  activePairingIds: string[];
+  activeBindingKeys: string[];
 }
 
 export type RuntimeRequest =
   | { type: 'get-auth-session' }
   | { type: 'set-auth-session'; payload: AuthSession | null }
   | { type: 'get-dashboard' }
+  | { type: 'get-receiver-sync-config' }
+  | { type: 'get-receiver-sync-runtime' }
   | { type: 'manual-capture' }
   | {
       type: 'create-coop';
@@ -58,8 +101,36 @@ export type RuntimeRequest =
       };
     }
   | {
+      type: 'create-receiver-pairing';
+      payload: { coopId: string; memberId: string };
+    }
+  | {
+      type: 'ingest-receiver-capture';
+      payload: ReceiverSyncEnvelope;
+    }
+  | {
+      type: 'convert-receiver-intake';
+      payload: {
+        captureId: string;
+        workflowStage: 'candidate' | 'ready';
+        targetCoopId?: string;
+      };
+    }
+  | {
+      type: 'archive-receiver-intake';
+      payload: { captureId: string };
+    }
+  | {
+      type: 'set-receiver-intake-archive-worthy';
+      payload: { captureId: string; archiveWorthy: boolean };
+    }
+  | {
       type: 'create-invite';
       payload: { coopId: string; inviteType: InviteType; createdBy: string };
+    }
+  | {
+      type: 'set-active-receiver-pairing';
+      payload: { pairingId: string };
     }
   | {
       type: 'join-coop';
@@ -75,7 +146,21 @@ export type RuntimeRequest =
       payload: {
         draft: ReviewDraft;
         targetCoopIds: string[];
-        actorId: string;
+      };
+    }
+  | {
+      type: 'update-review-draft';
+      payload: {
+        draft: ReviewDraft;
+      };
+    }
+  | {
+      type: 'update-meeting-settings';
+      payload: {
+        coopId: string;
+        weeklyReviewCadence: string;
+        facilitatorExpectation: string;
+        defaultCapturePosture: string;
       };
     }
   | {
@@ -83,8 +168,16 @@ export type RuntimeRequest =
       payload: { coopId: string; artifactId: string };
     }
   | {
+      type: 'set-artifact-archive-worthy';
+      payload: { coopId: string; artifactId: string; archiveWorthy: boolean };
+    }
+  | {
       type: 'archive-snapshot';
       payload: { coopId: string };
+    }
+  | {
+      type: 'refresh-archive-status';
+      payload: { coopId: string; receiptId?: string };
     }
   | { type: 'export-snapshot'; payload: { coopId: string; format: 'json' | 'text' } }
   | {
@@ -96,10 +189,19 @@ export type RuntimeRequest =
       payload: { coopId: string; receiptId: string; format: 'json' | 'text' };
     }
   | { type: 'set-sound-preferences'; payload: SoundPreferences }
+  | { type: 'set-anchor-mode'; payload: { enabled: boolean } }
   | { type: 'set-capture-mode'; payload: { captureMode: CaptureMode } }
   | { type: 'set-active-coop'; payload: { coopId: string } }
   | { type: 'persist-coop-state'; payload: { state: CoopSharedState } }
-  | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } };
+  | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
+  | {
+      type: 'resolve-onchain-state';
+      payload: { coopSeed: string };
+    }
+  | {
+      type: 'report-receiver-sync-runtime';
+      payload: Partial<ReceiverSyncRuntimeStatus>;
+    };
 
 export interface RuntimeActionResponse<T = unknown> {
   ok: boolean;

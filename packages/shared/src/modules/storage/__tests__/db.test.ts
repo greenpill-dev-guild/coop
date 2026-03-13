@@ -1,16 +1,27 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createMockPasskeyIdentity } from '../../auth/identity';
 import { createCoop } from '../../coop/flows';
+import { createReceiverCapture, createReceiverDeviceIdentity } from '../../receiver/capture';
+import { createReceiverPairingPayload, toReceiverPairingRecord } from '../../receiver/pairing';
 import {
   createCoopDb,
+  getActiveReceiverPairing,
   getAuthSession,
+  getReceiverCaptureBlob,
+  getReceiverDeviceIdentity,
   getSoundPreferences,
   listLocalIdentities,
+  listReceiverCaptures,
+  listReceiverPairings,
   loadCoopState,
   saveCoopState,
+  saveReceiverCapture,
+  setActiveReceiverPairing,
   setAuthSession,
+  setReceiverDeviceIdentity,
   setSoundPreferences,
   upsertLocalIdentity,
+  upsertReceiverPairing,
 } from '../db';
 
 const databases: ReturnType<typeof createCoopDb>[] = [];
@@ -127,5 +138,76 @@ describe('coop Dexie storage', () => {
     const identities = await listLocalIdentities(db);
 
     expect(identities.map((identity) => identity.displayName)).toEqual(['Newer', 'Older']);
+  });
+
+  it('stores receiver pairings, captures, blobs, and device identity locally', async () => {
+    const db = createCoopDb(`coop-db-${crypto.randomUUID()}`);
+    databases.push(db);
+    const device = createReceiverDeviceIdentity('Field Phone');
+    const pairing = toReceiverPairingRecord(
+      createReceiverPairingPayload({
+        coopId: 'coop-1',
+        coopDisplayName: 'River Coop',
+        memberId: 'member-1',
+        memberDisplayName: 'Mina',
+        signalingUrls: ['ws://127.0.0.1:4444'],
+      }),
+      '2026-03-11T18:00:00.000Z',
+    );
+    const blob = new Blob(['soft clucks'], { type: 'audio/webm' });
+    const capture = createReceiverCapture({
+      deviceId: device.id,
+      kind: 'audio',
+      blob,
+      pairing,
+      title: 'Field voice note',
+    });
+
+    await setReceiverDeviceIdentity(db, device);
+    await upsertReceiverPairing(db, pairing);
+    await setActiveReceiverPairing(db, pairing.pairingId);
+    await saveReceiverCapture(db, capture, blob);
+
+    expect(await getReceiverDeviceIdentity(db)).toEqual(device);
+    expect((await getActiveReceiverPairing(db))?.pairingId).toBe(pairing.pairingId);
+    expect((await listReceiverPairings(db)).map((item) => item.coopDisplayName)).toEqual([
+      'River Coop',
+    ]);
+    expect((await listReceiverCaptures(db)).map((item) => item.title)).toEqual([
+      'Field voice note',
+    ]);
+    const storedBlob = await getReceiverCaptureBlob(db, capture.id);
+    expect(storedBlob).not.toBeNull();
+  });
+
+  it('does not clear the active receiver pairing when switching to an unknown id', async () => {
+    const db = createCoopDb(`coop-db-${crypto.randomUUID()}`);
+    databases.push(db);
+    const first = toReceiverPairingRecord(
+      createReceiverPairingPayload({
+        coopId: 'coop-1',
+        coopDisplayName: 'River Coop',
+        memberId: 'member-1',
+        memberDisplayName: 'Mina',
+      }),
+      '2026-03-11T18:00:00.000Z',
+    );
+    const second = toReceiverPairingRecord(
+      createReceiverPairingPayload({
+        coopId: 'coop-1',
+        coopDisplayName: 'River Coop',
+        memberId: 'member-2',
+        memberDisplayName: 'Ari',
+      }),
+      '2026-03-11T18:10:00.000Z',
+    );
+
+    await upsertReceiverPairing(db, { ...first, active: true });
+    await upsertReceiverPairing(db, { ...second, active: false });
+
+    const result = await setActiveReceiverPairing(db, 'missing-pairing-id');
+
+    expect(result).toBeNull();
+    expect((await getActiveReceiverPairing(db))?.pairingId).toBe(first.pairingId);
   });
 });

@@ -1,6 +1,23 @@
 import type { ArchiveBundle, ArchiveReceipt, CoopSharedState } from '../../contracts/schema';
 import { createId, extractDomain, nowIso, toPseudoCid } from '../../utils';
 
+type ArchiveFilecoinInfoInput = {
+  piece?: { toString(): string } | string;
+  aggregates?: Array<{
+    aggregate: { toString(): string } | string;
+    inclusion?: unknown;
+  }>;
+  deals?: Array<{
+    aggregate: { toString(): string } | string;
+    provider?: { toString(): string } | string;
+    aux?: {
+      dataSource?: {
+        dealID?: bigint | number | string;
+      };
+    };
+  }>;
+};
+
 export function createArchiveBundle(input: {
   scope: ArchiveBundle['scope'];
   state: CoopSharedState;
@@ -54,12 +71,25 @@ export function createMockArchiveReceipt(input: {
     uploadedAt: nowIso(),
     filecoinStatus: 'offered',
     delegationIssuer: input.delegationIssuer,
+    delegation: {
+      issuer: input.delegationIssuer,
+      mode: 'mock',
+      allowsFilecoinInfo: false,
+    },
+    followUp: {
+      refreshCount: 0,
+    },
+    filecoinInfo: undefined,
   };
 }
 
 export function createArchiveReceiptFromUpload(input: {
   bundle: ArchiveBundle;
   delegationIssuer: string;
+  delegationMode?: NonNullable<ArchiveReceipt['delegation']>['mode'];
+  delegationIssuerUrl?: string;
+  delegationAudienceDid?: string;
+  allowsFilecoinInfo?: boolean;
   rootCid: string;
   shardCids: string[];
   pieceCids: string[];
@@ -81,7 +111,146 @@ export function createArchiveReceiptFromUpload(input: {
     uploadedAt: input.uploadedAt ?? nowIso(),
     filecoinStatus: input.filecoinStatus ?? (input.pieceCids.length > 0 ? 'offered' : 'pending'),
     delegationIssuer: input.delegationIssuer,
+    delegation: {
+      issuer: input.delegationIssuer,
+      issuerUrl: input.delegationIssuerUrl,
+      audienceDid: input.delegationAudienceDid,
+      mode: input.delegationMode ?? 'live',
+      allowsFilecoinInfo: input.allowsFilecoinInfo ?? false,
+    },
+    followUp: {
+      refreshCount: 0,
+    },
+    filecoinInfo:
+      input.pieceCids.length > 0
+        ? {
+            pieceCid: input.pieceCids[0],
+            aggregates: [],
+            deals: [],
+          }
+        : undefined,
   };
+}
+
+export function deriveArchiveReceiptFilecoinStatus(input: {
+  currentStatus?: ArchiveReceipt['filecoinStatus'];
+  pieceCids?: string[];
+  filecoinInfo?: ArchiveReceipt['filecoinInfo'];
+}) {
+  if ((input.filecoinInfo?.deals.length ?? 0) > 0) {
+    return 'sealed' satisfies ArchiveReceipt['filecoinStatus'];
+  }
+
+  if ((input.filecoinInfo?.aggregates.length ?? 0) > 0) {
+    return 'indexed' satisfies ArchiveReceipt['filecoinStatus'];
+  }
+
+  if ((input.pieceCids?.length ?? 0) > 0 || input.filecoinInfo?.pieceCid) {
+    return 'offered' satisfies ArchiveReceipt['filecoinStatus'];
+  }
+
+  return input.currentStatus ?? ('pending' satisfies ArchiveReceipt['filecoinStatus']);
+}
+
+export function isArchiveReceiptRefreshable(receipt: ArchiveReceipt) {
+  return (
+    receipt.delegation?.mode === 'live' &&
+    receipt.filecoinStatus !== 'sealed' &&
+    Boolean(receipt.filecoinInfo?.pieceCid ?? receipt.pieceCids[0])
+  );
+}
+
+export function summarizeArchiveFilecoinInfo(
+  value: ArchiveFilecoinInfoInput,
+  updatedAt = nowIso(),
+) {
+  return {
+    pieceCid:
+      typeof value.piece === 'string'
+        ? value.piece
+        : value.piece
+          ? value.piece.toString()
+          : undefined,
+    aggregates:
+      value.aggregates?.map((aggregate) => ({
+        aggregate:
+          typeof aggregate.aggregate === 'string'
+            ? aggregate.aggregate
+            : aggregate.aggregate.toString(),
+        inclusionProofAvailable: Boolean(aggregate.inclusion),
+      })) ?? [],
+    deals:
+      value.deals?.map((deal) => ({
+        aggregate: typeof deal.aggregate === 'string' ? deal.aggregate : deal.aggregate.toString(),
+        provider:
+          typeof deal.provider === 'string'
+            ? deal.provider
+            : deal.provider
+              ? deal.provider.toString()
+              : undefined,
+        dealId:
+          deal.aux?.dataSource?.dealID !== undefined
+            ? String(deal.aux.dataSource.dealID)
+            : undefined,
+      })) ?? [],
+    lastUpdatedAt: updatedAt,
+  } satisfies NonNullable<ArchiveReceipt['filecoinInfo']>;
+}
+
+export function applyArchiveReceiptFollowUp(input: {
+  receipt: ArchiveReceipt;
+  refreshedAt?: string;
+  filecoinInfo?: ArchiveFilecoinInfoInput;
+  error?: string;
+}) {
+  const refreshedAt = input.refreshedAt ?? nowIso();
+  const nextFilecoinInfo = input.filecoinInfo
+    ? summarizeArchiveFilecoinInfo(input.filecoinInfo, refreshedAt)
+    : input.receipt.filecoinInfo;
+  const nextStatus = deriveArchiveReceiptFilecoinStatus({
+    currentStatus: input.receipt.filecoinStatus,
+    pieceCids: input.receipt.pieceCids,
+    filecoinInfo: nextFilecoinInfo,
+  });
+  const statusChanged = nextStatus !== input.receipt.filecoinStatus;
+
+  return {
+    ...input.receipt,
+    filecoinStatus: nextStatus,
+    filecoinInfo: nextFilecoinInfo,
+    followUp: {
+      refreshCount: (input.receipt.followUp?.refreshCount ?? 0) + 1,
+      lastRefreshRequestedAt: refreshedAt,
+      lastRefreshedAt: input.error ? input.receipt.followUp?.lastRefreshedAt : refreshedAt,
+      lastStatusChangeAt: statusChanged ? refreshedAt : input.receipt.followUp?.lastStatusChangeAt,
+      lastError: input.error,
+    },
+  } satisfies ArchiveReceipt;
+}
+
+export function updateArchiveReceipt(
+  state: CoopSharedState,
+  receiptId: string,
+  nextReceipt: ArchiveReceipt,
+) {
+  let updated = false;
+  const archiveReceipts = state.archiveReceipts.map((receipt) => {
+    if (receipt.id !== receiptId) {
+      return receipt;
+    }
+
+    updated = true;
+    return nextReceipt;
+  });
+
+  if (!updated) {
+    return state;
+  }
+
+  return {
+    ...state,
+    archiveReceipts,
+  } satisfies CoopSharedState;
 }
 
 export function recordArchiveReceipt(

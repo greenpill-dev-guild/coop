@@ -3,8 +3,15 @@
   "name": "Coop v1",
   "version": "0.1.0",
   "description": "Browser-first shared intelligence for coordinated communities.",
-  "permissions": ["storage", "alarms", "tabs", "scripting", "sidePanel", "activeTab"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": ["storage", "alarms", "tabs", "scripting", "sidePanel", "activeTab", "offscreen"],
+  "host_permissions": ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1/*", "http://localhost/*"],
+      "js": ["receiver-bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"

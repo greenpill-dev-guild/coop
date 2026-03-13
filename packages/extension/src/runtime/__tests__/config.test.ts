@@ -6,12 +6,15 @@ import {
   resolveConfiguredArchiveMode,
   resolveConfiguredChain,
   resolveConfiguredOnchainMode,
+  resolveReceiverAppUrl,
 } from '../config';
 
 describe('runtime config helpers', () => {
   it('normalizes chain and mode defaults', () => {
-    expect(resolveConfiguredChain('celo')).toBe('celo');
-    expect(resolveConfiguredChain('anything-else')).toBe('celo-sepolia');
+    expect(resolveConfiguredChain('arbitrum')).toBe('arbitrum');
+    expect(resolveConfiguredChain('sepolia')).toBe('sepolia');
+    expect(resolveConfiguredChain('celo')).toBe('sepolia');
+    expect(resolveConfiguredChain('anything-else')).toBe('sepolia');
     expect(resolveConfiguredOnchainMode(undefined, 'pimlico-key')).toBe('live');
     expect(resolveConfiguredOnchainMode(undefined, undefined)).toBe('mock');
     expect(resolveConfiguredArchiveMode(undefined, 'https://issuer.example')).toBe('live');
@@ -26,6 +29,8 @@ describe('runtime config helpers', () => {
     ]);
     expect(resolveArchiveGatewayUrl(undefined)).toBe('https://storacha.link');
     expect(resolveArchiveGatewayUrl('https://gateway.example')).toBe('https://gateway.example');
+    expect(resolveReceiverAppUrl(undefined)).toBe('http://127.0.0.1:3001');
+    expect(resolveReceiverAppUrl('https://receiver.example')).toBe('https://receiver.example');
     expect(isLocalEnhancementEnabled(undefined)).toBe(true);
     expect(isLocalEnhancementEnabled('off')).toBe(false);
   });

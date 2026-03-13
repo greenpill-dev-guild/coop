@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sessionToMember } from '../../auth/auth';
 import {
   createCoop,
   createStateFromInviteBootstrap,
@@ -6,7 +7,11 @@ import {
   joinCoop,
   verifyInviteCodeProof,
 } from '../flows';
-import { publishDraftAcrossCoops, publishDraftToCoops } from '../publish';
+import {
+  publishDraftAcrossCoops,
+  publishDraftToCoops,
+  resolvePublishActorsForTargets,
+} from '../publish';
 
 function buildSetupInsights() {
   return {
@@ -260,6 +265,13 @@ describe('create, join, and publish flows', () => {
         confidence: 0.82,
         rationale: 'Keyword overlap with funding and stewardship language.',
         status: 'draft',
+        workflowStage: 'ready',
+        provenance: {
+          type: 'tab',
+          interpretationId: 'interp-1',
+          extractId: 'extract-1',
+          sourceCandidateId: 'candidate-1',
+        },
         createdAt: new Date().toISOString(),
       },
     });
@@ -270,6 +282,13 @@ describe('create, join, and publish flows', () => {
   });
 
   it('updates each target coop independently for multi-coop publish', () => {
+    const sharedAuthSession = {
+      authMode: 'wallet' as const,
+      displayName: 'June',
+      primaryAddress: '0x1111111111111111111111111111111111111111',
+      createdAt: '2026-03-12T18:00:00.000Z',
+      identityWarning: '',
+    };
     const created = createCoop({
       coopName: 'Forest Coop',
       purpose: 'Coordinate forest stewardship and shared funding context.',
@@ -277,6 +296,7 @@ describe('create, join, and publish flows', () => {
       captureMode: 'manual',
       seedContribution: 'I want our research and field notes to stay visible.',
       setupInsights: buildSetupInsights(),
+      creator: sessionToMember(sharedAuthSession, 'June', 'creator'),
     });
     const peerCoop = createCoop({
       coopName: 'Watershed Coop',
@@ -285,12 +305,23 @@ describe('create, join, and publish flows', () => {
       captureMode: 'manual',
       seedContribution: 'I bring watershed planning context.',
       setupInsights: buildSetupInsights(),
+      creator: sessionToMember(sharedAuthSession, 'June', 'creator'),
     });
+    const actorResolution = resolvePublishActorsForTargets({
+      states: [created.state, peerCoop.state],
+      authSession: sharedAuthSession,
+      targetCoopIds: [created.state.profile.id, peerCoop.state.profile.id],
+    });
+    expect(actorResolution).toMatchObject({
+      ok: true,
+    });
+    if (!actorResolution.ok) {
+      throw new Error(actorResolution.error);
+    }
 
     const published = publishDraftAcrossCoops({
       states: [created.state, peerCoop.state],
-      actorId: created.creator.id,
-      targetCoopIds: [created.state.profile.id, peerCoop.state.profile.id],
+      targetActors: actorResolution.targetActors,
       draft: {
         id: 'draft-2',
         interpretationId: 'interp-2',
@@ -313,6 +344,13 @@ describe('create, join, and publish flows', () => {
         confidence: 0.77,
         rationale: 'The grant supports both stewardship and watershed efforts.',
         status: 'draft',
+        workflowStage: 'ready',
+        provenance: {
+          type: 'tab',
+          interpretationId: 'interp-2',
+          extractId: 'extract-2',
+          sourceCandidateId: 'candidate-2',
+        },
         createdAt: new Date().toISOString(),
       },
     });
@@ -326,7 +364,47 @@ describe('create, join, and publish flows', () => {
 
     expect(updatedForest?.artifacts.at(-1)?.targetCoopId).toBe(created.state.profile.id);
     expect(updatedWatershed?.artifacts.at(-1)?.targetCoopId).toBe(peerCoop.state.profile.id);
+    expect(updatedForest?.artifacts.at(-1)?.createdBy).toBe(created.state.members[0]?.id);
+    expect(updatedWatershed?.artifacts.at(-1)?.createdBy).toBe(peerCoop.state.members[0]?.id);
     expect(updatedForest?.artifacts.length).toBe(created.state.artifacts.length + 1);
     expect(updatedWatershed?.artifacts.length).toBe(peerCoop.state.artifacts.length + 1);
+  });
+
+  it('fails multi-coop publish when the authenticated person is not a member of every target coop', () => {
+    const sharedAuthSession = {
+      authMode: 'wallet' as const,
+      displayName: 'June',
+      primaryAddress: '0x1111111111111111111111111111111111111111',
+      createdAt: '2026-03-12T18:00:00.000Z',
+      identityWarning: '',
+    };
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+      creator: sessionToMember(sharedAuthSession, 'June', 'creator'),
+    });
+    const peerCoop = createCoop({
+      coopName: 'Watershed Coop',
+      purpose: 'Track watershed coordination and funding opportunities.',
+      creatorDisplayName: 'Nico',
+      captureMode: 'manual',
+      seedContribution: 'I bring watershed planning context.',
+      setupInsights: buildSetupInsights(),
+    });
+
+    expect(
+      resolvePublishActorsForTargets({
+        states: [created.state, peerCoop.state],
+        authSession: sharedAuthSession,
+        targetCoopIds: [created.state.profile.id, peerCoop.state.profile.id],
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: `The current authenticated person is not a member of target coop(s): ${peerCoop.state.profile.id}`,
+    });
   });
 });

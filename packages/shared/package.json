@@ -10,10 +10,15 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "default": "./dist/contracts/index.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "probe:onchain-live": "bun run ./scripts/probe-onchain-live.ts"
   },
   "dependencies": {
     "@safe-global/protocol-kit": "^6.1.2",
@@ -22,6 +27,7 @@
     "@safe-global/types-kit": "^3.0.0",
     "@storacha/client": "^2.1.1",
     "dexie": "^4.0.10",
+    "multiformats": "^13.3.6",
     "ox": "^0.14.0",
     "permissionless": "^0.3.4",
     "viem": "^2.25.0",

@@ -1,0 +1,209 @@
+{
+  "skills": [
+    {
+      "name": "plan",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["/plan", "plan this", "create implementation plan"],
+      "dependencies": []
+    },
+    {
+      "name": "debug",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["/debug", "debug this", "investigate this bug"],
+      "dependencies": []
+    },
+    {
+      "name": "review",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["/review", "review this PR", "code review"],
+      "dependencies": []
+    },
+    {
+      "name": "audit",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["/audit", "audit the codebase", "health check"],
+      "dependencies": []
+    },
+    {
+      "name": "autonomous-review",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["review and fix", "auto-fix"],
+      "dependencies": ["review", "testing"]
+    },
+    {
+      "name": "cross-package-verify",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["verify whole repo", "cross-package check"],
+      "dependencies": ["review"]
+    },
+    {
+      "name": "tdd-bugfix",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["bugfix with TDD", "test-first fix"],
+      "dependencies": ["debug", "testing"]
+    },
+    {
+      "name": "testing",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["write tests", "TDD", "unit test", "e2e test"],
+      "dependencies": []
+    },
+    {
+      "name": "react",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["React component", "state management", "hooks"],
+      "dependencies": []
+    },
+    {
+      "name": "web3",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["wallet", "Safe", "ERC-4337", "passkey", "onchain"],
+      "dependencies": []
+    },
+    {
+      "name": "error-handling-patterns",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["error handling", "try/catch", "error boundary"],
+      "dependencies": []
+    },
+    {
+      "name": "data-layer",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["offline", "local-first", "Dexie", "Yjs", "sync", "IndexedDB", "CRDT"],
+      "dependencies": []
+    },
+    {
+      "name": "vite",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["build config", "bundle", "env vars", "plugins"],
+      "dependencies": []
+    },
+    {
+      "name": "security",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["security audit", "vulnerability", "XSS", "key exposure"],
+      "dependencies": []
+    },
+    {
+      "name": "migration",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["migration", "upgrade", "breaking change"],
+      "dependencies": ["testing"]
+    },
+    {
+      "name": "git-workflow",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["branch", "commit", "merge conflict", "release"],
+      "dependencies": []
+    },
+    {
+      "name": "ci-cd",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["CI", "GitHub Actions", "pipeline", "workflow"],
+      "dependencies": []
+    },
+    {
+      "name": "dependency-management",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["dependency", "lockfile", "bun install", "upgrade package"],
+      "dependencies": []
+    },
+    {
+      "name": "frontend-design",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["design UI", "build page", "frontend", "visual design"],
+      "dependencies": ["tailwindcss"]
+    },
+    {
+      "name": "tailwindcss",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["TailwindCSS", "design tokens", "dark mode"],
+      "dependencies": []
+    },
+    {
+      "name": "ui-compliance",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["accessibility", "a11y", "responsive", "forms", "WCAG"],
+      "dependencies": []
+    },
+    {
+      "name": "architecture",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["architecture", "refactor", "clean code", "reduce complexity"],
+      "dependencies": []
+    },
+    {
+      "name": "biome",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["format", "Biome", "import sorting"],
+      "dependencies": []
+    },
+    {
+      "name": "performance",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": ["performance", "bundle size", "profiling", "memory leak"],
+      "dependencies": []
+    },
+    {
+      "name": "meeting-notes",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["meeting notes", "transcript", "extract issues"],
+      "dependencies": []
+    }
+  ],
+  "aliases": {
+    "offline": "data-layer",
+    "storage": "data-layer",
+    "local-first": "data-layer"
+  }
+}

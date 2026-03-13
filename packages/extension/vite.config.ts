@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         sidepanel: path.resolve(__dirname, 'sidepanel.html'),
         popup: path.resolve(__dirname, 'popup.html'),
+        offscreen: path.resolve(__dirname, 'offscreen.html'),
         background: path.resolve(__dirname, 'src/background.ts'),
       },
       output: {

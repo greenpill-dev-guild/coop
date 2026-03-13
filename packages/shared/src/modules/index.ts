@@ -3,4 +3,6 @@ export * from './archive';
 export * from './auth';
 export * from './coop';
 export * from './onchain';
+export * from './operator';
+export * from './receiver';
 export * from './storage';

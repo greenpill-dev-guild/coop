@@ -80,18 +80,19 @@ describe('auth and onchain helpers', () => {
     const state = createMockOnchainState({
       seed: 'coop-seed',
       senderAddress: '0x1111111111111111111111111111111111111111',
-      chainKey: 'celo-sepolia',
+      chainKey: 'sepolia',
     });
 
-    expect(state.chainId).toBe(11142220);
-    expect(state.chainKey).toBe('celo-sepolia');
+    expect(state.chainId).toBe(11155111);
+    expect(state.chainKey).toBe('sepolia');
     expect(state.safeCapability).toBe('stubbed');
+    expect(state.statusNote).toContain('mock Safe on Sepolia');
   });
 
   it('builds the Pimlico RPC url from the selected chain key', () => {
-    const url = buildPimlicoRpcUrl('celo', 'test-key');
+    const url = buildPimlicoRpcUrl('sepolia', 'test-key');
 
-    expect(url).toContain('/celo/rpc');
+    expect(url).toContain('/sepolia/rpc');
     expect(url).toContain('apikey=test-key');
   });
 
@@ -116,37 +117,43 @@ describe('auth and onchain helpers', () => {
     expect(member.passkeyCredentialId).toBe('credential-1');
   });
 
-  it('deploys a coop safe with mocked Pimlico clients and preserves sender context', async () => {
+  it('deploys a coop safe with mocked Pimlico clients on supported chains', async () => {
     const session = await createPasskeySession({
       displayName: 'Kai',
       rpId: 'coop.local',
     });
 
-    const state = await deployCoopSafe({
-      authSession: session,
-      coopSeed: 'coop-seed',
-      pimlico: {
-        apiKey: 'pimlico-test-key',
-        chainKey: 'celo-sepolia',
-      },
-    });
+    for (const [chainKey, statusLabel] of [
+      ['arbitrum', 'live Safe on Arbitrum'],
+      ['sepolia', 'live Safe on Sepolia'],
+    ] as const) {
+      const state = await deployCoopSafe({
+        authSession: session,
+        coopSeed: `coop-seed:${chainKey}`,
+        pimlico: {
+          apiKey: 'pimlico-test-key',
+          chainKey,
+        },
+      });
 
-    expect(state.safeCapability).toBe('executed');
-    expect(state.chainKey).toBe('celo-sepolia');
-    expect(state.senderAddress).toBe(session.primaryAddress);
-    expect(state.safeAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
-    expect(state.deploymentTxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+      expect(state.safeCapability).toBe('executed');
+      expect(state.chainKey).toBe(chainKey);
+      expect(state.senderAddress).toBe(session.primaryAddress);
+      expect(state.safeAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(state.deploymentTxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+      expect(state.statusNote).toContain(statusLabel);
+    }
   });
 
   it('creates an unavailable placeholder for live-safe bootstrapping gaps', () => {
     const state = createUnavailableOnchainState({
       safeAddressSeed: 'pending-coop',
       senderAddress: '0x1111111111111111111111111111111111111111',
-      chainKey: 'celo',
+      chainKey: 'sepolia',
     });
 
-    expect(state.chainKey).toBe('celo');
+    expect(state.chainKey).toBe('sepolia');
     expect(state.safeCapability).toBe('unavailable');
-    expect(state.statusNote).toContain('Live Safe deployment is unavailable');
+    expect(state.statusNote).toContain('live Safe on Sepolia is unavailable');
   });
 });

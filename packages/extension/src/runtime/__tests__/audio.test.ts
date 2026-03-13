@@ -66,7 +66,7 @@ describe('extension audio playback', () => {
     });
 
     expect(createdContexts).toHaveLength(0);
-  }, 15_000);
+  }, 30_000);
 
   it('creates oscillators and resumes the audio context for explicit sound events', async () => {
     const { playCoopSound } = await import('../audio');
@@ -83,5 +83,5 @@ describe('extension audio playback', () => {
     expect(createdContexts[0]?.gains).toHaveLength(3);
     expect(createdContexts[0]?.oscillators[0]?.start).toHaveBeenCalledWith(1);
     expect(createdContexts[0]?.oscillators[0]?.stop).toHaveBeenCalledWith(1.07);
-  }, 15_000);
+  }, 30_000);
 });

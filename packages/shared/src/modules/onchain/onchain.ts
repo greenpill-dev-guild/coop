@@ -3,35 +3,50 @@ import { createSmartAccountClient } from 'permissionless/clients';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
 import { http, type Account, createPublicClient, zeroAddress } from 'viem';
 import type { WebAuthnAccount } from 'viem/account-abstraction';
-import { celo, celoSepolia } from 'viem/chains';
-import { type AuthSession, type OnchainState, onchainStateSchema } from '../../contracts/schema';
+import { arbitrum, sepolia } from 'viem/chains';
+import { type AuthSession, type CoopChainKey, onchainStateSchema } from '../../contracts/schema';
 import { toDeterministicAddress, toDeterministicBigInt } from '../../utils';
 import { restorePasskeyAccount } from '../auth/auth';
 
-type CoopChainKey = OnchainState['chainKey'];
+export type CoopOnchainMode = 'live' | 'mock';
 
 const chainConfigs = {
-  celo: {
-    chain: celo,
-    bundlerSegment: 'celo',
-    label: 'Celo',
+  arbitrum: {
+    chain: arbitrum,
+    bundlerSegment: 'arbitrum',
+    label: 'Arbitrum One',
+    shortLabel: 'Arbitrum',
   },
-  'celo-sepolia': {
-    chain: celoSepolia,
-    bundlerSegment: 'celo-sepolia',
-    label: 'Celo Sepolia',
+  sepolia: {
+    chain: sepolia,
+    bundlerSegment: 'sepolia',
+    label: 'Ethereum Sepolia',
+    shortLabel: 'Sepolia',
   },
 } as const satisfies Record<
   CoopChainKey,
   {
     bundlerSegment: string;
-    chain: typeof celo | typeof celoSepolia;
+    chain: typeof arbitrum | typeof sepolia;
     label: string;
+    shortLabel: string;
   }
 >;
 
-export function getCoopChainConfig(chainKey: CoopChainKey = 'celo-sepolia') {
+export function getCoopChainConfig(chainKey: CoopChainKey = 'sepolia') {
   return chainConfigs[chainKey];
+}
+
+export function getCoopChainLabel(chainKey: CoopChainKey, format: 'full' | 'short' = 'full') {
+  const config = getCoopChainConfig(chainKey);
+  return format === 'short' ? config.shortLabel : config.label;
+}
+
+export function describeOnchainModeSummary(input: {
+  mode: CoopOnchainMode;
+  chainKey: CoopChainKey;
+}) {
+  return `${input.mode} Safe on ${getCoopChainLabel(input.chainKey, 'short')}`;
 }
 
 export function buildPimlicoRpcUrl(chainKey: CoopChainKey, pimlicoApiKey: string) {
@@ -48,7 +63,7 @@ export function createMockOnchainState(input: {
   chainKey?: CoopChainKey;
   senderAddress?: string;
 }) {
-  const chainKey = input.chainKey ?? 'celo-sepolia';
+  const chainKey = input.chainKey ?? 'sepolia';
   const config = getCoopChainConfig(chainKey);
   return onchainStateSchema.parse({
     chainId: config.chain.id,
@@ -56,7 +71,7 @@ export function createMockOnchainState(input: {
     safeAddress: toDeterministicAddress(`mock-safe:${input.seed}:${chainKey}`),
     senderAddress: input.senderAddress,
     safeCapability: 'stubbed',
-    statusNote: `Mock onchain mode is active for ${config.label}.`,
+    statusNote: `${describeOnchainModeSummary({ mode: 'mock', chainKey })} is ready for demo flows.`,
     deploymentTxHash: undefined,
     userOperationHash: undefined,
   });
@@ -69,7 +84,7 @@ export async function deployCoopSafeAccount(input: {
   chainKey?: CoopChainKey;
   coopSeed: string;
 }) {
-  const chainKey = input.chainKey ?? 'celo-sepolia';
+  const chainKey = input.chainKey ?? 'sepolia';
   const config = getCoopChainConfig(chainKey);
   const bundlerUrl = buildPimlicoRpcUrl(chainKey, input.pimlicoApiKey);
   const publicClient = createPublicClient({
@@ -117,7 +132,7 @@ export async function deployCoopSafeAccount(input: {
     safeAddress: account.address,
     senderAddress: input.senderAddress,
     safeCapability: 'executed',
-    statusNote: `Safe deployed on ${config.label} via Pimlico account abstraction.`,
+    statusNote: `${describeOnchainModeSummary({ mode: 'live', chainKey })} was deployed via Pimlico account abstraction.`,
     deploymentTxHash,
     userOperationHash: undefined,
   });
@@ -147,7 +162,7 @@ export function createUnavailableOnchainState(input: {
   safeAddressSeed: string;
   senderAddress?: string;
 }) {
-  const chainKey = input.chainKey ?? 'celo-sepolia';
+  const chainKey = input.chainKey ?? 'sepolia';
   const config = getCoopChainConfig(chainKey);
   return onchainStateSchema.parse({
     chainId: config.chain.id,
@@ -155,6 +170,6 @@ export function createUnavailableOnchainState(input: {
     safeAddress: toDeterministicAddress(`pending-safe:${input.safeAddressSeed}:${chainKey}`),
     senderAddress: input.senderAddress,
     safeCapability: 'unavailable',
-    statusNote: `Live Safe deployment is unavailable until passkeys and Pimlico are configured for ${config.label}.`,
+    statusNote: `${describeOnchainModeSummary({ mode: 'live', chainKey })} is unavailable until passkeys and Pimlico are configured.`,
   });
 }

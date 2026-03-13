@@ -384,6 +384,13 @@ export function shapeReviewDraft(
     rationale: interpretation.rationale,
     previewImageUrl: extract.previewImageUrl,
     status: 'draft',
+    workflowStage: 'ready',
+    provenance: {
+      type: 'tab',
+      interpretationId: interpretation.id,
+      extractId: extract.id,
+      sourceCandidateId: extract.sourceCandidateId,
+    },
     createdAt: new Date().toISOString(),
   };
 }

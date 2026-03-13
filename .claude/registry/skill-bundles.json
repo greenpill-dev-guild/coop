@@ -1,0 +1,40 @@
+{
+  "bundles": {
+    "extension-change": {
+      "entrypoint": "/plan",
+      "default_mode": "interactive",
+      "skills": ["react", "tailwindcss", "frontend-design", "testing", "ui-compliance"],
+      "user_facing": true
+    },
+    "shared-module-change": {
+      "entrypoint": "/plan",
+      "default_mode": "interactive",
+      "skills": ["react", "web3", "data-layer", "error-handling-patterns", "testing"],
+      "user_facing": false
+    },
+    "onchain-change": {
+      "entrypoint": "/plan",
+      "default_mode": "interactive",
+      "skills": ["web3", "security", "testing"],
+      "user_facing": false
+    },
+    "app-change": {
+      "entrypoint": "/plan",
+      "default_mode": "interactive",
+      "skills": ["react", "tailwindcss", "frontend-design", "testing", "ui-compliance"],
+      "user_facing": true
+    },
+    "cross-package-change": {
+      "entrypoint": "/review --mode verify_only --scope cross-package",
+      "default_mode": "verify_only",
+      "skills": ["review", "cross-package-verify", "testing"],
+      "user_facing": false
+    },
+    "incident-hotfix": {
+      "entrypoint": "/debug --mode incident_hotfix",
+      "default_mode": "apply_fixes",
+      "skills": ["debug", "tdd-bugfix", "testing"],
+      "user_facing": false
+    }
+  }
+}

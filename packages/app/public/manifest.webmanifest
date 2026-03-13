@@ -1,0 +1,37 @@
+{
+  "name": "Coop Receiver",
+  "short_name": "Coop",
+  "description": "A local-first receiver nest for audio, photos, and files before they sync into Coop.",
+  "start_url": "/receiver",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fcf5ef",
+  "theme_color": "#4f2e1f",
+  "icons": [
+    {
+      "src": "/branding/coop-mark-flat.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/branding/coop-mark-glow.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pair Receiver",
+      "url": "/pair"
+    },
+    {
+      "name": "Open Receiver",
+      "url": "/receiver"
+    },
+    {
+      "name": "Open Inbox",
+      "url": "/inbox"
+    }
+  ]
+}

@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createStorachaArchiveClient,
   requestArchiveDelegation,
+  requestArchiveReceiptFilecoinInfo,
   uploadArchiveBundleToStoracha,
 } from '../storacha';
 
 const storachaMocks = vi.hoisted(() => {
+  const validPieceCid = 'bafkreibuenncyubohem5h4ak6xnlxb6llcxpivtlcbrr6ks5xfevb277xu';
   const addSpace = vi.fn();
   const addProof = vi.fn();
   const setCurrentSpace = vi.fn();
   const uploadFile = vi.fn();
+  const filecoinInfo = vi.fn();
   const did = vi.fn(() => 'did:key:test-agent');
   const clientFactory = vi.fn(async () => ({
     did,
@@ -17,6 +20,11 @@ const storachaMocks = vi.hoisted(() => {
     addProof,
     setCurrentSpace,
     uploadFile,
+    capability: {
+      filecoin: {
+        info: filecoinInfo,
+      },
+    },
   }));
   const parseProof = vi.fn(async (value: string) => ({ proof: value }));
 
@@ -25,6 +33,8 @@ const storachaMocks = vi.hoisted(() => {
     addProof,
     setCurrentSpace,
     uploadFile,
+    filecoinInfo,
+    validPieceCid,
     did,
     clientFactory,
     parseProof,
@@ -63,10 +73,11 @@ describe('storacha archive helpers', () => {
       audienceDid: 'did:key:test-agent',
       coopId: 'coop-1',
       scope: 'artifact',
+      operation: 'upload',
       artifactIds: ['artifact-1'],
       actorAddress: '0x1111111111111111111111111111111111111111',
       safeAddress: '0x2222222222222222222222222222222222222222',
-      chainKey: 'celo-sepolia',
+      chainKey: 'sepolia',
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -80,6 +91,27 @@ describe('storacha archive helpers', () => {
     );
     expect(delegation.spaceDid).toBe('did:key:space');
     expect(delegation.proofs).toEqual(['proof-a']);
+  });
+
+  it('fails clearly when the issuer responds with malformed material', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        spaceDid: 'did:key:space',
+      }),
+    } as Response);
+
+    await expect(
+      requestArchiveDelegation({
+        issuerUrl: 'https://issuer.example/archive',
+        audienceDid: 'did:key:test-agent',
+        coopId: 'coop-1',
+        scope: 'artifact',
+        operation: 'upload',
+        artifactIds: [],
+        pieceCids: [],
+      }),
+    ).rejects.toThrow('Issuer returned malformed delegation material.');
   });
 
   it('uploads an archive bundle with delegated proofs and collects shard metadata', async () => {
@@ -136,5 +168,63 @@ describe('storacha archive helpers', () => {
     expect(result.shardCids).toEqual(['bafyshard1', 'bafyshard2']);
     expect(result.pieceCids).toEqual(['bafkpiece1']);
     expect(result.gatewayUrl).toBe('https://storacha.link/ipfs/bafyroot');
+  });
+
+  it('requests Filecoin follow-up info for a live receipt', async () => {
+    storachaMocks.filecoinInfo.mockResolvedValue({
+      out: {
+        ok: {
+          piece: { toString: () => 'bafkpiece1' },
+          aggregates: [{ aggregate: { toString: () => 'bafyaggregate' }, inclusion: {} }],
+          deals: [
+            {
+              aggregate: { toString: () => 'bafyaggregate' },
+              provider: { toString: () => 'f01234' },
+              aux: {
+                dataSource: {
+                  dealID: 77,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const info = await requestArchiveReceiptFilecoinInfo({
+      client: await createStorachaArchiveClient(),
+      receipt: {
+        id: 'receipt-1',
+        scope: 'artifact',
+        targetCoopId: 'coop-1',
+        artifactIds: ['artifact-1'],
+        bundleReference: 'bundle-1',
+        rootCid: 'bafyroot',
+        shardCids: ['bafyshard1'],
+        pieceCids: [storachaMocks.validPieceCid],
+        gatewayUrl: 'https://storacha.link/ipfs/bafyroot',
+        uploadedAt: new Date().toISOString(),
+        filecoinStatus: 'offered',
+        delegationIssuer: 'trusted-node-demo',
+        delegation: {
+          issuer: 'trusted-node-demo',
+          mode: 'live',
+          allowsFilecoinInfo: true,
+        },
+      },
+      delegation: {
+        spaceDid: 'did:key:space',
+        delegationIssuer: 'trusted-node-demo',
+        gatewayBaseUrl: 'https://storacha.link',
+        spaceDelegation: 'space-proof',
+        proofs: ['proof-a'],
+        allowsFilecoinInfo: true,
+      },
+    });
+
+    expect(storachaMocks.filecoinInfo).toHaveBeenCalledTimes(1);
+    expect(info.pieceCid).toBe('bafkpiece1');
+    expect(info.aggregates[0]?.aggregate).toBe('bafyaggregate');
+    expect(info.deals[0]?.dealId).toBe('77');
   });
 });

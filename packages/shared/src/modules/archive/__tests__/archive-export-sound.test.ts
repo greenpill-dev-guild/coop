@@ -16,6 +16,7 @@ import {
   exportReviewDraftJson,
   exportSnapshotTextBundle,
 } from '../export';
+import { isArchiveWorthy, withArchiveWorthiness } from '../story';
 
 function buildSetupInsights() {
   return {
@@ -85,6 +86,29 @@ describe('archive, export, and sound behavior', () => {
     expect(exportArchiveReceiptTextBundle(receipt)).toContain(receipt.rootCid);
   });
 
+  it('toggles archive-worthy state without forcing an archive upload', () => {
+    const created = createCoop({
+      coopName: 'Archive Coop',
+      purpose: 'Keep approved artifacts portable and durable.',
+      creatorDisplayName: 'Kai',
+      captureMode: 'manual',
+      seedContribution: 'I care about durable long-memory bundles.',
+      setupInsights: buildSetupInsights(),
+    });
+    const artifact = created.state.artifacts[0];
+    if (!artifact) {
+      throw new Error('Expected an initial artifact.');
+    }
+
+    const flagged = withArchiveWorthiness(artifact, true, '2026-03-12T18:00:00.000Z');
+    const cleared = withArchiveWorthiness(flagged, false, '2026-03-12T18:01:00.000Z');
+
+    expect(isArchiveWorthy(flagged)).toBe(true);
+    expect(flagged.archiveStatus).toBe('not-archived');
+    expect(isArchiveWorthy(cleared)).toBe(false);
+    expect(cleared.archiveReceiptIds).toEqual([]);
+  });
+
   it('exports structured snapshots without raw passive browsing exhaust', () => {
     const created = createCoop({
       coopName: 'Archive Coop',
@@ -148,6 +172,13 @@ describe('archive, export, and sound behavior', () => {
         confidence: 0.77,
         rationale: 'Manual review keeps the signal legible.',
         status: 'draft',
+        workflowStage: 'ready',
+        provenance: {
+          type: 'tab',
+          interpretationId: 'interpretation-1',
+          extractId: 'extract-1',
+          sourceCandidateId: 'candidate-1',
+        },
         createdAt: new Date().toISOString(),
       }),
     ).toContain('"type": "review-draft"');

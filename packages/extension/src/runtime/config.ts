@@ -1,15 +1,17 @@
-export type CoopChainKey = 'celo' | 'celo-sepolia';
-export type RuntimeMode = 'live' | 'mock';
+import type { CoopChainKey, IntegrationMode } from '@coop/shared';
 
 export function resolveConfiguredChain(raw?: string): CoopChainKey {
-  return raw === 'celo' ? 'celo' : 'celo-sepolia';
+  return raw === 'arbitrum' ? 'arbitrum' : 'sepolia';
 }
 
-export function resolveConfiguredOnchainMode(raw?: string, pimlicoApiKey?: string): RuntimeMode {
+export function resolveConfiguredOnchainMode(
+  raw?: string,
+  pimlicoApiKey?: string,
+): IntegrationMode {
   return raw === 'live' || raw === 'mock' ? raw : pimlicoApiKey ? 'live' : 'mock';
 }
 
-export function resolveConfiguredArchiveMode(raw?: string, issuerUrl?: string): RuntimeMode {
+export function resolveConfiguredArchiveMode(raw?: string, issuerUrl?: string): IntegrationMode {
   return raw === 'live' || raw === 'mock' ? raw : issuerUrl ? 'live' : 'mock';
 }
 
@@ -23,6 +25,10 @@ export function parseConfiguredSignalingUrls(raw?: string) {
 
 export function resolveArchiveGatewayUrl(raw?: string) {
   return raw ?? 'https://storacha.link';
+}
+
+export function resolveReceiverAppUrl(raw?: string) {
+  return raw ?? 'http://127.0.0.1:3001';
 }
 
 export function isLocalEnhancementEnabled(raw?: string) {
