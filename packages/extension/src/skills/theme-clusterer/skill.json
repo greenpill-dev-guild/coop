@@ -1,0 +1,15 @@
+{
+  "id": "theme-clusterer",
+  "version": "0.1.0",
+  "description": "Cluster related local signals into reusable themes for shared memory and coordination.",
+  "runtime": "extension-offscreen",
+  "model": "transformers",
+  "triggers": ["ritual-review-due", "high-confidence-draft"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "theme-clusterer-output",
+  "allowedTools": ["read-coop-context", "list-related-artifacts", "list-related-drafts"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000
+}

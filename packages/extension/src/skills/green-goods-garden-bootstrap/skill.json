@@ -1,0 +1,15 @@
+{
+  "id": "green-goods-garden-bootstrap",
+  "version": "0.1.0",
+  "description": "Bootstrap a Green Goods garden for a coop Safe using the coop's name, purpose, and Green Goods defaults.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["green-goods-garden-requested"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "green-goods-garden-bootstrap-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
+  "allowedActionClasses": ["green-goods-create-garden"],
+  "requiredCapabilities": [],
+  "approvalMode": "auto-run-eligible",
+  "timeoutMs": 15000
+}

@@ -1,0 +1,15 @@
+{
+  "id": "publish-readiness-check",
+  "version": "0.1.0",
+  "description": "Review a draft for publish readiness and optionally propose a bounded publish action.",
+  "runtime": "extension-offscreen",
+  "model": "hybrid",
+  "triggers": ["high-confidence-draft"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "publish-readiness-check-output",
+  "allowedTools": ["read-observation-context", "patch-review-draft", "propose-action"],
+  "allowedActionClasses": ["publish-ready-draft"],
+  "requiredCapabilities": [],
+  "approvalMode": "proposal",
+  "timeoutMs": 30000
+}

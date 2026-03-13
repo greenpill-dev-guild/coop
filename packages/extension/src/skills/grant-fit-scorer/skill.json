@@ -1,0 +1,15 @@
+{
+  "id": "grant-fit-scorer",
+  "version": "0.1.0",
+  "description": "Score extracted opportunities against coop purpose, rituals, and archive history.",
+  "runtime": "extension-offscreen",
+  "model": "transformers",
+  "triggers": ["high-confidence-draft", "receiver-backlog"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "grant-fit-scorer-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "list-related-artifacts"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000
+}

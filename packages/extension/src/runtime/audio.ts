@@ -7,8 +7,36 @@ import {
 
 let audioContext: AudioContext | null = null;
 
+const soundFiles: Record<SoundEvent, { src: string; volume: number }> = {
+  'coop-created': { src: '/audio/coop-rooster-call.wav', volume: 0.72 },
+  'artifact-published': { src: '/audio/coop-soft-cluck.wav', volume: 0.62 },
+  'sound-test': { src: '/audio/coop-squeaky-test.wav', volume: 0.68 },
+};
+
+async function playSoundFile(event: SoundEvent) {
+  const AudioCtor = globalThis.Audio as (new (src?: string) => HTMLAudioElement) | undefined;
+  const sound = soundFiles[event];
+  if (!sound || typeof AudioCtor !== 'function') {
+    return false;
+  }
+
+  try {
+    const audio = new AudioCtor(sound.src);
+    audio.preload = 'auto';
+    audio.volume = sound.volume;
+    await Promise.resolve(audio.play());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function playCoopSound(event: SoundEvent, preferences: SoundPreferences) {
   if (!shouldPlaySound(event, preferences, true)) {
+    return;
+  }
+
+  if (await playSoundFile(event)) {
     return;
   }
 

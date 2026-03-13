@@ -31,7 +31,7 @@ export function PopupApp() {
     const response = await sendRuntimeMessage<number>({ type: 'manual-capture' });
     setMessage(
       response.ok
-        ? `Round-up complete. ${response.data ?? 0} tabs inspected.`
+        ? `Round-up complete. Coop checked ${response.data ?? 0} tabs.`
         : (response.error ?? 'Round-up failed.'),
     );
   }
@@ -39,6 +39,7 @@ export function PopupApp() {
   return (
     <div className="popup-shell">
       <img src="/branding/coop-wordmark-flat.png" alt="Coop" width={118} />
+      <p className="helper-text">No more chickens loose.</p>
       <div className="panel-card">
         <h2>{dashboard?.summary.iconLabel ?? 'Loading'}</h2>
         <p className="helper-text">
@@ -47,10 +48,10 @@ export function PopupApp() {
         </p>
         <div className="popup-actions">
           <button className="primary-button" onClick={openSidepanel} type="button">
-            Open sidepanel
+            Open Coop
           </button>
           <button className="secondary-button" onClick={manualRoundUp} type="button">
-            Manual round-up
+            Round up now
           </button>
         </div>
       </div>

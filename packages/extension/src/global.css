@@ -11,6 +11,18 @@
   --coop-error: #a63b20;
 }
 
+@keyframes coop-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -33,6 +45,8 @@ textarea {
 
 button {
   cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color
+    180ms ease, color 180ms ease;
 }
 
 img {
@@ -113,6 +127,16 @@ img {
   color: var(--coop-brown);
 }
 
+.tab-strip button {
+  min-height: 3.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
 .tab-strip button.is-active,
 .primary-button {
   background: var(--coop-brown);
@@ -146,6 +170,75 @@ img {
   background: rgba(255, 252, 249, 0.82);
   box-shadow: var(--coop-shadow);
   padding: 1rem;
+}
+
+.panel-card,
+.summary-card,
+.draft-card,
+.artifact-card,
+.member-row,
+.group-card,
+.operator-log-entry {
+  animation: coop-rise 320ms ease both;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color
+    180ms ease;
+}
+
+.panel-card:hover,
+.summary-card:hover,
+.draft-card:hover,
+.artifact-card:hover,
+.member-row:hover,
+.group-card:hover,
+.operator-log-entry:hover,
+.tab-strip button:hover:not(:disabled),
+.ghost-button:hover:not(:disabled),
+.primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
+.inline-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(79, 46, 31, 0.14);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.collapsible-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapsible-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.collapsible-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-card > summary::after {
+  content: "+";
+  font-size: 1.15rem;
+  color: var(--coop-orange);
+}
+
+.collapsible-card[open] > summary::after {
+  content: "-";
+}
+
+.collapsible-card__content {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0 1rem 1rem;
 }
 
 .panel-card h2,
@@ -315,6 +408,16 @@ img {
   .card-grid,
   .lens-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }
 

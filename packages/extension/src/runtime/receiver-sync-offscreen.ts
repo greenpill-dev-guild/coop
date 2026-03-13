@@ -10,6 +10,8 @@ import {
   markReceiverCaptureSyncFailed,
   patchReceiverSyncEnvelope,
 } from '@coop/shared';
+import { AGENT_LOOP_POLL_INTERVAL_MS } from './agent-config';
+import { runAgentCycle } from './agent-runner';
 import type {
   ReceiverSyncConfigResponse,
   ReceiverSyncRuntimeStatus,
@@ -344,6 +346,9 @@ void refreshBindings();
 window.setInterval(() => {
   void refreshBindings();
 }, pollIntervalMs);
+window.setInterval(() => {
+  void runAgentCycle();
+}, AGENT_LOOP_POLL_INTERVAL_MS);
 
 window.addEventListener('unload', () => {
   for (const binding of bindings.values()) {

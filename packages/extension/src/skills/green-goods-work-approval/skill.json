@@ -1,0 +1,15 @@
+{
+  "id": "green-goods-work-approval",
+  "version": "0.1.0",
+  "description": "Prepare a deterministic Green Goods work approval attestation from a structured approval request.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["green-goods-work-approval-requested"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "green-goods-work-approval-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
+  "allowedActionClasses": ["green-goods-submit-work-approval"],
+  "requiredCapabilities": [],
+  "approvalMode": "proposal",
+  "timeoutMs": 15000
+}

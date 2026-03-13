@@ -6,7 +6,9 @@ import {
   resolveConfiguredArchiveMode,
   resolveConfiguredChain,
   resolveConfiguredOnchainMode,
+  resolveConfiguredSessionMode,
   resolveReceiverAppUrl,
+  resolveTrustedNodeArchiveBootstrapConfig,
 } from '../config';
 
 describe('runtime config helpers', () => {
@@ -15,10 +17,15 @@ describe('runtime config helpers', () => {
     expect(resolveConfiguredChain('sepolia')).toBe('sepolia');
     expect(resolveConfiguredChain('celo')).toBe('sepolia');
     expect(resolveConfiguredChain('anything-else')).toBe('sepolia');
-    expect(resolveConfiguredOnchainMode(undefined, 'pimlico-key')).toBe('live');
+    expect(resolveConfiguredOnchainMode(undefined, 'pimlico-key')).toBe('mock');
     expect(resolveConfiguredOnchainMode(undefined, undefined)).toBe('mock');
-    expect(resolveConfiguredArchiveMode(undefined, 'https://issuer.example')).toBe('live');
-    expect(resolveConfiguredArchiveMode('mock', 'https://issuer.example')).toBe('mock');
+    expect(resolveConfiguredOnchainMode('live', 'pimlico-key')).toBe('live');
+    expect(resolveConfiguredArchiveMode(undefined)).toBe('mock');
+    expect(resolveConfiguredArchiveMode('mock')).toBe('mock');
+    expect(resolveConfiguredArchiveMode('live')).toBe('live');
+    expect(resolveConfiguredSessionMode(undefined)).toBe('off');
+    expect(resolveConfiguredSessionMode('mock')).toBe('mock');
+    expect(resolveConfiguredSessionMode('live')).toBe('live');
   });
 
   it('parses optional signaling and archive settings', () => {
@@ -33,5 +40,27 @@ describe('runtime config helpers', () => {
     expect(resolveReceiverAppUrl('https://receiver.example')).toBe('https://receiver.example');
     expect(isLocalEnhancementEnabled(undefined)).toBe(true);
     expect(isLocalEnhancementEnabled('off')).toBe(false);
+  });
+
+  it('parses trusted-node archive bootstrap env into local config', () => {
+    expect(
+      resolveTrustedNodeArchiveBootstrapConfig({
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_SPACE_DID: 'did:key:space',
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_DELEGATION_ISSUER: 'did:key:issuer',
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_SPACE_DELEGATION: 'space-proof',
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_PROOFS: JSON.stringify(['proof-a', 'proof-b']),
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_ALLOWS_FILECOIN_INFO: 'true',
+        VITE_COOP_TRUSTED_NODE_ARCHIVE_EXPIRATION_SECONDS: '900',
+      }),
+    ).toEqual({
+      spaceDid: 'did:key:space',
+      delegationIssuer: 'did:key:issuer',
+      gatewayBaseUrl: 'https://storacha.link',
+      spaceDelegation: 'space-proof',
+      proofs: ['proof-a', 'proof-b'],
+      allowsFilecoinInfo: true,
+      expirationSeconds: 900,
+    });
+    expect(resolveTrustedNodeArchiveBootstrapConfig({})).toBeNull();
   });
 });

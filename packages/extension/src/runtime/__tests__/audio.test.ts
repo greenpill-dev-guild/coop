@@ -14,6 +14,19 @@ type MockGainNode = {
 };
 
 const createdContexts: MockAudioContext[] = [];
+const createdAudioElements: MockAudioElement[] = [];
+
+class MockAudioElement {
+  preload = 'none';
+  src = '';
+  volume = 1;
+  play = vi.fn(async () => {});
+
+  constructor(src?: string) {
+    this.src = src ?? '';
+    createdAudioElements.push(this);
+  }
+}
 
 class MockAudioContext {
   state: AudioContextState = 'suspended';
@@ -54,6 +67,8 @@ describe('extension audio playback', () => {
     vi.resetModules();
     vi.stubGlobal('AudioContext', MockAudioContext as unknown as typeof AudioContext);
     createdContexts.length = 0;
+    createdAudioElements.length = 0;
+    vi.stubGlobal('Audio', MockAudioElement as unknown as typeof Audio);
   });
 
   it('does nothing when sound playback is disabled', async () => {
@@ -66,9 +81,27 @@ describe('extension audio playback', () => {
     });
 
     expect(createdContexts).toHaveLength(0);
+    expect(createdAudioElements).toHaveLength(0);
   }, 30_000);
 
-  it('creates oscillators and resumes the audio context for explicit sound events', async () => {
+  it('plays packaged coop audio files when Audio is available', async () => {
+    const { playCoopSound } = await import('../audio');
+
+    await playCoopSound('coop-created', {
+      enabled: true,
+      reducedMotion: false,
+      reducedSound: false,
+    });
+
+    expect(createdAudioElements).toHaveLength(1);
+    expect(createdAudioElements[0]?.src).toBe('/audio/coop-rooster-call.wav');
+    expect(createdAudioElements[0]?.volume).toBe(0.72);
+    expect(createdAudioElements[0]?.play).toHaveBeenCalledTimes(1);
+    expect(createdContexts).toHaveLength(0);
+  }, 30_000);
+
+  it('falls back to generated tones when packaged audio is unavailable', async () => {
+    vi.stubGlobal('Audio', undefined as unknown as typeof Audio);
     const { playCoopSound } = await import('../audio');
 
     await playCoopSound('sound-test', {

@@ -3,7 +3,17 @@
   "name": "Coop v1",
   "version": "0.1.0",
   "description": "Browser-first shared intelligence for coordinated communities.",
-  "permissions": ["storage", "alarms", "tabs", "scripting", "sidePanel", "activeTab", "offscreen"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "scripting",
+    "sidePanel",
+    "activeTab",
+    "offscreen",
+    "contextMenus",
+    "notifications"
+  ],
   "host_permissions": ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"],
   "content_scripts": [
     {
@@ -19,6 +29,29 @@
   "action": {
     "default_title": "Coop",
     "default_popup": "popup.html"
+  },
+  "commands": {
+    "open-sidepanel": {
+      "suggested_key": {
+        "default": "Alt+Shift+O",
+        "mac": "Command+Shift+O"
+      },
+      "description": "Open the Coop sidepanel"
+    },
+    "round-up-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+R",
+        "mac": "Command+Shift+R"
+      },
+      "description": "Round up the active tab into Coop"
+    },
+    "capture-screenshot": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Capture the visible tab as a private Coop screenshot"
+    }
   },
   "side_panel": {
     "default_path": "sidepanel.html"

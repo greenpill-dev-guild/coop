@@ -70,12 +70,21 @@ describe('operator runtime helpers', () => {
   });
 
   it('maps live archive failure states to operator-friendly errors', () => {
-    expect(describeArchiveLiveFailure(new Error('Archive issuer is unavailable.'))).toBe(
-      'Archive issuer unavailable or delegation rejected.',
+    expect(
+      describeArchiveLiveFailure(
+        new Error(
+          'Live Storacha archive mode is enabled, but this anchor node has no trusted-node archive delegation config.',
+        ),
+      ),
+    ).toBe(
+      'Live Storacha archive mode is enabled, but this anchor node has no trusted-node archive delegation config.',
     );
     expect(
       describeArchiveLiveFailure(new Error('Issuer returned malformed delegation material.')),
-    ).toBe('Archive issuer returned malformed delegation material.');
+    ).toBe('Trusted-node archive delegation material is malformed.');
+    expect(describeArchiveLiveFailure(new Error('Trusted-node delegation failed.'))).toBe(
+      'Trusted-node archive delegation could not be issued.',
+    );
     expect(describeArchiveLiveFailure(new Error('upload failed with 500 from Storacha'))).toBe(
       'Archive upload failed after delegation was issued.',
     );

@@ -1,0 +1,15 @@
+{
+  "id": "opportunity-extractor",
+  "version": "0.1.0",
+  "description": "Extract ecological, community, and capital-formation opportunity candidates from local knowledge.",
+  "runtime": "extension-offscreen",
+  "model": "transformers",
+  "triggers": ["high-confidence-draft", "receiver-backlog"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "opportunity-extractor-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "list-related-drafts"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000
+}

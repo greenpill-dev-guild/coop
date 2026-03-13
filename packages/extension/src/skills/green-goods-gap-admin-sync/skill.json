@@ -1,0 +1,15 @@
+{
+  "id": "green-goods-gap-admin-sync",
+  "version": "0.1.0",
+  "description": "Align Karma GAP project admins with the current trusted coop operators for a linked garden.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["green-goods-gap-admin-sync-needed"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "green-goods-gap-admin-sync-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
+  "allowedActionClasses": ["green-goods-sync-gap-admins"],
+  "requiredCapabilities": [],
+  "approvalMode": "auto-run-eligible",
+  "timeoutMs": 15000
+}

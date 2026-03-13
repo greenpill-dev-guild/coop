@@ -1,0 +1,15 @@
+{
+  "id": "ecosystem-entity-extractor",
+  "version": "0.1.0",
+  "description": "Identify organizations, places, watersheds, bioregions, networks, and programs from local knowledge.",
+  "runtime": "extension-offscreen",
+  "model": "transformers",
+  "triggers": ["high-confidence-draft", "receiver-backlog", "ritual-review-due"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "ecosystem-entity-extractor-output",
+  "allowedTools": ["read-observation-context", "read-coop-context"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000
+}

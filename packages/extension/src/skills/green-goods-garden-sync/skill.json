@@ -1,0 +1,19 @@
+{
+  "id": "green-goods-garden-sync",
+  "version": "0.1.0",
+  "description": "Sync a linked Green Goods garden so its profile, domains, and signal pools match the coop state.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["green-goods-sync-needed"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "green-goods-garden-sync-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
+  "allowedActionClasses": [
+    "green-goods-sync-garden-profile",
+    "green-goods-set-garden-domains",
+    "green-goods-create-garden-pools"
+  ],
+  "requiredCapabilities": [],
+  "approvalMode": "auto-run-eligible",
+  "timeoutMs": 15000
+}

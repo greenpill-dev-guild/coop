@@ -66,12 +66,16 @@ export function describeArchiveLiveFailure(error: unknown) {
     return message;
   }
 
-  if (lower.includes('malformed delegation')) {
-    return 'Archive issuer returned malformed delegation material.';
+  if (lower.includes('trusted-node archive') && lower.includes('config')) {
+    return message;
   }
 
-  if (lower.includes('issuer') || lower.includes('delegation request failed')) {
-    return 'Archive issuer unavailable or delegation rejected.';
+  if (lower.includes('malformed delegation')) {
+    return 'Trusted-node archive delegation material is malformed.';
+  }
+
+  if (lower.includes('trusted-node') || lower.includes('delegation')) {
+    return 'Trusted-node archive delegation could not be issued.';
   }
 
   if (lower.includes('upload')) {

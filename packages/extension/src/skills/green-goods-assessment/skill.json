@@ -1,0 +1,15 @@
+{
+  "id": "green-goods-assessment",
+  "version": "0.1.0",
+  "description": "Prepare a deterministic Green Goods assessment attestation from a structured assessment request.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["green-goods-assessment-requested"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "green-goods-assessment-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
+  "allowedActionClasses": ["green-goods-create-assessment"],
+  "requiredCapabilities": [],
+  "approvalMode": "proposal",
+  "timeoutMs": 15000
+}

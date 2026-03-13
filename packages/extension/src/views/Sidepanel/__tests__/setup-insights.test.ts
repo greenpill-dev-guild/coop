@@ -38,4 +38,21 @@ describe('sidepanel setup insights shaping', () => {
       'Use a shared review board.',
     ]);
   });
+
+  it('fills missing setup answers with readable defaults for a shorter hatch flow', () => {
+    const insights = toSetupInsights({
+      ...initialCreateForm,
+      coopName: 'Pocket Flock',
+      purpose: 'Keep good ideas from getting loose.',
+      seedContribution: 'I bring tabs and field notes.',
+    });
+
+    expect(insights.summary).toContain('Pocket Flock uses Coop');
+    expect(insights.lenses).toHaveLength(4);
+    expect(insights.lenses.every((lens) => lens.currentState.length > 0)).toBe(true);
+    expect(insights.lenses.every((lens) => lens.painPoints.length > 0)).toBe(true);
+    expect(insights.lenses.every((lens) => lens.improvements.length > 0)).toBe(true);
+    expect(insights.crossCuttingPainPoints).toEqual([]);
+    expect(insights.crossCuttingOpportunities).toEqual([]);
+  });
 });

@@ -1,0 +1,20 @@
+{
+  "id": "review-digest",
+  "version": "0.1.0",
+  "description": "Produce a weekly-style synthesis draft from accepted drafts and recent shared artifacts.",
+  "runtime": "extension-offscreen",
+  "model": "webllm",
+  "triggers": ["ritual-review-due"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "review-digest-output",
+  "allowedTools": [
+    "read-coop-context",
+    "list-related-artifacts",
+    "list-related-drafts",
+    "create-review-draft"
+  ],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 45000
+}
