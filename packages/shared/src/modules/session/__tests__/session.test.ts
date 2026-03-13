@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { getGreenGoodsDeployment } from '../../greengoods/greengoods';
 import {
   buildGreenGoodsCreateGardenPayload,
   buildGreenGoodsCreateGardenPoolsPayload,
@@ -26,8 +27,9 @@ const FIXED_NOW = '2026-03-12T00:00:00.000Z';
 const FUTURE = '2026-03-14T00:00:00.000Z';
 const PAST = '2026-03-10T00:00:00.000Z';
 const SAFE_ADDRESS = '0x5555555555555555555555555555555555555555';
-const CREATE_GARDEN_TARGET = '0x7777777777777777777777777777777777777777';
-const POOLS_TARGET = '0x8888888888888888888888888888888888888888';
+const SEPOLIA_DEPLOYMENT = getGreenGoodsDeployment('sepolia');
+const CREATE_GARDEN_TARGET = SEPOLIA_DEPLOYMENT.gardenToken;
+const POOLS_TARGET = SEPOLIA_DEPLOYMENT.gardensModule;
 const OTHER_TARGET = '0x9999999999999999999999999999999999999999';
 
 const dbs: Array<ReturnType<typeof createCoopDb>> = [];
@@ -146,7 +148,6 @@ describe('session capability helpers', () => {
       safeAddress: SAFE_ADDRESS,
       pimlicoApiKey: 'test-pimlico-key',
       hasEncryptedMaterial: true,
-      targetIds: [CREATE_GARDEN_TARGET],
       now: FIXED_NOW,
     });
 
@@ -156,7 +157,11 @@ describe('session capability helpers', () => {
   });
 
   it('rejects bundles when the target escapes the allowlist', () => {
-    const capability = makeCapability();
+    const capability = makeCapability({
+      targetAllowlist: {
+        'green-goods-create-garden': [OTHER_TARGET],
+      },
+    });
     const bundle = makeCreateGardenBundle();
 
     const result = validateSessionCapabilityForBundle({
@@ -166,7 +171,6 @@ describe('session capability helpers', () => {
       safeAddress: SAFE_ADDRESS,
       pimlicoApiKey: 'test-pimlico-key',
       hasEncryptedMaterial: true,
-      targetIds: [OTHER_TARGET],
       now: FIXED_NOW,
     });
 
@@ -211,7 +215,6 @@ describe('session capability helpers', () => {
       chainKey: 'sepolia',
       safeAddress: SAFE_ADDRESS,
       hasEncryptedMaterial: true,
-      targetIds: [POOLS_TARGET],
       now: FIXED_NOW,
     });
     expect(missingPimlico.ok).toBe(false);
@@ -229,7 +232,6 @@ describe('session capability helpers', () => {
       safeAddress: SAFE_ADDRESS,
       pimlicoApiKey: 'test-pimlico-key',
       hasEncryptedMaterial: true,
-      targetIds: [POOLS_TARGET],
       now: FIXED_NOW,
     });
     expect(missingTypedAuthorization.ok).toBe(false);
@@ -251,7 +253,6 @@ describe('session capability helpers', () => {
       safeAddress: SAFE_ADDRESS,
       pimlicoApiKey: 'test-pimlico-key',
       hasEncryptedMaterial: true,
-      targetIds: [CREATE_GARDEN_TARGET],
       now: FIXED_NOW,
     });
     expect(wrongChain.ok).toBe(false);
@@ -266,12 +267,42 @@ describe('session capability helpers', () => {
       safeAddress: OTHER_TARGET,
       pimlicoApiKey: 'test-pimlico-key',
       hasEncryptedMaterial: true,
-      targetIds: [CREATE_GARDEN_TARGET],
       now: FIXED_NOW,
     });
     expect(wrongSafe.ok).toBe(false);
     if (!wrongSafe.ok) {
       expect(wrongSafe.rejectType).toBe('missing-safe');
+    }
+  });
+
+  it('preserves unusable status on refresh and clears it after successful revalidation', () => {
+    const bundle = makeCreateGardenBundle();
+    const unusableCapability = {
+      ...makeCapability(),
+      status: 'unusable' as const,
+      lastValidationFailure: 'missing-pimlico' as const,
+      statusDetail: 'Pimlico is required before a live session key can send transactions.',
+    };
+
+    const refreshed = refreshSessionCapabilityStatus(unusableCapability, FIXED_NOW);
+    expect(refreshed.status).toBe('unusable');
+    expect(refreshed.lastValidationFailure).toBe('missing-pimlico');
+
+    const recovered = validateSessionCapabilityForBundle({
+      capability: refreshed,
+      bundle,
+      chainKey: 'sepolia',
+      safeAddress: SAFE_ADDRESS,
+      pimlicoApiKey: 'test-pimlico-key',
+      hasEncryptedMaterial: true,
+      now: FIXED_NOW,
+    });
+
+    expect(recovered.ok).toBe(true);
+    if (recovered.ok) {
+      expect(recovered.capability.status).toBe('active');
+      expect(recovered.capability.lastValidationFailure).toBeUndefined();
+      expect(recovered.capability.statusDetail).not.toContain('Pimlico is required');
     }
   });
 

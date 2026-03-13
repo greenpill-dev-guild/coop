@@ -815,7 +815,6 @@ async function refreshStoredSessionCapabilityStatuses() {
 async function selectSessionCapabilityForBundle(input: {
   coop: CoopSharedState;
   bundle: ActionBundle;
-  targetIds: string[];
 }) {
   const capabilities = (await refreshStoredSessionCapabilityStatuses()).filter(
     (capability) => capability.coopId === input.coop.profile.id,
@@ -831,7 +830,6 @@ async function selectSessionCapabilityForBundle(input: {
       safeAddress: input.coop.onchainState.safeAddress,
       pimlicoApiKey: configuredPimlicoApiKey,
       hasEncryptedMaterial: (await getEncryptedSessionMaterial(db, capability.id)) !== undefined,
-      targetIds: input.targetIds,
     });
     if (validation.ok) {
       if (JSON.stringify(validation.capability) !== JSON.stringify(capability)) {
@@ -867,7 +865,6 @@ async function selectSessionCapabilityForBundle(input: {
 async function buildGreenGoodsSessionExecutor(input: {
   coop: CoopSharedState;
   bundle: ActionBundle;
-  targetIds: string[];
 }) {
   if (configuredSessionMode !== 'live' || configuredOnchainMode !== 'live') {
     return undefined;
@@ -4001,7 +3998,6 @@ async function handleExecuteAction(
           liveExecutor: await buildGreenGoodsSessionExecutor({
             coop: provisioningCoop,
             bundle,
-            targetIds: scopedPayload.targetIds,
           }),
         });
 
@@ -4149,7 +4145,6 @@ async function handleExecuteAction(
           liveExecutor: await buildGreenGoodsSessionExecutor({
             coop,
             bundle,
-            targetIds: scopedPayload.targetIds,
           }),
         });
         const updated = await updateCoopGreenGoodsState({
@@ -4231,7 +4226,6 @@ async function handleExecuteAction(
           liveExecutor: await buildGreenGoodsSessionExecutor({
             coop,
             bundle,
-            targetIds: scopedPayload.targetIds,
           }),
         });
         const updated = await updateCoopGreenGoodsState({
@@ -4312,7 +4306,6 @@ async function handleExecuteAction(
           liveExecutor: await buildGreenGoodsSessionExecutor({
             coop,
             bundle,
-            targetIds: scopedPayload.targetIds,
           }),
         });
         const updated = await updateCoopGreenGoodsState({

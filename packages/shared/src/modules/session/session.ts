@@ -34,6 +34,7 @@ import {
   sessionCapableActionClassSchema,
 } from '../../contracts/schema';
 import { createId, nowIso } from '../../utils';
+import { getGreenGoodsDeployment } from '../greengoods/greengoods';
 import { getCoopChainConfig } from '../onchain/onchain';
 
 const SESSION_WRAPPING_CONTEXT = 'coop-session-wrap-v1';
@@ -75,6 +76,10 @@ type SessionCapabilityValidationResult =
       reason: string;
       rejectType: SessionCapabilityFailureReason;
     };
+
+type RefreshSessionCapabilityStatusOptions = {
+  preserveUnusable?: boolean;
+};
 
 function isAddress(value: string) {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -180,9 +185,16 @@ export function createSessionCapability(input: {
   });
 }
 
+function buildActiveSessionCapabilityStatusDetail(capability: SessionCapability) {
+  return capability.moduleInstalledAt
+    ? 'Session key is enabled on the coop Safe and ready for bounded execution.'
+    : `Session key is ready for ${capability.scope.allowedActions.length} bounded Green Goods action class(es).`;
+}
+
 export function computeSessionCapabilityStatus(
   capability: SessionCapability,
   now = nowIso(),
+  options: RefreshSessionCapabilityStatusOptions = {},
 ): SessionCapabilityStatus {
   if (capability.revokedAt) {
     return 'revoked';
@@ -193,15 +205,22 @@ export function computeSessionCapabilityStatus(
   if (capability.usedCount >= capability.scope.maxUses) {
     return 'exhausted';
   }
+  if (options.preserveUnusable !== false && capability.status === 'unusable') {
+    return 'unusable';
+  }
   return 'active';
 }
 
 export function refreshSessionCapabilityStatus(
   capability: SessionCapability,
   now = nowIso(),
+  options: RefreshSessionCapabilityStatusOptions = {},
 ): SessionCapability {
-  const status = computeSessionCapabilityStatus(capability, now);
-  if (status === capability.status && capability.updatedAt >= now) {
+  const status = computeSessionCapabilityStatus(capability, now, options);
+  const restoredFromUnusable =
+    capability.status === 'unusable' && status === 'active' && options.preserveUnusable === false;
+
+  if (status === capability.status && capability.updatedAt >= now && !restoredFromUnusable) {
     return capability;
   }
   return sessionCapabilitySchema.parse({
@@ -215,7 +234,11 @@ export function refreshSessionCapabilityStatus(
           ? 'revoked'
           : status === 'exhausted'
             ? 'exhausted'
-            : capability.lastValidationFailure,
+            : status === 'unusable'
+              ? capability.lastValidationFailure
+              : restoredFromUnusable
+                ? undefined
+                : capability.lastValidationFailure,
     statusDetail:
       status === 'expired'
         ? 'Session key expired and can no longer act.'
@@ -223,7 +246,11 @@ export function refreshSessionCapabilityStatus(
           ? 'Session key was revoked and can no longer act.'
           : status === 'exhausted'
             ? 'Session key has used all allowed executions.'
-            : capability.statusDetail,
+            : status === 'unusable'
+              ? capability.statusDetail
+              : restoredFromUnusable
+                ? buildActiveSessionCapabilityStatusDetail(capability)
+                : capability.statusDetail,
   });
 }
 
@@ -420,10 +447,12 @@ export function validateSessionCapabilityForBundle(input: {
   safeAddress?: string;
   pimlicoApiKey?: string;
   hasEncryptedMaterial: boolean;
-  targetIds?: string[];
+  executionTargets?: string[];
   now?: string;
 }): SessionCapabilityValidationResult {
-  const capability = refreshSessionCapabilityStatus(input.capability, input.now);
+  const capability = refreshSessionCapabilityStatus(input.capability, input.now, {
+    preserveUnusable: false,
+  });
 
   if (!isSessionCapableActionClass(input.bundle.actionClass)) {
     return {
@@ -542,13 +571,31 @@ export function validateSessionCapabilityForBundle(input: {
     };
   }
 
-  const targetIds = Array.from(new Set((input.targetIds ?? []).filter(Boolean)));
+  const targetIds = Array.from(
+    new Set(
+      (
+        input.executionTargets ??
+        resolveSessionExecutionTargetsForBundle(input.bundle, input.chainKey)
+      )
+        .filter(isAddress)
+        .map((target) => target.toLowerCase()),
+    ),
+  );
   const allowedTargets = capability.scope.targetAllowlist[input.bundle.actionClass] ?? [];
-  if (targetIds.some((targetId) => !allowedTargets.includes(targetId))) {
+  const normalizedAllowedTargets = allowedTargets.map((target) => target.toLowerCase());
+  if (targetIds.length === 0) {
     return {
       ok: false,
       capability,
-      reason: `Action target "${targetIds.find((targetId) => !allowedTargets.includes(targetId))}" is outside the session allowlist.`,
+      reason: 'Session execution target could not be resolved from the action bundle.',
+      rejectType: 'allowlist-mismatch',
+    };
+  }
+  if (targetIds.some((targetId) => !normalizedAllowedTargets.includes(targetId))) {
+    return {
+      ok: false,
+      capability,
+      reason: `Action target "${targetIds.find((targetId) => !normalizedAllowedTargets.includes(targetId))}" is outside the session allowlist.`,
       rejectType: 'allowlist-mismatch',
     };
   }
@@ -576,7 +623,42 @@ export function validateSessionCapabilityForBundle(input: {
     };
   }
 
+  if (capability.status !== 'active' || capability.lastValidationFailure) {
+    return {
+      ok: true,
+      capability: sessionCapabilitySchema.parse({
+        ...capability,
+        status: 'active',
+        updatedAt: input.now ?? nowIso(),
+        lastValidationFailure: undefined,
+        statusDetail: buildActiveSessionCapabilityStatusDetail(capability),
+      }),
+    };
+  }
+
   return { ok: true, capability };
+}
+
+function resolveSessionExecutionTargetsForBundle(
+  bundle: Pick<ActionBundle, 'actionClass' | 'payload'>,
+  chainKey: SessionCapabilityScope['chainKey'],
+) {
+  const deployment = getGreenGoodsDeployment(chainKey);
+
+  switch (bundle.actionClass) {
+    case 'green-goods-create-garden':
+      return [deployment.gardenToken];
+    case 'green-goods-sync-garden-profile': {
+      const gardenAddress = bundle.payload.gardenAddress;
+      return typeof gardenAddress === 'string' && isAddress(gardenAddress) ? [gardenAddress] : [];
+    }
+    case 'green-goods-set-garden-domains':
+      return [deployment.actionRegistry];
+    case 'green-goods-create-garden-pools':
+      return [deployment.gardensModule];
+    default:
+      return [];
+  }
 }
 
 export async function createSessionWrappingSecret() {

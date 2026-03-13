@@ -199,7 +199,6 @@ const allowedValidation = validateSessionCapabilityForBundle({
   safeAddress: onchainState.safeAddress,
   pimlicoApiKey,
   hasEncryptedMaterial: true,
-  targetIds: [deployment.gardenToken],
 });
 if (!allowedValidation.ok) {
   throw new Error(`Allowed bundle validation failed unexpectedly: ${allowedValidation.reason}`);
@@ -303,7 +302,6 @@ const rejectedValidation = validateSessionCapabilityForBundle({
   safeAddress: onchainState.safeAddress,
   pimlicoApiKey,
   hasEncryptedMaterial: true,
-  targetIds: [gardenResult.gardenAddress],
 });
 if (rejectedValidation.ok || rejectedValidation.rejectType !== 'unsupported-action') {
   throw new Error('Disallowed assessment action was not rejected by session validation.');
@@ -331,7 +329,6 @@ const revokedValidation = validateSessionCapabilityForBundle({
   safeAddress: onchainState.safeAddress,
   pimlicoApiKey,
   hasEncryptedMaterial: true,
-  targetIds: [deployment.gardenToken],
 });
 if (revokedValidation.ok || revokedValidation.rejectType !== 'revoked') {
   throw new Error('Revoked session key still passed local validation.');
