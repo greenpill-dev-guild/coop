@@ -99,6 +99,7 @@ At the `src` level, the repo now follows a more modular layout:
 - [docs/current-state-2026-03-11.md](docs/current-state-2026-03-11.md) — implementation review against the March architecture drafts and meeting notes
 - [docs/scoped-roadmap-2026-03-11.md](docs/scoped-roadmap-2026-03-11.md) — phased plan for receiver PWA, Arbitrum, Filecoin, visual flow, and agentic extensions
 - [docs/testing-and-validation.md](docs/testing-and-validation.md) — named validation suites plus manual QA guidance
+- [docs/reference/org-os-and-reactflow-context.md](docs/reference/org-os-and-reactflow-context.md) — archived context for Org-OS and React Flow scope decisions
 
 ## Current State
 
