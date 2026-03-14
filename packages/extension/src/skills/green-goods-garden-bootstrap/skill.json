@@ -11,5 +11,7 @@
   "allowedActionClasses": ["green-goods-create-garden"],
   "requiredCapabilities": [],
   "approvalMode": "auto-run-eligible",
-  "timeoutMs": 15000
+  "timeoutMs": 15000,
+  "depends": [],
+  "provides": ["garden"]
 }

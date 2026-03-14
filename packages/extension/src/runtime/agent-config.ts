@@ -10,6 +10,8 @@ export const AGENT_SETTING_KEYS = {
 export const AGENT_HIGH_CONFIDENCE_THRESHOLD = 0.24;
 export const AGENT_LOOP_POLL_INTERVAL_MS = 1500;
 export const AGENT_LOOP_WAIT_TIMEOUT_MS = 7000;
+export const AGENT_MAX_CONSECUTIVE_FAILURES = 3;
+export const AGENT_SKILL_TIMEOUT_MS = 30_000;
 
 export type AgentCycleRequest = {
   id: string;
@@ -25,4 +27,5 @@ export type AgentCycleState = {
   lastError?: string;
   lastRequestId?: string;
   lastRequestAt?: string;
+  consecutiveFailureCount?: number;
 };

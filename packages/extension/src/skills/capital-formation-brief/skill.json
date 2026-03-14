@@ -11,5 +11,8 @@
   "allowedActionClasses": [],
   "requiredCapabilities": [],
   "approvalMode": "advisory",
-  "timeoutMs": 45000
+  "timeoutMs": 45000,
+  "depends": ["grant-fit-scorer"],
+  "skipWhen": "no-scores",
+  "provides": ["drafts"]
 }

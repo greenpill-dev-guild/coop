@@ -1,16 +1,21 @@
 import Dexie, { type EntityTable } from 'dexie';
+import * as Y from 'yjs';
 import type {
   ActionBundle,
   ActionLogEntry,
   ActionPolicy,
+  AgentLog,
   AgentObservation,
   AgentPlan,
   AnchorCapability,
   AuthSession,
+  CoopKnowledgeSkillOverride,
   CoopSharedState,
   EncryptedSessionMaterial,
   ExecutionGrant,
   GrantLogEntry,
+  HapticPreferences,
+  KnowledgeSkill,
   LocalPasskeyIdentity,
   PrivilegedActionLogEntry,
   ReadablePageExtract,
@@ -37,6 +42,8 @@ import {
   encryptedSessionMaterialSchema,
   executionGrantSchema,
   grantLogEntrySchema,
+  hapticPreferencesSchema,
+  normalizeLegacyOnchainState,
   privilegedActionLogEntrySchema,
   receiverDeviceIdentitySchema,
   sessionCapabilityLogEntrySchema,
@@ -99,6 +106,9 @@ export class CoopDexie extends Dexie {
   agentObservations!: EntityTable<AgentObservation, 'id'>;
   agentPlans!: EntityTable<AgentPlan, 'id'>;
   skillRuns!: EntityTable<SkillRun, 'id'>;
+  knowledgeSkills!: EntityTable<KnowledgeSkill, 'id'>;
+  coopKnowledgeSkillOverrides!: EntityTable<CoopKnowledgeSkillOverride, 'id'>;
+  agentLogs!: EntityTable<AgentLog, 'id'>;
 
   constructor(name = 'coop-v1') {
     super(name);
@@ -248,6 +258,33 @@ export class CoopDexie extends Dexie {
       agentPlans: 'id, observationId, status, createdAt, updatedAt',
       skillRuns: 'id, observationId, planId, skillId, status, startedAt',
     });
+    this.version(9).stores({
+      tabCandidates: 'id, canonicalUrl, domain, capturedAt',
+      pageExtracts: 'id, canonicalUrl, domain, createdAt',
+      reviewDrafts: 'id, category, createdAt, workflowStage',
+      coopDocs: 'id, updatedAt',
+      captureRuns: 'id, state, capturedAt',
+      settings: 'key',
+      identities: 'id, ownerAddress, displayName, createdAt, lastUsedAt',
+      receiverPairings: 'pairingId, coopId, memberId, roomId, issuedAt, acceptedAt, active',
+      receiverCaptures:
+        'id, kind, createdAt, syncState, pairingId, coopId, memberId, intakeStatus, linkedDraftId',
+      receiverBlobs: 'captureId',
+      actionBundles: 'id, status, coopId, actionClass, createdAt',
+      actionLogEntries: 'id, bundleId, eventType, createdAt',
+      replayIds: 'replayId, bundleId, executedAt',
+      executionGrants: 'id, coopId, status, createdAt, expiresAt',
+      grantLogEntries: 'id, grantId, eventType, createdAt',
+      sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
+      sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
+      encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
+      agentObservations: 'id, status, trigger, coopId, createdAt, fingerprint',
+      agentPlans: 'id, observationId, status, createdAt, updatedAt',
+      skillRuns: 'id, observationId, planId, skillId, status, startedAt',
+      knowledgeSkills: 'id, &url, name, domain, enabled',
+      coopKnowledgeSkillOverrides: 'id, [coopId+knowledgeSkillId], coopId',
+      agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
+    });
   }
 }
 
@@ -310,6 +347,20 @@ export async function getSoundPreferences(db: CoopDexie): Promise<SoundPreferenc
   const record = await db.settings.get('sound-preferences');
   if (!record?.value) return null;
   const result = soundPreferencesSchema.safeParse(record.value);
+  return result.success ? result.data : null;
+}
+
+export async function setHapticPreferences(db: CoopDexie, value: HapticPreferences) {
+  await db.settings.put({
+    key: 'haptic-preferences',
+    value,
+  });
+}
+
+export async function getHapticPreferences(db: CoopDexie): Promise<HapticPreferences | null> {
+  const record = await db.settings.get('haptic-preferences');
+  if (!record?.value) return null;
+  const result = hapticPreferencesSchema.safeParse(record.value);
   return result.success ? result.data : null;
 }
 
@@ -698,4 +749,89 @@ export async function listSkillRuns(db: CoopDexie, limit = 200) {
 
 export async function listSkillRunsByPlanId(db: CoopDexie, planId: string) {
   return db.skillRuns.where('planId').equals(planId).reverse().sortBy('startedAt');
+}
+
+// --- Knowledge skills ---
+
+export async function saveKnowledgeSkill(db: CoopDexie, skill: KnowledgeSkill) {
+  await db.knowledgeSkills.put(skill);
+}
+
+export async function getKnowledgeSkill(db: CoopDexie, skillId: string) {
+  return db.knowledgeSkills.get(skillId);
+}
+
+export async function listKnowledgeSkills(db: CoopDexie) {
+  return db.knowledgeSkills.toArray();
+}
+
+export async function deleteKnowledgeSkill(db: CoopDexie, skillId: string) {
+  await db.knowledgeSkills.delete(skillId);
+}
+
+export async function saveCoopKnowledgeSkillOverride(
+  db: CoopDexie,
+  override: CoopKnowledgeSkillOverride,
+) {
+  await db.coopKnowledgeSkillOverrides.put(override);
+}
+
+export async function listCoopKnowledgeSkillOverrides(db: CoopDexie, coopId: string) {
+  return db.coopKnowledgeSkillOverrides.where('coopId').equals(coopId).toArray();
+}
+
+// --- Agent logs ---
+
+export async function saveAgentLog(db: CoopDexie, log: AgentLog) {
+  await db.agentLogs.put(log);
+}
+
+export async function listAgentLogsByTraceId(db: CoopDexie, traceId: string) {
+  return db.agentLogs.where('traceId').equals(traceId).sortBy('timestamp');
+}
+
+export async function listRecentAgentLogs(db: CoopDexie, limit = 200) {
+  return db.agentLogs.orderBy('timestamp').reverse().limit(limit).toArray();
+}
+
+// --- Legacy chain key migration ---
+
+/**
+ * One-time migration: normalizes legacy chain keys (celo → arbitrum,
+ * celo-sepolia → sepolia) stored in coop docs. Idempotent — safe to
+ * run multiple times; modern keys pass through unchanged.
+ */
+export async function migrateLegacyChainKeys(db: CoopDexie) {
+  const records = await db.coopDocs.toArray();
+
+  for (const record of records) {
+    const doc = hydrateCoopDoc(record.encodedState);
+    const root = doc.getMap<string>('coop');
+    const rawOnchain = root.get('onchainState');
+    if (!rawOnchain) continue;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawOnchain);
+    } catch {
+      continue;
+    }
+
+    const normalized = normalizeLegacyOnchainState(parsed);
+    if (normalized === parsed) continue;
+
+    // Check if anything actually changed
+    const normalizedJson = JSON.stringify(normalized);
+    if (normalizedJson === rawOnchain) continue;
+
+    doc.transact(() => {
+      root.set('onchainState', normalizedJson);
+    });
+
+    await db.coopDocs.put({
+      ...record,
+      encodedState: Y.encodeStateAsUpdate(doc),
+      updatedAt: new Date().toISOString(),
+    });
+  }
 }

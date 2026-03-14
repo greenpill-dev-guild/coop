@@ -365,6 +365,7 @@ export const agentObservationStatusSchema = z.enum([
   'completed',
   'failed',
   'dismissed',
+  'stalled',
 ]);
 
 export const agentPlanStatusSchema = z.enum([
@@ -671,6 +672,10 @@ export const skillManifestSchema = z.object({
   requiredCapabilities: z.array(z.string()).default([]),
   approvalMode: skillApprovalModeSchema,
   timeoutMs: z.number().int().positive(),
+  depends: z.array(z.string()).default([]),
+  skipWhen: z.string().optional(),
+  provides: z.array(z.string()).default([]),
+  maxTokens: z.number().int().positive().optional(),
 });
 
 export const skillRunSchema = z.object({
@@ -690,13 +695,55 @@ export const skillRunSchema = z.object({
   error: z.string().optional(),
 });
 
+export const knowledgeSkillSchema = z.object({
+  id: z.string().min(1),
+  url: z.string().url(),
+  name: z.string().min(1),
+  description: z.string().default(''),
+  domain: z.string().default('general'),
+  content: z.string().default(''),
+  contentHash: z.string().default(''),
+  fetchedAt: z.string().datetime().optional(),
+  enabled: z.boolean().default(true),
+  triggerPatterns: z.array(z.string()).default([]),
+});
+
+export const coopKnowledgeSkillOverrideSchema = z.object({
+  id: z.string().min(1),
+  coopId: z.string().min(1),
+  knowledgeSkillId: z.string().min(1),
+  enabled: z.boolean(),
+});
+
+export const agentLogSpanTypeSchema = z.enum([
+  'cycle',
+  'observation',
+  'skill',
+  'inference',
+  'action',
+]);
+
+export const agentLogLevelSchema = z.enum(['info', 'warn', 'error']);
+
+export const agentLogSchema = z.object({
+  id: z.string().min(1),
+  traceId: z.string().min(1),
+  spanType: agentLogSpanTypeSchema,
+  skillId: z.string().optional(),
+  observationId: z.string().optional(),
+  level: agentLogLevelSchema,
+  message: z.string(),
+  data: z.record(z.any()).optional(),
+  timestamp: z.string().datetime(),
+});
+
 export const privilegedActionStatusSchema = z.enum(['attempted', 'succeeded', 'failed']);
 export const archiveWorthinessSchema = z.object({
   flagged: z.boolean().default(false),
   flaggedAt: z.string().datetime().optional(),
 });
 
-const legacyOnchainChainKeyMap = {
+export const legacyOnchainChainKeyMap = {
   celo: 'arbitrum',
   'celo-sepolia': 'sepolia',
 } as const satisfies Record<string, z.infer<typeof coopChainKeySchema>>;
@@ -710,7 +757,7 @@ function normalizeLegacyOnchainStatusNote(statusNote: string) {
   return statusNote.replaceAll('Celo Sepolia', 'Sepolia').replace(/\bCelo\b/g, 'Arbitrum');
 }
 
-function normalizeLegacyOnchainState(value: unknown) {
+export function normalizeLegacyOnchainState(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return value;
   }
@@ -764,38 +811,35 @@ export const ritualDefinitionSchema = z.object({
   defaultCapturePosture: z.string().min(1),
 });
 
-export const onchainStateSchema = z.preprocess(
-  normalizeLegacyOnchainState,
-  z
-    .object({
-      chainId: z.number().int().positive(),
-      chainKey: coopChainKeySchema.default('sepolia'),
-      safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-      senderAddress: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]{40}$/)
-        .optional(),
-      safeCapability: capabilityStateSchema,
-      statusNote: z.string(),
-      deploymentTxHash: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]+$/)
-        .optional(),
-      userOperationHash: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]+$/)
-        .optional(),
-    })
-    .superRefine((value, ctx) => {
-      if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['chainId'],
-          message: `chainId must match the configured ${value.chainKey} network.`,
-        });
-      }
-    }),
-);
+export const onchainStateSchema = z
+  .object({
+    chainId: z.number().int().positive(),
+    chainKey: coopChainKeySchema.default('sepolia'),
+    safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    senderAddress: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{40}$/)
+      .optional(),
+    safeCapability: capabilityStateSchema,
+    statusNote: z.string(),
+    deploymentTxHash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]+$/)
+      .optional(),
+    userOperationHash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]+$/)
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['chainId'],
+        message: `chainId must match the configured ${value.chainKey} network.`,
+      });
+    }
+  });
 
 export const syncRoomConfigSchema = z.object({
   coopId: z.string().min(1),
@@ -1371,6 +1415,19 @@ export const soundPreferencesSchema = z.object({
   reducedSound: z.boolean().default(false),
 });
 
+export const hapticEventSchema = z.enum([
+  'pairing-confirmed',
+  'capture-saved',
+  'sync-completed',
+  'button-press',
+  'error',
+]);
+
+export const hapticPreferencesSchema = z.object({
+  enabled: z.boolean().default(false),
+  reducedMotion: z.boolean().default(false),
+});
+
 export const preferredExportMethodSchema = z.enum(['download', 'file-picker']);
 
 export const uiPreferencesSchema = z.object({
@@ -1523,6 +1580,8 @@ export type RitualLens = z.infer<typeof ritualLensSchema>;
 export type SetupInsights = z.infer<typeof setupInsightsSchema>;
 export type SoundEvent = z.infer<typeof soundEventSchema>;
 export type SoundPreferences = z.infer<typeof soundPreferencesSchema>;
+export type HapticEvent = z.infer<typeof hapticEventSchema>;
+export type HapticPreferences = z.infer<typeof hapticPreferencesSchema>;
 export type PreferredExportMethod = z.infer<typeof preferredExportMethodSchema>;
 export type UiPreferences = z.infer<typeof uiPreferencesSchema>;
 export type SourceReference = z.infer<typeof sourceReferenceSchema>;
@@ -1581,3 +1640,8 @@ export type ThemeClustererOutput = z.infer<typeof themeClustererOutputSchema>;
 export type PublishReadinessCheckOutput = z.infer<typeof publishReadinessCheckOutputSchema>;
 export type SkillManifest = z.infer<typeof skillManifestSchema>;
 export type SkillRun = z.infer<typeof skillRunSchema>;
+export type KnowledgeSkill = z.infer<typeof knowledgeSkillSchema>;
+export type CoopKnowledgeSkillOverride = z.infer<typeof coopKnowledgeSkillOverrideSchema>;
+export type AgentLogSpanType = z.infer<typeof agentLogSpanTypeSchema>;
+export type AgentLogLevel = z.infer<typeof agentLogLevelSchema>;
+export type AgentLog = z.infer<typeof agentLogSchema>;

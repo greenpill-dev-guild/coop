@@ -11,5 +11,7 @@
   "allowedActionClasses": ["green-goods-create-assessment"],
   "requiredCapabilities": [],
   "approvalMode": "proposal",
-  "timeoutMs": 15000
+  "timeoutMs": 15000,
+  "depends": [],
+  "provides": ["assessment"]
 }

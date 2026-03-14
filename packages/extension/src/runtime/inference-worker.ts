@@ -59,6 +59,8 @@ async function ensureModel() {
     // Configure for worker context
     env.allowLocalModels = false;
     env.useBrowserCache = true;
+    // Load ONNX WASM from CDN instead of bundling the 22 MB binary
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
 
     pipeline = await createPipeline('text-generation', MODEL_ID, {
       dtype: 'q4',

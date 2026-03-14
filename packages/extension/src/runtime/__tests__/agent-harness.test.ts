@@ -3,15 +3,19 @@ import {
   type AgentPlan,
   type ReceiverCapture,
   type ReviewDraft,
+  type SkillManifest,
   type SkillRun,
   createAgentObservation,
   createAgentPlan,
 } from '@coop/shared';
 import { describe, expect, it } from 'vitest';
 import {
+  type SkillExecutionContext,
   filterAgentDashboardState,
   isTrustedNodeRole,
   selectSkillIdsForObservation,
+  shouldSkipSkill,
+  topologicalSortSkills,
 } from '../agent-harness';
 import { listRegisteredSkills } from '../agent-registry';
 
@@ -119,6 +123,124 @@ function makeSkillRun(observationId: string, planId: string): SkillRun {
   };
 }
 
+function makeManifest(overrides: Partial<SkillManifest> & { id: string }): SkillManifest {
+  return {
+    version: '0.1.0',
+    description: `Skill ${overrides.id}`,
+    runtime: 'extension-offscreen',
+    model: 'transformers',
+    triggers: ['receiver-backlog'],
+    inputSchemaRef: 'agent-observation',
+    outputSchemaRef: 'opportunity-extractor-output',
+    allowedTools: [],
+    allowedActionClasses: [],
+    requiredCapabilities: [],
+    approvalMode: 'advisory',
+    timeoutMs: 30000,
+    depends: [],
+    provides: [],
+    ...overrides,
+  };
+}
+
+describe('topologicalSortSkills', () => {
+  it('sorts a linear dependency chain in correct order', () => {
+    const manifests: SkillManifest[] = [
+      makeManifest({ id: 'c', depends: ['b'] }),
+      makeManifest({ id: 'a', depends: [] }),
+      makeManifest({ id: 'b', depends: ['a'] }),
+    ];
+    const sorted = topologicalSortSkills(manifests);
+    expect(sorted.map((m) => m.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('sorts skills with no dependencies alphabetically', () => {
+    const manifests: SkillManifest[] = [
+      makeManifest({ id: 'zebra' }),
+      makeManifest({ id: 'alpha' }),
+      makeManifest({ id: 'middle' }),
+    ];
+    const sorted = topologicalSortSkills(manifests);
+    expect(sorted.map((m) => m.id)).toEqual(['alpha', 'middle', 'zebra']);
+  });
+
+  it('throws on dependency cycles', () => {
+    const manifests: SkillManifest[] = [
+      makeManifest({ id: 'a', depends: ['b'] }),
+      makeManifest({ id: 'b', depends: ['a'] }),
+    ];
+    expect(() => topologicalSortSkills(manifests)).toThrow(/cycle/i);
+  });
+
+  it('handles a mix of dependent and independent skills', () => {
+    const manifests: SkillManifest[] = [
+      makeManifest({ id: 'standalone-z' }),
+      makeManifest({ id: 'child', depends: ['parent'] }),
+      makeManifest({ id: 'standalone-a' }),
+      makeManifest({ id: 'parent' }),
+    ];
+    const sorted = topologicalSortSkills(manifests);
+    const ids = sorted.map((m) => m.id);
+    // Parent must come before child
+    expect(ids.indexOf('parent')).toBeLessThan(ids.indexOf('child'));
+    // Once parent is processed, child becomes ready and is re-sorted into the queue
+    expect(ids).toEqual(['parent', 'child', 'standalone-a', 'standalone-z']);
+  });
+
+  it('ignores depends entries for skills not in the input set', () => {
+    const manifests: SkillManifest[] = [
+      makeManifest({ id: 'b', depends: ['missing-skill'] }),
+      makeManifest({ id: 'a' }),
+    ];
+    const sorted = topologicalSortSkills(manifests);
+    expect(sorted.map((m) => m.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('shouldSkipSkill', () => {
+  const emptyCtx: SkillExecutionContext = {
+    candidates: [],
+    scores: [],
+    draft: undefined,
+    coop: undefined,
+  };
+
+  const fullCtx: SkillExecutionContext = {
+    candidates: [{ id: '1' }],
+    scores: [{ id: '1', score: 0.9 }],
+    draft: { id: 'draft-1' },
+    coop: { id: 'coop-1' },
+  };
+
+  it('returns false when skipWhen is undefined', () => {
+    expect(shouldSkipSkill(undefined, emptyCtx)).toBe(false);
+  });
+
+  it('returns true when no-candidates condition is met', () => {
+    expect(shouldSkipSkill('no-candidates', emptyCtx)).toBe(true);
+    expect(shouldSkipSkill('no-candidates', fullCtx)).toBe(false);
+  });
+
+  it('returns true when no-scores condition is met', () => {
+    expect(shouldSkipSkill('no-scores', emptyCtx)).toBe(true);
+    expect(shouldSkipSkill('no-scores', fullCtx)).toBe(false);
+  });
+
+  it('returns true when no-draft condition is met', () => {
+    expect(shouldSkipSkill('no-draft', emptyCtx)).toBe(true);
+    expect(shouldSkipSkill('no-draft', fullCtx)).toBe(false);
+  });
+
+  it('returns true when no-coop condition is met', () => {
+    expect(shouldSkipSkill('no-coop', emptyCtx)).toBe(true);
+    expect(shouldSkipSkill('no-coop', fullCtx)).toBe(false);
+  });
+
+  it('returns false for unknown condition keys', () => {
+    expect(shouldSkipSkill('unknown-condition', fullCtx)).toBe(false);
+  });
+});
+
 describe('agent harness helpers', () => {
   it('treats creator and trusted roles as trusted-node operators', () => {
     expect(isTrustedNodeRole('creator')).toBe(true);
@@ -136,11 +258,13 @@ describe('agent harness helpers', () => {
       coopId: 'coop-1',
       captureId: 'capture-1',
     });
+    // Topological sort: no-depends skills alphabetically first,
+    // then chain: opportunity-extractor → grant-fit-scorer → capital-formation-brief
     expect(selectSkillIdsForObservation(receiverBacklog, manifests)).toEqual([
+      'ecosystem-entity-extractor',
       'opportunity-extractor',
       'grant-fit-scorer',
       'capital-formation-brief',
-      'ecosystem-entity-extractor',
     ]);
 
     const ritualReview = createAgentObservation({
@@ -150,8 +274,8 @@ describe('agent harness helpers', () => {
       coopId: 'coop-1',
     });
     expect(selectSkillIdsForObservation(ritualReview, manifests)).toEqual([
-      'review-digest',
       'ecosystem-entity-extractor',
+      'review-digest',
       'theme-clusterer',
     ]);
 

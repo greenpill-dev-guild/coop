@@ -14,6 +14,7 @@ type WebLlmEngine = {
         messages: Array<{ role: 'system' | 'user'; content: string }>;
         temperature?: number;
         max_tokens?: number;
+        response_format?: { type: 'json_object' | 'text' };
       }): Promise<{
         choices?: Array<{ message?: { content?: string | null } }>;
       }>;
@@ -94,6 +95,7 @@ export class AgentWebLlmBridge {
       ],
       temperature: input.temperature ?? 0.2,
       max_tokens: input.maxTokens ?? 512,
+      response_format: { type: 'json_object' },
     });
     const output = response.choices?.[0]?.message?.content ?? '';
 

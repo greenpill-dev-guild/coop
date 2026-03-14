@@ -74,16 +74,36 @@ import {
 } from '@coop/shared';
 import {
   AGENT_HIGH_CONFIDENCE_THRESHOLD,
+  AGENT_MAX_CONSECUTIVE_FAILURES,
   AGENT_SETTING_KEYS,
   type AgentCycleRequest,
   type AgentCycleState,
 } from './agent-config';
-import { isTrustedNodeRole, selectSkillIdsForObservation } from './agent-harness';
+import { isTrustedNodeRole, selectSkillIdsForObservation, shouldSkipSkill } from './agent-harness';
+import { selectKnowledgeSkills } from './agent-knowledge';
+import {
+  logActionDispatch,
+  logCycleEnd,
+  logCycleStart,
+  logObservationDismissed,
+  logObservationStart,
+  logSkillComplete,
+  logSkillFailed,
+  logSkillStart,
+} from './agent-logger';
 import { completeSkillOutput } from './agent-models';
 import { getRegisteredSkill, listRegisteredSkills } from './agent-registry';
 import type { RuntimeActionResponse } from './messages';
 
 type CoopDexie = ReturnType<typeof createCoopDb>;
+
+type SkillRunMetric = {
+  skillId: string;
+  provider: AgentProvider;
+  durationMs: number;
+  retryCount: number;
+  skipped: boolean;
+};
 
 type AgentCycleResult = {
   processedObservationIds: string[];
@@ -92,6 +112,9 @@ type AgentCycleResult = {
   completedSkillRunIds: string[];
   autoExecutedActionCount: number;
   errors: string[];
+  traceId?: string;
+  totalDurationMs?: number;
+  skillRunMetrics: SkillRunMetric[];
 };
 
 type SkillExecutionContext = {
@@ -278,7 +301,7 @@ function getObservationDismissReason(input: {
   }
 }
 
-function buildSkillPrompt(input: {
+async function buildSkillPrompt(input: {
   manifest: SkillManifest;
   observation: AgentObservation;
   coop?: CoopSharedState;
@@ -360,8 +383,16 @@ function buildSkillPrompt(input: {
     `Expected output schema ref: ${input.manifest.outputSchemaRef}`,
   ].join('\n\n');
 
+  // Inject relevant knowledge skills into prompt context
+  const knowledgeSkills = await selectKnowledgeSkills(input.observation, input.coop?.profile.id);
+  const knowledgeContext =
+    knowledgeSkills.length > 0
+      ? `Domain knowledge:\n${knowledgeSkills.map((s) => `### ${s.name}\n${s.content}`).join('\n\n')}`
+      : '';
+
   const prompt = [
     coopContext,
+    ...(knowledgeContext ? [knowledgeContext] : []),
     sourceContext,
     candidateContext,
     scoreContext,
@@ -487,7 +518,7 @@ async function completeSkill<T>(input: {
   relatedArtifacts: CoopSharedState['artifacts'];
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const { manifest } = input;
-  const prepared = buildSkillPrompt(input);
+  const prepared = await buildSkillPrompt(input);
   const preferredProvider = inferPreferredProvider(manifest);
   const result = await completeSkillOutput<T>({
     preferredProvider,
@@ -743,6 +774,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         blockedReason: dismissalReason,
       }),
     );
+    void logObservationDismissed({ observationId: observation.id, reason: dismissalReason });
     return {
       processedObservationIds: [observation.id],
       createdPlanIds: [],
@@ -750,6 +782,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
 
@@ -784,7 +817,10 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
     completedSkillRunIds: [],
     autoExecutedActionCount: 0,
     errors: [],
+    skillRunMetrics: [],
   };
+
+  void logObservationStart({ observationId: observation.id, trigger: observation.trigger });
 
   let workingPlan = plan;
   let workingObservation = updateAgentObservation(observation, {
@@ -854,6 +890,45 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       continue;
     }
 
+    // Evaluate skip condition before running skill
+    if (
+      shouldSkipSkill(registered.manifest.skipWhen, {
+        candidates: context.candidates,
+        scores: context.scores,
+        draft: context.draft,
+        coop: context.coop,
+      })
+    ) {
+      const skippedStep = createAgentPlanStep({
+        skillId,
+        provider: inferPreferredProvider(registered.manifest),
+        summary: registered.manifest.description,
+        startedAt: nowIso(),
+      });
+      workingPlan = updateAgentPlan(workingPlan, {
+        steps: [
+          ...workingPlan.steps,
+          updateAgentPlanStep(skippedStep, { status: 'skipped', finishedAt: nowIso() }),
+        ],
+      });
+      await saveAgentPlan(db, workingPlan);
+      void logSkillComplete({
+        skillId,
+        observationId: observation.id,
+        provider: inferPreferredProvider(registered.manifest),
+        durationMs: 0,
+        skipped: true,
+      });
+      result.skillRunMetrics.push({
+        skillId,
+        provider: inferPreferredProvider(registered.manifest),
+        durationMs: 0,
+        retryCount: 0,
+        skipped: true,
+      });
+      continue;
+    }
+
     const step = createAgentPlanStep({
       skillId,
       provider: inferPreferredProvider(registered.manifest),
@@ -875,6 +950,11 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       promptHash: `${registered.manifest.id}:${observation.id}:${observation.updatedAt}`,
     });
     await saveSkillRun(db, run);
+    void logSkillStart({
+      skillId,
+      observationId: observation.id,
+      provider: inferPreferredProvider(registered.manifest),
+    });
 
     try {
       const completed = await completeSkill({
@@ -1217,6 +1297,20 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       run = completeSkillRun(run, output);
       await saveSkillRun(db, run);
       result.completedSkillRunIds.push(run.id);
+      result.skillRunMetrics.push({
+        skillId,
+        provider: completed.provider,
+        durationMs: completed.durationMs,
+        retryCount: 0,
+        skipped: false,
+      });
+      void logSkillComplete({
+        skillId,
+        observationId: observation.id,
+        provider: completed.provider,
+        model: completed.model,
+        durationMs: completed.durationMs,
+      });
 
       currentStep = updateAgentPlanStep(currentStep, {
         provider: completed.provider,
@@ -1234,6 +1328,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       const message = error instanceof Error ? error.message : `Skill ${skillId} failed.`;
       run = failSkillRun(run, message);
       await saveSkillRun(db, run);
+      void logSkillFailed({ skillId, observationId: observation.id, error: message });
 
       currentStep = updateAgentPlanStep(currentStep, {
         status: 'failed',
@@ -1298,6 +1393,7 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
 
@@ -1313,8 +1409,12 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
+
+  const cycleStart = Date.now();
+  const traceId = await logCycleStart(pendingObservations.length);
 
   await setCycleState({
     running: true,
@@ -1331,6 +1431,8 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     completedSkillRunIds: [],
     autoExecutedActionCount: 0,
     errors: [],
+    traceId,
+    skillRunMetrics: [],
   };
 
   try {
@@ -1341,10 +1443,23 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     );
 
     for (const observation of runnableObservations.slice(0, 8)) {
+      // Stall detection: skip observations that have failed too many times
       const priorPlans = await listAgentPlansByObservationId(db, observation.id);
       if (priorPlans.some((plan) => plan.status === 'executing')) {
         continue;
       }
+      const failedPlanCount = priorPlans.filter((plan) => plan.status === 'failed').length;
+      if (failedPlanCount >= AGENT_MAX_CONSECUTIVE_FAILURES) {
+        await saveAgentObservation(
+          db,
+          updateAgentObservation(observation, {
+            status: 'stalled',
+            blockedReason: `Stalled after ${failedPlanCount} consecutive failures.`,
+          }),
+        );
+        continue;
+      }
+
       const observationResult = await runObservationPlan(observation);
       result.processedObservationIds.push(...observationResult.processedObservationIds);
       result.createdPlanIds.push(...observationResult.createdPlanIds);
@@ -1352,18 +1467,27 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       result.completedSkillRunIds.push(...observationResult.completedSkillRunIds);
       result.autoExecutedActionCount += observationResult.autoExecutedActionCount;
       result.errors.push(...observationResult.errors);
+      result.skillRunMetrics.push(...observationResult.skillRunMetrics);
     }
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : 'Agent cycle failed.');
   } finally {
+    result.totalDurationMs = Date.now() - cycleStart;
     await setCycleState({
       running: false,
       lastCompletedAt: nowIso(),
       lastError: result.errors[0],
+      consecutiveFailureCount:
+        result.errors.length > 0 ? (cycleState.consecutiveFailureCount ?? 0) + 1 : 0,
     });
     if (request) {
       await setSetting(AGENT_SETTING_KEYS.cycleRequest, null);
     }
+    void logCycleEnd({
+      processedCount: result.processedObservationIds.length,
+      errorCount: result.errors.length,
+      durationMs: result.totalDurationMs,
+    });
   }
 
   return result;

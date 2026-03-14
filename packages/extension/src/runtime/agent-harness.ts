@@ -12,20 +12,85 @@ import {
 
 const trustedNodeRoles = new Set<Member['role']>(['creator', 'trusted']);
 
-const skillExecutionOrder: Record<string, number> = {
-  'opportunity-extractor': 10,
-  'grant-fit-scorer': 20,
-  'capital-formation-brief': 30,
-  'review-digest': 40,
-  'ecosystem-entity-extractor': 50,
-  'theme-clusterer': 60,
-  'publish-readiness-check': 70,
-  'green-goods-garden-bootstrap': 80,
-  'green-goods-garden-sync': 90,
-  'green-goods-work-approval': 100,
-  'green-goods-assessment': 110,
-  'green-goods-gap-admin-sync': 120,
+/**
+ * Topological sort of skills based on the `depends` graph.
+ * Falls back to alphabetical for skills with no dependencies.
+ * Throws at build time if cycles are detected.
+ */
+export function topologicalSortSkills(manifests: SkillManifest[]): SkillManifest[] {
+  const byId = new Map(manifests.map((m) => [m.id, m]));
+  const inDegree = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+
+  for (const m of manifests) {
+    inDegree.set(m.id, 0);
+    dependents.set(m.id, []);
+  }
+
+  for (const m of manifests) {
+    for (const dep of m.depends) {
+      if (!byId.has(dep)) continue;
+      inDegree.set(m.id, (inDegree.get(m.id) ?? 0) + 1);
+      const depChildren = dependents.get(dep);
+      if (depChildren) depChildren.push(m.id);
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [id, degree] of inDegree) {
+    if (degree === 0) queue.push(id);
+  }
+  queue.sort((a, b) => a.localeCompare(b));
+
+  const sorted: SkillManifest[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift();
+    if (!id) break;
+    const manifest = byId.get(id);
+    if (!manifest) continue;
+    sorted.push(manifest);
+
+    const children = dependents.get(id) ?? [];
+    const ready: string[] = [];
+    for (const child of children) {
+      const newDegree = (inDegree.get(child) ?? 1) - 1;
+      inDegree.set(child, newDegree);
+      if (newDegree === 0) ready.push(child);
+    }
+    ready.sort((a, b) => a.localeCompare(b));
+    queue.push(...ready);
+    queue.sort((a, b) => a.localeCompare(b));
+  }
+
+  if (sorted.length !== manifests.length) {
+    const remaining = manifests.filter((m) => !sorted.some((s) => s.id === m.id));
+    throw new Error(
+      `Dependency cycle detected among skills: ${remaining.map((m) => m.id).join(', ')}`,
+    );
+  }
+
+  return sorted;
+}
+
+export type SkillExecutionContext = {
+  candidates: Array<unknown>;
+  scores: Array<unknown>;
+  draft?: unknown;
+  coop?: unknown;
 };
+
+export const skipConditions: Record<string, (ctx: SkillExecutionContext) => boolean> = {
+  'no-candidates': (ctx) => ctx.candidates.length === 0,
+  'no-scores': (ctx) => ctx.scores.length === 0,
+  'no-draft': (ctx) => !ctx.draft,
+  'no-coop': (ctx) => !ctx.coop,
+};
+
+export function shouldSkipSkill(skipWhen: string | undefined, ctx: SkillExecutionContext): boolean {
+  if (!skipWhen) return false;
+  const condition = skipConditions[skipWhen];
+  return condition ? condition(ctx) : false;
+}
 
 export function isTrustedNodeRole(role: Member['role'] | undefined | null): boolean {
   return role ? trustedNodeRoles.has(role) : false;
@@ -35,15 +100,11 @@ export function selectSkillIdsForObservation(
   observation: AgentObservation,
   manifests: SkillManifest[],
 ): string[] {
-  return manifests
+  const filtered = manifests
     .filter((manifest) => manifest.triggers.includes(observation.trigger))
-    .filter((manifest) => observation.draftId || manifest.id !== 'publish-readiness-check')
-    .sort((left, right) => {
-      const leftOrder = skillExecutionOrder[left.id] ?? Number.MAX_SAFE_INTEGER;
-      const rightOrder = skillExecutionOrder[right.id] ?? Number.MAX_SAFE_INTEGER;
-      return leftOrder - rightOrder || left.id.localeCompare(right.id);
-    })
-    .map((manifest) => manifest.id);
+    .filter((manifest) => observation.draftId || manifest.id !== 'publish-readiness-check');
+
+  return topologicalSortSkills(filtered).map((manifest) => manifest.id);
 }
 
 export function isAgentObservationVisible(input: {

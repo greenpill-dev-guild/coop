@@ -11,5 +11,8 @@
   "allowedActionClasses": ["publish-ready-draft"],
   "requiredCapabilities": [],
   "approvalMode": "proposal",
-  "timeoutMs": 30000
+  "timeoutMs": 30000,
+  "depends": [],
+  "skipWhen": "no-draft",
+  "provides": ["readiness"]
 }

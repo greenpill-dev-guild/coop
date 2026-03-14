@@ -16,5 +16,7 @@
   "allowedActionClasses": [],
   "requiredCapabilities": [],
   "approvalMode": "advisory",
-  "timeoutMs": 45000
+  "timeoutMs": 45000,
+  "depends": [],
+  "provides": ["drafts"]
 }
