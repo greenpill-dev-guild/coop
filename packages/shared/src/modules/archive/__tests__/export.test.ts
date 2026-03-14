@@ -96,6 +96,7 @@ function createTestReceipt(state: CoopSharedState): ArchiveReceipt {
       mode: 'mock',
       allowsFilecoinInfo: false,
     },
+    anchorStatus: 'pending',
   };
 }
 

@@ -22,6 +22,8 @@ import {
   agentPlanStepSchema,
   capitalFormationBriefOutputSchema,
   ecosystemEntityExtractorOutputSchema,
+  erc8004FeedbackOutputSchema,
+  erc8004RegistrationOutputSchema,
   grantFitScorerOutputSchema,
   greenGoodsAssessmentOutputSchema,
   greenGoodsGapAdminSyncOutputSchema,
@@ -53,6 +55,8 @@ export const skillOutputSchemas: Record<
   'green-goods-work-approval-output': greenGoodsWorkApprovalOutputSchema,
   'green-goods-assessment-output': greenGoodsAssessmentOutputSchema,
   'green-goods-gap-admin-sync-output': greenGoodsGapAdminSyncOutputSchema,
+  'erc8004-registration-output': erc8004RegistrationOutputSchema,
+  'erc8004-feedback-output': erc8004FeedbackOutputSchema,
 };
 
 export function buildAgentObservationFingerprint(input: {

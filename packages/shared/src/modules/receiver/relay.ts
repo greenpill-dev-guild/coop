@@ -6,7 +6,7 @@ import {
   receiverCaptureSchema,
   receiverSyncEnvelopeSchema,
 } from '../../contracts/schema';
-import { createId, nowIso } from '../../utils';
+import { bytesToBase64Url, createId, nowIso } from '../../utils';
 import { assertReceiverPairingRecord, filterUsableReceiverSignalingUrls } from './pairing';
 
 const receiverRelayProtocolSchema = z.object({
@@ -60,18 +60,6 @@ type ReceiverSyncRelayQueuedMessage = {
   frame: ReceiverSyncRelayFrame;
 };
 
-function toBase64(bytes: Uint8Array) {
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function toBase64Url(bytes: Uint8Array) {
-  return toBase64(bytes).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '');
-}
-
 function serializeReceiverSyncRelayAckSignatureInput(
   frame: Omit<ReceiverSyncRelayAckFrame, 'signature'>,
 ) {
@@ -112,7 +100,7 @@ async function signReceiverSyncRelayAck(
     key,
     encoder.encode(serializeReceiverSyncRelayAckSignatureInput(frame)),
   );
-  return toBase64Url(new Uint8Array(signature));
+  return bytesToBase64Url(new Uint8Array(signature));
 }
 
 function relayMessageKey(frame: ReceiverSyncRelayFrame) {

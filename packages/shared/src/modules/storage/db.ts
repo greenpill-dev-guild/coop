@@ -9,6 +9,7 @@ import type {
   AgentPlan,
   AnchorCapability,
   AuthSession,
+  CoopArchiveSecrets,
   CoopKnowledgeSkillOverride,
   CoopSharedState,
   EncryptedSessionMaterial,
@@ -17,6 +18,7 @@ import type {
   HapticPreferences,
   KnowledgeSkill,
   LocalPasskeyIdentity,
+  PrivacyIdentityRecord,
   PrivilegedActionLogEntry,
   ReadablePageExtract,
   ReceiverCapture,
@@ -27,6 +29,7 @@ import type {
   SessionCapabilityLogEntry,
   SkillRun,
   SoundPreferences,
+  StealthKeyPairRecord,
   TabCandidate,
   TrustedNodeArchiveConfig,
   UiPreferences,
@@ -39,6 +42,7 @@ import {
   agentPlanSchema,
   anchorCapabilitySchema,
   authSessionSchema,
+  coopArchiveSecretsSchema,
   encryptedSessionMaterialSchema,
   executionGrantSchema,
   grantLogEntrySchema,
@@ -109,6 +113,8 @@ export class CoopDexie extends Dexie {
   knowledgeSkills!: EntityTable<KnowledgeSkill, 'id'>;
   coopKnowledgeSkillOverrides!: EntityTable<CoopKnowledgeSkillOverride, 'id'>;
   agentLogs!: EntityTable<AgentLog, 'id'>;
+  privacyIdentities!: EntityTable<PrivacyIdentityRecord, 'id'>;
+  stealthKeyPairs!: EntityTable<StealthKeyPairRecord, 'id'>;
 
   constructor(name = 'coop-v1') {
     super(name);
@@ -285,6 +291,35 @@ export class CoopDexie extends Dexie {
       coopKnowledgeSkillOverrides: 'id, [coopId+knowledgeSkillId], coopId',
       agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
     });
+    this.version(10).stores({
+      tabCandidates: 'id, canonicalUrl, domain, capturedAt',
+      pageExtracts: 'id, canonicalUrl, domain, createdAt',
+      reviewDrafts: 'id, category, createdAt, workflowStage',
+      coopDocs: 'id, updatedAt',
+      captureRuns: 'id, state, capturedAt',
+      settings: 'key',
+      identities: 'id, ownerAddress, displayName, createdAt, lastUsedAt',
+      receiverPairings: 'pairingId, coopId, memberId, roomId, issuedAt, acceptedAt, active',
+      receiverCaptures:
+        'id, kind, createdAt, syncState, pairingId, coopId, memberId, intakeStatus, linkedDraftId',
+      receiverBlobs: 'captureId',
+      actionBundles: 'id, status, coopId, actionClass, createdAt',
+      actionLogEntries: 'id, bundleId, eventType, createdAt',
+      replayIds: 'replayId, bundleId, executedAt',
+      executionGrants: 'id, coopId, status, createdAt, expiresAt',
+      grantLogEntries: 'id, grantId, eventType, createdAt',
+      sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
+      sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
+      encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
+      agentObservations: 'id, status, trigger, coopId, createdAt, fingerprint',
+      agentPlans: 'id, observationId, status, createdAt, updatedAt',
+      skillRuns: 'id, observationId, planId, skillId, status, startedAt',
+      knowledgeSkills: 'id, &url, name, domain, enabled',
+      coopKnowledgeSkillOverrides: 'id, [coopId+knowledgeSkillId], coopId',
+      agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
+      privacyIdentities: 'id, [coopId+memberId], coopId, memberId, commitment, createdAt',
+      stealthKeyPairs: 'id, coopId, createdAt',
+    });
   }
 }
 
@@ -443,6 +478,33 @@ export async function getTrustedNodeArchiveConfig(
   if (!record?.value) return null;
   const result = trustedNodeArchiveConfigSchema.safeParse(record.value);
   return result.success ? result.data : null;
+}
+
+// --- Per-coop archive secrets (local-only, never synced) ---
+
+export async function setCoopArchiveSecrets(
+  db: CoopDexie,
+  coopId: string,
+  secrets: CoopArchiveSecrets,
+) {
+  await db.settings.put({
+    key: `archive-secrets:${coopId}`,
+    value: coopArchiveSecretsSchema.parse({ ...secrets, coopId }),
+  });
+}
+
+export async function getCoopArchiveSecrets(
+  db: CoopDexie,
+  coopId: string,
+): Promise<CoopArchiveSecrets | null> {
+  const record = await db.settings.get(`archive-secrets:${coopId}`);
+  if (!record?.value) return null;
+  const result = coopArchiveSecretsSchema.safeParse(record.value);
+  return result.success ? result.data : null;
+}
+
+export async function removeCoopArchiveSecrets(db: CoopDexie, coopId: string) {
+  await db.settings.delete(`archive-secrets:${coopId}`);
 }
 
 export async function upsertLocalIdentity(db: CoopDexie, identity: LocalPasskeyIdentity) {
@@ -792,6 +854,30 @@ export async function listAgentLogsByTraceId(db: CoopDexie, traceId: string) {
 
 export async function listRecentAgentLogs(db: CoopDexie, limit = 200) {
   return db.agentLogs.orderBy('timestamp').reverse().limit(limit).toArray();
+}
+
+// --- Privacy identity persistence ---
+
+export async function savePrivacyIdentity(db: CoopDexie, record: PrivacyIdentityRecord) {
+  await db.privacyIdentities.put(record);
+}
+
+export async function getPrivacyIdentity(db: CoopDexie, coopId: string, memberId: string) {
+  return db.privacyIdentities.where({ coopId, memberId }).first();
+}
+
+export async function getPrivacyIdentitiesForCoop(db: CoopDexie, coopId: string) {
+  return db.privacyIdentities.where({ coopId }).toArray();
+}
+
+// --- Stealth key pair persistence ---
+
+export async function saveStealthKeyPair(db: CoopDexie, record: StealthKeyPairRecord) {
+  await db.stealthKeyPairs.put(record);
+}
+
+export async function getStealthKeyPair(db: CoopDexie, coopId: string) {
+  return db.stealthKeyPairs.where({ coopId }).first();
 }
 
 // --- Legacy chain key migration ---

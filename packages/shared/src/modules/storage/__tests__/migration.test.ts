@@ -91,7 +91,7 @@ describe('legacyOnchainChainKeyMap', () => {
   });
 });
 
-describe('onchainStateSchema (with z.preprocess)', () => {
+describe('onchainStateSchema (no preprocess — migration handles legacy keys)', () => {
   it('accepts modern chain keys', () => {
     const result = onchainStateSchema.parse({
       chainId: 42161,
@@ -103,17 +103,15 @@ describe('onchainStateSchema (with z.preprocess)', () => {
     expect(result.chainKey).toBe('arbitrum');
   });
 
-  it('normalizes legacy chain keys via preprocess', () => {
-    const result = onchainStateSchema.parse({
+  it('rejects legacy chain keys directly (migration must be run first)', () => {
+    const result = onchainStateSchema.safeParse({
       chainId: 42220,
       chainKey: 'celo',
       safeAddress: '0x1111111111111111111111111111111111111111',
       safeCapability: 'stubbed',
       statusNote: 'Safe deployed on Celo via Pimlico.',
     });
-    expect(result.chainKey).toBe('arbitrum');
-    expect(result.chainId).toBe(42161);
-    expect(result.statusNote).toContain('Arbitrum');
+    expect(result.success).toBe(false);
   });
 });
 

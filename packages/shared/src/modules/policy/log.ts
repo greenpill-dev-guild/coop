@@ -79,5 +79,9 @@ export function formatActionClassLabel(actionClass: ActionBundle['actionClass'])
       return 'Green Goods create assessment';
     case 'green-goods-sync-gap-admins':
       return 'Green Goods sync GAP admins';
+    case 'erc8004-register-agent':
+      return 'ERC-8004 register agent';
+    case 'erc8004-give-feedback':
+      return 'ERC-8004 give feedback';
   }
 }

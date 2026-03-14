@@ -1,6 +1,7 @@
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { type SignalingConn, WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
+import { defaultIceServers, defaultSignalingUrls } from '../../../../signaling/config';
 import {
   type CoopSharedState,
   type SyncRoomBootstrap,
@@ -10,7 +11,11 @@ import {
 import { createId, hashText } from '../../utils';
 
 const ROOT_KEY = 'coop';
-export const defaultSignalingUrls: string[] = [];
+export {
+  buildIceServers,
+  defaultIceServers,
+  defaultSignalingUrls,
+} from '../../../../signaling/config';
 const sharedKeys = [
   'profile',
   'setupInsights',
@@ -25,6 +30,8 @@ const sharedKeys = [
   'syncRoom',
   'onchainState',
   'greenGoods',
+  'archiveConfig',
+  'memberCommitments',
 ] as const;
 
 export function deriveSyncRoomId(coopId: string, roomSecret: string) {
@@ -122,7 +129,11 @@ export function hydrateCoopDoc(update?: Uint8Array) {
   return doc;
 }
 
-export function connectSyncProviders(doc: Y.Doc, room: SyncRoomConfig) {
+export function connectSyncProviders(
+  doc: Y.Doc,
+  room: SyncRoomConfig,
+  iceServers?: RTCIceServer[],
+) {
   if (typeof window === 'undefined') {
     return {
       roomId: room.roomId,
@@ -140,6 +151,7 @@ export function connectSyncProviders(doc: Y.Doc, room: SyncRoomConfig) {
       signaling: room.signalingUrls,
       password: room.roomSecret,
       maxConns: 8,
+      peerOpts: { config: { iceServers: iceServers ?? defaultIceServers } },
     });
   } catch (error) {
     void error;

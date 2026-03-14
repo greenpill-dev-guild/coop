@@ -80,6 +80,7 @@ function buildReceipt(overrides: Partial<ArchiveReceipt> = {}): ArchiveReceipt {
       mode: 'live',
       allowsFilecoinInfo: true,
     },
+    anchorStatus: 'pending',
     ...overrides,
   };
 }
@@ -540,6 +541,7 @@ describe('storacha archive helpers', () => {
         scope: 'artifact',
         targetCoopId: 'coop-1',
         createdAt: new Date().toISOString(),
+        schemaVersion: 1,
         payload: {
           coop: { id: 'coop-1', name: 'Archive Coop' },
           artifacts: [{ id: 'artifact-1', title: 'Proof of work' }],
@@ -573,6 +575,7 @@ describe('storacha archive helpers', () => {
         scope: 'artifact',
         targetCoopId: 'coop-1',
         createdAt: new Date().toISOString(),
+        schemaVersion: 1,
         payload: {
           coop: { id: 'coop-1', name: 'Auto Coop' },
           artifacts: [],
@@ -628,6 +631,7 @@ describe('storacha archive helpers', () => {
         scope: 'artifact',
         targetCoopId: 'coop-1',
         createdAt: new Date().toISOString(),
+        schemaVersion: 1,
         payload: { coop: { id: 'coop-1', name: 'Dedup Coop' }, artifacts: [] },
       },
       delegation: {
@@ -1047,6 +1051,7 @@ describe('isArchiveReceiptRefreshable', () => {
         mode: 'live',
         allowsFilecoinInfo: true,
       },
+      anchorStatus: 'pending',
       ...overrides,
     };
   }

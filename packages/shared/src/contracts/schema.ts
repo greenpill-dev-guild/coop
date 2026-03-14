@@ -52,6 +52,24 @@ export const filecoinStatusSchema = z.enum(['pending', 'offered', 'indexed', 'se
 export const archiveDelegationOperationSchema = z.enum(['upload', 'follow-up']);
 export const soundEventSchema = z.enum(['coop-created', 'artifact-published', 'sound-test']);
 export const coopChainKeySchema = z.enum(['arbitrum', 'sepolia']);
+export const providerModeSchema = z.enum(['standard', 'kohaku']);
+export type ProviderMode = z.infer<typeof providerModeSchema>;
+
+export const signatureValidationResultSchema = z.object({
+  isValid: z.boolean(),
+});
+export type SignatureValidationResult = z.infer<typeof signatureValidationResultSchema>;
+
+export const membershipProofSchema = z.object({
+  merkleTreeDepth: z.number().int().nonnegative(),
+  merkleTreeRoot: z.string().min(1),
+  nullifier: z.string().min(1),
+  message: z.string().min(1),
+  scope: z.string().min(1),
+  points: z.array(z.string()),
+});
+export type MembershipProof = z.infer<typeof membershipProofSchema>;
+
 export const greenGoodsGardenStatusSchema = z.enum([
   'disabled',
   'requested',
@@ -65,6 +83,7 @@ export const privilegedActionTypeSchema = z.enum([
   'anchor-mode-toggle',
   'archive-upload',
   'archive-follow-up-refresh',
+  'archive-anchor',
   'safe-deployment',
   'green-goods-transaction',
 ]);
@@ -82,6 +101,8 @@ export const policyActionClassSchema = z.enum([
   'green-goods-submit-work-approval',
   'green-goods-create-assessment',
   'green-goods-sync-gap-admins',
+  'erc8004-register-agent',
+  'erc8004-give-feedback',
 ]);
 
 export const actionPolicySchema = z.object({
@@ -357,6 +378,8 @@ export const agentObservationTriggerSchema = z.enum([
   'green-goods-work-approval-requested',
   'green-goods-assessment-requested',
   'green-goods-gap-admin-sync-needed',
+  'erc8004-registration-due',
+  'erc8004-feedback-due',
 ]);
 
 export const agentObservationStatusSchema = z.enum([
@@ -412,6 +435,8 @@ export const skillOutputSchemaRefSchema = z.enum([
   'green-goods-work-approval-output',
   'green-goods-assessment-output',
   'green-goods-gap-admin-sync-output',
+  'erc8004-registration-output',
+  'erc8004-feedback-output',
 ]);
 
 export const actionProposalSchema = z.object({
@@ -811,38 +836,35 @@ export const ritualDefinitionSchema = z.object({
   defaultCapturePosture: z.string().min(1),
 });
 
-export const onchainStateSchema = z.preprocess(
-  normalizeLegacyOnchainState,
-  z
-    .object({
-      chainId: z.number().int().positive(),
-      chainKey: coopChainKeySchema.default('sepolia'),
-      safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-      senderAddress: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]{40}$/)
-        .optional(),
-      safeCapability: capabilityStateSchema,
-      statusNote: z.string(),
-      deploymentTxHash: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]+$/)
-        .optional(),
-      userOperationHash: z
-        .string()
-        .regex(/^0x[a-fA-F0-9]+$/)
-        .optional(),
-    })
-    .superRefine((value, ctx) => {
-      if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['chainId'],
-          message: `chainId must match the configured ${value.chainKey} network.`,
-        });
-      }
-    }),
-);
+export const onchainStateSchema = z
+  .object({
+    chainId: z.number().int().positive(),
+    chainKey: coopChainKeySchema.default('sepolia'),
+    safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    senderAddress: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{40}$/)
+      .optional(),
+    safeCapability: capabilityStateSchema,
+    statusNote: z.string(),
+    deploymentTxHash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]+$/)
+      .optional(),
+    userOperationHash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]+$/)
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['chainId'],
+        message: `chainId must match the configured ${value.chainKey} network.`,
+      });
+    }
+  });
 
 export const syncRoomConfigSchema = z.object({
   coopId: z.string().min(1),
@@ -1144,6 +1166,7 @@ export const artifactSchema = z.object({
   archiveStatus: archiveStatusSchema,
   archiveReceiptIds: z.array(z.string()).default([]),
   archiveWorthiness: archiveWorthinessSchema.optional(),
+  membershipProof: membershipProofSchema.optional(),
 });
 
 export const archiveReceiptSchema = z.object({
@@ -1185,6 +1208,7 @@ export const archiveReceiptSchema = z.object({
           z.object({
             aggregate: z.string().min(1),
             inclusionProofAvailable: z.boolean().default(false),
+            inclusionProof: z.string().optional(),
           }),
         )
         .default([]),
@@ -1200,6 +1224,9 @@ export const archiveReceiptSchema = z.object({
       lastUpdatedAt: z.string().datetime().optional(),
     })
     .optional(),
+  anchorTxHash: z.string().optional(),
+  anchorChainKey: coopChainKeySchema.optional(),
+  anchorStatus: z.enum(['pending', 'anchored', 'skipped']).default('pending'),
 });
 
 export const archiveBundleSchema = z.object({
@@ -1207,6 +1234,7 @@ export const archiveBundleSchema = z.object({
   scope: archiveScopeSchema,
   targetCoopId: z.string().min(1),
   createdAt: z.string().datetime(),
+  schemaVersion: z.number().int().positive().default(1),
   payload: z.record(z.any()),
 });
 
@@ -1250,6 +1278,23 @@ export const trustedNodeArchiveConfigSchema = z.object({
   proofs: z.array(z.string().min(1)).default([]),
   allowsFilecoinInfo: z.boolean().default(false),
   expirationSeconds: z.number().int().positive().default(600),
+});
+
+/** Public archive config — synced via CRDT in CoopSharedState. */
+export const coopArchiveConfigSchema = z.object({
+  spaceDid: z.string().min(1),
+  delegationIssuer: z.string().min(1),
+  gatewayBaseUrl: z.string().url().default('https://storacha.link'),
+  allowsFilecoinInfo: z.boolean().default(false),
+  expirationSeconds: z.number().int().positive().default(600),
+});
+
+/** Secret archive config — stored locally in Dexie, never synced. */
+export const coopArchiveSecretsSchema = z.object({
+  coopId: z.string().min(1),
+  agentPrivateKey: z.string().min(1).optional(),
+  spaceDelegation: z.string().min(1),
+  proofs: z.array(z.string().min(1)).default([]),
 });
 
 export const anchorCapabilitySchema = z.object({
@@ -1382,6 +1427,38 @@ export const greenGoodsGardenStateSchema = z.object({
     .optional(),
 });
 
+// ---------------------------------------------------------------------------
+// ERC-8004 Agent Identity & Reputation
+// ---------------------------------------------------------------------------
+
+export const erc8004AgentStateSchema = z.object({
+  enabled: z.boolean().default(false),
+  agentId: z.number().int().positive().optional(),
+  agentURI: z.string().optional(),
+  agentURICid: z.string().optional(),
+  registrationTxHash: z.string().regex(/^0x/).optional(),
+  registeredAt: z.string().datetime().optional(),
+  reputationScore: z.number().optional(),
+  lastFeedbackAt: z.string().datetime().optional(),
+  feedbackCount: z.number().int().nonnegative().default(0),
+  status: z.enum(['disabled', 'pending', 'registered', 'error']),
+  statusNote: z.string().optional(),
+});
+
+export const erc8004RegistrationOutputSchema = z.object({
+  agentURI: z.string(),
+  metadata: z.array(z.object({ key: z.string(), value: z.string() })),
+  rationale: z.string(),
+});
+
+export const erc8004FeedbackOutputSchema = z.object({
+  targetAgentId: z.number().int().positive(),
+  value: z.number().int().min(-128).max(127),
+  tag1: z.string(),
+  tag2: z.string(),
+  rationale: z.string(),
+});
+
 export const inviteCoopBootstrapSnapshotSchema = z.object({
   profile: coopProfileSchema,
   setupInsights: setupInsightsSchema,
@@ -1453,6 +1530,9 @@ export const coopSharedStateSchema = z.object({
   syncRoom: syncRoomConfigSchema,
   onchainState: onchainStateSchema,
   greenGoods: greenGoodsGardenStateSchema.optional(),
+  agentIdentity: erc8004AgentStateSchema.optional(),
+  archiveConfig: coopArchiveConfigSchema.optional(),
+  memberCommitments: z.array(z.string()).default([]),
 });
 
 export const localEnhancementAvailabilitySchema = z.object({
@@ -1530,6 +1610,8 @@ export type CoopInterpretation = z.infer<typeof coopInterpretationSchema>;
 export type CoopMemoryProfile = z.infer<typeof coopMemoryProfileSchema>;
 export type CoopProfile = z.infer<typeof coopProfileSchema>;
 export type CoopSpaceType = z.infer<typeof coopSpaceTypeSchema>;
+export type CoopArchiveConfig = z.infer<typeof coopArchiveConfigSchema>;
+export type CoopArchiveSecrets = z.infer<typeof coopArchiveSecretsSchema>;
 export type CoopSharedState = z.infer<typeof coopSharedStateSchema>;
 export type CoopSoul = z.infer<typeof coopSoulSchema>;
 export type ExtensionIconState = z.infer<typeof extensionIconStateSchema>;
@@ -1544,6 +1626,9 @@ export type GreenGoodsWorkApprovalOutput = z.infer<typeof greenGoodsWorkApproval
 export type GreenGoodsAssessmentOutput = z.infer<typeof greenGoodsAssessmentOutputSchema>;
 export type GreenGoodsGapAdminSyncOutput = z.infer<typeof greenGoodsGapAdminSyncOutputSchema>;
 export type GreenGoodsWeightScheme = z.infer<typeof greenGoodsWeightSchemeSchema>;
+export type Erc8004AgentState = z.infer<typeof erc8004AgentStateSchema>;
+export type Erc8004RegistrationOutput = z.infer<typeof erc8004RegistrationOutputSchema>;
+export type Erc8004FeedbackOutput = z.infer<typeof erc8004FeedbackOutputSchema>;
 export type InviteBootstrap = z.infer<typeof inviteBootstrapSchema>;
 export type InviteCoopBootstrapSnapshot = z.infer<typeof inviteCoopBootstrapSnapshotSchema>;
 export type InviteCode = z.infer<typeof inviteCodeSchema>;
@@ -1648,3 +1733,85 @@ export type CoopKnowledgeSkillOverride = z.infer<typeof coopKnowledgeSkillOverri
 export type AgentLogSpanType = z.infer<typeof agentLogSpanTypeSchema>;
 export type AgentLogLevel = z.infer<typeof agentLogLevelSchema>;
 export type AgentLog = z.infer<typeof agentLogSchema>;
+
+// ---------------------------------------------------------------------------
+// Privacy / Semaphore v4 + Bandada
+// ---------------------------------------------------------------------------
+
+export const privacyIdentitySchema = z.object({
+  commitment: z.string().min(1),
+  publicKey: z.tuple([z.string().min(1), z.string().min(1)]),
+  exportedPrivateKey: z.string().min(1),
+});
+
+export const privacyGroupSchema = z.object({
+  id: z.string().min(1),
+  memberCount: z.number().int().nonnegative(),
+  merkleRoot: z.string().min(1),
+});
+
+export type PrivacyIdentity = z.infer<typeof privacyIdentitySchema>;
+export type PrivacyGroup = z.infer<typeof privacyGroupSchema>;
+
+// ── Stealth Address (ERC-5564 / ERC-6538) ──────────────────────────
+export const stealthSchemeIdSchema = z.literal(1);
+
+export const stealthKeysSchema = z.object({
+  spendingKey: z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'spending key must be a 32-byte hex string'),
+  viewingKey: z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'viewing key must be a 32-byte hex string'),
+  spendingPublicKey: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]+$/, 'spending public key must be a hex string'),
+  viewingPublicKey: z.string().regex(/^0x[a-fA-F0-9]+$/, 'viewing public key must be a hex string'),
+});
+
+export const stealthMetaAddressSchema = z
+  .string()
+  .regex(/^0x[a-fA-F0-9]+$/, 'stealth meta-address must be a hex string')
+  .refine(
+    (v) => v.length >= 134,
+    'stealth meta-address must encode both spending and viewing public keys',
+  );
+
+export const stealthAddressSchema = z.object({
+  stealthAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  ephemeralPublicKey: z.string().regex(/^0x[a-fA-F0-9]+$/),
+  viewTag: z.string().regex(/^0x[a-fA-F0-9]+$/),
+});
+
+export const stealthAnnouncementSchema = z.object({
+  schemeId: stealthSchemeIdSchema,
+  stealthAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  ephemeralPublicKey: z.string().regex(/^0x[a-fA-F0-9]+$/),
+  metadata: z.string().regex(/^0x[a-fA-F0-9]*$/),
+});
+
+export type StealthSchemeId = z.infer<typeof stealthSchemeIdSchema>;
+export type StealthKeys = z.infer<typeof stealthKeysSchema>;
+export type StealthMetaAddress = z.infer<typeof stealthMetaAddressSchema>;
+export type StealthAddress = z.infer<typeof stealthAddressSchema>;
+export type StealthAnnouncement = z.infer<typeof stealthAnnouncementSchema>;
+
+// ── Privacy Identity / Stealth Key Pair Records (Dexie storage) ────
+export const privacyIdentityRecordSchema = z.object({
+  id: z.string().min(1),
+  coopId: z.string().min(1),
+  memberId: z.string().min(1),
+  commitment: z.string().min(1),
+  publicKey: z.tuple([z.string().min(1), z.string().min(1)]),
+  exportedPrivateKey: z.string().min(1),
+  createdAt: z.string().datetime(),
+});
+export type PrivacyIdentityRecord = z.infer<typeof privacyIdentityRecordSchema>;
+
+export const stealthKeyPairRecordSchema = z.object({
+  id: z.string().min(1),
+  coopId: z.string().min(1),
+  spendingKey: z.string().min(1),
+  viewingKey: z.string().min(1),
+  spendingPublicKey: z.string().min(1),
+  viewingPublicKey: z.string().min(1),
+  metaAddress: z.string().min(1),
+  createdAt: z.string().datetime(),
+});
+export type StealthKeyPairRecord = z.infer<typeof stealthKeyPairRecordSchema>;

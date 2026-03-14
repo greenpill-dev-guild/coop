@@ -31,6 +31,9 @@ export interface ArchiveReceiptDetails {
   dealCount: number;
   lastRefreshedAt?: string;
   lastRefreshError?: string;
+  anchorTxHash?: string;
+  anchorChainKey?: string;
+  anchorStatus: 'pending' | 'anchored' | 'skipped';
 }
 
 export interface CoopArchiveStory {
@@ -111,6 +114,9 @@ export function describeArchiveReceipt(input: {
       dealCount: input.receipt.filecoinInfo?.deals.length ?? 0,
       lastRefreshedAt: input.receipt.followUp?.lastRefreshedAt,
       lastRefreshError: input.receipt.followUp?.lastError,
+      anchorTxHash: input.receipt.anchorTxHash,
+      anchorChainKey: input.receipt.anchorChainKey,
+      anchorStatus: input.receipt.anchorStatus ?? 'pending',
     };
   }
 
@@ -135,6 +141,9 @@ export function describeArchiveReceipt(input: {
     dealCount: input.receipt.filecoinInfo?.deals.length ?? 0,
     lastRefreshedAt: input.receipt.followUp?.lastRefreshedAt,
     lastRefreshError: input.receipt.followUp?.lastError,
+    anchorTxHash: input.receipt.anchorTxHash,
+    anchorChainKey: input.receipt.anchorChainKey,
+    anchorStatus: input.receipt.anchorStatus ?? 'pending',
   };
 }
 

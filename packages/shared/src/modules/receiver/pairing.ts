@@ -1,3 +1,4 @@
+import { filterUsableSignalingUrls } from '../../../../signaling/config';
 import {
   type ReceiverPairingPayload,
   type ReceiverPairingRecord,
@@ -89,16 +90,7 @@ export function isReceiverPairingExpired(
   return Date.parse(pairing.expiresAt) <= nowMs;
 }
 
-export function filterUsableReceiverSignalingUrls(urls: string[] = []) {
-  return urls.filter((value) => {
-    try {
-      const url = new URL(value);
-      return ['ws:', 'wss:', 'http:', 'https:'].includes(url.protocol);
-    } catch {
-      return false;
-    }
-  });
-}
+export { filterUsableSignalingUrls as filterUsableReceiverSignalingUrls } from '../../../../signaling/config';
 
 export function getReceiverPairingStatus(
   pairing: Pick<
@@ -129,7 +121,7 @@ export function getReceiverPairingStatus(
     } as const;
   }
 
-  if (filterUsableReceiverSignalingUrls(pairing.signalingUrls).length === 0) {
+  if (filterUsableSignalingUrls(pairing.signalingUrls).length === 0) {
     return {
       status: 'missing-signaling',
       message:
