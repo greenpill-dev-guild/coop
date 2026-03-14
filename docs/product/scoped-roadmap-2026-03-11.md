@@ -63,37 +63,37 @@ Planning implication:
 
 This is the highest-value scope for the next few days:
 
-- receiver PWA with local capture and pairing
-- playful mobile capture UX
-- sync from receiver to extension
-- Arbitrum switch in the onchain layer
-- Filecoin/Storacha flow surfaced as a visible product story
-- ritual scheduler and meeting-mode review surface
-- stronger multi-coop UX
-- read-only React Flow knowledge view on desktop
+- receiver PWA with local capture and pairing — **DONE**
+- playful mobile capture UX — **DONE**
+- sync from receiver to extension — **DONE**
+- Arbitrum switch in the onchain layer — **DONE** (Sepolia default, Arbitrum available)
+- Filecoin/Storacha flow surfaced as a visible product story — **PARTIAL** (archive works, no piece-level follow-up)
+- ritual scheduler and meeting-mode review surface — **NOT STARTED** (form fields stored but inert)
+- stronger multi-coop UX — **PARTIAL** (works technically, UX is shallow)
+- read-only React Flow knowledge view on desktop — **DONE**
 
 ### 3.2 Near-Term Platform
 
 This should start immediately after the hackathon-critical slice is stable:
 
-- real local model execution path
-- trusted-node or anchor runtime behavior
-- trusted-node local delegation for live archive upload
-- Filecoin lifecycle follow-up using piece-level info
-- richer identity envelopes and signed coop events
+- real local model execution path — **STUBBED** (heuristic only)
+- trusted-node or anchor runtime behavior — **CONCEPTUAL** (role flags exist, no operational anchor)
+- trusted-node local delegation for live archive upload — **DONE** (runs in trusted extension nodes)
+- Filecoin lifecycle follow-up using piece-level info — **NOT STARTED**
+- richer identity envelopes and signed coop events — **PARTIAL** (passkey works, no DID/signed envelopes)
 
 ### 3.3 Agentic Platform
 
 This should be scoped as a second architecture milestone:
 
-- autonomous agent execution with scoped permissions
-- session-key or delegated execution policy model
-- coop-level Ethereum agent identity
-- capital and governance execution flows driven by typed intents and review policies
+- autonomous agent execution with scoped permissions — **NOT STARTED** (correctly deferred)
+- session-key or delegated execution policy model — **NOT STARTED**
+- coop-level Ethereum agent identity — **NOT STARTED**
+- capital and governance execution flows driven by typed intents and review policies — **NOT STARTED**
 
 ## 4. Workstream Plan
 
-## 4.1 Receiver PWA
+## 4.1 Receiver PWA — DONE
 
 ### Goal
 
@@ -155,7 +155,7 @@ Turn `packages/app` from a landing-only surface into a real installable receiver
 - Playwright mobile tests for audio/photo/file creation
 - Playwright cross-context tests for pair + sync + offline queue replay
 
-## 4.2 Local Enhancement Path
+## 4.2 Local Enhancement Path — STUBBED
 
 ### Goal
 
@@ -180,7 +180,7 @@ Move from pure heuristics to a real local inference path without making the exte
 
 Do not make full WebLLM a blocker for the hackathon demo. Land the interface, capability detection, and one explicit local-refine action first.
 
-## 4.3 Trusted-Node Or Anchor Runtime
+## 4.3 Trusted-Node Or Anchor Runtime — CONCEPTUAL
 
 ### Goal
 
@@ -201,7 +201,7 @@ Make “trusted member” and “anchor” mean something operationally, not jus
   - review digest generation
 - optional cloud-backed enhancement only for anchor nodes
 
-## 4.4 Arbitrum Mainnet And Sepolia Test Path
+## 4.4 Arbitrum Mainnet And Sepolia Test Path — DONE
 
 ### Goal
 
@@ -227,7 +227,7 @@ Move the onchain path from the current Celo-only implementation to an Arbitrum m
 
 For the demo, “Coop creates and controls a Safe on Arbitrum, with Sepolia as the test path” is enough. Full Green Goods garden binding should be its own workstream after that chain standardization is stable.
 
-## 4.5 Archive Delegation And Filecoin Story
+## 4.5 Archive Delegation And Filecoin Story — PARTIAL
 
 ### Goal
 
@@ -259,7 +259,7 @@ Use Filecoin differently across Coop types:
 - personal coop: research archive or life log checkpoint
 - capital formation coop: proof-backed funding dossier bundle
 
-## 4.6 Review Rituals, Meeting Mode, And Scheduler
+## 4.6 Review Rituals, Meeting Mode, And Scheduler — NOT STARTED
 
 ### Goal
 
@@ -284,7 +284,7 @@ Turn review from a passive grouped list into an actual social ritual surface.
 - digest generation for the review session
 - facilitator controls for agenda sections and approval batches
 
-## 4.7 Multi-Coop UX
+## 4.7 Multi-Coop UX — PARTIAL
 
 ### Goal
 
@@ -306,7 +306,7 @@ Make multi-coop membership feel native instead of technically possible.
 - passive ranking based on recent archive and publish history
 - inbox filters by coop, member, and ritual lens
 
-## 4.8 Identity Model
+## 4.8 Identity Model — PARTIAL
 
 ### Goal
 
@@ -338,7 +338,7 @@ The practical onchain identity should be:
 
 Do not anchor the first version on niche AI-agent ERCs. Build on the smart-account stack that is already being adopted.
 
-## 4.9 React Flow Desktop View
+## 4.9 React Flow Desktop View — DONE
 
 ### Goal
 
@@ -364,7 +364,7 @@ Add a visual knowledge and contribution view without turning the product into a 
 
 This should be a read and presentation surface first, not a freeform editor.
 
-## 4.10 Autonomous Agent Execution, Session Keys, And Agentic Identity
+## 4.10 Autonomous Agent Execution, Session Keys, And Agentic Identity — NOT STARTED
 
 ### Goal
 
@@ -482,3 +482,42 @@ The right build order is:
 7. agentic execution and session-key policies
 
 That ordering keeps the demo legible, expands the product meaningfully, and avoids collapsing the current working core under too many experimental layers at once.
+
+---
+
+## 8. Status Update — March 14, 2026
+
+Since the roadmap was written, significant new capabilities have landed:
+
+### New Modules (not in original roadmap)
+
+| Module | Status | Description |
+|--------|--------|-------------|
+| `privacy` | **DONE** | Semaphore ZK membership proofs, anonymous publishing, group management, membership lifecycle |
+| `stealth` | **DONE** | ERC-5564 secp256k1 stealth addresses — key generation, one-time address creation, view tag scanning |
+| `policy` | **DONE** | Action approval workflows, typed EIP-712-compatible bundles, replay protection |
+| `session` | **DONE** | Scoped execution permissions, time-bounded capability windows, member constraints |
+| `grant` | **DONE** | Execution grants with expiry, privilege logs for audit trails |
+| `operator` | **DONE** | Anchor/trusted-node runtime with OperatorConsole UI (1,072 lines) |
+| `signaling` | **DONE** | Standalone y-webrtc signaling server (Fly.io deployed at `wss://coop.fly.dev`) |
+
+### Updated Workstream Status
+
+| Workstream | Was | Now | Notes |
+|-----------|-----|-----|-------|
+| 4.3 Trusted-Node Runtime | CONCEPTUAL | **DONE** | OperatorConsole built, anchor mode operational, action log panel shipped |
+| 4.10 Session Keys | NOT STARTED | **PARTIAL** | Session capability schema, grant system, and policy engine implemented in shared; UI integration pending |
+| 3.2 Near-term: Identity | PARTIAL | **PARTIAL** | Stealth addresses and ZK proofs added; DID/signed envelopes still pending |
+
+### Additional Standards Adopted
+
+- **ERC-5564** — Stealth addresses for private on-chain interactions
+- **ERC-8004** — On-chain agent registry (skill registered: `erc8004-register`)
+- **Semaphore** — Zero-knowledge group membership proofs for anonymous publishing
+
+### New Validation Coverage
+
+- 100+ new test files across privacy, stealth, onchain, archive, storage, policy modules
+- Agent harness testing (registry, knowledge, models, inference)
+- Runtime testing (operator, messages, session capability, anchor CID)
+- UI testing (operator console, privacy UI, archive config)

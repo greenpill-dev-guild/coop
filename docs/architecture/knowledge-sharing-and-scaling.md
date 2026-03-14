@@ -17,7 +17,7 @@ sidebar_position: 3
 
 Coop is a browser-first, local-first knowledge commons. Knowledge enters through browser tabs, mobile captures, and agent observations. It flows through a six-stage pipeline — capture, draft, publish, sync, feed, archive — with a fully autonomous in-browser agent that synthesizes insights and proposes actions back into the shared knowledge graph.
 
-The architecture is fundamentally sound for current scale (small coops, <20 members, <500 artifacts). **The critical risk is not the choice of CRDT library — Yjs scales well — but how we use it.** Storing entire state arrays as JSON strings inside Y.Map values defeats CRDT merge semantics, causes silent data loss on concurrent edits, and bloats document size proportional to total operations rather than current state size.
+The architecture is fundamentally sound for current scale (small coops, \<20 members, \<500 artifacts). **The critical risk is not the choice of CRDT library — Yjs scales well — but how we use it.** Storing entire state arrays as JSON strings inside Y.Map values defeats CRDT merge semantics, causes silent data loss on concurrent edits, and bloats document size proportional to total operations rather than current state size.
 
 This document maps the full architecture, identifies concrete performance and scaling constraints, and proposes a phased remediation plan.
 
@@ -452,7 +452,7 @@ createArchiveBundle({
 **Step 3 — Upload to Storacha:**
 - Serialize bundle as JSON blob → `client.uploadFile()`
 - Collect `shardCids[]` and `pieceCids[]` as pieces are stored
-- Returns `rootCid` + `gatewayUrl` (storacha.link/ipfs/{rootCid})
+- Returns `rootCid` + `gatewayUrl` (`storacha.link/ipfs/{rootCid}`)
 
 **Step 4 — Record receipt:**
 - Update artifact `archiveStatus` → `'archived'`
@@ -500,7 +500,7 @@ Yjs itself is not the bottleneck. In the official CRDT benchmarks:
 - Documents at 2MB: 4-5 second initial loads (network + decode combined)
 - Documents at 15.7MB: memory balloons from 18MB to 95MB in-heap (5x multiplier)
 
-For Coop's use case (small groups, <100 artifacts, <20 members), raw Y.Doc size stays well under 1MB for months of normal use.
+For Coop's use case (small groups, \<100 artifacts, \<20 members), raw Y.Doc size stays well under 1MB for months of normal use.
 
 ### 8.2 The Constraint Is Usage Pattern, Not Library Choice
 
@@ -707,4 +707,8 @@ summarizeSyncTransportHealth(webrtc?) → {
 | **Agent config** | `packages/extension/src/runtime/agent-config.ts` |
 | **Agent logger** | `packages/extension/src/runtime/agent-logger.ts` |
 | **Background worker** | `packages/extension/src/background.ts` |
-| **Sync bindings** | `packages/extension/src/views/Sidepanel/hooks/use-sync-bindings.ts` |
+| **Sync bindings** | `packages/extension/src/views/Sidepanel/hooks/useSyncBindings.ts` |
+| **Privacy** | `packages/shared/src/modules/privacy/` |
+| **Stealth addresses** | `packages/shared/src/modules/stealth/stealth.ts` |
+| **Operator console** | `packages/extension/src/views/Sidepanel/OperatorConsole.tsx` |
+| **Signaling server** | `packages/signaling/server.mjs` |

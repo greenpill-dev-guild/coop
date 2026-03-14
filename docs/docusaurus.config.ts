@@ -21,9 +21,16 @@ const config: Config = {
       'classic',
       {
         docs: {
-          path: '../docs',
+          path: '.',
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/regen-coordination/coop/tree/main/',
+          editUrl: 'https://github.com/regen-coordination/coop/tree/main/docs/',
+          exclude: [
+            '**/node_modules/**',
+            '**/src/**',
+            '**/static/**',
+            '**/build/**',
+            '**/.docusaurus/**',
+          ],
         },
         blog: false,
         theme: {
