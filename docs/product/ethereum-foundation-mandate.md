@@ -9,20 +9,20 @@ sidebar_position: 3
 > Published March 13, 2026 by the Ethereum Foundation Board.
 > Inscribed on-chain for permanent, immutable access.
 
-This document preserves the full text of the EF Mandate as a pillar for Coop's alignment with Ethereum's mission. Coop is sovereignty-preserving coordination infrastructure — the mandate articulates why that matters.
+This document preserves the full text of the EF Mandate as a pillar for Coop's alignment with Ethereum's mission. Coop is sovereignty-preserving coordination infrastructure, and the mandate articulates why that matters.
 
 ---
 
 ## Quick Reference
 
-### CROPS — Non-Negotiable Properties
+### CROPS - Non-Negotiable Properties
 
 | Property | Definition |
 |---|---|
 | **C**ensorship Resistance | No actor can selectively exclude valid use or break functionality |
 | **O**pen Source & Free | No privileged code or hidden specifications; all work public and forkable |
 | **P**rivacy | User data not exposed beyond necessity; maximal privacy as default |
-| **S**ecurity | Things must do what they claim — no more, no less |
+| **S**ecurity | Things must do what they claim, no more and no less |
 
 ### Two Fundamental Principles
 
@@ -31,10 +31,10 @@ This document preserves the full text of the EF Mandate as a pillar for Coop's a
 
 ### Social Pillar
 
-- **Principled Alignment** — Quality of principle-upholding resilience over quantity of users
-- **Discipline** — Truth-seeking, beauty-seeking; relevant timing over speed
-- **Right Association** — Work with those who share principles and spread them
-- **Big Picture** — Ethereum's future is bigger than crypto
+- **Principled Alignment**: Quality of principle-upholding resilience over quantity of users
+- **Discipline**: Truth-seeking, beauty-seeking; relevant timing over speed
+- **Right Association**: Work with those who share principles and spread them
+- **Big Picture**: Ethereum's future is bigger than crypto
 
 ---
 
@@ -46,7 +46,7 @@ Coop embodies the mandate structurally, not just rhetorically:
 |---|---|
 | Self-sovereign identity | Passkey-first, on-device credentials, no custodial provider |
 | Censorship resistance | P2P sync via y-webrtc, no central server owns data |
-| Privacy by default | Local-first — all data stays in browser until explicit publish |
+| Privacy by default | Local-first, all data stays in browser until explicit publish |
 | Open source | Full monorepo, shared modules are pure functions, no proprietary layers |
 | Security at boundaries | Zod validation, grant enforcement with expiry/replay protection |
 | Disintermediation | Safe smart accounts via passkey + ERC-4337, no wallet intermediary |
@@ -296,10 +296,10 @@ We believe that de-totalization - building toward a world in which no organizati
 Five timeless tensions the EF expects to face:
 
 1. **When two technically credible paths compete**, pick the one that removes points of leverage, not the one that can be shipped faster.
-2. **When designing or judging a proposal**, think through higher-order effects beyond the layer at hand — avoid capture points being displaced as externalities.
+2. **When designing or judging a proposal**, think through higher-order effects beyond the layer at hand, and avoid capture points being displaced as externalities.
 3. **When considering adversarial user environments**, default to empowering user agency, not weakening it. The goal is not to sanitize the environment; it is to keep users sovereign inside it.
-4. **Where a use case involves intermediation**, minimize barriers to entry and maximize competitiveness — while aiming to eliminate the need for intermediaries entirely.
-5. **When deciding which teams to back**, look past short-term output and social cues — judge patterns of choices and revealed preferences.
+4. **Where a use case involves intermediation**, minimize barriers to entry and maximize competitiveness, while aiming to eliminate the need for intermediaries entirely.
+5. **When deciding which teams to back**, look past short-term output and social cues, and judge patterns of choices and revealed preferences.
 
 ### VII. THE FUTURE
 
@@ -335,47 +335,47 @@ For we are building nothing less than the machinery of freedom - not just for to
 
 ### Official Sources
 
-- **EF Mandate Blog Post** — [The Promise of Ethereum: Introducing the EF Mandate](https://blog.ethereum.org/2026/03/13/ef-mandate)
-- **EF Mandate PDF** — [ethereum.foundation/ef-mandate.pdf](https://ethereum.foundation/ef-mandate.pdf)
-- **On-Chain Mandate** — [Etherscan Transaction](https://etherscan.io/tx/0x5dd574df963a1df1f064791e0f6ff41ec972cdbba12293b7e1ece582052ba855)
-- **Ethereum Foundation** — [ethereum.org/foundation](https://ethereum.org/foundation/)
+- **EF Mandate Blog Post**: [The Promise of Ethereum: Introducing the EF Mandate](https://blog.ethereum.org/2026/03/13/ef-mandate)
+- **EF Mandate PDF**: [ethereum.foundation/ef-mandate.pdf](https://ethereum.foundation/ef-mandate.pdf)
+- **On-Chain Mandate**: [Etherscan Transaction](https://etherscan.io/tx/0x5dd574df963a1df1f064791e0f6ff41ec972cdbba12293b7e1ece582052ba855)
+- **Ethereum Foundation**: [ethereum.org/foundation](https://ethereum.org/foundation/)
 
 ### Ecosystem Support & Grants
 
-- **ESP Home** — [esp.ethereum.foundation](https://esp.ethereum.foundation/)
-- **ESP Application Guide** — [esp.ethereum.foundation/applicants](https://esp.ethereum.foundation/applicants)
-- **ESP Funded Projects** — [esp.ethereum.foundation/funded-projects](https://esp.ethereum.foundation/funded-projects)
-- **ESP RFPs** — [esp.ethereum.foundation/applicants/rfp](https://esp.ethereum.foundation/applicants/rfp)
-- **Academic Grants** — [esp.ethereum.foundation/academic-grants](https://esp.ethereum.foundation/academic-grants)
-- **Community Grants Directory** — [ethereum.org/community/grants](https://ethereum.org/community/grants/)
+- **ESP Home**: [esp.ethereum.foundation](https://esp.ethereum.foundation/)
+- **ESP Application Guide**: [esp.ethereum.foundation/applicants](https://esp.ethereum.foundation/applicants)
+- **ESP Funded Projects**: [esp.ethereum.foundation/funded-projects](https://esp.ethereum.foundation/funded-projects)
+- **ESP RFPs**: [esp.ethereum.foundation/applicants/rfp](https://esp.ethereum.foundation/applicants/rfp)
+- **Academic Grants**: [esp.ethereum.foundation/academic-grants](https://esp.ethereum.foundation/academic-grants)
+- **Community Grants Directory**: [ethereum.org/community/grants](https://ethereum.org/community/grants/)
 
 ### Public Goods Funding
 
-- **Gitcoin** — Quadratic funding rounds for public goods
-- **Octant** — Ecosystem funding balancing individual and community benefit
-- **Giveth** — Zero-fee donation platform for regenerative projects
+- **Gitcoin**: Quadratic funding rounds for public goods
+- **Octant**: Ecosystem funding balancing individual and community benefit
+- **Giveth**: Zero-fee donation platform for regenerative projects
 
-### Vitalik Buterin — Related Writing
+### Vitalik Buterin - Related Writing
 
-- **"Why I support privacy"** (Apr 2025) — [vitalik.eth.limo/general/2025/04/14/privacy.html](https://vitalik.eth.limo/general/2025/04/14/privacy.html)
-- **"Simplifying the L1"** (May 2025) — [vitalik.eth.limo/general/2025/05/03/simplel1.html](https://vitalik.eth.limo/general/2025/05/03/simplel1.html)
-- **"Let a thousand societies bloom"** (Dec 2025) — [vitalik.eth.limo](https://vitalik.eth.limo/)
-- **"Balance of power"** (Dec 2025) — [vitalik.eth.limo](https://vitalik.eth.limo/)
-- **"Make Ethereum Cypherpunk Again"** (Dec 2023) — [vitalik.eth.limo/general/2023/12/28/cypherpunk.html](https://vitalik.eth.limo/general/2023/12/28/cypherpunk.html)
-- **"Sanctuary Technology"** concept — Introduced March 2026 alongside the mandate; Ethereum as part of an ecosystem building free, open-source technologies that let people live and collaborate in ways robust to outside pressures.
+- **"Why I support privacy"** (Apr 2025): [vitalik.eth.limo/general/2025/04/14/privacy.html](https://vitalik.eth.limo/general/2025/04/14/privacy.html)
+- **"Simplifying the L1"** (May 2025): [vitalik.eth.limo/general/2025/05/03/simplel1.html](https://vitalik.eth.limo/general/2025/05/03/simplel1.html)
+- **"Let a thousand societies bloom"** (Dec 2025): [vitalik.eth.limo](https://vitalik.eth.limo/)
+- **"Balance of power"** (Dec 2025): [vitalik.eth.limo](https://vitalik.eth.limo/)
+- **"Make Ethereum Cypherpunk Again"** (Dec 2023): [vitalik.eth.limo/general/2023/12/28/cypherpunk.html](https://vitalik.eth.limo/general/2023/12/28/cypherpunk.html)
+- **"Sanctuary Technology"** concept: Introduced March 2026 alongside the mandate; Ethereum as part of an ecosystem building free, open-source technologies that let people live and collaborate in ways robust to outside pressures.
 
 ### EF Organizational Context
 
-- **EF Management & Board Structure** (Apr 2025) — [blog.ethereum.org/2025/04/28/ef-mgmt-board](https://blog.ethereum.org/2025/04/28/ef-mgmt-board)
-- **EF Treasury Policy** (Jun 2025) — [blog.ethereum.org/2025/06/04/ef-treasury-policy](https://blog.ethereum.org/2025/06/04/ef-treasury-policy)
-- **Announcing Protocol Team** (Jun 2025) — [blog.ethereum.org/2025/06/02/announcing-protocol](https://blog.ethereum.org/2025/06/02/announcing-protocol)
+- **EF Management & Board Structure** (Apr 2025): [blog.ethereum.org/2025/04/28/ef-mgmt-board](https://blog.ethereum.org/2025/04/28/ef-mgmt-board)
+- **EF Treasury Policy** (Jun 2025): [blog.ethereum.org/2025/06/04/ef-treasury-policy](https://blog.ethereum.org/2025/06/04/ef-treasury-policy)
+- **Announcing Protocol Team** (Jun 2025): [blog.ethereum.org/2025/06/02/announcing-protocol](https://blog.ethereum.org/2025/06/02/announcing-protocol)
 
 ### Coverage & Analysis
 
 - [CoinDesk: EF publishes mandate defining role and core principles](https://www.coindesk.com/tech/2026/03/13/ethereum-foundation-publishes-new-mandate-defining-its-role-core-principles)
-- [The Defiant: EF Mandate — A Constitution for the World Computer](https://thedefiant.io/news/blockchains/ethereum-foundation-publishes-ef-mandate-a-constitution-for-the-world-computer)
+- [The Defiant: EF Mandate - A Constitution for the World Computer](https://thedefiant.io/news/blockchains/ethereum-foundation-publishes-ef-mandate-a-constitution-for-the-world-computer)
 - [CoinTelegraph: EF Outlines Ethos and Responsibilities](https://cointelegraph.com/news/ethereum-foundation-mandate-role-goals)
 - [Crypto News: EF hard-locks censorship resistance and privacy](https://crypto.news/ethereum-foundation-publishes-formal-mandate-to-hard-lock-censorship-resistance-and-privacy/)
-- [The Block: Vitalik — build sanctuary tech, forget emulating Apple or Google](https://www.theblock.co/post/392079/ethereum-vitalik-buterin-sanctuary-tech-forget-emulating-apple-or-google)
-- [CryptoPotato: Beyond DeFi — Buterin urges sanctuary tech against digital control](https://cryptopotato.com/beyond-defi-buterin-urges-ethereum-to-build-sanctuary-tech-against-digital-control/)
-- [Bankless: Vitalik — Ethereum Should Be Sanctuary Tech](https://www.bankless.com/read/news/vitalik-ethereum-should-be-sanctuary-tech)
+- [The Block: Vitalik - build sanctuary tech, forget emulating Apple or Google](https://www.theblock.co/post/392079/ethereum-vitalik-buterin-sanctuary-tech-forget-emulating-apple-or-google)
+- [CryptoPotato: Beyond DeFi - Buterin urges sanctuary tech against digital control](https://cryptopotato.com/beyond-defi-buterin-urges-ethereum-to-build-sanctuary-tech-against-digital-control/)
+- [Bankless: Vitalik - Ethereum Should Be Sanctuary Tech](https://www.bankless.com/read/news/vitalik-ethereum-should-be-sanctuary-tech)

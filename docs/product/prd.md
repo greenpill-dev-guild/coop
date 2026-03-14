@@ -4,7 +4,7 @@ sidebar_label: "PRD"
 sidebar_position: 1
 ---
 
-# Coop — Product Requirements Document
+# Coop - Product Requirements Document
 
 **Version**: 0.0 (Pre-Release)
 **Last Updated**: 2026-03-13
@@ -17,7 +17,7 @@ sidebar_position: 1
 Coop is a **browser-first, local-first knowledge commons** that helps communities turn scattered online knowledge into shared intelligence and coordinated action. Built on Ethereum principles (self-sovereignty, censorship resistance, privacy by default), Coop enables groups to capture, review, publish, and archive knowledge without central servers or custodial providers.
 
 ### Mission
-Enable communities to coordinate around knowledge — funding leads, evidence, governance insights, ecosystem signals — without extraction, surveillance, or centralized gatekeeping.
+Enable communities to coordinate around knowledge, including funding leads, evidence, governance insights, and ecosystem signals, without extraction, surveillance, or centralized gatekeeping.
 
 ### Alignment
 Coop implements the Ethereum Foundation's March 2026 Mandate (CROPS: Censorship Resistance, Open Source, Privacy, Security) through passkey-first identity, P2P sync, local-first data, and durable Filecoin archiving.
@@ -49,12 +49,12 @@ Coop implements the Ethereum Foundation's March 2026 Mandate (CROPS: Censorship 
 |---------|---------|-------|
 | **Sidepanel** | Full coop workspace (4 tabs) | `Cmd+Shift+Y` or click extension icon |
 | **Popup** | Quick status + actions | Click extension icon |
-| **Offscreen** | Background sync (WebRTC) | Automatic (keeps sync alive when sidepanel closed) |
+| **Offscreen** | Background sync (WebRTC) | Automatic, keeps sync alive when sidepanel closed |
 
 **Keyboard Shortcuts**:
-- `Cmd+Shift+Y` — Open sidepanel
-- `Cmd+Shift+U` — Round up active tab
-- `Cmd+Shift+S` — Capture visible tab screenshot
+- `Cmd+Shift+Y`: Open sidepanel
+- `Cmd+Shift+U`: Round up active tab
+- `Cmd+Shift+S`: Capture visible tab screenshot
 
 ### 3.2 Web Application (PWA)
 
@@ -189,7 +189,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **Acceptance Criteria**:
 - Captured tabs visible in Chickens tab
 - Only http/https URLs captured (chrome://, about: excluded)
-- Capture is entirely local — nothing sent to any server
+- Capture is entirely local, nothing sent to any server
 - Multiple tabs can be captured in one round-up
 
 ---
@@ -201,7 +201,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 **Flow**:
 1. Set capture mode during coop creation or in settings:
-   - Manual (default — no auto-capture)
+   - Manual (default, no auto-capture)
    - 30-minute intervals
    - 60-minute intervals
 2. Chrome alarm triggers capture at interval
@@ -604,7 +604,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 **Acceptance Criteria**:
 - Graph renders with correct node/edge layout
-- Pan and zoom work (no drag/select — read-only)
+- Pan and zoom work (no drag/select, read-only)
 - MiniMap provides overview navigation
 - Archive story sidebar shows narrative + receipts
 - Missing/invalid snapshot shows clear error with guidance
@@ -709,13 +709,13 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** I can manage the coop's automated systems and policies.
 
 **Operator Console Features**:
-1. **Trusted Helpers** — Agent skill auto-run toggles
-2. **Approval Rules** — Action policy toggles (12 action classes)
-3. **Waiting Chores** — Action queue (propose → approve → reject → execute)
-4. **Grants** — Issue/revoke execution grants (time-bound, usage-limited)
-5. **Session Capabilities** — Smart session management (ERC-4337)
-6. **Garden Requests** — Green Goods work approvals, assessments, admin sync
-7. **Agent Dashboard** — Observations, plans, skill runs
+1. **Trusted Helpers**: Agent skill auto-run toggles
+2. **Approval Rules**: Action policy toggles (12 action classes)
+3. **Waiting Chores**: Action queue (propose → approve → reject → execute)
+4. **Grants**: Issue/revoke execution grants (time-bound, usage-limited)
+5. **Session Capabilities**: Smart session management (ERC-4337)
+6. **Garden Requests**: Green Goods work approvals, assessments, admin sync
+7. **Agent Dashboard**: Observations, plans, skill runs
 
 **Access Control**: Only `creator` and `trusted` roles see the Operator Console (in Feed tab).
 
@@ -738,14 +738,14 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | `green-goods-*` | Garden operations needed |
 
 **Agent Skills** (execution order):
-1. `opportunity-extractor` — Identifies funding/opportunity signals
-2. `grant-fit-scorer` — Scores grant fit
-3. `capital-formation-brief` — Generates capital formation summaries
-4. `review-digest` — Creates review digests
-5. `ecosystem-entity-extractor` — Extracts entity references
-6. `theme-clusterer` — Groups related content
-7. `publish-readiness-check` — Validates draft quality
-8. `green-goods-*` — Garden automation (5 skills)
+1. `opportunity-extractor`: Identifies funding/opportunity signals
+2. `grant-fit-scorer`: Scores grant fit
+3. `capital-formation-brief`: Generates capital formation summaries
+4. `review-digest`: Creates review digests
+5. `ecosystem-entity-extractor`: Extracts entity references
+6. `theme-clusterer`: Groups related content
+7. `publish-readiness-check`: Validates draft quality
+8. `green-goods-*`: Garden automation (5 skills)
 
 **Flow**:
 1. Observation created → Agent cycle triggered
@@ -776,8 +776,8 @@ Handles all business logic, storage, and message routing for the extension. Not 
 - `live`: Deploy via Pimlico ERC-4337 bundler
 
 **Chains**:
-- `sepolia` — Ethereum Sepolia testnet (development)
-- `arbitrum` — Arbitrum One mainnet (production)
+- `sepolia`: Ethereum Sepolia testnet (development)
+- `arbitrum`: Arbitrum One mainnet (production)
 
 **Acceptance Criteria**:
 - Mock mode works offline with deterministic addresses
@@ -913,15 +913,15 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | Entity | Created By | Stored In | Synced Via |
 |--------|-----------|-----------|------------|
 | CoopSharedState | Create flow | IndexedDB + Yjs | y-webrtc |
-| TabCandidate | Tab capture | IndexedDB | — (local only) |
+| TabCandidate | Tab capture | IndexedDB | Local only |
 | ReviewDraft | Promotion/AI | IndexedDB + Yjs | y-webrtc |
 | Artifact | Publish flow | Yjs | y-webrtc |
 | ArchiveReceipt | Archive flow | Yjs | y-webrtc |
 | ReceiverCapture | Receiver PWA | IndexedDB | Receiver CRDT |
-| ReceiverPairing | Pairing flow | IndexedDB | — (local only) |
-| ExecutionGrant | Operator | IndexedDB | — (local only) |
-| SessionCapability | Operator | IndexedDB | — (local only) |
-| AgentObservation | Agent cycle | IndexedDB | — (local only) |
+| ReceiverPairing | Pairing flow | IndexedDB | Local only |
+| ExecutionGrant | Operator | IndexedDB | Local only |
+| SessionCapability | Operator | IndexedDB | Local only |
+| AgentObservation | Agent cycle | IndexedDB | Local only |
 
 ---
 
@@ -980,8 +980,8 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 ### Known Limitations
 
-1. CRDT updates are schema-validated but not author-authenticated — a compromised peer can inject valid-looking data
-2. Room secret is the sole trust boundary for sync — if leaked, unauthorized peers can read/write
+1. CRDT updates are schema-validated but not author-authenticated. A compromised peer can inject valid-looking data.
+2. Room secret is the sole trust boundary for sync. If leaked, unauthorized peers can read/write.
 3. Local inference model quality depends on device capability (WebGPU)
 
 ---
@@ -1043,9 +1043,9 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | `VITE_COOP_ONCHAIN_MODE` | `mock`, `live` | `mock` | Safe deployment mode |
 | `VITE_COOP_ARCHIVE_MODE` | `mock`, `live` | `mock` | Storacha upload mode |
 | `VITE_COOP_SESSION_MODE` | `mock`, `live`, `off` | `off` | Smart session mode |
-| `VITE_PIMLICO_API_KEY` | API key | — | ERC-4337 bundler |
-| `VITE_STORACHA_ISSUER_URL` | URL | — | Archive delegation |
-| `VITE_COOP_SIGNALING_URLS` | CSV of URLs | — | WebRTC signaling servers |
+| `VITE_PIMLICO_API_KEY` | API key | | ERC-4337 bundler |
+| `VITE_STORACHA_ISSUER_URL` | URL | | Archive delegation |
+| `VITE_COOP_SIGNALING_URLS` | CSV of URLs | | WebRTC signaling servers |
 | `VITE_COOP_RECEIVER_APP_URL` | URL | `https://coop.town` | Receiver PWA URL |
 | `VITE_COOP_LOCAL_ENHANCEMENT` | `on`, `off` | `on` | Local inference toggle |
 
@@ -1054,15 +1054,15 @@ Handles all business logic, storage, and message routing for the extension. Not 
 ## 11. Release Criteria (v0.0)
 
 ### Must Pass
-- [ ] `bun format && bun lint` — Zero warnings
-- [ ] `bun run test` — All unit tests pass
-- [ ] `bun build` — Clean build (shared → app → extension)
-- [ ] `bun run validate core-loop` — Two-profile coop lifecycle
-- [ ] `bun run validate flow-board` — Board visualization + archive
-- [ ] `bun run validate receiver-slice` — Receiver pairing + sync
+- [ ] `bun format && bun lint`: Zero warnings
+- [ ] `bun run test`: All unit tests pass
+- [ ] `bun build`: Clean build (shared → app → extension)
+- [ ] `bun run validate core-loop`: Two-profile coop lifecycle
+- [ ] `bun run validate flow-board`: Board visualization + archive
+- [ ] `bun run validate receiver-slice`: Receiver pairing + sync
 
 ### Should Pass
-- [ ] `bun run validate full` — All suites including receiver-hardening
+- [ ] `bun run validate full`: All suites including receiver-hardening
 - [ ] Manual test: Create coop → invite → join → capture → review → publish → archive → board
 - [ ] Manual test: Receiver pairing → audio capture → sync → convert to draft → publish
 - [ ] Accessibility audit: keyboard navigation through all flows

@@ -13,6 +13,8 @@ const sidebars: SidebarsConfig = {
       label: 'Architecture',
       items: [
         'architecture/coop-os-architecture-vnext',
+        'architecture/agent-harness',
+        'architecture/knowledge-sharing-and-scaling',
         'architecture/green-goods-integration-spec',
       ],
     },

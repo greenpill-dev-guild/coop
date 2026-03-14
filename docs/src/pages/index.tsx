@@ -4,14 +4,16 @@ import styles from './index.module.css';
 
 export default function Home() {
   return (
-    <Layout title="Coop Docs" description="Browser-first knowledge commons documentation">
+    <Layout
+      title="Coop Docs"
+      description="Capture scattered knowledge, refine it into opportunities, and share what matters."
+    >
       <div className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.eyebrow}>Documentation</p>
           <h1 className={styles.heroTitle}>Build with Coop</h1>
           <p className={styles.heroSubtitle}>
-            Everything you need to understand, build, and contribute to the browser-first knowledge
-            commons.
+            Capture scattered knowledge, refine it into opportunities, and share what matters.
           </p>
           <div className={styles.ctaRow}>
             <Link className={styles.buttonPrimary} to="/docs/intro">

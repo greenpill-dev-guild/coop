@@ -1,4 +1,4 @@
-# UI Review — Issues, Regressions & Confusion Areas
+# UI Review - Issues, Regressions & Confusion Areas
 
 **Date**: 2026-03-13
 **Branch**: `release/0.0`
@@ -13,9 +13,9 @@
 **Severity**: High (maintainability, testability)
 **Status**: CONFIRMED (worse than initially estimated)
 
-- `packages/app/src/app.tsx` — **1,771 lines**, single React component with 20+ useState, 15+ useRef, 14+ useEffect, 20+ useCallback hooks
-- `packages/extension/src/views/Sidepanel/sidepanel-app.tsx` — **3,135 lines** (not 1,000+ as initially estimated)
-- `packages/extension/src/background.ts` — **5,794 lines** service worker
+- `packages/app/src/app.tsx`: **1,771 lines**, single React component with 20+ useState, 15+ useRef, 14+ useEffect, 20+ useCallback hooks
+- `packages/extension/src/views/Sidepanel/sidepanel-app.tsx`: **3,135 lines** (not 1,000+ as initially estimated)
+- `packages/extension/src/background.ts`: **5,794 lines** service worker
 - `SettingsPanel` accepts **19 props** (prop drilling)
 
 **Impact**: Difficult to reason about state, test in isolation, or refactor safely. Any change risks unintended side effects across unrelated features.
@@ -32,7 +32,7 @@
 
 ### 3. No Loading States or Skeletons
 **Severity**: Medium (UX)
-**Status**: CONFIRMED — zero matches for loading/spinner/skeleton/Suspense/fallback across all .tsx and .css files
+**Status**: CONFIRMED, zero matches for loading/spinner/skeleton/Suspense/fallback across all .tsx and .css files
 
 - Dashboard loads via polling with no visual feedback on first load
 - Route transitions show nothing while `refreshLocalState()` runs
@@ -44,7 +44,7 @@
 
 ## Regressions & Tech Debt
 
-### 4. ~~Audio Asset Format Migration Incomplete~~ — NOT A REGRESSION
+### 4. ~~Audio Asset Format Migration Incomplete~~ - NOT A REGRESSION
 **Status**: VERIFIED COMPLETE
 
 - `.wav` files deleted, `.mp3` replacements added in both extension and app packages
@@ -63,11 +63,11 @@
 
 ### 6. Legacy Chain Key Normalization
 **Severity**: Low (tech debt)
-**Status**: CONFIRMED — runs on every parse via `z.preprocess()`
+**Status**: CONFIRMED, runs on every parse via `z.preprocess()`
 
 - `schema.ts:746-749` defines `legacyOnchainChainKeyMap` converting `celo`→`arbitrum`, `celo-sepolia`→`sepolia`
 - `schema.ts:814-815` uses `z.preprocess(normalizeLegacyOnchainState, ...)` on the onchain state schema
-- This runs on every `.parse()` or `.safeParse()` call — should be a one-time migration or removed if no legacy data exists
+- This runs on every `.parse()` or `.safeParse()` call. Should be a one-time migration or removed if no legacy data exists
 
 ---
 
@@ -79,16 +79,16 @@
 
 | Concept | Extension Sidepanel | App (PWA) | E2E Tests | Landing Page |
 |---------|-------------------|-----------|-----------|--------------|
-| Tab queue | "Loose Chickens" | — | "Loose Chickens" | "Loose Chickens" |
+| Tab queue | "Loose Chickens" |  | "Loose Chickens" | "Loose Chickens" |
 | Review queue | "The Roost" | "Inbox" / "Roost" | "Roost" | "Roost" |
-| Shared feed | "The Feed" / "Coop Feed" | — | "Coop Feed" / "Feed" | "Coop Feed" |
-| Home/Settings | "Home" tab | "Pair" route | "Coops"/"Nest" (stale) | — |
+| Shared feed | "The Feed" / "Coop Feed" |  | "Coop Feed" / "Feed" | "Coop Feed" |
+| Home/Settings | "Home" tab | "Pair" route | "Coops"/"Nest" (stale) |  |
 | Capture action | "Round up" | "Hatch" / "Capture" | "Round up" | "Round up" |
-| Agent section | "Trusted Helpers" | — | "Agent Skills"/"Helper Runs" | — |
+| Agent section | "Trusted Helpers" |  | "Agent Skills"/"Helper Runs" |  |
 
 Current sidepanel tabs are `['Chickens', 'Roost', 'Home', 'Feed']` (`sidepanel-app.tsx:77`). E2E tests use regex fallbacks for defunct labels like `/^(Coops|Nest)$/i` and `/^(Settings|Nest Tools)$/i`.
 
-### 8. Receiver vs Extension Capture — Parallel Code Paths
+### 8. Receiver vs Extension Capture: Parallel Code Paths
 **Severity**: Medium (architecture)
 **Status**: CONFIRMED
 
@@ -98,24 +98,24 @@ Two completely separate capture systems:
 
 Different UIs, different sync mechanisms, different status labels, independent storage.
 
-### 9. Agent Confidence Threshold — Intentionally Low
+### 9. Agent Confidence Threshold: Intentionally Low
 **Severity**: Low (by design, not a bug)
-**Status**: CONFIRMED — intentional calibration
+**Status**: CONFIRMED, intentional calibration
 
 - `AGENT_HIGH_CONFIDENCE_THRESHOLD = 0.24` (`agent-config.ts:10`)
 - Comment explains: "Passive pipeline relevance scores for strong funding/opportunity pages currently cluster around the low 0.20s, so the agent trigger threshold needs to track that calibrated range instead of assuming a near-1.0 confidence scale."
-- No user-facing control to adjust this threshold — consider exposing as a setting
+- No user-facing control to adjust this threshold, consider exposing as a setting
 
-### 10. Meeting/Ritual Settings — Unclear When They Apply
+### 10. Meeting/Ritual Settings: Unclear When They Apply
 **Severity**: Low-Medium
-**Status**: CONFIRMED — settings are stored but inert
+**Status**: CONFIRMED, settings are stored but inert
 
 - Meeting settings (`weeklyReviewCadence`, `facilitatorExpectation`, `defaultCapturePosture`) collected in forms
 - Stored in coop state via `flows.ts:240-243`
 - Used for agent context logging (`agent-runner.ts:297`) and message payloads
 - **No scheduling, cron, or trigger logic exists** that uses these values to conduct reviews
 
-### 11. Board View — Limited Interactivity
+### 11. Board View: Limited Interactivity
 **Severity**: Medium (UX flow)
 **Status**: PARTIALLY CONFIRMED
 
@@ -124,12 +124,12 @@ Different UIs, different sync mechanisms, different status labels, independent s
 - **Has**: Collapsible sidebar via `<details>` elements, archive receipt links to Storacha gateway
 - **Missing**: No actions to edit/publish/moderate content, no path back to extension (only "Back to landing")
 
-### 12. Operator Console — No Progressive Disclosure
+### 12. Operator Console: No Progressive Disclosure
 **Severity**: Low-Medium
-**Status**: CONFIRMED — zero `<details>` or `<summary>` elements
+**Status**: CONFIRMED, zero `<details>` or `<summary>` elements
 
 - All sections (Trusted Helpers, Garden Requests, Approval Rules, Waiting Chores, Grants, Session Capabilities) fully visible immediately
-- Contrast: Board sidebar properly uses `<details>` for collapse — Operator Console lacks this pattern
+- Contrast: Board sidebar properly uses `<details>` for collapse, Operator Console lacks this pattern
 
 ---
 
@@ -143,8 +143,8 @@ Different UIs, different sync mechanisms, different status labels, independent s
 - QR scanner overlay (`PairingPanel.tsx`): No `role="dialog"`, no focus management
 - Tab key can reach elements behind both overlays
 
-### 14. ~~Missing ARIA on Dynamic Content~~ — ALREADY IMPLEMENTED
-**Status**: INCORRECT — features are present
+### 14. ~~Missing ARIA on Dynamic Content~~: ALREADY IMPLEMENTED
+**Status**: INCORRECT, features are present
 
 - Tab strip buttons **do have** `aria-selected={panelTab === tab}` (`sidepanel-app.tsx:2268`)
 - Sync status **does have** `<output aria-live="polite">` regions (`sidepanel-app.tsx:2280, 2284`)
@@ -155,7 +155,7 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 
 ### 15. Keyboard Navigation Gaps
 **Severity**: Low
-**Status**: CONFIRMED — no `onKeyDown` handlers on tab strip
+**Status**: CONFIRMED, no `onKeyDown` handlers on tab strip
 
 - Extension tab strip: no arrow-key navigation between tabs (only `onClick`)
 - Draft editor: no keyboard shortcut to save/publish
@@ -167,7 +167,7 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 
 ### 16. Unbounded Yjs Document Growth
 **Severity**: Medium (long-term)
-**Status**: CONFIRMED — no gc/compaction/truncation in sync.ts or receiver/sync.ts
+**Status**: CONFIRMED, no gc/compaction/truncation in sync.ts or receiver/sync.ts
 
 - Coop state stored as single Yjs Y.Map with 13 top-level keys
 - Each key contains full arrays (all members, all artifacts, all receipts)
@@ -181,7 +181,7 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 - `app.tsx:249-257` creates/revokes blob URLs via `createPreviewUrl()`/`revokePreviewUrl()`
 - No batching or guards to prevent rapid churn during frequent `refreshLocalState` cycles (every 2s when paired)
 
-### 18. Sync Binding Per Coop — Lazy Init Present, No Pooling
+### 18. Sync Binding Per Coop: Lazy Init Present, No Pooling
 **Severity**: Low
 **Status**: PARTIALLY CONFIRMED
 
@@ -198,35 +198,35 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 **Status**: CONFIRMED
 
 E2E tests use regex fallbacks masking label mismatches:
-- `extension.spec.cjs:182` — `/^(Coops|Nest)$/i` (no such tab exists; current: "Home")
-- `extension.spec.cjs:242` — `/^(Settings|Nest Tools)$/i` (now collapsible inside Home)
-- `extension.spec.cjs:235` — `/^(Feed|Coop Feed)$/i` (current: "Feed")
+- `extension.spec.cjs:182`: `/^(Coops|Nest)$/i` (no such tab exists; current: "Home")
+- `extension.spec.cjs:242`: `/^(Settings|Nest Tools)$/i` (now collapsible inside Home)
+- `extension.spec.cjs:235`: `/^(Feed|Coop Feed)$/i` (current: "Feed")
 
 Tests may pass via regex fallback but test the wrong UI element.
 
 ### 20. Board View Minimal Test Coverage
 **Severity**: Low-Medium
-**Status**: CONFIRMED — exactly 2 `it()` blocks
+**Status**: CONFIRMED, exactly 2 `it()` blocks
 
-- `BoardApp.test.tsx:166, 181` — 2 test cases with comprehensive assertions (~15+ each)
+- `BoardApp.test.tsx:166, 181`: 2 test cases with comprehensive assertions (~15+ each)
 - No tests for: edge styling, node card rendering by kind, archive story section, responsive layout, error/empty states
 
 ---
 
 ## Validated Recommendations (Priority Order)
 
-1. **Extract state into custom hooks** — Break `app.tsx` (1,771 lines) and `sidepanel-app.tsx` (3,135 lines) into `useCapture()`, `useSync()`, `usePairing()`, etc.
-2. **Replace polling with message-based updates** — Use `chrome.runtime.onMessage` from background to sidepanel instead of 3.5s polling
-3. **Add loading skeletons** — At minimum for initial dashboard load and route transitions
-4. **Unify terminology** — Pick one name per concept and enforce across all surfaces
-5. **Add focus traps to modals** — Onboarding overlay, QR scanner
-6. **Progressive disclosure for Operator Console** — Collapse advanced sections by default using `<details>`
-7. **Board view actions** — Add "Back to extension" link and share/export buttons
-8. **Fix E2E test labels** — Replace regex fallbacks with current tab names
-9. **Document the meeting/ritual lifecycle** — Either implement scheduling or remove inert form fields
-10. **Add arrow-key navigation to tab strip** — WAI-ARIA tabs pattern
+1. **Extract state into custom hooks**: Break `app.tsx` (1,771 lines) and `sidepanel-app.tsx` (3,135 lines) into `useCapture()`, `useSync()`, `usePairing()`, etc.
+2. **Replace polling with message-based updates**: Use `chrome.runtime.onMessage` from background to sidepanel instead of 3.5s polling
+3. **Add loading skeletons**: At minimum for initial dashboard load and route transitions
+4. **Unify terminology**: Pick one name per concept and enforce across all surfaces
+5. **Add focus traps to modals**: Onboarding overlay, QR scanner
+6. **Progressive disclosure for Operator Console**: Collapse advanced sections by default using `<details>`
+7. **Board view actions**: Add "Back to extension" link and share/export buttons
+8. **Fix E2E test labels**: Replace regex fallbacks with current tab names
+9. **Document the meeting/ritual lifecycle**: Either implement scheduling or remove inert form fields
+10. **Add arrow-key navigation to tab strip**: WAI-ARIA tabs pattern
 
 ### Removed from recommendations (verified as already done):
-- ~~Verify audio migration~~ — Migration is complete
-- ~~Add aria-selected to tabs~~ — Already implemented
-- ~~Add aria-live for sync status~~ — Already implemented
+- ~~Verify audio migration~~: Migration is complete
+- ~~Add aria-selected to tabs~~: Already implemented
+- ~~Add aria-live for sync status~~: Already implemented

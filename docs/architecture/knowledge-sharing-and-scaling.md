@@ -15,9 +15,9 @@ sidebar_position: 3
 
 ## 1. Executive Summary
 
-Coop is a browser-first, local-first knowledge commons. Knowledge enters through browser tabs, mobile captures, and agent observations. It flows through a six-stage pipeline — capture, draft, publish, sync, feed, archive — with a fully autonomous in-browser agent that synthesizes insights and proposes actions back into the shared knowledge graph.
+Coop is a browser-first, local-first knowledge commons. Knowledge enters through browser tabs, mobile captures, and agent observations. It flows through a six-stage pipeline (capture, draft, publish, sync, feed, archive) with a fully autonomous in-browser agent that synthesizes insights and proposes actions back into the shared knowledge graph.
 
-The architecture is fundamentally sound for current scale (small coops, \<20 members, \<500 artifacts). **The critical risk is not the choice of CRDT library — Yjs scales well — but how we use it.** Storing entire state arrays as JSON strings inside Y.Map values defeats CRDT merge semantics, causes silent data loss on concurrent edits, and bloats document size proportional to total operations rather than current state size.
+The architecture is fundamentally sound for current scale (small coops, \<20 members, \<500 artifacts). **The critical risk is not the choice of CRDT library (Yjs scales well) but how we use it.** Storing entire state arrays as JSON strings inside Y.Map values defeats CRDT merge semantics, causes silent data loss on concurrent edits, and bloats document size proportional to total operations rather than current state size.
 
 This document maps the full architecture, identifies concrete performance and scaling constraints, and proposes a phased remediation plan.
 
@@ -71,11 +71,11 @@ ReviewDraft {
 
 Publishing is an explicit, user-initiated action that moves local knowledge into the shared CRDT:
 
-1. **Resolve actors** — Validate membership via `resolvePublishActorsForTargets()` (checks auth session + coop membership)
-2. **Create sibling artifacts** — One `Artifact` per target coop (same `originId`, different `targetCoopId`)
-3. **Write to Y.Doc** — `updateCoopState()` appends artifacts, rebuilds `reviewBoard` index
-4. **Update memory profile** — Increment domain/tag/category counts, trim exemplar artifacts to 12 most recent
-5. **Sync to peers** — Y.Doc update propagates via y-indexeddb (local) and y-webrtc (remote)
+1. **Resolve actors**: Validate membership via `resolvePublishActorsForTargets()` (checks auth session + coop membership)
+2. **Create sibling artifacts**: One `Artifact` per target coop (same `originId`, different `targetCoopId`)
+3. **Write to Y.Doc**: `updateCoopState()` appends artifacts, rebuilds `reviewBoard` index
+4. **Update memory profile**: Increment domain/tag/category counts, trim exemplar artifacts to 12 most recent
+5. **Sync to peers**: Y.Doc update propagates via y-indexeddb (local) and y-webrtc (remote)
 
 ```typescript
 Artifact {
@@ -105,7 +105,7 @@ roomId = `coop-room-${hashText(`${coopId}:${roomSecret}`).slice(2, 18)}`
 
 Sync health is reported every 2500ms with event-triggered updates on `status`, `synced`, and `peers` changes. Reconnection is scheduled at 1200ms delay after disconnect.
 
-No awareness protocol is used — there is no cursor/presence tracking. All shared state is structured knowledge data.
+No awareness protocol is used; there is no cursor/presence tracking. All shared state is structured knowledge data.
 
 ### 2.6 Coop Feed & Board
 
@@ -131,7 +131,7 @@ Member    Capture    Draft      Coop       Artifact    Archive
 
 ### 3.1 Overview
 
-The agent runs entirely in-browser — no cloud APIs, no data leaves the device. It executes in the extension's offscreen document on a 1.5-second polling interval:
+The agent runs entirely in-browser, with no cloud APIs and no data leaving the device. It executes in the extension's offscreen document on a 1.5-second polling interval:
 
 ```
 OBSERVE → PLAN → EXECUTE (skill DAG) → SYNTHESIZE → PROPOSE → APPROVE
@@ -171,9 +171,9 @@ publish-readiness-check → proposes: publish-ready-draft action
 ```
 
 **Skip conditions** prevent unnecessary execution:
-- `no-candidates` — No opportunity candidates from prior skill
-- `no-scores` — No grant fit scores from prior skill
-- `no-draft` — No draft context available
+- `no-candidates`: No opportunity candidates from prior skill
+- `no-scores`: No grant fit scores from prior skill
+- `no-draft`: No draft context available
 
 ### 3.4 Three-Tier Inference Cascade
 
@@ -186,20 +186,20 @@ Each skill runs through a fallback chain until one succeeds:
 | 3 | Heuristic rules | Deterministic | JS | N/A |
 
 **Output reliability pipeline:**
-1. `extractJsonBlock()` — Pull JSON from markdown fences or raw text
-2. `repairJson()` — Fix control chars, trailing commas, truncated strings, unmatched braces
-3. Zod schema validation — If fails, retry once with error appended to prompt
+1. `extractJsonBlock()`: Pull JSON from markdown fences or raw text
+2. `repairJson()`: Fix control chars, trailing commas, truncated strings, unmatched braces
+3. Zod schema validation: If fails, retry once with error appended to prompt
 
 ### 3.5 Agent → Shared Knowledge Feedback
 
 The agent's outputs feed back into the knowledge pipeline at two points:
 
-**1. Draft creation** — Skills generate `ReviewDraft` records:
+**1. Draft creation**: Skills generate `ReviewDraft` records:
 - `capital-formation-brief` → category `funding-lead`, confidence 0.82
 - `review-digest` → category `insight`, confidence 0.76
 - Agent-generated drafts have `provenance: 'agent'`
 
-**2. Action proposals** — Skills propose mutations to shared state:
+**2. Action proposals**: Skills propose mutations to shared state:
 - `publish-readiness-check` → proposes `publish-ready-draft` action
 - Green Goods skills → propose garden/pool creation, sync, assessment actions
 
@@ -324,7 +324,7 @@ Peer A: adds artifact "Funding Lead #3" → JSON.stringify(artifacts) → root.s
 Peer B: adds artifact "Research Note #7" → JSON.stringify(artifacts) → root.set('artifacts', '...')
 ```
 
-Yjs resolves Y.Map key conflicts by picking the peer with the higher client ID. **One peer's artifact silently disappears.** The `artifacts` array is an opaque string to Yjs — it cannot merge individual array elements.
+Yjs resolves Y.Map key conflicts by picking the peer with the higher client ID. **One peer's artifact silently disappears.** The `artifacts` array is an opaque string to Yjs, it cannot merge individual array elements.
 
 This is not a theoretical risk. Any two members publishing artifacts within the same sync window will hit this.
 
@@ -345,7 +345,7 @@ The growth is proportional to total operations, not current state size. Over mon
 
 Changing `profile.name` triggers `writeCoopState()`, which re-serializes and re-sets all 13 keys. Each `root.set()` generates a Yjs update that transmits the entire JSON string for that key to all peers.
 
-Worse — each invite contains an `InviteCoopBootstrapSnapshot` that embeds the full coop state. Five invites with 50 artifacts means the artifact list is stored 6 times in the document, all re-transmitted on any state change.
+Worse, each invite contains an `InviteCoopBootstrapSnapshot` that embeds the full coop state. Five invites with 50 artifacts means the artifact list is stored 6 times in the document, all re-transmitted on any state change.
 
 ### 5.5 Read Path Overhead
 
@@ -364,12 +364,12 @@ This runs on every Y.Doc update (debounced 280ms in the sidepanel) and on every 
 
 | Component | Idle Cost | Active Cost | Frequency |
 |-----------|-----------|-------------|-----------|
-| Agent cycle (no work) | 5-10ms (2 IDB reads) | — | Every 1.5s |
-| Agent cycle (full, 8 obs) | — | 500-1500ms (100+ IDB ops + inference) | Variable |
-| Sidepanel state read | 2-5ms (JSON parse + Zod) | — | Every 280ms on doc update |
-| WebLLM model load | — | 30-60s first load | Once per session |
+| Agent cycle (no work) | 5-10ms (2 IDB reads) |  | Every 1.5s |
+| Agent cycle (full, 8 obs) |  | 500-1500ms (100+ IDB ops + inference) | Variable |
+| Sidepanel state read | 2-5ms (JSON parse + Zod) |  | Every 280ms on doc update |
+| WebLLM model load |  | 30-60s first load | Once per session |
 | WebLLM VRAM held | 500-800 MB | Same | Persistent until extension unload |
-| transformers.js fallback | — | 400-600 MB RAM peak | Once per session |
+| transformers.js fallback |  | 400-600 MB RAM peak | Once per session |
 | Agent log writes | 2 rows/cycle | 50-60 rows/cycle | Every 1.5s |
 | Receiver relay WebSocket | 0ms (idle) | Exponential backoff on failure | On demand |
 | Offscreen document baseline | ~15-20 MB | Same | Persistent |
@@ -380,7 +380,7 @@ This runs on every Y.Doc update (debounced 280ms in the sidepanel) and on every 
 
 **GPU memory pressure**: WebLLM loads a 250-350MB quantized model into VRAM and never releases it. Users running GPU-intensive applications (video editing, gaming, other AI tools) will contend for VRAM.
 
-**Storage growth**: Agent logs accumulate unbounded — no TTL, no cleanup. Active usage produces ~115KB/day of log entries. Combined with Y.Doc bloat from the JSON-in-CRDT pattern, IndexedDB will grow faster than the actual knowledge content warrants.
+**Storage growth**: Agent logs accumulate unbounded, no TTL, no cleanup. Active usage produces ~115KB/day of log entries. Combined with Y.Doc bloat from the JSON-in-CRDT pattern, IndexedDB will grow faster than the actual knowledge content warrants.
 
 **Receiver blob storage**: Photos and audio from mobile captures are stored as `dataBase64` in the `receiverBlobs` table. A few dozen photos can consume significant IndexedDB quota (~50MB implicit browser limit) with no eviction pipeline.
 
@@ -433,7 +433,7 @@ This runs on every Y.Doc update (debounced 280ms in the sidepanel) and on every 
 
 ### 7.2 Archive Pipeline
 
-**Step 1 — Bundle creation:**
+**Step 1: Bundle creation:**
 ```typescript
 createArchiveBundle({
   scope: 'artifact' | 'snapshot',
@@ -444,23 +444,23 @@ createArchiveBundle({
 - `artifact` scope: selected artifacts with tags/sources
 - `snapshot` scope: full state (profile, soul, rituals, artifacts, reviewBoard, receipts)
 
-**Step 2 — UCAN delegation:**
+**Step 2: UCAN delegation:**
 - Ed25519 agent key issues time-limited delegation (default 600s)
 - Abilities granted: `filecoin/offer`, `space/blob/add`, `space/index/add`, `upload/add`
 - Follow-up delegations grant only `filecoin/info`
 
-**Step 3 — Upload to Storacha:**
+**Step 3: Upload to Storacha:**
 - Serialize bundle as JSON blob → `client.uploadFile()`
 - Collect `shardCids[]` and `pieceCids[]` as pieces are stored
 - Returns `rootCid` + `gatewayUrl` (`storacha.link/ipfs/{rootCid}`)
 
-**Step 4 — Record receipt:**
+**Step 4: Record receipt:**
 - Update artifact `archiveStatus` → `'archived'`
 - Append `archiveReceiptIds[]` on each archived artifact
 - Update `memoryProfile.archiveSignals` (tag/domain counts)
 - Persist receipt in `CoopSharedState.archiveReceipts[]`
 
-**Step 5 — Follow-up (live mode):**
+**Step 5: Follow-up (live mode):**
 - Query Filecoin aggregation and deal state via `filecoin/info`
 - Track status progression: `pending` → `offered` → `indexed` → `sealed`
 - Increment `followUp.refreshCount`, track errors
@@ -506,9 +506,9 @@ For Coop's use case (small groups, \<100 artifacts, \<20 members), raw Y.Doc siz
 
 The JSON-in-CRDT anti-pattern (Section 5) creates three compounding scaling limits that are independent of Yjs performance:
 
-1. **Merge correctness** — Concurrent edits to different array elements cause silent data loss
-2. **Size growth** — O(total operations) rather than O(current state)
-3. **Sync bandwidth** — Full JSON blob retransmitted on any sub-field change
+1. **Merge correctness**: Concurrent edits to different array elements cause silent data loss
+2. **Size growth**: O(total operations) rather than O(current state)
+3. **Sync bandwidth**: Full JSON blob retransmitted on any sub-field change
 
 ### 8.3 y-webrtc Mesh Limits
 
@@ -516,7 +516,7 @@ The JSON-in-CRDT anti-pattern (Section 5) creates three compounding scaling limi
 |-------|--------------------|---------|
 | 4 | 6 | Comfortable |
 | 8 | 28 | Fine for data-only (no audio/video) |
-| 16 | 120 | Degraded — need SFU or server relay |
+| 16 | 120 | Degraded, need SFU or server relay |
 | 50+ | 1,225 | Not viable as mesh |
 
 Current `maxConns: 8` is adequate for Coop's target group size. Data-only WebRTC mesh at 8 peers works well. Beyond that, a server-mediated provider (y-websocket) is needed.
@@ -527,25 +527,25 @@ Current `maxConns: 8` is adequate for Coop's target group size. Data-only WebRTC
 |-------------|-------------------|
 | **Loro** | Rust/WASM, movable lists/trees, but immature ecosystem, no y-webrtc equivalent |
 | **Automerge** | JSON data model (more natural), but historically slower, needs custom WebRTC transport |
-| **cr-sqlite / ElectricSQL** | SQL-based CRDTs — requires relational rearchitecture, overkill for shared state |
-| **Liveblocks / PartyKit** | Hosted Yjs backends — conflicts with local-first philosophy |
+| **cr-sqlite / ElectricSQL** | SQL-based CRDTs, requires relational rearchitecture, overkill for shared state |
+| **Liveblocks / PartyKit** | Hosted Yjs backends, conflicts with local-first philosophy |
 | **Custom libp2p** | Maximum control, massive implementation effort, not justified |
 
-**Verdict: No provider switch needed.** The fix is architectural — how we structure data inside the Y.Doc — not which CRDT library we use.
+**Verdict: No provider switch needed.** The fix is architectural, how we structure data inside the Y.Doc, not which CRDT library we use.
 
 ---
 
 ## 9. Remediation Plan
 
-### Phase 1: Fix the Anti-Pattern (Critical — prevents data loss)
+### Phase 1: Fix the Anti-Pattern (Critical, prevents data loss)
 
 **Replace JSON strings with native Yjs types for collection fields.**
 
 ```typescript
-// CURRENT — broken for concurrent edits
+// CURRENT: broken for concurrent edits
 root.set('artifacts', JSON.stringify(state.artifacts));
 
-// TARGET — correct CRDT merge
+// TARGET: correct CRDT merge
 const artifacts = doc.getArray<Y.Map<string>>('artifacts');
 // Push individual artifacts as Y.Map instances
 // Update individual fields within artifact Y.Maps
@@ -578,7 +578,7 @@ Stop embedding full `CoopSharedState` snapshots inside invite codes that live in
 | **Idle backoff** | Increase agent cycle to 10-30s when no pending observations | 6-20x reduction in idle CPU |
 | **WebLLM unloading** | Call `teardown()` after 5 minutes of inactivity | Release 500-800MB VRAM |
 | **Agent log rotation** | Cap at 1000 rows, delete oldest on insert | Bounded storage (~500KB max) |
-| **Selective reads** | `readCoopField(doc, 'artifacts')` — parse only needed field | Skip JSON-parsing 12 unused fields |
+| **Selective reads** | `readCoopField(doc, 'artifacts')`: parse only needed field | Skip JSON-parsing 12 unused fields |
 | **Quota monitoring** | `navigator.storage.estimate()` in agent cycle | Early warning before silent write failures |
 | **Receiver blob pipeline** | Archive to Storacha after sync, replace with CID reference | Free IndexedDB space after archival |
 
@@ -605,8 +605,8 @@ Not urgent while users typically have 1-3 coops.
 
 If group size exceeds 8 peers or signaling reliability becomes an issue, add y-websocket with a lightweight persistent server:
 
-- **Cloudflare Durable Objects** — natural fit (stateful, low-latency, global)
-- Server acts as a persistent peer — sync happens even when no browser tabs are open
+- **Cloudflare Durable Objects**: natural fit (stateful, low-latency, global)
+- Server acts as a persistent peer, sync happens even when no browser tabs are open
 - Maintains local-first semantics (server is a peer, not an authority)
 - Enables offline members to receive updates when they come back online
 

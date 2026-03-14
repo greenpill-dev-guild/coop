@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Browser-Native Agent Harness
 
-Coop runs a fully autonomous agent loop inside the browser extension — no cloud APIs, no server inference, no data leaves the device. The agent observes local knowledge, plans skill execution, runs small language models in-browser, and proposes actions for human approval.
+Coop runs a fully autonomous agent loop inside the browser extension, with no cloud APIs, no server inference, and no data leaving the device. The agent observes local knowledge, plans skill execution, runs small language models in-browser, and proposes actions for human approval.
 
 This is the only known production implementation that combines in-browser LLM inference, a structured observe→plan→act loop, typed skill execution, and human-in-the-loop approval in a single browser extension.
 
@@ -34,12 +34,12 @@ This is the only known production implementation that combines in-browser LLM in
 
 The agent runs on a 1.5-second polling interval in the extension's offscreen document. Each cycle:
 
-1. **Observe** — Scan local state for actionable triggers (high-confidence drafts, receiver backlog, ritual reviews due, Green Goods requests)
-2. **Deduplicate** — Fingerprint-based dedup prevents re-processing the same state
-3. **Plan** — Select skills via topological sort of the dependency graph, build execution plan
-4. **Execute** — Run each skill through the inference cascade (WebLLM → transformers.js → heuristic)
-5. **Propose** — Generate action proposals with per-skill approval modes
-6. **Log** — Write structured trace spans to Dexie for observability
+1. **Observe**: Scan local state for actionable triggers (high-confidence drafts, receiver backlog, ritual reviews due, Green Goods requests)
+2. **Deduplicate**: Fingerprint-based dedup prevents re-processing the same state
+3. **Plan**: Select skills via topological sort of the dependency graph, build execution plan
+4. **Execute**: Run each skill through the inference cascade (WebLLM → transformers.js → heuristic)
+5. **Propose**: Generate action proposals with per-skill approval modes
+6. **Log**: Write structured trace spans to Dexie for observability
 
 ```
 Observation (pending)
@@ -75,11 +75,11 @@ Three-tier fallback ensures the agent always works, regardless of hardware:
 
 Small models (0.5B parameters) produce unreliable JSON. The harness compensates with:
 
-- **JSON repair** — Fixes trailing commas, missing brackets, truncated strings, raw newlines, control characters before parsing
-- **Retry-with-error-context** — On validation failure, retries once with the Zod error message appended to the prompt
-- **Grammar-constrained generation** — WebLLM's `response_format: { type: 'json_object' }` forces valid JSON at the token level via XGrammar
-- **Zod schema validation** — Every skill output is validated against its declared schema before acceptance
-- **Graceful fallback** — If a model fails, the next tier is tried automatically; heuristic rules always produce valid output
+- **JSON repair**: Fixes trailing commas, missing brackets, truncated strings, raw newlines, control characters before parsing
+- **Retry-with-error-context**: On validation failure, retries once with the Zod error message appended to the prompt
+- **Grammar-constrained generation**: WebLLM's `response_format: { type: 'json_object' }` forces valid JSON at the token level via XGrammar
+- **Zod schema validation**: Every skill output is validated against its declared schema before acceptance
+- **Graceful fallback**: If a model fails, the next tier is tried automatically; heuristic rules always produce valid output
 
 ## Skill System
 
@@ -131,7 +131,7 @@ opportunity-extractor ──▶ grant-fit-scorer ──▶ capital-formation-bri
          └── provides: candidates    provides: scores    provides: drafts
 ```
 
-Skills with `skipWhen` conditions are evaluated before execution. If `skipWhen: "no-candidates"` and the context has zero candidates, the skill is skipped with status `'skipped'` — no inference cost.
+Skills with `skipWhen` conditions are evaluated before execution. If `skipWhen: "no-candidates"` and the context has zero candidates, the skill is skipped with status `'skipped'`, incurring no inference cost.
 
 ### Knowledge Skills (SKILL.md Protocol)
 
@@ -175,14 +175,14 @@ Every agent cycle produces a trace with correlated spans:
 
 ```
 Trace: agent-trace-abc123
-├── Span: cycle (info) — "Agent cycle started with 3 pending observations"
-├── Span: observation (info) — "Processing observation: high-confidence-draft"
-│   ├── Span: skill (info) — "Skill started: opportunity-extractor (transformers)"
-│   ├── Span: skill (info) — "Skill completed: opportunity-extractor in 1,230ms"
-│   ├── Span: skill (info) — "Skill skipped: grant-fit-scorer"
-│   └── Span: action (info) — "Action dispatched: publish-ready-draft (auto-executed)"
-├── Span: observation (info) — "Observation dismissed: Source draft no longer exists"
-└── Span: cycle (info) — "Agent cycle completed: 2 processed, 0 errors"
+├── Span: cycle (info): "Agent cycle started with 3 pending observations"
+├── Span: observation (info): "Processing observation: high-confidence-draft"
+│   ├── Span: skill (info): "Skill started: opportunity-extractor (transformers)"
+│   ├── Span: skill (info): "Skill completed: opportunity-extractor in 1,230ms"
+│   ├── Span: skill (info): "Skill skipped: grant-fit-scorer"
+│   └── Span: action (info): "Action dispatched: publish-ready-draft (auto-executed)"
+├── Span: observation (info): "Observation dismissed: Source draft no longer exists"
+└── Span: cycle (info): "Agent cycle completed: 2 processed, 0 errors"
 ```
 
 Logs are stored in the `agentLogs` Dexie table with span type, level, skill ID, observation ID, and arbitrary data payload (provider, model, duration, tokens).
@@ -194,9 +194,9 @@ If an observation fails 3+ consecutive times (across separate cycles), it is mar
 ### Cycle Metrics
 
 Each `AgentCycleResult` includes:
-- `traceId` — correlates to structured log spans
-- `totalDurationMs` — wall-clock time for the entire cycle
-- `skillRunMetrics[]` — per-skill breakdown (provider, durationMs, retryCount, skipped)
+- `traceId`: correlates to structured log spans
+- `totalDurationMs`: wall-clock time for the entire cycle
+- `skillRunMetrics[]`: per-skill breakdown (provider, durationMs, retryCount, skipped)
 
 ## Human-in-the-Loop
 
@@ -212,7 +212,7 @@ Auto-run is opt-in per skill via the `autoRunSkillIds` setting. Users toggle ind
 
 ## Web Primitives Used
 
-The harness is built entirely on browser-native APIs — no server dependencies for core operation:
+The harness is built entirely on browser-native APIs, with no server dependencies for core operation:
 
 | Capability | Web Primitive | How Used |
 |-----------|---------------|----------|
@@ -229,29 +229,29 @@ The harness is built entirely on browser-native APIs — no server dependencies 
 
 ### Near-Term
 
-**Progressive model loading** — Detect WebGPU availability and auto-select larger models (3B+) when GPU is present. The inference layer already cascades; adding a capability tier that maps to model IDs is straightforward.
+**Progressive model loading**: Detect WebGPU availability and auto-select larger models (3B+) when GPU is present. The inference layer already cascades; adding a capability tier that maps to model IDs is straightforward.
 
-**Per-skill token limits** — The `maxTokens` manifest field is defined but not yet wired. Extraction skills (opportunity-extractor) need fewer tokens than synthesis skills (capital-formation-brief). Tuning per-skill reduces inference time.
+**Per-skill token limits**: The `maxTokens` manifest field is defined but not yet wired. Extraction skills (opportunity-extractor) need fewer tokens than synthesis skills (capital-formation-brief). Tuning per-skill reduces inference time.
 
-**Parallel skill execution** — Skills with no dependency relationship could run concurrently. The topological sort already identifies independent skills; the runner just needs to `Promise.all()` groups at the same DAG level instead of executing sequentially.
+**Parallel skill execution**: Skills with no dependency relationship could run concurrently. The topological sort already identifies independent skills; the runner just needs to `Promise.all()` groups at the same DAG level instead of executing sequentially.
 
 ### Medium-Term
 
-**Semantic memory** — In-browser embeddings via `all-MiniLM-L6-v2` (384-dim, ~23MB, runs on WASM). Store embeddings in Dexie alongside drafts and observations. Replace the naive `relatedDrafts.slice(0, 4)` with cosine similarity search for context-aware prompt building.
+**Semantic memory**: In-browser embeddings via `all-MiniLM-L6-v2` (384-dim, ~23MB, runs on WASM). Store embeddings in Dexie alongside drafts and observations. Replace the naive `relatedDrafts.slice(0, 4)` with cosine similarity search for context-aware prompt building.
 
-**Output handler extraction** — The 600+ line switch on `outputSchemaRef` in `agent-runner.ts` should be split into a handler registry (`agent-output-handlers.ts` types are defined). Each handler becomes a focused function, making it trivial to add new skill types.
+**Output handler extraction**: The 600+ line switch on `outputSchemaRef` in `agent-runner.ts` should be split into a handler registry (`agent-output-handlers.ts` types are defined). Each handler becomes a focused function, making it trivial to add new skill types.
 
-**Reflection bank** — Store `(bad_output, error, corrected_output)` triples. Use the most relevant failure as a negative example in future prompts. Small models can't self-correct, but they can learn from external examples.
+**Reflection bank**: Store `(bad_output, error, corrected_output)` triples. Use the most relevant failure as a negative example in future prompts. Small models can't self-correct, but they can learn from external examples.
 
 ### Long-Term
 
-**P2P agent coordination** — Each browser runs its own agent independently. Add CRDT-backed observation claims to the Yjs doc so peers don't duplicate work. The fingerprinting system already provides deterministic dedup — extend it across peers.
+**P2P agent coordination**: Each browser runs its own agent independently. Add CRDT-backed observation claims to the Yjs doc so peers don't duplicate work. The fingerprinting system already provides deterministic dedup; extend it across peers.
 
-**Pluggable executable skills** — External skills with sandboxed execution (iframe/worker), open output schemas, and a trust model (untrusted → verified → trusted). The knowledge skill infrastructure provides the loading pattern; executable skills need schema registration and sandboxing.
+**Pluggable executable skills**: External skills with sandboxed execution (iframe/worker), open output schemas, and a trust model (untrusted → verified → trusted). The knowledge skill infrastructure provides the loading pattern; executable skills need schema registration and sandboxing.
 
-**Larger models via WebGPU** — As WebGPU support matures and quantization improves, 3B-7B models become viable in-browser. The model tier system is designed for this upgrade path. Key models to watch: Qwen2.5-3B, Phi-3.5-mini, Gemma-2B.
+**Larger models via WebGPU**: As WebGPU support matures and quantization improves, 3B-7B models become viable in-browser. The model tier system is designed for this upgrade path. Key models to watch: Qwen2.5-3B, Phi-3.5-mini, Gemma-2B.
 
-**In-browser embedding search** — HNSW in WASM (`hnswlib-wasm`) for scaled vector search when document counts exceed brute-force cosine similarity thresholds (~5,000+ embeddings).
+**In-browser embedding search**: HNSW in WASM (`hnswlib-wasm`) for scaled vector search when document counts exceed brute-force cosine similarity thresholds (~5,000+ embeddings).
 
 ## Key Files
 
@@ -266,15 +266,15 @@ The harness is built entirely on browser-native APIs — no server dependencies 
 | `extension/src/runtime/agent-config.ts` | ~30 | Thresholds, timeouts, cycle state |
 | `extension/src/runtime/agent-webllm-bridge.ts` | ~120 | WebLLM worker bridge |
 | `shared/src/modules/agent/agent.ts` | ~430 | Domain model: observations, plans, skills, drafts |
-| `shared/src/contracts/schema.ts` | — | Zod schemas for all agent types |
-| `shared/src/modules/storage/db.ts` | — | Dexie tables + CRUD for agent state |
-| `extension/src/skills/*/skill.json` | — | 12 skill manifests with dependency graph |
+| `shared/src/contracts/schema.ts` | | Zod schemas for all agent types |
+| `shared/src/modules/storage/db.ts` | | Dexie tables + CRUD for agent state |
+| `extension/src/skills/*/skill.json` | | 12 skill manifests with dependency graph |
 
 ## Design Principles
 
-1. **Zero cloud dependency** — Inference, storage, and sync all run in-browser. No API keys required for core operation.
-2. **Graceful degradation** — Three inference tiers ensure the agent always works, even on low-end hardware without WebGPU.
-3. **Human authority** — The agent proposes, humans decide. Auto-run is opt-in per skill, never default.
-4. **Deterministic when possible** — Topological sort, fingerprint dedup, and heuristic fallbacks are all deterministic. Nondeterminism is isolated to LLM inference.
-5. **Observable by default** — Every cycle, observation, skill run, and action dispatch produces structured log spans.
-6. **Extensible via convention** — Skills are directories with `skill.json` + `SKILL.md`. Knowledge skills follow the same SKILL.md format used by ETHSkills, Anthropic, and OpenClaw.
+1. **Zero cloud dependency**: Inference, storage, and sync all run in-browser. No API keys required for core operation.
+2. **Graceful degradation**: Three inference tiers ensure the agent always works, even on low-end hardware without WebGPU.
+3. **Human authority**: The agent proposes, humans decide. Auto-run is opt-in per skill, never default.
+4. **Deterministic when possible**: Topological sort, fingerprint dedup, and heuristic fallbacks are all deterministic. Nondeterminism is isolated to LLM inference.
+5. **Observable by default**: Every cycle, observation, skill run, and action dispatch produces structured log spans.
+6. **Extensible via convention**: Skills are directories with `skill.json` + `SKILL.md`. Knowledge skills follow the same SKILL.md format used by ETHSkills, Anthropic, and OpenClaw.

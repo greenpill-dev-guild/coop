@@ -48,21 +48,21 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 4. **signaling** (`@coop/signaling`) → y-webrtc signaling server (Fly.io deployed)
 
 ### Shared Modules
-- `auth` — Passkey-first identity + onchain auth
-- `coop` — Core flow board, review, and publish logic
-- `storage` — Dexie + Yjs local persistence
-- `archive` — Storacha/Filecoin upload and lifecycle
-- `onchain` — Safe creation, ERC-4337, contract interactions, provider factory, signatures
-- `receiver` — PWA receiver and cross-device sync
-- `privacy` — Semaphore ZK membership proofs + anonymous publishing
-- `stealth` — ERC-5564 stealth addresses (secp256k1)
-- `agent` — Agent harness, skills, observation triggers, inference cascade
-- `operator` — Anchor/trusted-node runtime behavior
-- `policy` — Action approval workflows, typed action bundles
-- `session` — Scoped execution permissions, time-bounded capabilities
-- `grant` — Execution grants with replay protection
-- `greengoods` — Green Goods garden bootstrap and sync
-- `app` — App shell logic
+- `auth`: Passkey-first identity + onchain auth
+- `coop`: Core flow board, review, and publish logic
+- `storage`: Dexie + Yjs local persistence
+- `archive`: Storacha/Filecoin upload and lifecycle
+- `onchain`: Safe creation, ERC-4337, contract interactions, provider factory, signatures
+- `receiver`: PWA receiver and cross-device sync
+- `privacy`: Semaphore ZK membership proofs + anonymous publishing
+- `stealth`: ERC-5564 stealth addresses (secp256k1)
+- `agent`: Agent harness, skills, observation triggers, inference cascade
+- `operator`: Anchor/trusted-node runtime behavior
+- `policy`: Action approval workflows, typed action bundles
+- `session`: Scoped execution permissions, time-bounded capabilities
+- `grant`: Execution grants with replay protection
+- `greengoods`: Green Goods garden bootstrap and sync
+- `app`: App shell logic
 
 ## Key Patterns
 
@@ -91,22 +91,22 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 ## Environment
 
 Single `.env` at root (never create package-specific .env). `.env` vars:
-- `VITE_COOP_CHAIN` — Target chain (`sepolia` or `arbitrum`)
-- `VITE_COOP_ONCHAIN_MODE` — `mock` (default) or `live`
-- `VITE_COOP_ARCHIVE_MODE` — `mock` (default) or `live`
-- `VITE_PIMLICO_API_KEY` — For live Safe/4337 operations
-- `VITE_STORACHA_ISSUER_URL` — For live archive delegation
+- `VITE_COOP_CHAIN`: Target chain (`sepolia` or `arbitrum`)
+- `VITE_COOP_ONCHAIN_MODE`: `mock` (default) or `live`
+- `VITE_COOP_ARCHIVE_MODE`: `mock` (default) or `live`
+- `VITE_PIMLICO_API_KEY`: For live Safe/4337 operations
+- `VITE_STORACHA_ISSUER_URL`: For live archive delegation
 
 ## Validation Suites
 
 Named suites via `scripts/validate.ts`:
-- `smoke` — Unit tests + workspace build
-- `core-loop` — Unit tests, build, two-profile extension flow
-- `flow-board` — Board/archive unit tests + Playwright checks
-- `receiver-slice` — App shell checks + pair/sync into extension
-- `receiver-hardening` — Receiver sync with sidepanel closed
-- `arbitrum-safe-live` — Live Safe probe (needs API keys)
-- `full` — Lint, unit, build, all E2E suites
+- `smoke`: Unit tests + workspace build
+- `core-loop`: Unit tests, build, two-profile extension flow
+- `flow-board`: Board/archive unit tests + Playwright checks
+- `receiver-slice`: App shell checks + pair/sync into extension
+- `receiver-hardening`: Receiver sync with sidepanel closed
+- `arbitrum-safe-live`: Live Safe probe (needs API keys)
+- `full`: Lint, unit, build, all E2E suites
 
 ## Scope Discipline
 - When instructions say "output in chat" or "just tell me", do NOT edit files
