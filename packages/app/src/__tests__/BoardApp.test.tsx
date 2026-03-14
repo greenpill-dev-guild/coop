@@ -178,6 +178,61 @@ describe('board app routes', () => {
     expect(handoff).toEqual(snapshot);
   });
 
+  it('renders the empty state when no board snapshot is available', async () => {
+    window.history.pushState({}, '', '/board/nonexistent-coop');
+
+    await act(async () => {
+      render(<RootApp />);
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'The board needs a coop snapshot' }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        'Open the board from the extension sidepanel so it can hand off a member-scoped snapshot.',
+      ),
+    ).toBeVisible();
+    expect(screen.getByText('Back to landing')).toBeVisible();
+    expect(screen.getByTestId('board-empty-nest')).toBeVisible();
+  });
+
+  it('renders the toolbar with share and export buttons when snapshot is present', async () => {
+    const snapshot = buildBoardSnapshot();
+    window.history.pushState({}, '', `/board/${snapshot.coopId}`);
+
+    await act(async () => {
+      render(<RootApp initialBoardSnapshot={snapshot} />);
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Board Coop' })).toBeVisible();
+    const shareButton = screen.getByRole('button', { name: 'Share snapshot' });
+    expect(shareButton).toBeVisible();
+    const exportButton = screen.getByRole('button', { name: 'Export as image' });
+    expect(exportButton).toBeVisible();
+    expect(exportButton).toBeDisabled();
+  });
+
+  it('copies the URL to clipboard when share snapshot is clicked', async () => {
+    const snapshot = buildBoardSnapshot();
+    window.history.pushState({}, '', `/board/${snapshot.coopId}`);
+
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
+
+    await act(async () => {
+      render(<RootApp initialBoardSnapshot={snapshot} />);
+    });
+
+    const shareButton = await screen.findByRole('button', { name: 'Share snapshot' });
+    await act(async () => {
+      shareButton.click();
+    });
+
+    expect(writeTextMock).toHaveBeenCalledWith(window.location.href);
+    expect(shareButton.textContent).toBe('Copied!');
+  });
+
   it('renders the board route with graph labels and archive receipt details', async () => {
     const snapshot = buildBoardSnapshot();
     window.history.pushState({}, '', `/board/${snapshot.coopId}`);

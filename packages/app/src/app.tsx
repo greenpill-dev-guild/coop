@@ -1,47 +1,17 @@
 import {
   type CoopBoardSnapshot,
-  RECEIVER_BRIDGE_APP_SOURCE,
   type ReceiverCapture,
-  type ReceiverDeviceIdentity,
-  type ReceiverPairingPayload,
   type ReceiverPairingRecord,
-  type ReceiverSyncEnvelope,
-  assertReceiverSyncRelayAck,
-  blobToReceiverSyncAsset,
-  connectReceiverSyncProviders,
-  connectReceiverSyncRelay,
   createCoopDb,
-  createReceiverCapture,
-  createReceiverDeviceIdentity,
-  createReceiverLinkCapture,
-  createReceiverSyncDoc,
-  createReceiverSyncEnvelope,
-  createReceiverSyncRelayCaptureFrame,
   detectBrowserUxCapabilities,
   getActiveReceiverPairing,
-  getReceiverCapture,
-  getReceiverCaptureBlob,
-  getReceiverDeviceIdentity,
   getReceiverPairingStatus,
-  isReceiverPairingExpired,
-  listReceiverCaptures,
-  listReceiverSyncEnvelopes,
-  markReceiverCaptureSyncFailed,
-  nowIso,
-  parseReceiverPairingInput,
-  patchReceiverSyncEnvelope,
-  queueReceiverCaptureForRetry,
-  receiverBridgeResponseSchema,
-  saveReceiverCapture,
-  setActiveReceiverPairing,
-  setReceiverDeviceIdentity,
-  shouldAutoRetryReceiverCapture,
-  toReceiverPairingRecord,
-  updateReceiverCapture,
-  upsertReceiverPairing,
-  upsertReceiverSyncEnvelope,
 } from '@coop/shared';
-import React, { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCapture } from './hooks/useCapture';
+import { usePairingFlow } from './hooks/usePairingFlow';
+import { useReceiverSettings } from './hooks/useReceiverSettings';
+import { useReceiverSync } from './hooks/useReceiverSync';
 import type { ReceiverShareHandoff } from './share-handoff';
 import { isSafeExternalUrl } from './url-safety';
 import { BoardView } from './views/Board';
@@ -90,8 +60,6 @@ export class ErrorBoundary extends React.Component<
   }
 }
 
-const emptySignalingUrls: string[] = [];
-
 export const receiverDb = createCoopDb('coop-receiver');
 
 type RoutePath =
@@ -101,37 +69,10 @@ type RoutePath =
   | { kind: 'inbox' }
   | { kind: 'board'; coopId: string };
 
-type CaptureCard = {
-  capture: ReceiverCapture;
-  previewUrl?: string;
-};
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-};
-
 type NavigatorWithUx = Navigator & {
-  share?: (data: ShareData) => Promise<void>;
-  canShare?: (data: ShareData) => boolean;
   setAppBadge?: (contents?: number) => Promise<void>;
   clearAppBadge?: () => Promise<void>;
 };
-
-type BarcodeDetectorLike = {
-  detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
-};
-
-type GlobalWithBarcodeDetector = typeof globalThis & {
-  BarcodeDetector?: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
-};
-
-const receiverNotificationSettingKey = 'receiver-notifications-enabled';
-
-type DirectReceiverSyncResult =
-  | { status: 'unavailable' }
-  | { status: 'attempted' }
-  | { status: 'error'; error: string };
 
 type ReceiverNavKind = Extract<RoutePath['kind'], 'pair' | 'receiver' | 'inbox'>;
 
@@ -235,16 +176,6 @@ const receiverNavItems: Array<{
   },
 ];
 
-function createPreviewUrl(blob: Blob) {
-  return typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : undefined;
-}
-
-function revokePreviewUrl(previewUrl?: string) {
-  if (previewUrl && typeof URL.revokeObjectURL === 'function') {
-    URL.revokeObjectURL(previewUrl);
-  }
-}
-
 function resolveRoute(pathname: string): RoutePath {
   if (pathname === '/pair') {
     return { kind: 'pair' };
@@ -302,10 +233,6 @@ function pairingStatusLabel(status?: ReturnType<typeof getReceiverPairingStatus>
   }
 }
 
-function oldPairingRetryMessage() {
-  return 'This roost item belongs to an older nest code. Open that code again or hatch it under the current one.';
-}
-
 function receiverItemLabel(kind: ReceiverCapture['kind']) {
   switch (kind) {
     case 'audio':
@@ -330,96 +257,6 @@ function receiverPreviewLabel(kind: ReceiverCapture['kind']) {
     case 'link':
       return 'Trail';
   }
-}
-
-async function getReceiverNotificationsEnabled() {
-  const record = await receiverDb.settings.get(receiverNotificationSettingKey);
-  return record?.value === true;
-}
-
-async function setReceiverNotificationsEnabled(value: boolean) {
-  await receiverDb.settings.put({
-    key: receiverNotificationSettingKey,
-    value,
-  });
-}
-
-async function materializeCaptureCards() {
-  const captures = await listReceiverCaptures(receiverDb);
-  return Promise.all(
-    captures.map(async (capture) => {
-      const blob = await getReceiverCaptureBlob(receiverDb, capture.id);
-      if (!blob) {
-        return {
-          capture,
-        } satisfies CaptureCard;
-      }
-
-      return {
-        capture,
-        previewUrl: createPreviewUrl(blob),
-      } satisfies CaptureCard;
-    }),
-  );
-}
-
-async function syncCaptureThroughExtensionBridge(
-  envelope: ReceiverSyncEnvelope,
-): Promise<DirectReceiverSyncResult> {
-  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') {
-    return { status: 'unavailable' };
-  }
-
-  const requestId =
-    globalThis.crypto?.randomUUID?.() ?? `receiver-bridge-${envelope.capture.id}-${Date.now()}`;
-
-  return new Promise((resolve) => {
-    const cleanup = (timer: number, listener: (event: MessageEvent<unknown>) => void) => {
-      window.clearTimeout(timer);
-      window.removeEventListener('message', listener);
-    };
-
-    const listener = (event: MessageEvent<unknown>) => {
-      if (event.source !== window) {
-        return;
-      }
-
-      const parsed = receiverBridgeResponseSchema.safeParse(event.data);
-      if (!parsed.success || parsed.data.requestId !== requestId) {
-        return;
-      }
-
-      cleanup(timer, listener);
-
-      if (parsed.data.ok) {
-        resolve({
-          status: 'attempted',
-        });
-        return;
-      }
-
-      resolve({
-        status: 'error',
-        error: parsed.data.error ?? 'Receiver bridge sync failed.',
-      });
-    };
-
-    const timer = window.setTimeout(() => {
-      cleanup(timer, listener);
-      resolve({ status: 'unavailable' });
-    }, 700);
-
-    window.addEventListener('message', listener);
-    window.postMessage(
-      {
-        source: RECEIVER_BRIDGE_APP_SOURCE,
-        type: 'ingest',
-        requestId,
-        envelope,
-      },
-      window.location.origin,
-    );
-  });
 }
 
 export async function resetReceiverDb() {
@@ -453,48 +290,10 @@ export function RootApp({
   const [bridgeOptimizationDisabled] = useState(
     () => new URLSearchParams(window.location.search).get('bridge') === 'off',
   );
-  const [pairingInput, setPairingInput] = useState('');
-  const [pendingPairing, setPendingPairing] = useState<ReceiverPairingPayload | null>(null);
   const [pairing, setPairing] = useState<ReceiverPairingRecord | null>(null);
-  const [deviceIdentity, setDeviceIdentity] = useState<ReceiverDeviceIdentity | null>(null);
-  const [captures, setCaptures] = useState<CaptureCard[]>([]);
-  const [online, setOnline] = useState(() => navigator.onLine);
-  const [message, setMessage] = useState('');
-  const [pairingError, setPairingError] = useState('');
-  const [hatchedCaptureId, setHatchedCaptureId] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [receiverNotificationsEnabled, setReceiverNotificationsEnabledState] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState(() =>
-    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
-  );
-  const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
-  const [qrScanError, setQrScanError] = useState('');
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const qrVideoRef = useRef<HTMLVideoElement | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const recorderStreamRef = useRef<MediaStream | null>(null);
-  const recorderChunksRef = useRef<Blob[]>([]);
-  const recorderCommitRef = useRef<'save' | 'cancel'>('save');
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const reconcileStateRef = useRef<{ running: boolean; pending: boolean }>({
-    running: false,
-    pending: false,
-  });
-  const syncBindingRef = useRef<{
-    key: string;
-    doc: ReturnType<typeof createReceiverSyncDoc>;
-    relay: ReturnType<typeof connectReceiverSyncRelay>;
-    disconnect: () => void;
-  } | null>(null);
-  const capturesRef = useRef<CaptureCard[]>([]);
-  const isMountedRef = useRef(false);
-  const pairingRef = useRef<ReceiverPairingRecord | null>(null);
+
   const initialPairingHandoffRef = useRef<string | null>(initialPairingInput ?? null);
   const initialShareHandoffRef = useRef<ReceiverShareHandoff | null>(initialShareInput ?? null);
-  const qrStreamRef = useRef<MediaStream | null>(null);
-  const qrScanTimerRef = useRef<number | null>(null);
   const notifiedFailureIdsRef = useRef<Set<string>>(new Set());
   const pairingNotificationRef = useRef<{
     pairingId: string | null;
@@ -504,45 +303,75 @@ export function RootApp({
     lastSyncedAt: undefined,
   });
 
-  const pairedNestLabel = pairing
-    ? `${pairing.coopDisplayName} · ${pairing.memberDisplayName}`
-    : 'Local-only nest';
-  const newestCapture = captures[0]?.capture;
-  const pairingId = pairing?.pairingId ?? null;
-  const pairingRoomId = pairing?.roomId ?? null;
-  const pairingSignalingUrls = pairing?.signalingUrls ?? emptySignalingUrls;
-  const pairingSignalingKey = JSON.stringify(pairingSignalingUrls);
-  const pairingStatus = pairing ? getReceiverPairingStatus(pairing) : null;
+  // Cross-hook ref bridges: created here with no-op defaults, updated via effects below.
+  // Hooks read these refs at invocation time, not declaration time, so the ordering is safe.
+  const reconcilePairingRef = useRef<() => Promise<void>>(async () => {});
+  const refreshLocalStateRef = useRef<() => Promise<void>>(async () => {});
+  const ensureDeviceIdentityRef = useRef<() => Promise<{ id: string }>>(async () => ({ id: '' }));
+  const soundPreferencesRef = useRef({ enabled: true, reducedMotion: false, reducedSound: false });
+  const hapticPreferencesRef = useRef({ enabled: true, reducedMotion: false });
+  const pairingRef = useRef<ReceiverPairingRecord | null>(null);
 
-  const refreshLocalState = useCallback(async () => {
-    const [nextPairing, nextDevice, nextCards, nextNotificationsEnabled] = await Promise.all([
-      getActiveReceiverPairing(receiverDb),
-      getReceiverDeviceIdentity(receiverDb),
-      materializeCaptureCards(),
-      getReceiverNotificationsEnabled(),
-    ]);
+  // --- Hook 1: Settings (device identity, sound, haptic, notifications, online) ---
+  const settings = useReceiverSettings(receiverDb);
+  const {
+    online,
+    message,
+    setMessage,
+    deviceIdentity,
+    soundPreferences,
+    hapticPreferences,
+    installPrompt,
+    receiverNotificationsEnabled,
+    isMountedRef,
+    ensureDeviceIdentity,
+    notifyReceiverEvent,
+    setReceiverNotificationPreference,
+    installApp,
+  } = settings;
 
-    if (!isMountedRef.current) {
-      for (const card of nextCards) {
-        revokePreviewUrl(card.previewUrl);
-      }
-      return;
-    }
+  // --- Hook 2: Capture (camera, mic, photos, file picks, stash, share, download) ---
+  const capture = useCapture(receiverDb, {
+    isMountedRef,
+    ensureDeviceIdentityRef,
+    soundPreferencesRef,
+    hapticPreferencesRef,
+    setMessage,
+    reconcilePairingRef,
+    pairingRef,
+    refreshLocalStateRef,
+  });
+  const {
+    captures,
+    newestCapture,
+    hatchedCaptureId,
+    isRecording,
+    photoInputRef,
+    fileInputRef,
+    capturesRef,
+    stashCapture,
+    stashSharedLink,
+    startRecording,
+    finishRecording,
+    onPickFile,
+    shareCapture,
+    copyCaptureLink,
+    downloadCapture,
+  } = capture;
 
-    setPairing(nextPairing);
-    setDeviceIdentity(nextDevice);
-    setReceiverNotificationsEnabledState(nextNotificationsEnabled);
-    if (typeof Notification !== 'undefined') {
-      setNotificationPermission(Notification.permission);
-    }
-    setCaptures((current) => {
-      for (const card of current) {
-        revokePreviewUrl(card.previewUrl);
-      }
-      return nextCards;
-    });
-  }, []);
+  // --- Hook 3: Receiver sync (Yjs doc, relay, reconciliation) ---
+  const sync = useReceiverSync(receiverDb, {
+    pairing,
+    isMountedRef,
+    deviceIdentityId: deviceIdentity?.id,
+    bridgeOptimizationDisabled,
+    setMessage,
+    capturesRef,
+    refreshLocalStateRef,
+  });
+  const { reconcilePairing, retrySync } = sync;
 
+  // --- Navigation ---
   const navigate = useCallback(
     (nextRoute: '/pair' | '/receiver' | '/inbox' | '/') => {
       const nextUrl = bridgeOptimizationDisabled ? `${nextRoute}?bridge=off` : nextRoute;
@@ -552,774 +381,84 @@ export function RootApp({
     [bridgeOptimizationDisabled],
   );
 
-  const ensureDeviceIdentity = useCallback(async () => {
-    const existing = (await getReceiverDeviceIdentity(receiverDb)) ?? deviceIdentity;
-    if (existing) {
-      const touched = {
-        ...existing,
-        lastSeenAt: nowIso(),
-      } satisfies ReceiverDeviceIdentity;
-      await setReceiverDeviceIdentity(receiverDb, touched);
-      if (isMountedRef.current) {
-        setDeviceIdentity(touched);
-      }
-      return touched;
-    }
+  // --- Composite refresh ---
+  const refreshLocalState = useCallback(async () => {
+    const [nextPairing] = await Promise.all([
+      getActiveReceiverPairing(receiverDb),
+      settings.refreshSettings(),
+      capture.refreshCaptures(),
+    ]);
 
-    const created = createReceiverDeviceIdentity(
-      /iPhone|Android/i.test(navigator.userAgent) ? 'Pocket Receiver' : 'Receiver Browser',
-    );
-    await setReceiverDeviceIdentity(receiverDb, created);
     if (isMountedRef.current) {
-      setDeviceIdentity(created);
+      setPairing(nextPairing);
     }
-    return created;
-  }, [deviceIdentity]);
-
-  const notifyReceiverEvent = useCallback(
-    async (title: string, body: string, tag: string) => {
-      if (
-        !receiverNotificationsEnabled ||
-        typeof Notification === 'undefined' ||
-        Notification.permission !== 'granted'
-      ) {
-        return;
-      }
-
-      try {
-        new Notification(title, {
-          body,
-          tag,
-        });
-      } catch {
-        // Notifications are optional.
-      }
-    },
-    [receiverNotificationsEnabled],
-  );
-
-  const setReceiverNotificationPreference = useCallback(async (enabled: boolean) => {
-    if (enabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission !== 'granted') {
-        setMessage('Notifications stay off until the browser grants permission.');
-        await setReceiverNotificationsEnabled(false);
-        setReceiverNotificationsEnabledState(false);
-        return;
-      }
-    }
-
-    await setReceiverNotificationsEnabled(enabled);
-    setReceiverNotificationsEnabledState(enabled);
-    if (typeof Notification !== 'undefined') {
-      setNotificationPermission(Notification.permission);
-    }
-    setMessage(enabled ? 'Receiver notifications enabled.' : 'Receiver notifications disabled.');
-  }, []);
-
-  const stopQrScanner = useCallback(() => {
-    if (qrScanTimerRef.current) {
-      window.clearInterval(qrScanTimerRef.current);
-      qrScanTimerRef.current = null;
-    }
-    const stream = qrStreamRef.current;
-    if (stream) {
-      for (const track of stream.getTracks()) {
-        track.stop();
-      }
-      qrStreamRef.current = null;
-    }
-    if (qrVideoRef.current) {
-      qrVideoRef.current.srcObject = null;
-    }
-    setIsQrScannerOpen(false);
-  }, []);
-
-  const applyRemoteCaptureSync = useCallback(
-    async (nextCapture: ReceiverCapture) => {
-      const currentPairing = pairingRef.current;
-      if (currentPairing && nextCapture.pairingId !== currentPairing.pairingId) {
-        return;
-      }
-
-      const existing = await getReceiverCapture(receiverDb, nextCapture.id);
-      if (!existing) {
-        return;
-      }
-
-      await updateReceiverCapture(receiverDb, nextCapture.id, nextCapture);
-      const binding = syncBindingRef.current;
-      if (binding) {
-        patchReceiverSyncEnvelope(binding.doc, nextCapture.id, (current) => ({
-          ...current,
-          capture: {
-            ...current.capture,
-            ...nextCapture,
-          },
-        }));
-      }
-      await refreshLocalState();
-    },
-    [refreshLocalState],
-  );
-
-  const reconcilePairing = useCallback(async () => {
-    const binding = syncBindingRef.current;
-    const activePairing = pairingRef.current ?? (await getActiveReceiverPairing(receiverDb));
-    if (!binding || !activePairing) {
-      return;
-    }
-
-    const reconcileState = reconcileStateRef.current;
-    if (reconcileState.running) {
-      reconcileState.pending = true;
-      return;
-    }
-
-    reconcileState.running = true;
-
-    try {
-      const localCaptures = await listReceiverCaptures(receiverDb);
-      const syncEnvelopes = new Map(
-        listReceiverSyncEnvelopes(binding.doc).map((envelope) => [envelope.capture.id, envelope]),
-      );
-      const currentPairingStatus = getReceiverPairingStatus(activePairing);
-
-      for (const capture of localCaptures) {
-        if (capture.pairingId && capture.pairingId !== activePairing.pairingId) {
-          continue;
-        }
-
-        let envelope = syncEnvelopes.get(capture.id);
-        let workingCapture = capture;
-
-        try {
-          if (currentPairingStatus.status !== 'ready') {
-            if (capture.pairingId === activePairing.pairingId && capture.syncState === 'queued') {
-              const failedCapture = markReceiverCaptureSyncFailed(
-                capture,
-                currentPairingStatus.message,
-              );
-              await updateReceiverCapture(receiverDb, capture.id, failedCapture);
-              if (envelope) {
-                patchReceiverSyncEnvelope(binding.doc, capture.id, (current) => ({
-                  ...current,
-                  capture: markReceiverCaptureSyncFailed(
-                    current.capture,
-                    currentPairingStatus.message,
-                  ),
-                }));
-              }
-            }
-            continue;
-          }
-
-          if (
-            workingCapture.syncState === 'failed' &&
-            shouldAutoRetryReceiverCapture(workingCapture)
-          ) {
-            const retryCapture = queueReceiverCaptureForRetry({
-              ...workingCapture,
-              pairingId: activePairing.pairingId,
-              coopId: activePairing.coopId,
-              coopDisplayName: activePairing.coopDisplayName,
-              memberId: activePairing.memberId,
-              memberDisplayName: activePairing.memberDisplayName,
-            });
-            await updateReceiverCapture(receiverDb, capture.id, retryCapture);
-            workingCapture = retryCapture;
-
-            if (envelope) {
-              envelope =
-                patchReceiverSyncEnvelope(binding.doc, capture.id, (current) => ({
-                  ...current,
-                  capture: queueReceiverCaptureForRetry({
-                    ...current.capture,
-                    pairingId: activePairing.pairingId,
-                    coopId: activePairing.coopId,
-                    coopDisplayName: activePairing.coopDisplayName,
-                    memberId: activePairing.memberId,
-                    memberDisplayName: activePairing.memberDisplayName,
-                  }),
-                })) ?? envelope;
-            }
-          }
-
-          if (!envelope) {
-            if (workingCapture.syncState === 'synced' || workingCapture.syncState === 'failed') {
-              continue;
-            }
-
-            const blob = await getReceiverCaptureBlob(receiverDb, capture.id);
-            if (!blob) {
-              continue;
-            }
-
-            const queuedCapture = queueReceiverCaptureForRetry({
-              ...workingCapture,
-              pairingId: activePairing.pairingId,
-              coopId: activePairing.coopId,
-              coopDisplayName: activePairing.coopDisplayName,
-              memberId: activePairing.memberId,
-              memberDisplayName: activePairing.memberDisplayName,
-            });
-            const asset = await blobToReceiverSyncAsset(queuedCapture, blob);
-
-            await updateReceiverCapture(receiverDb, capture.id, queuedCapture);
-            workingCapture = queuedCapture;
-            envelope = await createReceiverSyncEnvelope(queuedCapture, asset, activePairing);
-            upsertReceiverSyncEnvelope(binding.doc, envelope);
-          }
-
-          if (!envelope) {
-            continue;
-          }
-
-          if (envelope.capture.syncState === 'queued') {
-            binding.relay.publishCapture(
-              createReceiverSyncRelayCaptureFrame({
-                envelope,
-                pairing: activePairing,
-                sourceClientId: deviceIdentity?.id ?? workingCapture.deviceId,
-              }),
-            );
-          }
-
-          if (envelope.capture.syncState === 'queued' && !bridgeOptimizationDisabled) {
-            const directSync = await syncCaptureThroughExtensionBridge(envelope);
-            if (directSync.status === 'error' && isMountedRef.current) {
-              setMessage('Receiver bridge missed the handoff, so background sync is taking over.');
-            }
-          }
-
-          if (
-            workingCapture.syncState !== envelope.capture.syncState ||
-            workingCapture.syncError !== envelope.capture.syncError ||
-            workingCapture.syncedAt !== envelope.capture.syncedAt ||
-            workingCapture.nextRetryAt !== envelope.capture.nextRetryAt ||
-            workingCapture.retryCount !== envelope.capture.retryCount ||
-            workingCapture.intakeStatus !== envelope.capture.intakeStatus
-          ) {
-            await updateReceiverCapture(receiverDb, capture.id, {
-              syncState: envelope.capture.syncState,
-              syncError: envelope.capture.syncError,
-              syncedAt: envelope.capture.syncedAt,
-              nextRetryAt: envelope.capture.nextRetryAt,
-              retryCount: envelope.capture.retryCount,
-              intakeStatus: envelope.capture.intakeStatus,
-              linkedDraftId: envelope.capture.linkedDraftId,
-              updatedAt: nowIso(),
-            });
-          }
-        } catch (error) {
-          const failureMessage =
-            error instanceof Error ? error.message : 'Receiver sync failed before completion.';
-          const failedCapture = markReceiverCaptureSyncFailed(
-            envelope?.capture ?? workingCapture,
-            failureMessage,
-          );
-          await updateReceiverCapture(receiverDb, capture.id, failedCapture);
-          if (envelope) {
-            patchReceiverSyncEnvelope(binding.doc, capture.id, (current) => ({
-              ...current,
-              capture: markReceiverCaptureSyncFailed(current.capture, failureMessage),
-            }));
-          }
-        }
-      }
-
-      await refreshLocalState();
-    } finally {
-      reconcileState.running = false;
-      if (reconcileState.pending) {
-        reconcileState.pending = false;
-        void reconcilePairing();
-      }
-    }
-  }, [bridgeOptimizationDisabled, deviceIdentity?.id, refreshLocalState]);
-
-  const stashCapture = useCallback(
-    async (input: {
-      blob: Blob;
-      kind: ReceiverCapture['kind'];
-      fileName?: string;
-      title?: string;
-    }) => {
-      try {
-        const device = await ensureDeviceIdentity();
-        const activePairing = pairingRef.current ?? (await getActiveReceiverPairing(receiverDb));
-        const activePairingStatus = activePairing ? getReceiverPairingStatus(activePairing) : null;
-        const usablePairing = activePairingStatus?.status === 'ready' ? activePairing : null;
-        const capture = createReceiverCapture({
-          deviceId: device.id,
-          kind: input.kind,
-          blob: input.blob,
-          fileName: input.fileName,
-          title: input.title,
-          pairing: usablePairing,
-        });
-
-        await saveReceiverCapture(receiverDb, capture, input.blob);
-        if (!isMountedRef.current) {
-          return;
-        }
-        setHatchedCaptureId(capture.id);
-        setMessage(
-          usablePairing
-            ? 'Nest item saved locally and queued for sync.'
-            : activePairingStatus?.status === 'expired'
-              ? 'Nest item saved locally. The current nest code expired, so it stayed local until you join with a fresh one.'
-              : activePairingStatus?.status === 'invalid'
-                ? 'Nest item saved locally. The current nest code is invalid, so it stayed local until you join with a fresh one.'
-                : activePairingStatus?.status === 'missing-signaling'
-                  ? 'Nest item saved locally. This nest code has no usable signaling path yet, so sync is blocked for now.'
-                  : activePairingStatus?.status === 'inactive'
-                    ? 'Nest item saved locally. This nest code is inactive, so it stayed local until you reactivate or replace it.'
-                    : 'Nest item saved locally. Mate with a coop when you are ready to sync.',
-        );
-        await refreshLocalState();
-        if (usablePairing) {
-          await reconcilePairing();
-        }
-      } catch (error) {
-        if (isMountedRef.current) {
-          setMessage(error instanceof Error ? error.message : 'Could not save this nest item.');
-        }
-      }
-    },
-    [ensureDeviceIdentity, reconcilePairing, refreshLocalState],
-  );
-
-  const stashSharedLink = useCallback(
-    async (input: ReceiverShareHandoff) => {
-      try {
-        const device = await ensureDeviceIdentity();
-        const activePairing = pairingRef.current ?? (await getActiveReceiverPairing(receiverDb));
-        const activePairingStatus = activePairing ? getReceiverPairingStatus(activePairing) : null;
-        const usablePairing = activePairingStatus?.status === 'ready' ? activePairing : null;
-        const { capture, blob } = createReceiverLinkCapture({
-          deviceId: device.id,
-          title: input.title,
-          note: input.note,
-          sourceUrl: input.sourceUrl,
-          pairing: usablePairing,
-        });
-
-        await saveReceiverCapture(receiverDb, capture, blob);
-        if (!isMountedRef.current) {
-          return;
-        }
-        setHatchedCaptureId(capture.id);
-        setMessage(
-          usablePairing
-            ? 'Shared link saved locally and queued for sync.'
-            : 'Shared link saved locally. Mate with a coop when you are ready to sync it.',
-        );
-        await refreshLocalState();
-        if (usablePairing) {
-          await reconcilePairing();
-        }
-      } catch (error) {
-        if (isMountedRef.current) {
-          setMessage(error instanceof Error ? error.message : 'Could not save the shared link.');
-        }
-      }
-    },
-    [ensureDeviceIdentity, reconcilePairing, refreshLocalState],
-  );
-
-  const reviewPairing = useCallback((value: string) => {
-    try {
-      const payload = parseReceiverPairingInput(value);
-      if (!isMountedRef.current) {
-        return;
-      }
-      setPendingPairing(payload);
-      setPairingInput('');
-      setPairingError('');
-      setMessage('Check the nest code, then join this coop.');
-    } catch (error) {
-      if (isMountedRef.current) {
-        setPendingPairing(null);
-        setPairingError(error instanceof Error ? error.message : 'Could not read that nest code.');
-      }
-    }
-  }, []);
-
-  const startQrScanner = useCallback(async () => {
-    if (!browserUxCapabilities.canScanQr || !navigator.mediaDevices?.getUserMedia) {
-      setQrScanError('QR scanning is not supported in this browser yet.');
-      return;
-    }
-
-    const BarcodeDetectorCtor = (globalThis as GlobalWithBarcodeDetector).BarcodeDetector;
-    if (!BarcodeDetectorCtor) {
-      setQrScanError('QR scanning is not supported in this browser yet.');
-      return;
-    }
-
-    stopQrScanner();
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-        },
-      });
-      qrStreamRef.current = stream;
-      setQrScanError('');
-      setIsQrScannerOpen(true);
-
-      const detector = new BarcodeDetectorCtor({
-        formats: ['qr_code'],
-      });
-
-      qrScanTimerRef.current = window.setInterval(() => {
-        void (async () => {
-          const video = qrVideoRef.current;
-          if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-            return;
-          }
-          const matches = await detector.detect(video);
-          const payload = matches[0]?.rawValue?.trim();
-          if (!payload) {
-            return;
-          }
-          stopQrScanner();
-          setPairingInput(payload);
-          reviewPairing(payload);
-        })().catch(() => undefined);
-      }, 500);
-    } catch (error) {
-      stopQrScanner();
-      setQrScanError(
-        error instanceof Error ? error.message : 'Could not access the camera for QR scanning.',
-      );
-    }
-  }, [browserUxCapabilities.canScanQr, reviewPairing, stopQrScanner]);
-
-  const confirmPairing = useCallback(async () => {
-    if (!pendingPairing) {
-      return;
-    }
-
-    try {
-      if (isReceiverPairingExpired(pendingPairing)) {
-        throw new Error('This nest code has expired.');
-      }
-      const nextPairing = toReceiverPairingRecord(pendingPairing, nowIso());
-      const nextPairingStatus = getReceiverPairingStatus(nextPairing);
-      await upsertReceiverPairing(receiverDb, nextPairing);
-      await setActiveReceiverPairing(receiverDb, nextPairing.pairingId);
-      if (!isMountedRef.current) {
-        return;
-      }
-      setPendingPairing(null);
-      setPairingError('');
-      setMessage(
-        nextPairingStatus.status === 'ready'
-          ? `Paired to ${pendingPairing.coopDisplayName} as ${pendingPairing.memberDisplayName}.`
-          : nextPairingStatus.message,
-      );
-      await refreshLocalState();
-      await notifyReceiverEvent(
-        'Receiver paired',
-        `${pendingPairing.coopDisplayName} is ready for private intake sync.`,
-        `receiver-pairing-${nextPairing.pairingId}`,
-      );
-      navigate('/receiver');
-    } catch (error) {
-      if (isMountedRef.current) {
-        setPairingError(error instanceof Error ? error.message : 'Could not join this coop.');
-      }
-    }
-  }, [navigate, notifyReceiverEvent, pendingPairing, refreshLocalState]);
-
-  const retrySync = useCallback(
-    async (captureId: string) => {
-      const capture = capturesRef.current.find((card) => card.capture.id === captureId)?.capture;
-      if (!capture) {
-        return;
-      }
-      const activePairing = pairingRef.current ?? (await getActiveReceiverPairing(receiverDb));
-      const activePairingStatus = activePairing ? getReceiverPairingStatus(activePairing) : null;
-
-      if (capture?.pairingId && activePairing && capture.pairingId !== activePairing.pairingId) {
-        await updateReceiverCapture(
-          receiverDb,
-          captureId,
-          markReceiverCaptureSyncFailed(capture, oldPairingRetryMessage()),
-        );
-        setMessage(oldPairingRetryMessage());
-        await refreshLocalState();
-        return;
-      }
-
-      if (activePairingStatus && activePairingStatus.status !== 'ready') {
-        await updateReceiverCapture(
-          receiverDb,
-          captureId,
-          markReceiverCaptureSyncFailed(capture, activePairingStatus.message),
-        );
-        setMessage(activePairingStatus.message);
-        await refreshLocalState();
-        return;
-      }
-
-      const nextCapture = activePairing
-        ? queueReceiverCaptureForRetry({
-            ...capture,
-            pairingId: activePairing.pairingId,
-            coopId: activePairing.coopId,
-            coopDisplayName: activePairing.coopDisplayName,
-            memberId: activePairing.memberId,
-            memberDisplayName: activePairing.memberDisplayName,
-          })
-        : {
-            ...capture,
-            syncState: 'local-only' as const,
-            syncError: undefined,
-            nextRetryAt: undefined,
-            updatedAt: nowIso(),
-          };
-
-      await updateReceiverCapture(receiverDb, captureId, nextCapture);
-      const binding = syncBindingRef.current;
-      if (binding) {
-        patchReceiverSyncEnvelope(binding.doc, captureId, (current) => ({
-          ...current,
-          capture: activePairing
-            ? queueReceiverCaptureForRetry({
-                ...current.capture,
-                pairingId: activePairing.pairingId,
-                coopId: activePairing.coopId,
-                coopDisplayName: activePairing.coopDisplayName,
-                memberId: activePairing.memberId,
-                memberDisplayName: activePairing.memberDisplayName,
-              })
-            : {
-                ...current.capture,
-                syncState: 'local-only',
-                syncError: undefined,
-                nextRetryAt: undefined,
-                updatedAt: nowIso(),
-              },
-        }));
-      }
-      await refreshLocalState();
-      if (activePairing) {
-        await reconcilePairing();
-      }
-    },
-    [reconcilePairing, refreshLocalState],
-  );
-
-  const startRecording = useCallback(async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setMessage('This browser cannot record audio here yet.');
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (!isMountedRef.current) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-        return;
-      }
-      const recorder = new MediaRecorder(stream);
-      recorderChunksRef.current = [];
-      recorderCommitRef.current = 'save';
-      recorderStreamRef.current = stream;
-      recorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recorderChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        const blob = new Blob(recorderChunksRef.current, {
-          type: recorder.mimeType || 'audio/webm',
-        });
-
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-        recorderStreamRef.current = null;
-        recorderRef.current = null;
-        recorderChunksRef.current = [];
-        if (wakeLockRef.current) {
-          await wakeLockRef.current.release().catch(() => undefined);
-          wakeLockRef.current = null;
-        }
-
-        if (recorderCommitRef.current === 'save' && blob.size > 0) {
-          await stashCapture({
-            blob,
-            kind: 'audio',
-            fileName: `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`,
-            title: 'Voice note',
-          });
-        } else if (isMountedRef.current) {
-          setMessage('Recording canceled before it hatched.');
-        }
-      };
-
-      recorder.start(250);
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLockRef.current = await navigator.wakeLock.request('screen');
-        } catch {
-          wakeLockRef.current = null;
-        }
-      }
-      setIsRecording(true);
-      setMessage('Recording into the nest…');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not start recording.');
-    }
-  }, [stashCapture]);
-
-  const finishRecording = useCallback((mode: 'save' | 'cancel') => {
-    if (!recorderRef.current || recorderRef.current.state === 'inactive') {
-      return;
-    }
-    recorderCommitRef.current = mode;
-    recorderRef.current.stop();
-    setIsRecording(false);
-  }, []);
-
-  const onPickFile = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>, kind: 'photo' | 'file') => {
-      const file = event.target.files?.[0];
-      event.target.value = '';
-      if (!file) {
-        return;
-      }
-
-      await stashCapture({
-        blob: file,
-        kind,
-        fileName: file.name,
-      });
-    },
-    [stashCapture],
-  );
-
-  const shareCapture = useCallback(async (card: CaptureCard) => {
-    const shareNavigator = navigator as NavigatorWithUx;
-    if (!shareNavigator.share) {
-      setMessage('Web Share is not available in this browser.');
-      return;
-    }
-
-    try {
-      if (card.capture.kind === 'link') {
-        await shareNavigator.share({
-          title: card.capture.title,
-          text: card.capture.note || card.capture.sourceUrl || card.capture.title,
-          url: card.capture.sourceUrl,
-        });
-        return;
-      }
-
-      const blob = await getReceiverCaptureBlob(receiverDb, card.capture.id);
-      if (!blob) {
-        throw new Error('Missing local capture blob.');
-      }
-
-      const file = new File([blob], card.capture.fileName ?? card.capture.title, {
-        type: card.capture.mimeType,
-      });
-      const shareData = {
-        title: card.capture.title,
-        text: card.capture.note || card.capture.title,
-        files: [file],
-      } satisfies ShareData;
-
-      if (shareNavigator.canShare && !shareNavigator.canShare(shareData)) {
-        throw new Error('This browser can share links here, but not local files.');
-      }
-
-      await shareNavigator.share(shareData);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not share this nest item.');
-    }
-  }, []);
-
-  const copyCaptureLink = useCallback(async (capture: ReceiverCapture) => {
-    if (!capture.sourceUrl) {
-      setMessage('No source link is available for this capture.');
-      return;
-    }
-    if (!navigator.clipboard?.writeText) {
-      setMessage('Clipboard access is unavailable in this browser.');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(capture.sourceUrl);
-      setMessage('Link copied to the clipboard.');
-    } catch {
-      setMessage('Could not copy the link.');
-    }
-  }, []);
-
-  const downloadCapture = useCallback(async (card: CaptureCard) => {
-    if (!card.previewUrl) {
-      setMessage('This nest item is missing its local preview.');
-      return;
-    }
-
-    const anchor = document.createElement('a');
-    anchor.href = card.previewUrl;
-    anchor.download =
-      card.capture.fileName ??
-      `${card.capture.title.toLowerCase().replace(/[^a-z0-9]+/giu, '-') || 'coop-capture'}`;
-    anchor.click();
-  }, []);
-
-  const installApp = useCallback(async () => {
-    if (!installPrompt) {
-      return;
-    }
-    await installPrompt.prompt();
-    await installPrompt.userChoice.catch(() => undefined);
-    if (isMountedRef.current) {
-      setInstallPrompt(null);
-    }
-  }, [installPrompt]);
+  }, [isMountedRef, settings.refreshSettings, capture.refreshCaptures]);
+
+  // --- Hook 4: Pairing flow (QR scanning, paste/review/confirm pairing) ---
+  const pairingFlow = usePairingFlow(receiverDb, {
+    isMountedRef,
+    soundPreferences,
+    hapticPreferences,
+    setMessage,
+    navigate,
+    refreshLocalState,
+    notifyReceiverEvent,
+  });
+  const {
+    pairingInput,
+    setPairingInput,
+    pendingPairing,
+    setPendingPairing,
+    pairingError,
+    isQrScannerOpen,
+    qrScanError,
+    qrVideoRef,
+    reviewPairing,
+    startQrScanner,
+    stopQrScanner,
+    confirmPairing,
+  } = pairingFlow;
+
+  // --- Derived state ---
+  const pairingStatus = pairing ? getReceiverPairingStatus(pairing) : null;
+  const pairedNestLabel = pairing
+    ? `${pairing.coopDisplayName} · ${pairing.memberDisplayName}`
+    : 'Local-only nest';
+
+  // --- Keep cross-hook refs in sync ---
+  useEffect(() => {
+    reconcilePairingRef.current = reconcilePairing;
+  }, [reconcilePairing]);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    refreshLocalStateRef.current = refreshLocalState;
+  }, [refreshLocalState]);
+
+  useEffect(() => {
+    ensureDeviceIdentityRef.current = ensureDeviceIdentity;
+  }, [ensureDeviceIdentity]);
+
+  useEffect(() => {
+    soundPreferencesRef.current = soundPreferences;
+  }, [soundPreferences]);
+
+  useEffect(() => {
+    hapticPreferencesRef.current = hapticPreferences;
+  }, [hapticPreferences]);
+
+  useEffect(() => {
+    pairingRef.current = pairing;
+  }, [pairing]);
+
+  // --- App-level effects ---
+  useEffect(() => {
     void refreshLocalState();
 
     const onPopState = () => {
       setRoute(resolveRoute(window.location.pathname));
     };
-    const onInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
-    const onOnline = () => setOnline(true);
-    const onOffline = () => setOnline(false);
-
     window.addEventListener('popstate', onPopState);
-    window.addEventListener('beforeinstallprompt', onInstallPrompt);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
-
-    return () => {
-      isMountedRef.current = false;
-      window.removeEventListener('popstate', onPopState);
-      window.removeEventListener('beforeinstallprompt', onInstallPrompt);
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
-    };
+    return () => window.removeEventListener('popstate', onPopState);
   }, [refreshLocalState]);
 
   // Toggle html class for receiver scroll containment
@@ -1330,143 +469,34 @@ export function RootApp({
     return () => document.documentElement.classList.remove('has-receiver');
   }, [route.kind]);
 
-  useEffect(() => {
-    capturesRef.current = captures;
-  }, [captures]);
-
-  useEffect(() => {
-    pairingRef.current = pairing;
-  }, [pairing]);
-
+  // Initial pairing handoff
   useEffect(() => {
     if (route.kind !== 'pair' || !initialPairingHandoffRef.current) {
       return;
     }
-
     const handoff = initialPairingHandoffRef.current;
     initialPairingHandoffRef.current = null;
     void reviewPairing(handoff);
   }, [reviewPairing, route]);
 
+  // Initial share handoff
   useEffect(() => {
     if (route.kind !== 'receiver' || !initialShareHandoffRef.current) {
       return;
     }
-
     const handoff = initialShareHandoffRef.current;
     initialShareHandoffRef.current = null;
     void stashSharedLink(handoff);
   }, [route, stashSharedLink]);
 
-  useEffect(() => {
-    for (const card of captures) {
-      if (card.capture.id === hatchedCaptureId) {
-        const timer = window.setTimeout(() => setHatchedCaptureId(null), 2400);
-        return () => window.clearTimeout(timer);
-      }
-    }
-  }, [captures, hatchedCaptureId]);
-
-  useEffect(() => {
-    let signalingUrls: string[] = [];
-    try {
-      const parsed = JSON.parse(pairingSignalingKey);
-      if (Array.isArray(parsed) && parsed.every((s) => typeof s === 'string')) {
-        signalingUrls = parsed;
-      }
-    } catch {
-      // pairingSignalingKey may be empty or malformed — fall back to empty
-    }
-    const nextBindingKey =
-      pairingId && pairingRoomId ? `${pairingId}:${pairingRoomId}:${pairingSignalingKey}` : null;
-
-    if (!nextBindingKey || !pairingRoomId) {
-      if (syncBindingRef.current) {
-        syncBindingRef.current.disconnect();
-        syncBindingRef.current = null;
-      }
-      return;
-    }
-
-    if (syncBindingRef.current?.key === nextBindingKey) {
-      void reconcilePairing();
-      return;
-    }
-
-    if (syncBindingRef.current) {
-      syncBindingRef.current.disconnect();
-      syncBindingRef.current = null;
-    }
-
-    const doc = createReceiverSyncDoc();
-    const providers = connectReceiverSyncProviders(doc, pairingRoomId, signalingUrls);
-    const relay = connectReceiverSyncRelay({
-      roomId: pairingRoomId,
-      signalingUrls: signalingUrls,
-      onAck: async (frame) => {
-        const activePairing = pairingRef.current;
-        if (!activePairing || activePairing.pairingId !== frame.pairingId) {
-          return;
-        }
-
-        try {
-          const ack = await assertReceiverSyncRelayAck(frame, activePairing);
-          await applyRemoteCaptureSync(ack.capture);
-        } catch {
-          // Ignore malformed or stale relay acknowledgements.
-        }
-      },
-    });
-    const onDocUpdate = () => {
-      void reconcilePairing();
-    };
-
-    doc.on('update', onDocUpdate);
-    syncBindingRef.current = {
-      key: nextBindingKey,
-      doc,
-      relay,
-      disconnect() {
-        doc.off('update', onDocUpdate);
-        relay.disconnect();
-        providers.disconnect();
-      },
-    };
-    void reconcilePairing();
-
-    return () => {
-      syncBindingRef.current?.disconnect();
-      syncBindingRef.current = null;
-    };
-  }, [applyRemoteCaptureSync, pairingId, pairingRoomId, pairingSignalingKey, reconcilePairing]);
-
-  useEffect(() => {
-    if (!pairingId) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      void reconcilePairing();
-    }, 2_000);
-
-    return () => window.clearInterval(interval);
-  }, [pairingId, reconcilePairing]);
-
-  useEffect(() => {
-    if (!isQrScannerOpen || !qrStreamRef.current || !qrVideoRef.current) {
-      return;
-    }
-
-    qrVideoRef.current.srcObject = qrStreamRef.current;
-    void qrVideoRef.current.play().catch(() => undefined);
-  }, [isQrScannerOpen]);
-
+  // Stop QR scanner when navigating away from /pair
   useEffect(() => {
     if (route.kind !== 'pair' && isQrScannerOpen) {
       stopQrScanner();
     }
   }, [isQrScannerOpen, route.kind, stopQrScanner]);
 
+  // Pairing notification on first sync
   useEffect(() => {
     const previous = pairingNotificationRef.current;
     if (pairing?.pairingId !== previous.pairingId) {
@@ -1491,6 +521,7 @@ export function RootApp({
     };
   }, [notifyReceiverEvent, pairing?.coopDisplayName, pairing?.lastSyncedAt, pairing?.pairingId]);
 
+  // Failure notifications
   useEffect(() => {
     const nextFailedIds = new Set(
       captures.filter((card) => card.capture.syncState === 'failed').map((card) => card.capture.id),
@@ -1512,6 +543,7 @@ export function RootApp({
     notifiedFailureIdsRef.current = nextFailedIds;
   }, [captures, notifyReceiverEvent]);
 
+  // App badge
   useEffect(() => {
     const badgeNavigator = navigator as NavigatorWithUx;
     if (!browserUxCapabilities.canSetBadge) {
@@ -1533,27 +565,6 @@ export function RootApp({
 
     void badgeNavigator.clearAppBadge?.().catch(() => undefined);
   }, [browserUxCapabilities.canSetBadge, captures, receiverNotificationsEnabled]);
-
-  useEffect(() => {
-    return () => {
-      if (syncBindingRef.current) {
-        syncBindingRef.current.disconnect();
-      }
-      for (const card of capturesRef.current) {
-        revokePreviewUrl(card.previewUrl);
-      }
-      const stream = recorderStreamRef.current;
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      }
-      if (wakeLockRef.current) {
-        void wakeLockRef.current.release().catch(() => undefined);
-      }
-      stopQrScanner();
-    };
-  }, [stopQrScanner]);
 
   if (route.kind === 'landing') {
     return <LandingPage />;

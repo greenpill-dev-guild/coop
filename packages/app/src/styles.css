@@ -1,13 +1,8 @@
+@import "../../shared/src/styles/tokens.css";
+@import "../../shared/src/styles/a11y.css";
+
 :root {
-  color-scheme: light;
   font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
-  --coop-cream: #fcf5ef;
-  --coop-brown: #4f2e1f;
-  --coop-brown-soft: #6b4a36;
-  --coop-green: #5a7d10;
-  --coop-orange: #fd8a01;
-  --coop-mist: #d8d4d0;
-  --coop-ink: #27140e;
   --coop-line: rgba(79, 46, 31, 0.18);
   --coop-shadow: 0 24px 60px rgba(79, 46, 31, 0.12);
 }
@@ -1012,6 +1007,30 @@ audio {
 .board-sidebar-card h2,
 .board-hero-card h1 {
   margin-bottom: 0.35rem;
+}
+
+.board-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.board-toolbar .button {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+}
+
+.board-empty-nest {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  border: 2px dashed var(--coop-line);
+  margin: 1.5rem auto;
 }
 
 .board-topbar-actions {
