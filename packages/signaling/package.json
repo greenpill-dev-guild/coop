@@ -1,0 +1,17 @@
+{
+  "name": "@coop/signaling",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./config.ts",
+    "./config": "./config.ts"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  }
+}

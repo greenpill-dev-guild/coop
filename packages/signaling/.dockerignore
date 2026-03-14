@@ -1,0 +1,16 @@
+# flyctl launch added from .gitignore
+**/node_modules
+**/.DS_Store
+**/dist
+**/coverage
+**/.turbo
+**/playwright-report
+**/test-results
+**/output/playwright/*
+!**/.gitkeep
+
+**/docs/build
+**/docs/.docusaurus
+
+**/.env*
+fly.toml
