@@ -2,7 +2,7 @@
 
 import { resolveTrustedNodeArchiveBootstrapConfig } from '../packages/extension/src/runtime/config';
 import { issueArchiveDelegation } from '../packages/shared/src/modules/archive/storacha';
-import { loadRootEnv } from './load-root-env.mjs';
+import { loadRootEnv } from './load-root-env';
 
 loadRootEnv();
 

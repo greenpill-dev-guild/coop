@@ -118,7 +118,7 @@ async function openOptionalSetup(page) {
 }
 
 async function launchCoop(page, input) {
-  await page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
+  await page.getByRole('button', { name: 'Nest' }).click();
   await page.fill('#coop-name', input.coopName);
   await page.fill('#coop-purpose', input.purpose);
   await page.fill('#creator-name', input.creatorName ?? 'Ari');
@@ -142,7 +142,7 @@ async function launchCoop(page, input) {
   await expect(page.getByText(/coop created\./i)).toBeVisible({
     timeout: 30000,
   });
-  await page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
+  await page.getByRole('button', { name: 'Nest' }).click();
   await expect(page.getByRole('heading', { name: input.coopName })).toBeVisible({
     timeout: 30000,
   });
@@ -210,7 +210,7 @@ test.describe('receiver pairing and sync', () => {
         knowledgeImprove: 'Make multi-coop publishing a first-class action.',
       });
 
-      await creatorProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
+      await creatorProfile.page.getByRole('button', { name: 'Nest' }).click();
       await creatorProfile.page.selectOption('#active-coop-select', { label: 'Receiver Coop' });
       await expect(creatorProfile.page.getByRole('heading', { name: 'Receiver Coop' })).toBeVisible(
         {
@@ -311,7 +311,7 @@ test.describe('receiver pairing and sync', () => {
           transport: expect.stringMatching(/^(websocket|webrtc)$/),
           lastIngestSuccessAt: expect.any(String),
         });
-      await reviewPage.getByRole('button', { name: /^(Meeting Mode|Flock Meeting)$/i }).click();
+      await reviewPage.getByRole('button', { name: 'Flock Meeting' }).click();
       await expect(reviewPage.getByText('field-note.txt').first()).toBeVisible({ timeout: 20000 });
       await expect(reviewPage.locator('#meeting-cadence')).toBeVisible({ timeout: 15000 });
 
@@ -389,13 +389,13 @@ test.describe('receiver pairing and sync', () => {
         timeout: 15000,
       });
 
-      await reviewPage.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await reviewPage.getByRole('button', { name: 'Coop Feed' }).click();
       await expect(reviewPage.getByText('Community field note', { exact: true })).toBeVisible({
         timeout: 15000,
       });
 
       await reviewPage.selectOption('#active-coop-select', { label: 'Forest Signals' });
-      await reviewPage.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await reviewPage.getByRole('button', { name: 'Coop Feed' }).click();
       await expect(reviewPage.getByText('Community field note', { exact: true })).toBeVisible({
         timeout: 15000,
       });

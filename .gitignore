@@ -8,7 +8,7 @@ test-results
 output/playwright/*
 !.gitkeep
 
-docs-site/build
-docs-site/.docusaurus
+docs/build
+docs/.docusaurus
 
 .env*

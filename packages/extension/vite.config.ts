@@ -72,6 +72,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@coop/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+        '@coop/signaling': path.resolve(__dirname, '../signaling/config.ts'),
       },
     },
     build: {
@@ -97,6 +98,14 @@ export default defineConfig(({ mode }) => {
           },
           chunkFileNames: 'assets/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash][extname]',
+          manualChunks(id) {
+            if (id.includes('@huggingface/transformers')) {
+              return 'transformers';
+            }
+            if (id.includes('@mlc-ai/web-llm')) {
+              return 'webllm';
+            }
+          },
         },
       },
     },

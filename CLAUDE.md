@@ -26,18 +26,13 @@ Per-package: check each package.json for available scripts.
 
 ## Architecture
 
-Coop is a **browser-first, local-first knowledge commons** for communities to coordinate and form shared intelligence. Bun monorepo.
+Coop captures scattered knowledge (browser tabs, audio, photos, files, links), refines it into clear opportunities via an in-browser AI agent, and gives groups a shared space to act on what matters. Bun monorepo.
 
 ### Product Loop
-1. Create a coop → real Safe address
-2. Generate member/trusted invites
-3. Join from second profile (passkey-first)
-4. Round up relevant tabs locally (extension)
-5. Review and edit drafts in the Roost
-6. Publish into shared coop memory
-7. Live sync between peers (Yjs + y-webrtc)
-8. Archive artifacts to Storacha/Filecoin
-9. Export snapshots and receipts
+1. **Capture**: Browser tabs (extension) + audio, photos, files, links (companion PWA)
+2. **Refine**: In-browser agent with 12-skill pipeline (WebGPU/WASM, no cloud)
+3. **Review**: Drafts land in the Roost for human triage
+4. **Share**: Publish to a coop (Safe multisig on Arbitrum, P2P sync via Yjs + y-webrtc, archived to Filecoin via Storacha)
 
 ### Key Principles
 1. **Browser-First**: Extension is the primary product surface
@@ -47,17 +42,26 @@ Coop is a **browser-first, local-first knowledge commons** for communities to co
 5. **Single Environment**: All packages share root `.env` (never create package-specific .env)
 
 ### Packages & Build Order
-1. **shared** (`@coop/shared`) → Schemas, flows, sync contracts, modules (auth, coop, storage, archive, onchain, receiver)
+1. **shared** (`@coop/shared`) → Schemas, flows, sync contracts, all domain modules
 2. **app** (`@coop/app`) → Landing page + receiver PWA shell
 3. **extension** (`@coop/extension`) → MV3 browser extension (popup, sidepanel, background worker)
+4. **signaling** (`@coop/signaling`) → y-webrtc signaling server (Fly.io deployed)
 
 ### Shared Modules
 - `auth` — Passkey-first identity + onchain auth
 - `coop` — Core flow board, review, and publish logic
 - `storage` — Dexie + Yjs local persistence
 - `archive` — Storacha/Filecoin upload and lifecycle
-- `onchain` — Safe creation, ERC-4337, contract interactions
+- `onchain` — Safe creation, ERC-4337, contract interactions, provider factory, signatures
 - `receiver` — PWA receiver and cross-device sync
+- `privacy` — Semaphore ZK membership proofs + anonymous publishing
+- `stealth` — ERC-5564 stealth addresses (secp256k1)
+- `agent` — Agent harness, skills, observation triggers, inference cascade
+- `operator` — Anchor/trusted-node runtime behavior
+- `policy` — Action approval workflows, typed action bundles
+- `session` — Scoped execution permissions, time-bounded capabilities
+- `grant` — Execution grants with replay protection
+- `greengoods` — Green Goods garden bootstrap and sync
 - `app` — App shell logic
 
 ## Key Patterns
@@ -95,7 +99,7 @@ Single `.env` at root (never create package-specific .env). `.env` vars:
 
 ## Validation Suites
 
-Named suites via `scripts/validate.mjs`:
+Named suites via `scripts/validate.ts`:
 - `smoke` — Unit tests + workspace build
 - `core-loop` — Unit tests, build, two-profile extension flow
 - `flow-board` — Board/archive unit tests + Playwright checks

@@ -32,7 +32,7 @@ module.exports = defineConfig({
       timeout: 120_000,
     },
     {
-      command: 'node ./scripts/y-webrtc-signaling.mjs',
+      command: 'node ./packages/signaling/server.mjs',
       url: 'http://127.0.0.1:4444',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

@@ -8,11 +8,12 @@ export default defineConfig({
     alias: {
       '@coop/shared/contracts': path.resolve(__dirname, 'packages/shared/src/contracts/index.ts'),
       '@coop/shared': path.resolve(__dirname, 'packages/shared/src/index.ts'),
+      '@coop/signaling': path.resolve(__dirname, 'packages/signaling/config.ts'),
     },
   },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],
+    setupFiles: ['./vitest.setup.ts'],
     include: [
       'packages/app/src/**/*.test.{ts,tsx}',
       'packages/extension/src/**/*.test.{ts,tsx}',

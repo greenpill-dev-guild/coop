@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@coop/shared": ["packages/shared/src/index.ts"],
-      "@coop/shared/*": ["packages/shared/src/*"]
+      "@coop/shared/*": ["packages/shared/src/*"],
+      "@coop/signaling": ["packages/signaling/config.ts"]
     },
     "types": ["chrome", "node"]
   }

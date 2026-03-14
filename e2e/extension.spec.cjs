@@ -177,7 +177,7 @@ test.describe('extension workflow', () => {
       await expect(creatorProfile.page.getByText(/coop created\./i)).toBeVisible({
         timeout: 30000,
       });
-      await creatorProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
+      await creatorProfile.page.getByRole('button', { name: 'Nest' }).click();
       await expect(
         creatorProfile.page.getByRole('heading', { name: 'Coop Town Test' }),
       ).toBeVisible();
@@ -200,7 +200,7 @@ test.describe('extension workflow', () => {
           /member joined and (seed contribution published|starter note saved)/i,
         ),
       ).toBeVisible();
-      await memberProfile.page.getByRole('button', { name: /^(Coops|Nest)$/i }).click();
+      await memberProfile.page.getByRole('button', { name: 'Nest' }).click();
       await expect(memberProfile.page.getByText('Mina')).toBeVisible();
 
       await creatorProfile.page.getByRole('button', { name: 'Loose Chickens' }).click();
@@ -230,14 +230,14 @@ test.describe('extension workflow', () => {
         ),
       ).toBeVisible();
 
-      await memberProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await memberProfile.page.getByRole('button', { name: 'Coop Feed' }).click();
       if (publishedTitle) {
         await expect(memberProfile.page.getByText(publishedTitle.trim())).toBeVisible({
           timeout: 15000,
         });
       }
 
-      await creatorProfile.page.getByRole('button', { name: /^(Settings|Nest Tools)$/i }).click();
+      await creatorProfile.page.getByRole('button', { name: 'Nest Tools' }).click();
       await creatorProfile.page
         .getByRole('button', { name: /(archive latest artifact|save latest find)/i })
         .click();
@@ -247,7 +247,7 @@ test.describe('extension workflow', () => {
         ),
       ).toBeVisible();
 
-      await creatorProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await creatorProfile.page.getByRole('button', { name: 'Coop Feed' }).click();
       const boardUrl = await creatorProfile.page
         .getByRole('link', { name: /open.*board/i })
         .first()
@@ -364,13 +364,13 @@ test.describe('extension workflow', () => {
         timeout: 15000,
       });
 
-      await creatorProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
+      await creatorProfile.page.getByRole('button', { name: 'Coop Feed' }).click();
       await expect(
-        creatorProfile.page.getByRole('heading', { name: /^(Agent Skills|Trusted Helper Runs)$/i }),
+        creatorProfile.page.getByRole('heading', { name: 'Trusted Helper Runs' }),
       ).toBeVisible();
       await expect(
         creatorProfile.page.getByRole('heading', {
-          name: /^(Agent Observations|What Helpers Noticed)$/i,
+          name: 'What Helpers Noticed',
         }),
       ).toBeVisible();
       await expect(creatorProfile.page.getByText('opportunity-extractor')).toBeVisible();

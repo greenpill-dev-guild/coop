@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "../..",
     "outDir": "dist",
     "declaration": true,
     "declarationMap": true,
     "noEmit": false,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src", "../signaling/config.ts"]
 }
