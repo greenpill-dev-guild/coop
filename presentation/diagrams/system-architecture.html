@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop — System Architecture</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        color: var(--coop-brown);
+        background: var(--coop-cream);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .header h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2rem;
+      }
+
+      .header p {
+        color: var(--coop-brown-soft);
+        margin: 0;
+      }
+
+      .diagram-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: rgba(255, 252, 249, 0.9);
+        border: 1px solid var(--coop-line);
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: var(--coop-shadow);
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+      }
+
+      .legend {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+      }
+
+      .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 2px solid;
+      }
+
+      .nav {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        background: rgba(255, 252, 249, 0.95);
+        border: 1px solid var(--coop-line);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        backdrop-filter: blur(10px);
+      }
+
+      .nav a {
+        color: var(--coop-brown);
+        text-decoration: none;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🏗️ System Architecture</h1>
+      <p>Component relationships and data flow</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect x="0" y="0" width="900" height="600" fill="none"/>
+
+        <!-- Extension (Primary Node) -->
+        <rect x="50" y="50" width="280" height="500" rx="16" fill="rgba(90,125,16,0.08)" stroke="#5a7d10" stroke-width="2"/>
+        <text x="190" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#4f2e1f">Extension (Primary Node)</text>
+        
+        <!-- Extension Components -->
+        <rect x="70" y="100" width="240" height="60" rx="12" fill="white" stroke="#5a7d10" stroke-width="1.5"/>
+        <text x="190" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#4f2e1f">Popup</text>
+        <text x="190" y="142" text-anchor="middle" font-size="10" fill="#6b4a36">Quick capture & status</text>
+
+        <rect x="70" y="180" width="240" height="80" rx="12" fill="white" stroke="#5a7d10" stroke-width="1.5"/>
+        <text x="190" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#4f2e1f">Sidepanel</text>
+        <text x="190" y="222" text-anchor="middle" font-size="10" fill="#6b4a36">Loose • Roost • Nest • Feed</text>
+        <text x="190" y="238" text-anchor="middle" font-size="10" fill="#6b4a36">Meet • Tools • Operator Console</text>
+
+        <rect x="70" y="280" width="240" height="60" rx="12" fill="white" stroke="#5a7d10" stroke-width="1.5"/>
+        <text x="190" y="305" text-anchor="middle" font-size="12" font-weight="600" fill="#4f2e1f">Background Runtime</text>
+        <text x="190" y="322" text-anchor="middle" font-size="10" fill="#6b4a36">Capture • Sync • Policy execution</text>
+
+        <rect x="70" y="360" width="240" height="60" rx="12" fill="white" stroke="#5a7d10" stroke-width="1.5"/>
+        <text x="190" y="385" text-anchor="middle" font-size="12" font-weight="600" fill="#4f2e1f">Agent Harness</text>
+        <text x="190" y="402" text-anchor="middle" font-size="10" fill="#6b4a36">Skills • Plans • Action bundles</text>
+
+        <rect x="70" y="440" width="240" height="80" rx="12" fill="white" stroke="#5a7d10" stroke-width="1.5"/>
+        <text x="190" y="465" text-anchor="middle" font-size="12" font-weight="600" fill="#4f2e1f">Local Storage</text>
+        <text x="190" y="482" text-anchor="middle" font-size="10" fill="#6b4a36">Dexie (IndexedDB)</text>
+        <text x="190" y="498" text-anchor="middle" font-size="10" fill="#6b4a36">Yjs documents</text>
+
+        <!-- Receiver PWA -->
+        <rect x="370" y="50" width="200" height="240" rx="16" fill="rgba(253,138,1,0.08)" stroke="#fd8a01" stroke-width="2"/>
+        <text x="470" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#4f2e1f">Receiver PWA</text>
+
+        <rect x="390" y="100" width="160" height="50" rx="10" fill="white" stroke="#fd8a01" stroke-width="1.5"/>
+        <text x="470" y="122" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Pairing</text>
+        <text x="470" y="138" text-anchor="middle" font-size="9" fill="#6b4a36">QR / Deep link</text>
+
+        <rect x="390" y="170" width="160" height="50" rx="10" fill="white" stroke="#fd8a01" stroke-width="1.5"/>
+        <text x="470" y="192" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Capture</text>
+        <text x="470" y="208" text-anchor="middle" font-size="9" fill="#6b4a36">Voice • Photo • Link</text>
+
+        <rect x="390" y="240" width="160" height="30" rx="8" fill="rgba(253,138,1,0.1)" stroke="#fd8a01" stroke-width="1"/>
+        <text x="470" y="260" text-anchor="middle" font-size="9" fill="#6b4a36">Private intake queue</text>
+
+        <!-- Shared Package -->
+        <rect x="620" y="50" width="230" height="320" rx="16" fill="rgba(79,46,31,0.06)" stroke="#4f2e1f" stroke-width="2"/>
+        <text x="735" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#4f2e1f">Shared Package</text>
+
+        <rect x="640" y="100" width="190" height="50" rx="10" fill="white" stroke="#4f2e1f" stroke-width="1"/>
+        <text x="735" y="122" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Contracts & Flows</text>
+        <text x="735" y="138" text-anchor="middle" font-size="9" fill="#6b4a36">Coop • Grant • Policy</text>
+
+        <rect x="640" y="170" width="190" height="50" rx="10" fill="white" stroke="#4f2e1f" stroke-width="1"/>
+        <text x="735" y="192" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Onchain Adapter</text>
+        <text x="735" y="208" text-anchor="middle" font-size="9" fill="#6b4a36">Safe • Arbitrum/Sepolia</text>
+
+        <rect x="640" y="240" width="190" height="50" rx="10" fill="white" stroke="#4f2e1f" stroke-width="1"/>
+        <text x="735" y="262" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Archive</text>
+        <text x="735" y="278" text-anchor="middle" font-size="9" fill="#6b4a36">Storacha • Filecoin</text>
+
+        <rect x="640" y="310" width="190" height="40" rx="10" fill="white" stroke="#4f2e1f" stroke-width="1"/>
+        <text x="735" y="335" text-anchor="middle" font-size="11" font-weight="600" fill="#4f2e1f">Identity & Session</text>
+
+        <!-- Peer Sync -->
+        <rect x="370" y="330" width="200" height="100" rx="16" fill="rgba(90,125,16,0.06)" stroke="#5a7d10" stroke-width="2" stroke-dasharray="6,3"/>
+        <text x="470" y="360" text-anchor="middle" font-size="14" font-weight="700" fill="#4f2e1f">Peer Sync</text>
+
+        <rect x="390" y="380" width="160" height="35" rx="8" fill="white" stroke="#5a7d10" stroke-width="1"/>
+        <text x="470" y="402" text-anchor="middle" font-size="10" fill="#6b4a36">Yjs + y-webrtc</text>
+
+        <!-- Connection Lines -->
+        <!-- Extension to Receiver -->
+        <path d="M 310 200 L 370 200" stroke="#6b4a36" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <text x="340" y="195" text-anchor="middle" font-size="9" fill="#6b4a36">Pair</text>
+
+        <!-- Receiver to Extension (intake) -->
+        <path d="M 390 250 Q 350 250 350 300 Q 350 350 310 350" stroke="#fd8a01" stroke-width="2" fill="none" stroke-dasharray="4,2"/>
+        <text x="355" y="320" text-anchor="middle" font-size="9" fill="#6b4a36">Intake</text>
+
+        <!-- Extension to Shared -->
+        <path d="M 310 300 L 620 200" stroke="#5a7d10" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <text x="460" y="240" text-anchor="middle" font-size="9" fill="#6b4a36">Uses</text>
+
+        <!-- Peer Sync connections -->
+        <path d="M 310 400 L 390 400" stroke="#5a7d10" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 570 380 L 640 340" stroke="#5a7d10" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+        <!-- Shared to External -->
+        <rect x="640" y="400" width="190" height="60" rx="10" fill="rgba(79,46,31,0.04)" stroke="#4f2e1f" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="735" y="425" text-anchor="middle" font-size="10" font-weight="600" fill="#4f2e1f">External Services</text>
+        <text x="735" y="445" text-anchor="middle" font-size="9" fill="#6b4a36">Pimlico • Storacha • Signaling</text>
+
+        <path d="M 735 360 L 735 400" stroke="#4f2e1f" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/>
+
+        <!-- Arrow marker -->
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#6b4a36"/>
+          </marker>
+        </defs>
+
+        <!-- Privacy Boundary Note -->
+        <rect x="50" y="570" width="800" height="20" rx="8" fill="rgba(90,125,16,0.08)" stroke="#5a7d10" stroke-width="1"/>
+        <text x="450" y="584" text-anchor="middle" font-size="10" fill="#4f2e1f" font-weight="600">🔒 Privacy Boundary: Local observation/review → Explicit push → Shared state</text>
+      </svg>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-box" style="border-color: #5a7d10; background: rgba(90,125,16,0.08);"></div>
+          <span>Extension (Primary)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="border-color: #fd8a01; background: rgba(253,138,1,0.08);"></div>
+          <span>Receiver PWA</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="border-color: #4f2e1f; background: rgba(79,46,31,0.06);"></div>
+          <span>Shared Package</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="border-color: #5a7d10; background: rgba(90,125,16,0.06); border-style: dashed;"></div>
+          <span>Peer Sync</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <a href="../index.html">← Back to Hub</a>
+    </div>
+  </body>
+</html>

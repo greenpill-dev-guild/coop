@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop Extension — UI Mockup</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+        --coop-error: #a63b20;
+      }
+
+      * { box-sizing: border-box; }
+      
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        background: var(--coop-cream);
+        color: var(--coop-brown);
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        padding: 2rem;
+      }
+
+      @media (max-width: 900px) {
+        body { grid-template-columns: 1fr; }
+      }
+
+      /* ===== SIDEPANEL MOCKUP ===== */
+      .sidepanel {
+        width: 100%;
+        max-width: 400px;
+        background: radial-gradient(circle at top right, rgba(90, 125, 16, 0.08), transparent 12rem),
+                    radial-gradient(circle at top left, rgba(253, 138, 1, 0.08), transparent 12rem),
+                    var(--coop-cream);
+        border-radius: 24px;
+        border: 1px solid var(--coop-line);
+        box-shadow: var(--coop-shadow);
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        height: 700px;
+      }
+
+      .panel-header {
+        padding: 1rem;
+        background: rgba(255, 252, 249, 0.9);
+        border-bottom: 1px solid var(--coop-line);
+        backdrop-filter: blur(10px);
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+
+      .logo {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--coop-brown);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .logo::before {
+        content: "🐔";
+        font-size: 1.5rem;
+      }
+
+      .state-badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 99px;
+        background: rgba(90, 125, 16, 0.12);
+        color: var(--coop-green);
+        font-weight: 600;
+      }
+
+      .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+      }
+
+      .summary-item {
+        text-align: center;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        border: 1px solid var(--coop-line);
+      }
+
+      .summary-item .num {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: var(--coop-brown);
+      }
+
+      .summary-item .label {
+        font-size: 0.7rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .tab-strip {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.25rem;
+        padding: 0.75rem;
+        background: rgba(255, 252, 249, 0.6);
+      }
+
+      .tab {
+        padding: 0.6rem 0.3rem;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: transparent;
+        font-size: 0.65rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 180ms ease;
+        color: var(--coop-brown-soft);
+      }
+
+      .tab:hover, .tab.active {
+        background: var(--coop-brown);
+        color: white;
+      }
+
+      .panel-content {
+        padding: 1rem;
+        overflow-y: auto;
+        display: grid;
+        gap: 0.75rem;
+        align-content: start;
+      }
+
+      .card {
+        background: rgba(255, 252, 249, 0.82);
+        border: 1px solid var(--coop-line);
+        border-radius: 18px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(79, 46, 31, 0.06);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(79, 46, 31, 0.1);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+      }
+
+      .card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .card-meta {
+        font-size: 0.75rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+      }
+
+      .tag {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 99px;
+        background: rgba(253, 138, 1, 0.12);
+        color: var(--coop-orange);
+      }
+
+      .tag.green {
+        background: rgba(90, 125, 16, 0.12);
+        color: var(--coop-green);
+      }
+
+      .action-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 0.6rem;
+        border-radius: 12px;
+        border: 1px solid var(--coop-line);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 180ms ease;
+      }
+
+      .btn:hover {
+        background: var(--coop-brown);
+        color: white;
+      }
+
+      .btn.primary {
+        background: var(--coop-brown);
+        color: white;
+      }
+
+      .btn.primary:hover {
+        background: var(--coop-brown-soft);
+      }
+
+      /* ===== POPUP MOCKUP ===== */
+      .popup-section {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .popup {
+        width: 100%;
+        max-width: 360px;
+        background: var(--coop-cream);
+        border-radius: 20px;
+        border: 1px solid var(--coop-line);
+        box-shadow: var(--coop-shadow);
+        padding: 1.25rem;
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .popup-logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--coop-orange), var(--coop-green));
+        display: grid;
+        place-items: center;
+        font-size: 1.5rem;
+      }
+
+      .popup-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .popup-subtitle {
+        font-size: 0.8rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .status-card {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--coop-line);
+        border-radius: 14px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+      }
+
+      .status-label {
+        font-size: 0.8rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .status-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--coop-brown);
+      }
+
+      .big-btn {
+        width: 100%;
+        padding: 0.9rem;
+        border-radius: 14px;
+        border: none;
+        background: var(--coop-brown);
+        color: white;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 180ms ease;
+        margin-bottom: 0.5rem;
+      }
+
+      .big-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(79, 46, 31, 0.2);
+      }
+
+      .big-btn.secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--coop-brown);
+        border: 1px solid var(--coop-line);
+      }
+
+      h2 {
+        font-size: 1.1rem;
+        margin: 0 0 0.75rem;
+        color: var(--coop-brown-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- SIDEPANEL MOCKUP -->
+    <div>
+      <h2>Sidepanel — Roost View</h2>
+      <div class="sidepanel">
+        <div class="panel-header">
+          <div class="brand-row">
+            <div class="logo">Coop</div>
+            <span class="state-badge">● Active</span>
+          </div>
+          <div class="summary-strip">
+            <div class="summary-item">
+              <div class="num">12</div>
+              <div class="label">Loose</div>
+            </div>
+            <div class="summary-item">
+              <div class="num">5</div>
+              <div class="label">In Roost</div>
+            </div>
+            <div class="summary-item">
+              <div class="num">3</div>
+              <div class="label">Ready</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-strip">
+          <div class="tab active">Loose</div>
+          <div class="tab">Roost</div>
+          <div class="tab">Nest</div>
+          <div class="tab">Feed</div>
+          <div class="tab">Meet</div>
+          <div class="tab">Tools</div>
+        </div>
+
+        <div class="panel-content">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Funding landscape research</h3>
+            </div>
+            <div class="card-meta">Captured 2 min ago • relevance: high</div>
+            <div class="tag-row">
+              <span class="tag">regenerative</span>
+              <span class="tag green">funding</span>
+            </div>
+            <div class="action-row">
+              <button class="btn">Edit</button>
+              <button class="btn primary">To Roost</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Green Goods integration spec</h3>
+            </div>
+            <div class="card-meta">Captured 15 min ago • relevance: medium</div>
+            <div class="tag-row">
+              <span class="tag">garden</span>
+              <span class="tag green">onchain</span>
+            </div>
+            <div class="action-row">
+              <button class="btn">Edit</button>
+              <button class="btn primary">To Roost</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Local-first architecture patterns</h3>
+            </div>
+            <div class="card-meta">Captured 1 hr ago • relevance: high</div>
+            <div class="tag-row">
+              <span class="tag">tech</span>
+              <span class="tag">privacy</span>
+            </div>
+            <div class="action-row">
+              <button class="btn">Edit</button>
+              <button class="btn primary">To Roost</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POPUP MOCKUP -->
+    <div class="popup-section">
+      <h2>Popup</h2>
+      <div class="popup">
+        <div class="popup-header">
+          <div class="popup-logo">🐔</div>
+          <div>
+            <div class="popup-title">Coop</div>
+            <div class="popup-subtitle">No more chickens loose.</div>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-row">
+            <span class="status-label">Active Coop</span>
+            <span class="status-value">Regen Coordination</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Pending drafts</span>
+            <span class="status-value" style="color: var(--coop-orange);">5 in Roost</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Sync state</span>
+            <span class="status-value" style="color: var(--coop-green);">● Live</span>
+          </div>
+        </div>
+
+        <button class="big-btn">Round up now</button>
+        <button class="big-btn secondary">Open sidepanel</button>
+      </div>
+
+      <h2>Popup — Idle State</h2>
+      <div class="popup">
+        <div class="popup-header">
+          <div class="popup-logo">🐔</div>
+          <div>
+            <div class="popup-title">Coop</div>
+            <div class="popup-subtitle">No more chickens loose.</div>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-row">
+            <span class="status-label">Status</span>
+            <span class="status-value" style="color: var(--coop-brown-soft);">Idle</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Last sync</span>
+            <span class="status-value">2 min ago</span>
+          </div>
+        </div>
+
+        <button class="big-btn secondary">Create a Coop</button>
+        <button class="big-btn secondary">Join with invite</button>
+      </div>
+    </div>
+  </body>
+</html>

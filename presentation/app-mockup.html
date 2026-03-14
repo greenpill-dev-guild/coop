@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop App — UI Mockup</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 20px 50px rgba(79, 46, 31, 0.14);
+      }
+
+      * { box-sizing: border-box; }
+      
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        color: var(--coop-brown);
+        background: var(--coop-cream);
+        min-height: 100vh;
+      }
+
+      /* ===== LANDING PAGE ===== */
+      .landing {
+        min-height: 100vh;
+        background: 
+          radial-gradient(circle at 80% 20%, rgba(90, 125, 16, 0.15), transparent 40vw),
+          radial-gradient(circle at 20% 80%, rgba(253, 138, 1, 0.12), transparent 35vw),
+          var(--coop-cream);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 5vw;
+        position: sticky;
+        top: 0;
+        background: rgba(252, 245, 239, 0.9);
+        backdrop-filter: blur(12px);
+        z-index: 100;
+        border-bottom: 1px solid var(--coop-line);
+      }
+
+      .nav-logo {
+        font-size: 1.5rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .nav-logo::before {
+        content: "🐔";
+        font-size: 1.8rem;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .nav-links a {
+        color: var(--coop-brown-soft);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 180ms ease;
+      }
+
+      .nav-links a:hover {
+        color: var(--coop-brown);
+      }
+
+      .hero {
+        padding: 5rem 5vw 4rem;
+        text-align: center;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 99px;
+        background: rgba(90, 125, 16, 0.1);
+        color: var(--coop-green);
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        line-height: 1.05;
+        margin: 0 0 1rem;
+        letter-spacing: -0.02em;
+      }
+
+      .hero p {
+        font-size: clamp(1.1rem, 2vw, 1.5rem);
+        color: var(--coop-brown-soft);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+        line-height: 1.5;
+      }
+
+      .cta-row {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .cta-btn {
+        padding: 1rem 2rem;
+        border-radius: 16px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 200ms ease;
+        border: none;
+      }
+
+      .cta-btn.primary {
+        background: var(--coop-brown);
+        color: white;
+        box-shadow: 0 8px 24px rgba(79, 46, 31, 0.2);
+      }
+
+      .cta-btn.primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px rgba(79, 46, 31, 0.28);
+      }
+
+      .cta-btn.secondary {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--coop-brown);
+        border: 1px solid var(--coop-line);
+      }
+
+      .features {
+        padding: 4rem 5vw;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .feature-card {
+        background: rgba(255, 252, 249, 0.9);
+        border: 1px solid var(--coop-line);
+        border-radius: 24px;
+        padding: 2rem;
+        transition: transform 200ms ease, box-shadow 200ms ease;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--coop-shadow);
+      }
+
+      .feature-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+        background: rgba(90, 125, 16, 0.1);
+      }
+
+      .feature-icon.orange {
+        background: rgba(253, 138, 1, 0.1);
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        margin: 0 0 0.5rem;
+      }
+
+      .feature-card p {
+        color: var(--coop-brown-soft);
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      /* ===== RECEIVER PWA ===== */
+      .receiver-section {
+        padding: 3rem 5vw;
+        background: linear-gradient(180deg, var(--coop-cream) 0%, rgba(90, 125, 16, 0.05) 100%);
+        border-top: 1px solid var(--coop-line);
+      }
+
+      .receiver-section h2 {
+        text-align: center;
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .phone-mockup {
+        width: 100%;
+        max-width: 375px;
+        margin: 0 auto;
+        background: #1a1a1a;
+        border-radius: 48px;
+        padding: 12px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .phone-screen {
+        background: var(--coop-cream);
+        border-radius: 40px;
+        overflow: hidden;
+        height: 700px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .phone-notch {
+        height: 28px;
+        background: #1a1a1a;
+        margin: 0 auto;
+        width: 120px;
+        border-radius: 0 0 20px 20px;
+      }
+
+      .receiver-header {
+        padding: 1rem 1.25rem;
+        background: rgba(255, 252, 249, 0.95);
+        border-bottom: 1px solid var(--coop-line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .receiver-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .sync-badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 99px;
+        background: rgba(90, 125, 16, 0.12);
+        color: var(--coop-green);
+      }
+
+      .receiver-content {
+        padding: 1.25rem;
+        overflow-y: auto;
+        display: grid;
+        gap: 1rem;
+        align-content: start;
+      }
+
+      .big-capture-btn {
+        width: 160px;
+        height: 200px;
+        border-radius: 50% 50% 48% 48% / 60% 60% 40% 40%;
+        background: linear-gradient(180deg, #fff 0%, #ffe8c8 50%, #ffd4a0 100%);
+        border: 2px solid rgba(79, 46, 31, 0.2);
+        margin: 1rem auto;
+        display: grid;
+        place-items: center;
+        font-size: 3rem;
+        cursor: pointer;
+        transition: transform 200ms ease, box-shadow 200ms ease;
+        box-shadow: 0 12px 30px rgba(253, 138, 1, 0.25);
+      }
+
+      .big-capture-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 16px 40px rgba(253, 138, 1, 0.35);
+      }
+
+      .big-capture-btn:active {
+        transform: scale(0.98);
+      }
+
+      .capture-hint {
+        text-align: center;
+        color: var(--coop-brown-soft);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
+      .inbox-item {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--coop-line);
+        border-radius: 16px;
+        padding: 1rem;
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .inbox-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .inbox-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: rgba(253, 138, 1, 0.12);
+        display: grid;
+        place-items: center;
+        font-size: 1.2rem;
+      }
+
+      .inbox-icon.audio {
+        background: rgba(90, 125, 16, 0.12);
+      }
+
+      .inbox-meta {
+        flex: 1;
+      }
+
+      .inbox-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .inbox-time {
+        font-size: 0.8rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .inbox-status {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 99px;
+        background: rgba(90, 125, 16, 0.1);
+        color: var(--coop-green);
+      }
+
+      .inbox-status.pending {
+        background: rgba(253, 138, 1, 0.1);
+        color: var(--coop-orange);
+      }
+
+      .receiver-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        padding: 0.75rem;
+        background: rgba(255, 252, 249, 0.95);
+        border-top: 1px solid var(--coop-line);
+        gap: 0.5rem;
+      }
+
+      .receiver-tab {
+        display: grid;
+        place-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        color: var(--coop-brown-soft);
+        cursor: pointer;
+        transition: all 180ms ease;
+      }
+
+      .receiver-tab:hover, .receiver-tab.active {
+        background: var(--coop-brown);
+        color: white;
+      }
+
+      .receiver-tab .icon {
+        font-size: 1.3rem;
+      }
+
+      /* Pairing screen */
+      .pairing-screen {
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        text-align: center;
+        gap: 1.5rem;
+      }
+
+      .qr-placeholder {
+        width: 200px;
+        height: 200px;
+        border: 2px dashed var(--coop-line);
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .qr-placeholder span {
+        font-size: 4rem;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .nav-links { display: none; }
+        .hero { padding: 3rem 1.5rem; }
+        .features { padding: 2rem 1.5rem; }
+      }
+
+      .mockup-label {
+        text-align: center;
+        color: var(--coop-brown-soft);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+      }
+
+      .section-title {
+        font-size: 1.3rem;
+        margin: 3rem 0 1.5rem;
+        padding: 0 5vw;
+        color: var(--coop-brown-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LANDING PAGE -->
+    <div class="landing">
+      <nav class="nav">
+        <div class="nav-logo">Coop Town</div>
+        <div class="nav-links">
+          <a href="#features">How it works</a>
+          <a href="#receiver">Receiver</a>
+          <a href="#extension">Extension</a>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="hero-badge">🐔 Browser-first • Local-first</div>
+        <h1>Turn loose tabs into shared intelligence</h1>
+        <p>Coop is a coordination membrane for communities, projects, and families. Capture locally. Review together. Publish intentionally.</p>
+        <div class="cta-row">
+          <button class="cta-btn primary">Install Extension</button>
+          <button class="cta-btn secondary">Open Receiver</button>
+        </div>
+      </section>
+
+      <section class="features" id="features">
+        <div class="feature-card">
+          <div class="feature-icon">🐔</div>
+          <h3>Round up loose chickens</h3>
+          <p>Capture tabs, voice notes, and links locally. Your browsing becomes structured drafts before anything is shared.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">📝</div>
+          <h3>Review in the Roost</h3>
+          <p>Edit, tag, and score relevance. Only what matters gets pushed to your coop's shared memory.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌿</div>
+          <h3>Build shared memory</h3>
+          <p>Live-synced feed across members. Archive to Filecoin for durable, provable receipts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">🔐</div>
+          <h3>Passkey-first identity</h3>
+          <p>No wallet extension required. Create coops, join with invites, and manage Safe state seamlessly.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- RECEIVER PWA MOCKUP -->
+    <h2 class="section-title">Receiver PWA — Capture Screen</h2>
+    <section class="receiver-section">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="receiver-header">
+            <div class="receiver-title">🐔 Receiver</div>
+            <span class="sync-badge">● Synced</span>
+          </div>
+          <div class="receiver-content">
+            <div class="big-capture-btn">🎤</div>
+            <div class="capture-hint">Tap to record voice note<br>Hold for photo • Swipe for file</div>
+            
+            <div class="inbox-item">
+              <div class="inbox-item-header">
+                <div class="inbox-icon audio">🎵</div>
+                <div class="inbox-meta">
+                  <div class="inbox-title">Funding ideas brainstorm</div>
+                  <div class="inbox-time">2 min ago • 0:42</div>
+                </div>
+                <span class="inbox-status">Synced</span>
+              </div>
+            </div>
+
+            <div class="inbox-item">
+              <div class="inbox-item-header">
+                <div class="inbox-icon">🔗</div>
+                <div class="inbox-meta">
+                  <div class="inbox-title">Green Goods documentation</div>
+                  <div class="inbox-time">15 min ago</div>
+                </div>
+                <span class="inbox-status pending">Pending</span>
+              </div>
+            </div>
+
+            <div class="inbox-item">
+              <div class="inbox-item-header">
+                <div class="inbox-icon audio">🎵</div>
+                <div class="inbox-meta">
+                  <div class="inbox-title">Meeting follow-up thoughts</div>
+                  <div class="inbox-time">1 hr ago • 2:15</div>
+                </div>
+                <span class="inbox-status">Synced</span>
+              </div>
+            </div>
+          </div>
+          <div class="receiver-tabs">
+            <div class="receiver-tab">
+              <span class="icon">📥</span>
+              <span>Inbox</span>
+            </div>
+            <div class="receiver-tab active">
+              <span class="icon">🎤</span>
+              <span>Capture</span>
+            </div>
+            <div class="receiver-tab">
+              <span class="icon">📊</span>
+              <span>Status</span>
+            </div>
+            <div class="receiver-tab">
+              <span class="icon">⚙️</span>
+              <span>Settings</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="mockup-label">iPhone-style mockup showing the egg capture button and inbox</p>
+    </section>
+
+    <!-- PAIRING SCREEN -->
+    <h2 class="section-title">Receiver PWA — Pairing Screen</h2>
+    <section class="receiver-section" style="background: linear-gradient(180deg, rgba(253,138,1,0.05) 0%, var(--coop-cream) 100%);">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="receiver-header">
+            <div class="receiver-title">🔗 Pair Device</div>
+          </div>
+          <div class="pairing-screen">
+            <div>
+              <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">Scan to pair</div>
+              <div style="color: var(--coop-brown-soft); font-size: 0.9rem;">Connect this device to your Coop extension</div>
+            </div>
+            <div class="qr-placeholder">
+              <span>📱</span>
+            </div>
+            <div style="color: var(--coop-brown-soft); font-size: 0.85rem;">
+              <strong>Regen Coordination</strong><br>
+              Member: Alex • Expires in 10 min
+            </div>
+            <button style="padding: 0.9rem 2rem; border-radius: 14px; border: none; background: var(--coop-brown); color: white; font-weight: 600; cursor: pointer;">
+              Enter code manually
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="mockup-label">QR pairing flow from extension to mobile receiver</p>
+    </section>
+  </body>
+</html>

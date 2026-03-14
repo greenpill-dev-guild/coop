@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop — User Flows</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        color: var(--coop-brown);
+        background: var(--coop-cream);
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      .header {
+        padding: 1.5rem 5vw;
+        background: rgba(255, 252, 249, 0.95);
+        border-bottom: 1px solid var(--coop-line);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .header h1::before {
+        content: "🐔";
+        font-size: 1.8rem;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 5vw;
+      }
+
+      .flow-section {
+        margin-bottom: 4rem;
+      }
+
+      .flow-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .flow-number {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--coop-brown);
+        color: white;
+        display: grid;
+        place-items: center;
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+
+      .flow-title {
+        font-size: 1.4rem;
+        margin: 0;
+      }
+
+      .flow-subtitle {
+        color: var(--coop-brown-soft);
+        font-size: 0.95rem;
+      }
+
+      .flow-steps {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: rgba(255, 252, 249, 0.9);
+        border: 1px solid var(--coop-line);
+        border-radius: 16px;
+        transition: all 200ms ease;
+      }
+
+      .step:hover {
+        transform: translateX(4px);
+        box-shadow: var(--coop-shadow);
+      }
+
+      .step-marker {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(90, 125, 16, 0.12);
+        color: var(--coop-green);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .step-content h3 {
+        margin: 0 0 0.25rem;
+        font-size: 1.1rem;
+      }
+
+      .step-content p {
+        margin: 0;
+        color: var(--coop-brown-soft);
+        font-size: 0.95rem;
+      }
+
+      .step-actor {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .step-actor.extension {
+        background: rgba(90, 125, 16, 0.12);
+        color: var(--coop-green);
+      }
+
+      .step-actor.receiver {
+        background: rgba(253, 138, 1, 0.12);
+        color: var(--coop-orange);
+      }
+
+      .step-actor.user {
+        background: rgba(79, 46, 31, 0.08);
+        color: var(--coop-brown);
+      }
+
+      .flow-visual {
+        margin-top: 1.5rem;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 20px;
+        border: 1px solid var(--coop-line);
+      }
+
+      .flow-visual h4 {
+        margin: 0 0 1rem;
+        font-size: 0.9rem;
+        color: var(--coop-brown-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .mini-flow {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .flow-node {
+        padding: 0.6rem 1rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .flow-node.start {
+        background: var(--coop-green);
+        color: white;
+      }
+
+      .flow-node.action {
+        background: rgba(253, 138, 1, 0.15);
+        color: var(--coop-brown);
+        border: 1px solid var(--coop-line);
+      }
+
+      .flow-node.decision {
+        background: rgba(79, 46, 31, 0.08);
+        color: var(--coop-brown);
+        border: 2px dashed var(--coop-line);
+      }
+
+      .flow-node.end {
+        background: var(--coop-brown);
+        color: white;
+      }
+
+      .flow-arrow {
+        color: var(--coop-brown-soft);
+        font-size: 1.2rem;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 768px) {
+        .two-col { grid-template-columns: 1fr; }
+      }
+
+      .highlight-box {
+        padding: 1rem 1.25rem;
+        background: rgba(90, 125, 16, 0.08);
+        border-left: 4px solid var(--coop-green);
+        border-radius: 0 12px 12px 0;
+        margin-top: 1rem;
+      }
+
+      .highlight-box h4 {
+        margin: 0 0 0.25rem;
+        font-size: 0.9rem;
+        color: var(--coop-green);
+      }
+
+      .highlight-box p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .actor-legend {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        border: 1px solid var(--coop-line);
+      }
+
+      .actor-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+      }
+
+      .actor-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .actor-dot.extension { background: var(--coop-green); }
+      .actor-dot.receiver { background: var(--coop-orange); }
+      .actor-dot.user { background: var(--coop-brown); }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>Coop User Flows</h1>
+    </header>
+
+    <div class="container">
+      <div class="actor-legend">
+        <div class="actor-legend-item">
+          <div class="actor-dot extension"></div>
+          <span>Extension (primary node)</span>
+        </div>
+        <div class="actor-legend-item">
+          <div class="actor-dot receiver"></div>
+          <span>Receiver PWA (mobile)</span>
+        </div>
+        <div class="actor-legend-item">
+          <div class="actor-dot user"></div>
+          <span>User action</span>
+        </div>
+      </div>
+
+      <!-- FLOW 1: Onboarding -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">1</div>
+          <div>
+            <h2 class="flow-title">First-time Setup</h2>
+            <div class="flow-subtitle">From install to first coop in 5 minutes</div>
+          </div>
+        </div>
+
+        <div class="flow-steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Install Extension</h3>
+              <p>User installs Coop from Chrome Web Store. Extension shows popup with "Create a Coop" and "Join with invite" options.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">2</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Create Passkey Identity</h3>
+              <p>User creates local identity using device passkey (Face ID, Touch ID, or PIN). No wallet extension needed.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">3</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Setup Ritual (4 Lenses)</h3>
+              <p>User answers: What's the purpose? Who's involved? What are we tracking? What's the review cadence?</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">4</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Coop Created + Safe Deployed</h3>
+              <p>Extension creates coop state and (in live mode) deploys Safe on Arbitrum/Sepolia. Shows success with coop address.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">5</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Invite Generation</h3>
+              <p>Creator generates trusted member or regular member invite. QR code and deep link created for sharing.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-visual">
+          <h4>Flow Visualization</h4>
+          <div class="mini-flow">
+            <span class="flow-node start">Install</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node action">Passkey</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node action">4 Lenses</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node action">Safe Deploy</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node end">Coop Live</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLOW 2: Member Join -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">2</div>
+          <div>
+            <h2 class="flow-title">Member Join Flow</h2>
+            <div class="flow-subtitle">Joining an existing coop from invite</div>
+          </div>
+        </div>
+
+        <div class="flow-steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Receive Invite</h3>
+              <p>User receives invite link via chat, email, or QR scan from coop creator. Link contains coop ID and invite token.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">2</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Accept Invite</h3>
+              <p>Extension validates invite, shows coop details (name, purpose, members), asks user to confirm join.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">3</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>State Bootstrap</h3>
+              <p>Extension syncs coop state from peers via Yjs. New member sees existing shared memory and feed.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">4</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Ready to Participate</h3>
+              <p>Member can now capture, review, publish, and see live updates from other members.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLOW 3: Capture Flow -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">3</div>
+          <div>
+            <h2 class="flow-title">Capture & Review Flow</h2>
+            <div class="flow-subtitle">From loose tabs to published memory</div>
+          </div>
+        </div>
+
+        <div class="flow-steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Manual Round-up</h3>
+              <p>User clicks "Round up now" in extension popup. Extension scans open tabs and extracts content.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">2</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Local Processing</h3>
+              <p>Extension shapes extracts into candidates with heuristics: title, summary, domain, relevance score. All local.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">3</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Review in Roost</h3>
+              <p>User reviews draft cards in sidepanel. Can edit title, summary, add tags, adjust relevance, or discard.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">4</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Explicit Publish</h3>
+              <p>User clicks "Publish to Feed" — only now does content enter shared coop state. Privacy boundary respected.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">5</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Live Sync</h3>
+              <p>Published artifact syncs to all online members via Yjs. Feed updates in real-time across all devices.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <h4>🔒 Privacy Boundary</h4>
+          <p>Observation and shaping happen locally. Nothing enters shared state until human explicitly pushes it. This is the core privacy promise.</p>
+        </div>
+      </section>
+
+      <!-- FLOW 4: Receiver Pairing -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">4</div>
+          <div>
+            <h2 class="flow-title">Receiver Pairing & Capture</h2>
+            <div class="flow-subtitle">Mobile capture into extension inbox</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--coop-brown-soft);">Extension Operator</h3>
+            <div class="flow-steps">
+              <div class="step">
+                <div class="step-marker">1</div>
+                <div class="step-content">
+                  <span class="step-actor extension">Extension</span>
+                  <h3>Generate Pairing</h3>
+                  <p>In Coops tab, operator generates receiver pairing with QR code and deeplink.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-marker">2</div>
+                <div class="step-content">
+                  <span class="step-actor extension">Extension</span>
+                  <h3>Wait for Intake</h3>
+                  <p>Extension monitors member-private intake queue for synced captures.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-marker">3</div>
+                <div class="step-content">
+                  <span class="step-actor extension">Extension</span>
+                  <h3>Convert & Publish</h3>
+                  <p>Operator converts intake items to drafts, reviews, and publishes to Feed.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--coop-brown-soft);">Mobile Receiver</h3>
+            <div class="flow-steps">
+              <div class="step">
+                <div class="step-marker">1</div>
+                <div class="step-content">
+                  <span class="step-actor receiver">Receiver</span>
+                  <h3>Scan QR / Open Link</h3>
+                  <p>User opens /pair on mobile PWA, scans QR or accepts deeplink payload.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-marker">2</div>
+                <div class="step-content">
+                  <span class="step-actor user">User</span>
+                  <h3>Capture Voice/Photo</h3>
+                  <p>User taps egg button to record voice, takes photo, or attaches file.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-marker">3</div>
+                <div class="step-content">
+                  <span class="step-actor receiver">Receiver</span>
+                  <h3>Sync to Extension</h3>
+                  <p>Capture queues locally, syncs to extension when online. Shows in inbox.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLOW 5: Archive -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">5</div>
+          <div>
+            <h2 class="flow-title">Archive & Export Flow</h2>
+            <div class="flow-subtitle">Preserving memory with Filecoin receipts</div>
+          </div>
+        </div>
+
+        <div class="flow-steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Select Archive Target</h3>
+              <p>User chooses: artifact capsule, coop snapshot, or memory seed bundle from Feed or Board.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">2</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Prepare Bundle</h3>
+              <p>Extension compiles structured JSON + metadata. In mock mode: simulates. In live mode: delegates to trusted node.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">3</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Storacha Upload</h3>
+              <p>Bundle uploads via delegated Storacha space. Returns root CID and gateway URL.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">4</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Receipt Generated</h3>
+              <p>Archive receipt saved locally: timestamp, CID, gateway URL, purpose. Visible in archive log.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">5</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Export or Share</h3>
+              <p>User exports receipt bundle (JSON) or shares gateway link. Filecoin deal follows async.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLOW 6: Weekly Ritual -->
+      <section class="flow-section">
+        <div class="flow-header">
+          <div class="flow-number">6</div>
+          <div>
+            <h2 class="flow-title">Weekly Review Ritual</h2>
+            <div class="flow-subtitle">Group synthesis and next-step planning</div>
+          </div>
+        </div>
+
+        <div class="flow-steps">
+          <div class="step">
+            <div class="step-marker">1</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Gather Context</h3>
+              <p>Members open Flock Meeting tab. See: private finds, working drafts, ready-to-share items, and board snapshot.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">2</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Review Together</h3>
+              <p>Grouped view by category and member. Discuss, combine, refine. Move items to "ready" or archive.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">3</div>
+            <div class="step-content">
+              <span class="step-actor user">User</span>
+              <h3>Publish Batch</h3>
+              <p>Multiple drafts published to Feed. Board updates with new artifacts. Members see live updates.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-marker">4</div>
+            <div class="step-content">
+              <span class="step-actor extension">Extension</span>
+              <h3>Snapshot & Archive</h3>
+              <p>Post-meeting snapshot created. Optional: archive to Filecoin for durable weekly memory.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="highlight-box" style="margin-top: 3rem;">
+        <h4>🎯 Demo-Critical Paths</h4>
+        <p>For hackathon demo, focus on Flows 1→2→3: Create coop → Join with peer → Round up tabs → Review → Publish → See sync. Add Flow 4 (receiver pairing) if time permits.</p>
+      </div>
+    </div>
+  </body>
+</html>

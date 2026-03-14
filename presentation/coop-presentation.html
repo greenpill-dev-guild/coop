@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop — Pitch Presentation</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 18px 45px rgba(79, 46, 31, 0.14);
+        --coop-panel: rgba(255, 252, 249, 0.84);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        color: var(--coop-brown);
+        background:
+          radial-gradient(circle at 12% 5%, rgba(90, 125, 16, 0.2), transparent 22rem),
+          radial-gradient(circle at 88% 8%, rgba(253, 138, 1, 0.2), transparent 22rem),
+          var(--coop-cream);
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          45deg,
+          rgba(79, 46, 31, 0.02) 0,
+          rgba(79, 46, 31, 0.02) 1px,
+          transparent 1px,
+          transparent 10px
+        );
+      }
+
+      .deck {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      .topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.7rem 1rem;
+        background: rgba(255, 252, 249, 0.86);
+        border-bottom: 1px solid var(--coop-line);
+        backdrop-filter: blur(8px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .brand img {
+        width: 120px;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .meta {
+        font-size: 0.8rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .progress-wrap {
+        flex: 1;
+        max-width: 360px;
+        height: 8px;
+        border-radius: 99px;
+        background: rgba(79, 46, 31, 0.12);
+        overflow: hidden;
+      }
+
+      .progress {
+        width: 0;
+        height: 100%;
+        background: linear-gradient(90deg, var(--coop-green), var(--coop-orange));
+        transition: width 300ms ease;
+      }
+
+      .slides {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      .slide {
+        position: absolute;
+        inset: 0;
+        padding: 4.8rem 4.5vw 4.2rem;
+        display: grid;
+        align-content: center;
+        gap: 1.2rem;
+        opacity: 0;
+        transform: translateX(40px) scale(0.985);
+        pointer-events: none;
+        transition: opacity 380ms ease, transform 420ms ease;
+      }
+
+      .slide.active {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .slide .reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: all 420ms ease;
+      }
+
+      .slide.active .reveal {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .slide.active .reveal:nth-child(2) {
+        transition-delay: 80ms;
+      }
+      .slide.active .reveal:nth-child(3) {
+        transition-delay: 140ms;
+      }
+      .slide.active .reveal:nth-child(4) {
+        transition-delay: 220ms;
+      }
+      .slide.active .reveal:nth-child(5) {
+        transition-delay: 300ms;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4.8vw, 4.2rem);
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 3.2vw, 2.8rem);
+      }
+
+      .subtitle {
+        font-size: clamp(1rem, 1.8vw, 1.4rem);
+        color: var(--coop-brown-soft);
+        max-width: 62ch;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: fit-content;
+        border: 1px solid var(--coop-line);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.83rem;
+        font-weight: 700;
+        color: var(--coop-green);
+        background: rgba(90, 125, 16, 0.1);
+      }
+
+      .grid-2,
+      .grid-3 {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--coop-line);
+        border-radius: 22px;
+        background: var(--coop-panel);
+        box-shadow: var(--coop-shadow);
+        padding: 1.05rem 1rem;
+      }
+
+      .card h3 {
+        margin: 0 0 0.45rem;
+        font-size: clamp(1rem, 1.5vw, 1.25rem);
+      }
+
+      .card p,
+      .card li {
+        margin: 0;
+        color: var(--coop-brown-soft);
+        line-height: 1.45;
+        font-size: clamp(0.9rem, 1.25vw, 1.04rem);
+      }
+
+      ul.tight {
+        margin: 0.3rem 0 0;
+        padding-left: 1.1rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .highlight {
+        color: var(--coop-orange);
+        font-weight: 800;
+      }
+
+      .loop {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+
+      .loop-step {
+        border: 1px solid var(--coop-line);
+        border-radius: 16px;
+        padding: 0.7rem;
+        background: rgba(255, 255, 255, 0.8);
+        min-height: 108px;
+        display: grid;
+        gap: 0.35rem;
+        align-content: start;
+      }
+
+      .loop-step b {
+        color: var(--coop-brown);
+      }
+
+      .loop-step span {
+        font-size: 0.84rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+
+      .pill {
+        border: 1px solid var(--coop-line);
+        border-radius: 999px;
+        padding: 0.34rem 0.72rem;
+        font-size: 0.82rem;
+        color: var(--coop-brown-soft);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+
+      .metric {
+        border-radius: 16px;
+        border: 1px solid var(--coop-line);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 0.8rem;
+      }
+
+      .metric .n {
+        display: block;
+        font-size: clamp(1.3rem, 2.2vw, 2.1rem);
+        font-weight: 800;
+        color: var(--coop-brown);
+      }
+
+      .metric .l {
+        color: var(--coop-brown-soft);
+        font-size: 0.9rem;
+      }
+
+      .footer-note {
+        margin-top: 0.4rem;
+        color: var(--coop-brown-soft);
+        font-size: 0.86rem;
+      }
+
+      .floating-eggs {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .egg {
+        position: absolute;
+        width: 20px;
+        height: 28px;
+        border-radius: 60% 60% 54% 54% / 66% 66% 44% 44%;
+        background: linear-gradient(180deg, #fff 0%, #fff7ef 70%, #ffe7c9 100%);
+        border: 1px solid rgba(79, 46, 31, 0.16);
+        animation: float 9s ease-in-out infinite;
+        opacity: 0.45;
+      }
+
+      .egg:nth-child(1) {
+        left: 8%;
+        top: 24%;
+        animation-delay: 0s;
+      }
+      .egg:nth-child(2) {
+        left: 89%;
+        top: 18%;
+        animation-delay: 1.2s;
+      }
+      .egg:nth-child(3) {
+        left: 78%;
+        top: 74%;
+        animation-delay: 2.1s;
+      }
+      .egg:nth-child(4) {
+        left: 18%;
+        top: 80%;
+        animation-delay: 3.4s;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-8px) rotate(3deg);
+        }
+      }
+
+      .nav {
+        position: fixed;
+        bottom: 0.9rem;
+        right: 1rem;
+        z-index: 25;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: rgba(255, 252, 249, 0.88);
+        border: 1px solid var(--coop-line);
+        border-radius: 999px;
+        padding: 0.3rem;
+        box-shadow: 0 10px 24px rgba(79, 46, 31, 0.12);
+      }
+
+      .nav button {
+        border: 1px solid var(--coop-line);
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--coop-brown);
+        border-radius: 999px;
+        width: 2.1rem;
+        height: 2.1rem;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+
+      .nav button:hover {
+        transform: translateY(-1px);
+      }
+
+      .counter {
+        min-width: 3.1rem;
+        text-align: center;
+        font-size: 0.82rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .hero-logo {
+        width: min(360px, 60vw);
+      }
+
+      .tagline {
+        font-size: clamp(1.15rem, 2vw, 1.6rem);
+        font-weight: 700;
+        color: var(--coop-brown-soft);
+      }
+
+      .roadmap {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+      }
+
+      .roadmap .card {
+        min-height: 180px;
+      }
+
+      .diagram-card {
+        border: 1px solid var(--coop-line);
+        border-radius: 22px;
+        background: var(--coop-panel);
+        box-shadow: var(--coop-shadow);
+        padding: 1.2rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .diagram-card h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .diagram-svg {
+        width: 100%;
+        height: auto;
+        max-height: 320px;
+      }
+
+      .arch-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+      }
+
+      .arch-node {
+        border: 2px solid var(--coop-line);
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        background: rgba(255,255,255,0.6);
+        position: relative;
+      }
+
+      .arch-node.primary {
+        border-color: var(--coop-green);
+        background: rgba(90,125,16,0.08);
+      }
+
+      .arch-node.secondary {
+        border-color: var(--coop-orange);
+        background: rgba(253,138,1,0.08);
+      }
+
+      .arch-node.tertiary {
+        border-color: var(--coop-brown-soft);
+        background: rgba(79,46,31,0.06);
+      }
+
+      .arch-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--coop-brown-soft);
+        font-size: 1.5rem;
+      }
+
+      @media (max-width: 980px) {
+        .slide {
+          padding: 5.2rem 1rem 4.8rem;
+          align-content: start;
+          overflow-y: auto;
+        }
+
+        .grid-2,
+        .grid-3,
+        .metrics,
+        .roadmap {
+          grid-template-columns: 1fr;
+        }
+
+        .loop {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .brand img {
+          width: 94px;
+        }
+
+        .meta {
+          display: none;
+        }
+      }
+
+      @media print {
+        .topbar,
+        .nav {
+          display: none;
+        }
+
+        body,
+        html {
+          overflow: visible;
+        }
+
+        .slide {
+          position: relative;
+          page-break-after: always;
+          opacity: 1 !important;
+          transform: none !important;
+          min-height: 100vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="deck">
+      <header class="topbar">
+        <div class="brand">
+          <img src="../docs/assets/branding/coop-wordmark-flat.png" alt="Coop" />
+          <div class="meta">Browser-first • Local-first • Shared intelligence</div>
+        </div>
+        <div class="progress-wrap" aria-hidden="true">
+          <div class="progress" id="progress"></div>
+        </div>
+      </header>
+
+      <main class="slides" id="slides">
+        <section class="slide active" data-title="Title">
+          <div class="floating-eggs">
+            <div class="egg"></div><div class="egg"></div><div class="egg"></div><div class="egg"></div>
+          </div>
+          <img class="hero-logo reveal" src="../docs/assets/branding/coop-wordmark-glow.png" alt="Coop Town" onerror="this.style.display='none'" />
+          <h1 class="reveal">Turn loose tabs into shared intelligence and fundable next steps.</h1>
+          <p class="tagline reveal">No more chickens loose.</p>
+          <p class="subtitle reveal">
+            Coop is a browser-first, local-first coordination membrane for communities, projects,
+            families, and personal knowledge loops.
+          </p>
+          <div class="pill-row reveal">
+            <span class="pill">Extension-first runtime</span>
+            <span class="pill">Passkey-first identity</span>
+            <span class="pill">Explicit push privacy model</span>
+            <span class="pill">Live peer sync</span>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Problem">
+          <span class="kicker reveal">The gap we close</span>
+          <h2 class="reveal">Communities don’t lack information. They lack <span class="highlight">memory coordination</span>.</h2>
+          <div class="grid-2 reveal">
+            <article class="card">
+              <h3>What exists today</h3>
+              <ul class="tight">
+                <li>Loose tabs and half-read research</li>
+                <li>Scattered notes across private tools</li>
+                <li>Meeting insights that disappear</li>
+                <li>Funding leads without evidence bundles</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>What breaks</h3>
+              <ul class="tight">
+                <li>Repeated research and fragmented context</li>
+                <li>No shared narrative between sessions</li>
+                <li>Weak handoffs between members</li>
+                <li>Capital formation blocked by missing proof</li>
+              </ul>
+            </article>
+          </div>
+          <p class="footer-note reveal">Coop’s core promise: gather, review in context, publish intentionally, and keep durable receipts.</p>
+        </section>
+
+        <section class="slide" data-title="Loop">
+          <span class="kicker reveal">V1 working loop</span>
+          <h2 class="reveal">From capture to shared memory in one legible flow.</h2>
+          <div class="diagram-card reveal" style="margin-bottom:1rem;">
+            <svg class="diagram-svg" viewBox="0 0 700 140" xmlns="http://www.w3.org/2000/svg" style="max-height:160px;">
+              <!-- Step 1 -->
+              <circle cx="60" cy="70" r="35" fill="rgba(90,125,16,0.15)" stroke="#5a7d10" stroke-width="2"/>
+              <text x="60" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Launch</text>
+              <text x="60" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Coop</text>
+              
+              <!-- Arrow 1 -->
+              <path d="M 95 70 L 115 70" stroke="#6b4a36" stroke-width="2" marker-end="url(#arr)"/>
+              
+              <!-- Step 2 -->
+              <circle cx="150" cy="70" r="35" fill="rgba(253,138,1,0.15)" stroke="#fd8a01" stroke-width="2"/>
+              <text x="150" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Join</text>
+              <text x="150" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Peers</text>
+              
+              <!-- Arrow 2 -->
+              <path d="M 185 70 L 205 70" stroke="#6b4a36" stroke-width="2" marker-end="url(#arr)"/>
+              
+              <!-- Step 3 -->
+              <circle cx="240" cy="70" r="35" fill="rgba(90,125,16,0.15)" stroke="#5a7d10" stroke-width="2"/>
+              <text x="240" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Capture</text>
+              <text x="240" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Tabs</text>
+              
+              <!-- Arrow 3 -->
+              <path d="M 275 70 L 295 70" stroke="#6b4a36" stroke-width="2" marker-end="url(#arr)"/>
+              
+              <!-- Step 4 -->
+              <circle cx="330" cy="70" r="35" fill="rgba(253,138,1,0.15)" stroke="#fd8a01" stroke-width="2"/>
+              <text x="330" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Review</text>
+              <text x="330" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Roost</text>
+              
+              <!-- Arrow 4 -->
+              <path d="M 365 70 L 385 70" stroke="#6b4a36" stroke-width="2" marker-end="url(#arr)"/>
+              
+              <!-- Step 5 -->
+              <circle cx="420" cy="70" r="35" fill="rgba(79,46,31,0.1)" stroke="#4f2e1f" stroke-width="2"/>
+              <text x="420" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Publish</text>
+              <text x="420" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Feed</text>
+              
+              <!-- Arrow 5 -->
+              <path d="M 455 70 L 475 70" stroke="#6b4a36" stroke-width="2" marker-end="url(#arr)"/>
+              
+              <!-- Step 6 -->
+              <circle cx="510" cy="70" r="35" fill="rgba(90,125,16,0.15)" stroke="#5a7d10" stroke-width="2"/>
+              <text x="510" y="65" text-anchor="middle" font-size="11" fill="#4f2e1f" font-weight="bold">Archive</text>
+              <text x="510" y="78" text-anchor="middle" font-size="9" fill="#6b4a36">Receipts</text>
+              
+              <!-- Arrow 6 (loop back) -->
+              <path d="M 545 70 L 580 70 Q 600 70 600 50 L 600 25 Q 600 10 580 10 L 120 10 Q 100 10 100 25 L 100 40" stroke="#6b4a36" stroke-width="1.5" fill="none" stroke-dasharray="4,3"/>
+              <text x="350" y="6" text-anchor="middle" font-size="10" fill="#6b4a36" font-style="italic">Continuous loop</text>
+              
+              <defs>
+                <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#6b4a36"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+          <div class="loop reveal">
+            <div class="loop-step"><b>1. Launch Coop</b><span>Create coop + passkey identity + Safe state (mock/live)</span></div>
+            <div class="loop-step"><b>2. Join peers</b><span>Trusted/member invites and shared state bootstrap</span></div>
+            <div class="loop-step"><b>3. Round up tabs</b><span>Loose Chickens captured locally first</span></div>
+            <div class="loop-step"><b>4. Review in Roost</b><span>Edit drafts, score relevance, decide what matters</span></div>
+            <div class="loop-step"><b>5. Publish to Feed</b><span>Explicit push into shared coop memory</span></div>
+            <div class="loop-step"><b>6. Archive receipts</b><span>Snapshot/artifact export + Filecoin-ready proof trail</span></div>
+          </div>
+          <div class="grid-2 reveal">
+            <article class="card">
+              <h3>Key privacy boundary</h3>
+              <p>
+                Observation and shaping can happen locally. Nothing enters shared coop state until a human
+                explicitly pushes it.
+              </p>
+            </article>
+            <article class="card">
+              <h3>Why this matters</h3>
+              <p>
+                It keeps trust high while still enabling collaborative, live shared intelligence.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Product surfaces">
+          <span class="kicker reveal">Current product state</span>
+          <h2 class="reveal">Extension is the node. App is the landing + receiver shell.</h2>
+          <div class="grid-3 reveal">
+            <article class="card">
+              <h3>Extension (primary)</h3>
+              <p>Popup, sidepanel, background runtime, review/publish loop, policy/log visibility.</p>
+            </article>
+            <article class="card">
+              <h3>Receiver PWA</h3>
+              <p>Pairing, private intake capture, sync into extension inbox for conversion and publish.</p>
+            </article>
+            <article class="card">
+              <h3>Shared package</h3>
+              <p>Contracts, flows, policy, archive/onchain/session-key boundaries and testable modules.</p>
+            </article>
+          </div>
+          <div class="metrics reveal">
+            <div class="metric"><span class="n">232</span><span class="l">Files changed in latest upstream push</span></div>
+            <div class="metric"><span class="n">9</span><span class="l">New upstream commits integrated locally</span></div>
+            <div class="metric"><span class="n">3</span><span class="l">Local commits preserved on top</span></div>
+            <div class="metric"><span class="n">6</span><span class="l">Core sidepanel tabs in current UX</span></div>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Architecture">
+          <span class="kicker reveal">System design</span>
+          <h2 class="reveal">Extension-first runtime with bounded execution paths.</h2>
+          <div class="arch-grid reveal">
+            <div class="arch-node primary">
+              <strong>Extension</strong>
+              <div style="font-size:0.85rem;color:var(--coop-brown-soft);margin-top:0.4rem;">Primary node<br/>Capture + Review + Policy</div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node secondary">
+              <strong>Receiver PWA</strong>
+              <div style="font-size:0.85rem;color:var(--coop-brown-soft);margin-top:0.4rem;">Private intake<br/>Pairing + Sync</div>
+            </div>
+            <div class="arch-node tertiary">
+              <strong>Shared Package</strong>
+              <div style="font-size:0.85rem;color:var(--coop-brown-soft);margin-top:0.4rem;">Contracts + Flows<br/>Archive + Onchain</div>
+            </div>
+            <div class="arch-arrow">↔</div>
+            <div class="arch-node tertiary">
+              <strong>Peer Sync</strong>
+              <div style="font-size:0.85rem;color:var(--coop-brown-soft);margin-top:0.4rem;">Yjs + y-webrtc<br/>Live shared state</div>
+            </div>
+          </div>
+          <div class="grid-2 reveal" style="margin-top:1rem;">
+            <article class="diagram-card">
+              <h3>Privacy boundary</h3>
+              <svg class="diagram-svg" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="30" width="100" height="60" rx="12" fill="rgba(90,125,16,0.15)" stroke="#5a7d10" stroke-width="2"/>
+                <text x="60" y="55" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Local</text>
+                <text x="60" y="72" text-anchor="middle" font-size="10" fill="#6b4a36">Observation</text>
+                <text x="60" y="85" text-anchor="middle" font-size="10" fill="#6b4a36">+ Shaping</text>
+                
+                <rect x="150" y="30" width="100" height="60" rx="12" fill="rgba(253,138,1,0.15)" stroke="#fd8a01" stroke-width="2"/>
+                <text x="200" y="55" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Review</text>
+                <text x="200" y="72" text-anchor="middle" font-size="10" fill="#6b4a36">Roost drafts</text>
+                <text x="200" y="85" text-anchor="middle" font-size="10" fill="#6b4a36">Explicit edit</text>
+                
+                <rect x="290" y="30" width="100" height="60" rx="12" fill="rgba(79,46,31,0.1)" stroke="#4f2e1f" stroke-width="2"/>
+                <text x="340" y="55" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Shared</text>
+                <text x="340" y="72" text-anchor="middle" font-size="10" fill="#6b4a36">Coop Feed</text>
+                <text x="340" y="85" text-anchor="middle" font-size="10" fill="#6b4a36">Human push</text>
+                
+                <path d="M 110 60 L 140 60" stroke="#6b4a36" stroke-width="2" marker-end="url(#arrowhead)"/>
+                <path d="M 250 60 L 280 60" stroke="#6b4a36" stroke-width="2" marker-end="url(#arrowhead)"/>
+                
+                <defs>
+                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#6b4a36"/>
+                  </marker>
+                </defs>
+              </svg>
+            </article>
+            <article class="diagram-card">
+              <h3>Execution modes</h3>
+              <svg class="diagram-svg" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                <rect x="20" y="25" width="100" height="70" rx="12" fill="rgba(90,125,16,0.12)" stroke="#5a7d10" stroke-width="2"/>
+                <text x="70" y="50" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Mock</text>
+                <text x="70" y="68" text-anchor="middle" font-size="10" fill="#6b4a36">Local demo</text>
+                <text x="70" y="82" text-anchor="middle" font-size="10" fill="#6b4a36">Offline safe</text>
+                
+                <rect x="150" y="25" width="100" height="70" rx="12" fill="rgba(253,138,1,0.12)" stroke="#fd8a01" stroke-width="2"/>
+                <text x="200" y="50" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Test</text>
+                <text x="200" y="68" text-anchor="middle" font-size="10" fill="#6b4a36">Sepolia</text>
+                <text x="200" y="82" text-anchor="middle" font-size="10" fill="#6b4a36">Safe probes</text>
+                
+                <rect x="280" y="25" width="100" height="70" rx="12" fill="rgba(79,46,31,0.1)" stroke="#4f2e1f" stroke-width="2"/>
+                <text x="330" y="50" text-anchor="middle" font-size="12" fill="#4f2e1f" font-weight="bold">Live</text>
+                <text x="330" y="68" text-anchor="middle" font-size="10" fill="#6b4a36">Arbitrum</text>
+                <text x="330" y="82" text-anchor="middle" font-size="10" fill="#6b4a36">Bounded scope</text>
+                
+                <text x="200" y="108" text-anchor="middle" font-size="11" fill="#6b4a36" font-style="italic">Progressive trust: mock → test → live</text>
+              </svg>
+            </article>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Trust and architecture">
+          <span class="kicker reveal">Safety + architecture posture</span>
+          <h2 class="reveal">Local-first by default. Bounded execution when privileged.</h2>
+          <div class="grid-2 reveal">
+            <article class="card">
+              <h3>Runtime principles</h3>
+              <ul class="tight">
+                <li>Thin runtimes, strong shared contracts</li>
+                <li>Explicit policy + approval + replay protection</li>
+                <li>Mock/live modes surfaced in UI</li>
+                <li>Arbitrum + Sepolia scoped chain posture</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Bounded session-key slice</h3>
+              <ul class="tight">
+                <li>Green Goods garden actions only in phase-1 scope</li>
+                <li>Disallowed actions blocked before send</li>
+                <li>Revoked/expired/exhausted sessions rejected</li>
+                <li>Operator logs remain demo-legible</li>
+              </ul>
+            </article>
+          </div>
+          <p class="subtitle reveal">
+            Coop avoids open-ended autonomous execution in v1 and prioritizes deterministic, auditable action paths.
+          </p>
+        </section>
+
+        <section class="slide" data-title="Validation proof">
+          <span class="kicker reveal">Execution confidence</span>
+          <h2 class="reveal">Named validation suites already exist for the real flow.</h2>
+          <div class="grid-2 reveal">
+            <article class="card">
+              <h3>Suites</h3>
+              <ul class="tight">
+                <li><b>smoke</b> — unit + workspace build</li>
+                <li><b>core-loop</b> — extension create/join/capture/publish</li>
+                <li><b>receiver-slice</b> — pair + sync intake</li>
+                <li><b>production-readiness</b> — lint/build/agent/session key/E2E</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Focused E2E coverage</h3>
+              <ul class="tight">
+                <li><code>e2e/extension.spec.cjs</code></li>
+                <li><code>e2e/receiver-sync.spec.cjs</code></li>
+                <li><code>e2e/app.spec.cjs</code></li>
+              </ul>
+              <p style="margin-top:0.6rem">Validation is already organized as operational entrypoints, not ad-hoc scripts.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Demo flow">
+          <span class="kicker reveal">Live demo narrative</span>
+          <h2 class="reveal">Two people, one coop, visible value in minutes.</h2>
+          <div class="grid-3 reveal">
+            <article class="card">
+              <h3>Operator</h3>
+              <p>Create coop → generate pairing → monitor private intake → convert and publish.</p>
+            </article>
+            <article class="card">
+              <h3>Receiver</h3>
+              <p>Open <code>/pair</code> → capture voice/link/photo on <code>/receiver</code> → confirm inbox state.</p>
+            </article>
+            <article class="card">
+              <h3>Close loop</h3>
+              <p>Publish to Feed, open board route, archive snapshot, export latest receipt.</p>
+            </article>
+          </div>
+          <div class="pill-row reveal">
+            <span class="pill">Environment 1: local/local</span>
+            <span class="pill">Environment 2: local extension + production PWA</span>
+            <span class="pill">Environment 3: production (Vercel + CWS + hosted signaling)</span>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Roadmap">
+          <span class="kicker reveal">Phased build discipline</span>
+          <h2 class="reveal">Ship the membrane first, deepen autonomy later.</h2>
+          <div class="roadmap reveal">
+            <article class="card">
+              <h3>Now (demo-critical)</h3>
+              <ul class="tight">
+                <li>Core extension loop polish</li>
+                <li>Receiver pair/sync reliability</li>
+                <li>Feed + board legibility</li>
+                <li>Archive/export confidence</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Next (platform)</h3>
+              <ul class="tight">
+                <li>Trusted-node runtime hardening</li>
+                <li>Local enhancement provider path</li>
+                <li>Live edges: Safe / archive / signaling</li>
+                <li>Multi-coop UX improvements</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Later (agentic)</h3>
+              <ul class="tight">
+                <li>Scoped delegated execution expansion</li>
+                <li>Richer ritual facilitation modes</li>
+                <li>Structured attestations + approvals</li>
+                <li>Broader cross-space presets</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Closing">
+          <span class="kicker reveal">Closing</span>
+          <h2 class="reveal">Coop makes collective intelligence operational — without surrendering privacy by default.</h2>
+          <p class="subtitle reveal">
+            Keep capture local. Review intentionally. Publish what matters. Leave with shared memory and actionable next steps.
+          </p>
+          <div class="grid-2 reveal">
+            <article class="card">
+              <h3>Immediate ask</h3>
+              <p>Support the next milestone: production signaling, polish pass, and proof-backed demo package.</p>
+            </article>
+            <article class="card" style="display:grid; place-items:center; text-align:center;">
+              <img src="../docs/assets/branding/coop-mark-glow.png" alt="Coop mark" style="max-width:140px; margin-bottom:0.45rem;" onerror="this.style.display='none'" />
+              <strong style="font-size:1.05rem">Coop Town</strong>
+              <span style="color:var(--coop-brown-soft)">Get your chickens in order.</span>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <nav class="nav" aria-label="Slide controls">
+        <button id="prev" title="Previous slide">←</button>
+        <div class="counter" id="counter">1 / 9</div>
+        <button id="next" title="Next slide">→</button>
+      </nav>
+    </div>
+
+    <script>
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const progress = document.getElementById('progress');
+      const counter = document.getElementById('counter');
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
+      let index = 0;
+
+      function renderSlide(i) {
+        index = Math.max(0, Math.min(slides.length - 1, i));
+        slides.forEach((s, idx) => s.classList.toggle('active', idx === index));
+        const pct = ((index + 1) / slides.length) * 100;
+        progress.style.width = `${pct}%`;
+        counter.textContent = `${index + 1} / ${slides.length}`;
+        document.title = `Coop — ${slides[index].dataset.title || 'Presentation'}`;
+      }
+
+      function next() {
+        renderSlide(index + 1);
+      }
+
+      function prev() {
+        renderSlide(index - 1);
+      }
+
+      prevBtn.addEventListener('click', prev);
+      nextBtn.addEventListener('click', next);
+
+      document.addEventListener('keydown', (e) => {
+        if (['ArrowRight', 'PageDown', ' '].includes(e.key)) {
+          e.preventDefault();
+          next();
+        }
+        if (['ArrowLeft', 'PageUp'].includes(e.key)) {
+          e.preventDefault();
+          prev();
+        }
+        if (e.key === 'Home') renderSlide(0);
+        if (e.key === 'End') renderSlide(slides.length - 1);
+      });
+
+      // touch swipe
+      let touchStartX = null;
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].clientX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        if (touchStartX == null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 42) {
+          if (dx < 0) next();
+          if (dx > 0) prev();
+        }
+        touchStartX = null;
+      }, { passive: true });
+
+      // simple wheel paging (desktop)
+      let wheelLock = false;
+      document.addEventListener('wheel', (e) => {
+        if (wheelLock) return;
+        if (Math.abs(e.deltaY) < 30) return;
+        wheelLock = true;
+        if (e.deltaY > 0) next();
+        else prev();
+        setTimeout(() => (wheelLock = false), 360);
+      }, { passive: true });
+
+      renderSlide(0);
+    </script>
+  </body>
+</html>

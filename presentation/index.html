@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coop — Presentation Hub</title>
+    <style>
+      :root {
+        --coop-cream: #fcf5ef;
+        --coop-brown: #4f2e1f;
+        --coop-brown-soft: #6b4a36;
+        --coop-green: #5a7d10;
+        --coop-orange: #fd8a01;
+        --coop-line: rgba(79, 46, 31, 0.16);
+        --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", Inter, sans-serif;
+        color: var(--coop-brown);
+        background: var(--coop-cream);
+        min-height: 100vh;
+      }
+
+      .header {
+        padding: 2rem 5vw;
+        background: 
+          radial-gradient(circle at 80% 0%, rgba(90, 125, 16, 0.15), transparent 40vw),
+          radial-gradient(circle at 20% 100%, rgba(253, 138, 1, 0.12), transparent 35vw),
+          var(--coop-cream);
+        border-bottom: 1px solid var(--coop-line);
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        margin: 0 0 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+      }
+
+      .header h1::before {
+        content: "🐔";
+        font-size: 1.2em;
+      }
+
+      .header p {
+        color: var(--coop-brown-soft);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 5vw;
+      }
+
+      .section {
+        margin-bottom: 3rem;
+      }
+
+      .section-title {
+        font-size: 1.3rem;
+        margin: 0 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+      }
+
+      .card {
+        background: rgba(255, 252, 249, 0.9);
+        border: 1px solid var(--coop-line);
+        border-radius: 20px;
+        padding: 1.5rem;
+        transition: all 200ms ease;
+        text-decoration: none;
+        color: inherit;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--coop-shadow);
+        border-color: rgba(90, 125, 16, 0.3);
+      }
+
+      .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 1.5rem;
+        background: rgba(90, 125, 16, 0.1);
+      }
+
+      .card-icon.orange { background: rgba(253, 138, 1, 0.1); }
+      .card-icon.blue { background: rgba(79, 46, 31, 0.08); }
+
+      .card h3 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--coop-brown-soft);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      .card-meta {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+      }
+
+      .tag {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 99px;
+        background: rgba(90, 125, 16, 0.1);
+        color: var(--coop-green);
+      }
+
+      .tag.orange {
+        background: rgba(253, 138, 1, 0.1);
+        color: var(--coop-orange);
+      }
+
+      .status-bar {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255, 252, 249, 0.95);
+        border-top: 1px solid var(--coop-line);
+        padding: 1rem 5vw;
+        backdrop-filter: blur(10px);
+      }
+
+      .status-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--coop-brown-soft);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--coop-green);
+      }
+
+      .status-dot.orange {
+        background: var(--coop-orange);
+      }
+
+      a.external::after {
+        content: " ↗";
+        font-size: 0.8em;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>Coop Presentation Hub</h1>
+      <p>All demo materials, mockups, and documentation in one place</p>
+    </header>
+
+    <div class="container">
+      <!-- Core Presentations -->
+      <section class="section">
+        <h2 class="section-title">📊 Core Presentations</h2>
+        <div class="grid">
+          <a href="coop-presentation.html" class="card">
+            <div class="card-icon">🎯</div>
+            <h3>Pitch Deck</h3>
+            <p>Full pitch presentation with 9 slides covering problem, solution, product, architecture, and roadmap.</p>
+            <div class="card-meta">
+              <span class="tag">9 slides</span>
+              <span class="tag orange">Keyboard nav</span>
+            </div>
+          </a>
+
+          <a href="user-flows.html" class="card">
+            <div class="card-icon orange">🌊</div>
+            <h3>User Flows</h3>
+            <p>6 complete user journeys from onboarding to weekly rituals with visual flow diagrams.</p>
+            <div class="card-meta">
+              <span class="tag">6 flows</span>
+              <span class="tag orange">Step-by-step</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- UI Mockups -->
+      <section class="section">
+        <h2 class="section-title">🎨 UI Mockups</h2>
+        <div class="grid">
+          <a href="extension-mockup.html" class="card">
+            <div class="card-icon">🧩</div>
+            <h3>Extension Mockups</h3>
+            <p>Sidepanel (Roost view), popup active/idle states. Full Coop styling with hover interactions.</p>
+            <div class="card-meta">
+              <span class="tag">Sidepanel</span>
+              <span class="tag">Popup</span>
+              <span class="tag orange">Interactive</span>
+            </div>
+          </a>
+
+          <a href="app-mockup.html" class="card">
+            <div class="card-icon orange">📱</div>
+            <h3>App & Receiver Mockups</h3>
+            <p>Landing page, receiver PWA capture screen, and pairing flow with iPhone-style frame.</p>
+            <div class="card-meta">
+              <span class="tag">Landing</span>
+              <span class="tag">Receiver</span>
+              <span class="tag">Pairing</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Diagrams -->
+      <section class="section">
+        <h2 class="section-title">📐 Architecture Diagrams</h2>
+        <div class="grid">
+          <a href="diagrams/system-architecture.html" class="card">
+            <div class="card-icon blue">🏗️</div>
+            <h3>System Architecture</h3>
+            <p>Component diagram showing Extension → Receiver → Shared Package → Peer Sync relationships.</p>
+            <div class="card-meta">
+              <span class="tag">SVG</span>
+              <span class="tag">Components</span>
+            </div>
+          </a>
+
+          <a href="diagrams/data-flow.html" class="card">
+            <div class="card-icon blue">🌊</div>
+            <h3>Data Flow</h3>
+            <p>Capture → Local process → Review → Publish → Sync → Archive flow with privacy boundaries.</p>
+            <div class="card-meta">
+              <span class="tag">SVG</span>
+              <span class="tag">Privacy</span>
+            </div>
+          </a>
+
+          <a href="diagrams/trust-model.html" class="card">
+            <div class="card-icon blue">🛡️</div>
+            <h3>Trust Model</h3>
+            <p>Mock → Test → Live execution modes with policy boundaries and session-key scope.</p>
+            <div class="card-meta">
+              <span class="tag">Security</span>
+              <span class="tag">Policy</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Quick Links -->
+      <section class="section">
+        <h2 class="section-title">🔗 Quick Links</h2>
+        <div class="grid">
+          <a href="../docs/coop-os-architecture-vnext.md" class="card external">
+            <div class="card-icon">📄</div>
+            <h3>Architecture Spec</h3>
+            <p>Full v1 build plan and system design documentation.</p>
+          </a>
+
+          <a href="../docs/demo-and-deploy-runbook.md" class="card external">
+            <div class="card-icon orange">🚀</div>
+            <h3>Demo Runbook</h3>
+            <p>Step-by-step demo scripts for all environments.</p>
+          </a>
+
+          <a href="../docs/testing-and-validation.md" class="card external">
+            <div class="card-icon blue">✓</div>
+            <h3>Testing Guide</h3>
+            <p>Validation suites and test entrypoints.</p>
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-content">
+        <div class="status-item">
+          <span class="status-dot"></span>
+          <span>Last updated: March 14, 2026</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot orange"></span>
+          <span>6 user flows • 2 UI mockups • 3 architecture diagrams</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
