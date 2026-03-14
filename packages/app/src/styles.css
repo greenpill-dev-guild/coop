@@ -457,86 +457,209 @@ pre {
   }
 }
 
-.receiver-shell {
-  padding-bottom: calc(6.75rem + env(safe-area-inset-bottom));
+/* ── Receiver shell: fixed app frame ── */
+
+html.has-receiver {
+  overscroll-behavior: none;
 }
 
-.receiver-topbar,
-.receiver-main {
-  position: relative;
-  z-index: 1;
-  width: min(1120px, calc(100% - 2rem));
-  margin: 0 auto;
+.receiver-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.1), transparent 28rem),
+    radial-gradient(circle at top right, rgba(253, 138, 1, 0.1), transparent 24rem),
+    linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 36%, #fffdfb 100%);
 }
+
+/* ── Compact top bar ── */
 
 .receiver-topbar {
-  padding-top: 1rem;
-  padding-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: calc(env(safe-area-inset-top, 0px) + 0.6rem) 1rem 0.5rem;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
-.receiver-wordmark-link {
+.receiver-mark-link {
   display: inline-flex;
+  flex-shrink: 0;
 }
 
-.receiver-brand-lockup {
-  display: grid;
-  gap: 0.35rem;
+.receiver-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
-.receiver-tagline {
+.receiver-screen-title {
   margin: 0;
-  color: var(--coop-brown-soft);
-  font-size: 0.94rem;
+  font-family: var(--coop-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--coop-brown);
 }
+
+.receiver-status-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.status-dot.is-online {
+  background: var(--coop-green);
+}
+
+.status-dot.is-offline {
+  background: var(--coop-mist);
+}
+
+.receiver-status-summary {
+  font-size: 0.72rem;
+  color: var(--coop-brown-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+/* ── Scrollable main area ── */
 
 .receiver-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
   display: grid;
-  gap: 1.2rem;
-  padding-top: 1.4rem;
-  padding-bottom: 1rem;
+  gap: 1rem;
+  padding: 0.75rem 1rem calc(5rem + env(safe-area-inset-bottom));
+  z-index: 1;
 }
 
-.receiver-status-bar,
+.receiver-main::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Settings drawer (collapsed by default) ── */
+
+.receiver-settings-drawer {
+  border-radius: var(--coop-radius-input);
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 252, 249, 0.85);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.receiver-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--coop-brown-soft);
+}
+
+.receiver-settings-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.receiver-settings-toggle::before {
+  content: "▸";
+  font-size: 0.7rem;
+  transition: transform var(--coop-ease);
+}
+
+.receiver-settings-drawer[open] .receiver-settings-toggle::before {
+  transform: rotate(90deg);
+}
+
+.receiver-settings-toggle-label {
+  flex-shrink: 0;
+}
+
+.receiver-settings-message {
+  color: var(--coop-brown-soft);
+  font-weight: 400;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiver-settings-content {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0 0.85rem 0.85rem;
+}
+
+.receiver-status-grid {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.receiver-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(79, 46, 31, 0.06);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--coop-brown);
+}
+
+.receiver-settings-detail {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--coop-brown-soft);
+}
+
+.receiver-settings-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Receiver content cards ── */
+
 .receiver-card,
 .nest-item-card {
   position: relative;
   overflow: hidden;
 }
 
-.receiver-status-bar {
-  padding: 1.6rem;
-}
-
-.receiver-status-grid,
 .receiver-grid,
 .receiver-actions-grid {
   display: grid;
   gap: 1rem;
 }
 
-.receiver-status-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 1.2rem;
-}
-
 .receiver-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .receiver-card {
-  padding: 1.5rem;
-}
-
-.receiver-mini-card {
-  min-height: 100%;
-}
-
-.receiver-helper-row {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
+  padding: 1.2rem;
 }
 
 .receiver-form {
@@ -789,26 +912,71 @@ audio {
   }
 }
 
-@media (max-width: 1024px) {
-  .receiver-grid,
-  .receiver-status-grid,
-  .receiver-actions-grid {
-    grid-template-columns: 1fr;
+/* ── Receiver: touch feedback ── */
+
+.receiver-shell button,
+.receiver-shell a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.receiver-shell button:active,
+.receiver-shell .receiver-appbar-link:active {
+  transform: scale(0.97);
+}
+
+/* Kill base hover in receiver — touch-only by default */
+.receiver-shell .button:hover {
+  transform: none;
+}
+
+/* Re-enable hover only for pointer devices */
+@media (hover: hover) and (pointer: fine) {
+  .receiver-shell .button:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* ── Receiver: heading scale override ── */
+
+.receiver-shell h1 {
+  font-size: 1.15rem;
+}
+
+.receiver-shell h2 {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.receiver-shell .eyebrow {
+  font-size: 0.7rem;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Receiver: responsive ── */
+
+@media (min-width: 768px) {
+  .receiver-main {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .receiver-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .receiver-main {
+    max-width: 64rem;
   }
 }
 
 @media (max-width: 720px) {
-  .receiver-main {
-    padding-top: 1.5rem;
-  }
-
-  .receiver-status-bar,
-  .receiver-card {
-    padding: 1.2rem;
-  }
-
   .egg-button {
-    width: min(16rem, 78vw);
+    width: min(14rem, 72vw);
   }
 }
 

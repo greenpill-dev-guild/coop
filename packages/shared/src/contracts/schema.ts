@@ -811,35 +811,38 @@ export const ritualDefinitionSchema = z.object({
   defaultCapturePosture: z.string().min(1),
 });
 
-export const onchainStateSchema = z
-  .object({
-    chainId: z.number().int().positive(),
-    chainKey: coopChainKeySchema.default('sepolia'),
-    safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-    senderAddress: z
-      .string()
-      .regex(/^0x[a-fA-F0-9]{40}$/)
-      .optional(),
-    safeCapability: capabilityStateSchema,
-    statusNote: z.string(),
-    deploymentTxHash: z
-      .string()
-      .regex(/^0x[a-fA-F0-9]+$/)
-      .optional(),
-    userOperationHash: z
-      .string()
-      .regex(/^0x[a-fA-F0-9]+$/)
-      .optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['chainId'],
-        message: `chainId must match the configured ${value.chainKey} network.`,
-      });
-    }
-  });
+export const onchainStateSchema = z.preprocess(
+  normalizeLegacyOnchainState,
+  z
+    .object({
+      chainId: z.number().int().positive(),
+      chainKey: coopChainKeySchema.default('sepolia'),
+      safeAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+      senderAddress: z
+        .string()
+        .regex(/^0x[a-fA-F0-9]{40}$/)
+        .optional(),
+      safeCapability: capabilityStateSchema,
+      statusNote: z.string(),
+      deploymentTxHash: z
+        .string()
+        .regex(/^0x[a-fA-F0-9]+$/)
+        .optional(),
+      userOperationHash: z
+        .string()
+        .regex(/^0x[a-fA-F0-9]+$/)
+        .optional(),
+    })
+    .superRefine((value, ctx) => {
+      if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['chainId'],
+          message: `chainId must match the configured ${value.chainKey} network.`,
+        });
+      }
+    }),
+);
 
 export const syncRoomConfigSchema = z.object({
   coopId: z.string().min(1),

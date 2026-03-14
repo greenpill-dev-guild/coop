@@ -604,7 +604,7 @@ export function OperatorConsole(props: OperatorConsoleProps) {
       </article>
 
       <article className="panel-card">
-        <h2>Helper Runs</h2>
+        <h2>Trusted Helper Runs</h2>
         {props.skillRuns.slice(0, 16).map((run) => (
           <article className="operator-log-entry" key={run.id}>
             <div className="badge-row">

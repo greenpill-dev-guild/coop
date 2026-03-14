@@ -1322,6 +1322,14 @@ export function RootApp({
     };
   }, [refreshLocalState]);
 
+  // Toggle html class for receiver scroll containment
+  useEffect(() => {
+    const isReceiver =
+      route.kind !== 'landing' && route.kind !== 'board' && route.kind !== 'not-found';
+    document.documentElement.classList.toggle('has-receiver', isReceiver);
+    return () => document.documentElement.classList.remove('has-receiver');
+  }, [route.kind]);
+
   useEffect(() => {
     capturesRef.current = captures;
   }, [captures]);
@@ -1555,86 +1563,80 @@ export function RootApp({
     return <BoardView coopId={route.coopId} snapshot={boardSnapshot} />;
   }
 
+  const screenTitle = route.kind === 'pair' ? 'Pair' : route.kind === 'inbox' ? 'Roost' : 'Hatch';
+
   return (
-    <div className="page-shell receiver-shell">
-      <div className="backdrop" />
-      <header className="topbar receiver-topbar">
-        <div className="receiver-brand-lockup">
-          <a
-            className="receiver-wordmark-link"
-            href="/"
-            onClick={(event) => {
-              event.preventDefault();
-              navigate('/');
-            }}
-          >
-            <img className="wordmark" src="/branding/coop-wordmark-flat.png" alt="Coop" />
-          </a>
-          <p className="receiver-tagline">No more chickens loose</p>
+    <div className="receiver-shell">
+      <header className="receiver-topbar">
+        <a
+          className="receiver-mark-link"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('/');
+          }}
+        >
+          <img className="receiver-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
+        </a>
+        <h1 className="receiver-screen-title">{screenTitle}</h1>
+        <div className="receiver-status-dots">
+          <span className={online ? 'status-dot is-online' : 'status-dot is-offline'} />
+          <span className="receiver-status-summary">
+            {online ? 'Online' : 'Offline'} · {pairingStatusLabel(pairingStatus?.status)} ·{' '}
+            {captures.length} items
+          </span>
         </div>
       </header>
 
       <main className="receiver-main">
-        <section className="receiver-status-bar nest-card">
-          <div>
-            <p className="eyebrow">Pocket Coop</p>
-            <h1>
-              {route.kind === 'pair'
-                ? 'Find your coop'
-                : route.kind === 'inbox'
-                  ? 'Your roost'
-                  : 'Hatch something'}
-            </h1>
-          </div>
-          <div className="receiver-status-grid">
-            <div className="state-card receiver-mini-card">
-              <div className="state-pill">{online ? 'Online' : 'Offline'}</div>
-              <p>
-                {online
-                  ? 'Ready to sync when the extension is listening.'
-                  : 'Still collecting locally until the link comes back.'}
-              </p>
+        <details className="receiver-settings-drawer">
+          <summary className="receiver-settings-toggle">
+            <span className="receiver-settings-toggle-label">Settings &amp; status</span>
+            {message ? <span className="receiver-settings-message">{message}</span> : null}
+          </summary>
+          <div className="receiver-settings-content">
+            <div className="receiver-status-grid">
+              <div className="receiver-status-chip">
+                <span className={online ? 'status-dot is-online' : 'status-dot is-offline'} />
+                {online ? 'Online' : 'Offline'}
+              </div>
+              <div className="receiver-status-chip">
+                <span
+                  className={
+                    pairingStatus?.status === 'ready'
+                      ? 'status-dot is-online'
+                      : 'status-dot is-offline'
+                  }
+                />
+                {pairingStatusLabel(pairingStatus?.status)}
+              </div>
+              <div className="receiver-status-chip">{captures.length} items</div>
             </div>
-            <div className="state-card receiver-mini-card">
-              <div className="state-pill">{pairingStatusLabel(pairingStatus?.status)}</div>
-              <p>{pairing ? `${pairedNestLabel}. ${pairingStatus?.message}` : pairedNestLabel}</p>
-            </div>
-            <div className="state-card receiver-mini-card">
-              <div className="state-pill">{captures.length} items</div>
-              <p>
-                {newestCapture
-                  ? newestCapture.title
-                  : 'No nest items yet. Hatch the first one from /receiver.'}
-              </p>
+            {pairing ? <p className="receiver-settings-detail">{pairedNestLabel}</p> : null}
+            <div className="receiver-settings-actions">
+              {installPrompt ? (
+                <button
+                  className="button button-secondary button-small"
+                  onClick={installApp}
+                  type="button"
+                >
+                  Install
+                </button>
+              ) : null}
+              {browserUxCapabilities.canNotify ? (
+                <button
+                  className="button button-secondary button-small"
+                  onClick={() =>
+                    void setReceiverNotificationPreference(!receiverNotificationsEnabled)
+                  }
+                  type="button"
+                >
+                  {receiverNotificationsEnabled ? 'Notifications off' : 'Notifications on'}
+                </button>
+              ) : null}
             </div>
           </div>
-          <div className="receiver-helper-row">
-            {installPrompt ? (
-              <button
-                className="button button-secondary button-small"
-                onClick={installApp}
-                type="button"
-              >
-                Install Pocket Coop
-              </button>
-            ) : null}
-            {browserUxCapabilities.canNotify ? (
-              <button
-                className="button button-secondary button-small"
-                onClick={() =>
-                  void setReceiverNotificationPreference(!receiverNotificationsEnabled)
-                }
-                type="button"
-              >
-                {receiverNotificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
-              </button>
-            ) : null}
-            {notificationPermission !== 'unsupported' ? (
-              <span className="quiet-note">Notifications: {notificationPermission}</span>
-            ) : null}
-            {message ? <span className="quiet-note">{message}</span> : null}
-          </div>
-        </section>
+        </details>
 
         {route.kind === 'pair' ? (
           <section className="receiver-grid">

@@ -358,3 +358,25 @@ export interface RuntimeActionResponse<T = unknown> {
 export async function sendRuntimeMessage<T = unknown>(message: RuntimeRequest) {
   return chrome.runtime.sendMessage(message) as Promise<RuntimeActionResponse<T>>;
 }
+
+/**
+ * Messages pushed from the background service worker to the sidepanel.
+ * These are fire-and-forget notifications, not request/response pairs.
+ */
+export type BackgroundNotification = { type: 'DASHBOARD_UPDATED' };
+
+/**
+ * Notify the sidepanel that dashboard-relevant state has changed.
+ * Silently ignores the expected "Receiving end does not exist" error
+ * (when no sidepanel listener is open) but warns on unexpected failures.
+ */
+export function notifyDashboardUpdated(): Promise<void> {
+  return chrome.runtime
+    .sendMessage({ type: 'DASHBOARD_UPDATED' } satisfies BackgroundNotification)
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('Receiving end does not exist')) {
+        console.warn('[notifyDashboardUpdated] unexpected error:', err);
+      }
+    });
+}

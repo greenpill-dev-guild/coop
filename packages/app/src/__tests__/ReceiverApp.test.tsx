@@ -39,7 +39,7 @@ describe('receiver app routes', () => {
       render(<RootApp />);
     });
 
-    expect(await screen.findByRole('heading', { name: /hatch something/i })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
     expect(screen.getByRole('navigation', { name: /receiver navigation/i })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Mate', exact: true })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Hatch', exact: true })).toBeVisible();
@@ -47,7 +47,7 @@ describe('receiver app routes', () => {
     expect(screen.getByRole('button', { name: /start recording/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /take photo/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /attach file/i })).toBeVisible();
-    expect(screen.getByText(/local-only nest/i)).toBeVisible();
+    expect(screen.getAllByText(/not paired/i).length).toBeGreaterThan(0);
   });
 
   it('requires explicit confirmation before accepting a pasted pairing payload', async () => {
@@ -67,7 +67,7 @@ describe('receiver app routes', () => {
       render(<RootApp />);
     });
 
-    expect(await screen.findByRole('heading', { name: /find your coop/i })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: /^Pair$/i })).toBeVisible();
 
     fireEvent.change(screen.getByLabelText(/nest code or coop link/i), {
       target: { value: pairingCode },
@@ -86,9 +86,9 @@ describe('receiver app routes', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByRole('heading', { name: /hatch something/i })).toBeVisible();
+        expect(screen.getByRole('heading', { name: /^Hatch$/i })).toBeVisible();
         expect(screen.getByText(/paired to river coop as mina/i)).toBeVisible();
-        expect(screen.getByText(/river coop · mina/i)).toBeVisible();
+        expect(screen.getByText(/river coop · mina/i)).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
@@ -173,7 +173,7 @@ describe('receiver app routes', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /your roost/i })).toBeVisible();
+      expect(screen.getByText(/your roost/i)).toBeVisible();
     });
     expect(screen.getAllByText('field-note.txt').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /download local file/i })).toBeVisible();

@@ -1,5 +1,5 @@
-import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import type { Config } from '@docusaurus/types';
 import { coopPrismTheme } from './src/css/coop-prism-theme';
 
 const config: Config = {
@@ -77,7 +77,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Coop — browser-first knowledge commons`,
+      copyright: 'Coop — browser-first knowledge commons',
     },
     prism: {
       theme: coopPrismTheme,

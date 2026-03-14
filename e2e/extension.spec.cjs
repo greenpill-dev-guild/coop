@@ -366,7 +366,7 @@ test.describe('extension workflow', () => {
 
       await creatorProfile.page.getByRole('button', { name: /^(Feed|Coop Feed)$/i }).click();
       await expect(
-        creatorProfile.page.getByRole('heading', { name: /^(Agent Skills|Helper Runs)$/i }),
+        creatorProfile.page.getByRole('heading', { name: /^(Agent Skills|Trusted Helper Runs)$/i }),
       ).toBeVisible();
       await expect(
         creatorProfile.page.getByRole('heading', {
