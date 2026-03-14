@@ -10,6 +10,7 @@ import {
   markReceiverCaptureSyncFailed,
   patchReceiverSyncEnvelope,
 } from '@coop/shared';
+import { buildIceServers } from '@coop/signaling';
 import { AGENT_LOOP_POLL_INTERVAL_MS } from './agent-config';
 import { runAgentCycle } from './agent-runner';
 import type {
@@ -102,7 +103,18 @@ function scheduleProcessQueue(
 
 function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) {
   const doc = createReceiverSyncDoc();
-  const providers = connectReceiverSyncProviders(doc, pairing.roomId, pairing.signalingUrls);
+  const iceServers = buildIceServers({
+    urls: import.meta.env.VITE_COOP_TURN_URLS,
+    username: import.meta.env.VITE_COOP_TURN_USERNAME,
+    credential: import.meta.env.VITE_COOP_TURN_CREDENTIAL,
+  });
+  const providers = connectReceiverSyncProviders(
+    doc,
+    pairing.roomId,
+    pairing.signalingUrls,
+    undefined,
+    iceServers,
+  );
   const relayTransport = resolveBindingTransport({
     webrtcEnabled: Boolean(providers.webrtc),
     relayConfigured: false,

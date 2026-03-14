@@ -14,7 +14,7 @@ import type {
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { OperatorConsole } from '../operator-console';
+import { OperatorConsole } from '../OperatorConsole';
 
 const baseProps = {
   actionLog: [

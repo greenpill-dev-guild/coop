@@ -24,6 +24,7 @@ import type {
   OnchainState,
   PolicyActionClass,
   PrivilegedActionLogEntry,
+  ProviderMode,
   ReceiverCapture,
   ReceiverPairingRecord,
   ReceiverSyncEnvelope,
@@ -72,6 +73,8 @@ export interface DashboardResponse {
     onchainMode: IntegrationMode;
     archiveMode: IntegrationMode;
     sessionMode: SessionMode;
+    providerMode: ProviderMode;
+    privacyMode: 'off' | 'on';
     receiverAppUrl: string;
     signalingUrls: string[];
   };
@@ -199,6 +202,7 @@ export type RuntimeRequest =
       payload: {
         draft: ReviewDraft;
         targetCoopIds: string[];
+        anonymous?: boolean;
       };
     }
   | {
@@ -346,7 +350,49 @@ export type RuntimeRequest =
     }
   | { type: 'revoke-session-capability'; payload: { capabilityId: string } }
   | { type: 'get-session-capabilities' }
-  | { type: 'get-session-capability-log' };
+  | { type: 'get-session-capability-log' }
+  | { type: 'export-agent-manifest'; payload: { coopId: string } }
+  | { type: 'export-agent-log'; payload: { coopId: string; traceId?: string } }
+  | { type: 'get-agent-identity'; payload: { coopId: string } }
+  | { type: 'get-privacy-identity'; payload: { coopId: string; memberId: string } }
+  | { type: 'get-stealth-meta-address'; payload: { coopId: string } }
+  | { type: 'get-membership-commitments'; payload: { coopId: string } }
+  | {
+      type: 'set-coop-archive-config';
+      payload: {
+        coopId: string;
+        publicConfig: {
+          spaceDid: string;
+          delegationIssuer: string;
+          gatewayBaseUrl?: string;
+          allowsFilecoinInfo?: boolean;
+          expirationSeconds?: number;
+        };
+        secrets: {
+          agentPrivateKey?: string;
+          spaceDelegation: string;
+          proofs?: string[];
+        };
+      };
+    }
+  | {
+      type: 'remove-coop-archive-config';
+      payload: { coopId: string };
+    }
+  | {
+      type: 'retrieve-archive-bundle';
+      payload: {
+        coopId: string;
+        receiptId: string;
+      };
+    }
+  | {
+      type: 'anchor-archive-cid';
+      payload: {
+        coopId: string;
+        receiptId: string;
+      };
+    };
 
 export interface RuntimeActionResponse<T = unknown> {
   ok: boolean;

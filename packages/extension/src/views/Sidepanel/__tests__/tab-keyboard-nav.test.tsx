@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TabStrip } from '../tab-strip';
+import { TabStrip } from '../TabStrip';
 
 const tabs = ['Chickens', 'Roost', 'Home', 'Feed'] as const;
 

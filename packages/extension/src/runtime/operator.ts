@@ -9,7 +9,9 @@ import {
 export type PrivilegedFeature =
   | 'live archive uploads'
   | 'live Safe deployments'
-  | 'archive follow-up jobs';
+  | 'archive follow-up jobs'
+  | 'archive CID anchoring'
+  | 'erc8004 identity registration';
 
 export function requireAnchorModeForFeature(input: {
   capability: AnchorCapability | null | undefined;

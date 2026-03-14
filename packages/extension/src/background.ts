@@ -8,6 +8,7 @@ import {
   type CoopSharedState,
   type DelegatedActionClass,
   type EncryptedSessionMaterial,
+  type Erc8004LiveExecutor,
   type ExecutionGrant,
   type GrantLogEntry,
   type GreenGoodsAssessmentRequest,
@@ -26,10 +27,13 @@ import {
   type UiPreferences,
   addInviteToState,
   appendPrivilegedActionLog,
+  applyArchiveAnchor,
   applyArchiveReceiptFollowUp,
   approveBundle,
   assertReceiverSyncEnvelope,
   authSessionToLocalIdentity,
+  buildAgentLogExport,
+  buildAgentManifest,
   buildAgentObservationFingerprint,
   buildEnableSessionExecution,
   buildPimlicoRpcUrl,
@@ -38,6 +42,7 @@ import {
   buildSmartSession,
   checkSessionCapabilityEnabled,
   completeAgentPlan,
+  coopArchiveConfigSchema,
   coopSharedStateSchema,
   createActionBundle,
   createActionLogEntry,
@@ -75,6 +80,7 @@ import {
   deriveExtensionIconState,
   describeAnchorCapabilityStatus,
   detectLocalEnhancementAvailability,
+  encodeArchiveAnchorCalldata,
   encodeReceiverPairingPayload,
   encryptSessionPrivateKey,
   executeBundle as executeBundleAction,
@@ -91,28 +97,36 @@ import {
   filterVisibleReviewDrafts,
   findAgentObservationByFingerprint,
   findMatchingPolicy,
+  generateAnonymousPublishProof,
   generateInviteCode,
   getActionBundle,
   getAgentObservation,
   getAgentPlan,
   getAnchorCapability,
   getAuthSession,
+  getCoopArchiveSecrets,
   getCoopChainConfig,
   getEncryptedSessionMaterial,
   getExecutionGrant,
   getGreenGoodsDeployment,
+  getPrivacyIdentitiesForCoop,
+  getPrivacyIdentity,
   getReceiverCapture,
   getReviewDraft,
   getSessionCapability,
   getSkillRun,
   getSoundPreferences,
+  getStealthKeyPair,
   getTrustedNodeArchiveConfig,
   getUiPreferences,
+  giveAgentFeedback,
   greenGoodsAssessmentRequestSchema,
   greenGoodsWorkApprovalRequestSchema,
   hydrateCoopDoc,
   incrementGrantUsage,
   incrementSessionCapabilityUsage,
+  initializeCoopPrivacy,
+  initializeMemberPrivacy,
   isArchiveReceiptRefreshable,
   issueArchiveDelegation,
   joinCoop,
@@ -134,6 +148,7 @@ import {
   listSkillRuns,
   approveAgentPlan as markAgentPlanApproved,
   rejectAgentPlan as markAgentPlanRejected,
+  mergeCoopArchiveConfig,
   nowIso,
   parseInviteCode,
   pendingBundles,
@@ -144,12 +159,15 @@ import {
   recordReplayId,
   refreshGrantStatus,
   refreshSessionCapabilityStatus,
+  registerAgentIdentity,
   rejectBundle,
+  removeCoopArchiveSecrets,
   requestArchiveReceiptFilecoinInfo,
   resolveDraftTargetCoopIdsForUi,
   resolveGreenGoodsGapAdminChanges,
   resolveScopedActionPayload,
   restorePasskeyAccount,
+  retrieveArchiveBundle,
   revokeGrant,
   revokeSessionCapability,
   rotateSessionCapability,
@@ -171,6 +189,7 @@ import {
   setActiveReceiverPairing,
   setAnchorCapability,
   setAuthSession,
+  setCoopArchiveSecrets,
   setGreenGoodsGardenDomains,
   setPrivilegedActionLog,
   setSoundPreferences,
@@ -194,9 +213,11 @@ import {
   validateGrantForExecution,
   validateSessionCapabilityForBundle,
   verifyInviteCodeProof,
+  verifyMembershipProof,
   withArchiveWorthiness,
   wrapUseSessionSignature,
 } from '@coop/shared';
+import { defaultSignalingUrls } from '@coop/signaling';
 import {
   type Account as SessionModuleAccount,
   installModule as buildModuleInstallExecutions,
@@ -222,6 +243,8 @@ import {
   resolveConfiguredArchiveMode,
   resolveConfiguredChain,
   resolveConfiguredOnchainMode,
+  resolveConfiguredPrivacyMode,
+  resolveConfiguredProviderMode,
   resolveConfiguredSessionMode,
   resolveReceiverAppUrl,
   resolveTrustedNodeArchiveBootstrapConfig,
@@ -287,8 +310,12 @@ const configuredOnchainMode = resolveConfiguredOnchainMode(
   import.meta.env.VITE_PIMLICO_API_KEY,
 );
 const configuredSessionMode = resolveConfiguredSessionMode(import.meta.env.VITE_COOP_SESSION_MODE);
+const configuredProviderMode = resolveConfiguredProviderMode(
+  import.meta.env.VITE_COOP_PROVIDER_MODE,
+);
+const configuredPrivacyMode = resolveConfiguredPrivacyMode(import.meta.env.VITE_COOP_PRIVACY_MODE);
 const configuredSignalingUrls =
-  parseConfiguredSignalingUrls(import.meta.env.VITE_COOP_SIGNALING_URLS) ?? [];
+  parseConfiguredSignalingUrls(import.meta.env.VITE_COOP_SIGNALING_URLS) ?? defaultSignalingUrls;
 const configuredPimlicoApiKey =
   typeof import.meta.env.VITE_PIMLICO_API_KEY === 'string' &&
   import.meta.env.VITE_PIMLICO_API_KEY.length > 0
@@ -1028,6 +1055,21 @@ async function requireTrustedNodeArchiveConfig() {
   throw new Error(trustedNodeArchiveConfigMissingError);
 }
 
+async function resolveArchiveConfigForCoop(coopId: string, coop: CoopSharedState) {
+  // 1. Check per-coop config first
+  if (coop.archiveConfig) {
+    const secrets = await getCoopArchiveSecrets(db, coopId);
+    if (secrets) {
+      return mergeCoopArchiveConfig(coop.archiveConfig, secrets);
+    }
+    // Has public config but no local secrets — can't archive from this node
+    return null;
+  }
+
+  // 2. Fall back to global config
+  return getResolvedTrustedNodeArchiveConfig();
+}
+
 function localEnhancementAvailability() {
   return detectLocalEnhancementAvailability({
     prefersLocalModels: prefersLocalEnhancement,
@@ -1243,7 +1285,9 @@ async function logPrivilegedAction(input: {
       receiptId: input.receiptId,
       archiveScope: input.archiveScope,
       mode:
-        input.actionType === 'safe-deployment' || input.actionType === 'green-goods-transaction'
+        input.actionType === 'safe-deployment' ||
+        input.actionType === 'green-goods-transaction' ||
+        input.actionType === 'archive-anchor'
           ? configuredOnchainMode
           : input.actionType === 'anchor-mode-toggle'
             ? undefined
@@ -1536,6 +1580,23 @@ function resolveObservationInactiveReason(input: {
       }
       return null;
     }
+    case 'erc8004-registration-due': {
+      const coop = observation.coopId ? input.coopsById.get(observation.coopId) : undefined;
+      if (!coop || coop.agentIdentity?.agentId) {
+        return 'ERC-8004 agent identity already registered or coop not found.';
+      }
+      if (coop.onchainState.safeCapability !== 'executed') {
+        return 'Safe is not yet deployed — registration cannot proceed.';
+      }
+      return null;
+    }
+    case 'erc8004-feedback-due': {
+      const coop = observation.coopId ? input.coopsById.get(observation.coopId) : undefined;
+      if (!coop?.agentIdentity?.agentId) {
+        return 'No ERC-8004 agent identity — feedback cannot be submitted.';
+      }
+      return null;
+    }
   }
 }
 
@@ -1805,6 +1866,20 @@ async function syncAgentObservations() {
       });
     }
 
+    // ERC-8004: If coop has a deployed Safe but no agent identity, fire registration observation
+    if (coop.onchainState.safeCapability === 'executed' && !coop.agentIdentity?.agentId) {
+      await emitAgentObservationIfMissing({
+        trigger: 'erc8004-registration-due',
+        title: `ERC-8004 agent registration due for ${coop.profile.name}`,
+        summary: `Coop ${coop.profile.name} has a deployed Safe but no ERC-8004 agent identity. Register to enable reputation tracking.`,
+        coopId: coop.profile.id,
+        payload: {
+          safeAddress: coop.onchainState.safeAddress,
+          safeCapability: coop.onchainState.safeCapability,
+        },
+      });
+    }
+
     for (const receipt of coop.archiveReceipts) {
       if (!isArchiveReceiptRefreshable(receipt)) {
         continue;
@@ -1976,6 +2051,8 @@ async function getDashboard(): Promise<DashboardResponse> {
       onchainMode: configuredOnchainMode,
       archiveMode: configuredArchiveMode,
       sessionMode: configuredSessionMode,
+      providerMode: configuredProviderMode,
+      privacyMode: configuredPrivacyMode,
       receiverAppUrl: configuredReceiverAppUrl,
       signalingUrls: configuredSignalingUrls,
     },
@@ -2342,6 +2419,23 @@ async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 'create
     });
     await ensureReceiverSyncOffscreenDocument();
     await requestAgentCycle(`green-goods-create:${created.state.profile.id}`, true);
+  }
+  // Initialize privacy primitives for the new coop
+  try {
+    const creatorMemberId = created.state.members[0]?.id;
+    if (creatorMemberId) {
+      const privacyResult = await initializeCoopPrivacy(db, {
+        coopId: created.state.profile.id,
+        memberId: creatorMemberId,
+      });
+      // Add the creator's commitment to shared state for peer sync
+      await saveState({
+        ...created.state,
+        memberCommitments: [privacyResult.identity.commitment],
+      });
+    }
+  } catch (privacyError) {
+    console.warn('[coop:privacy] Failed to initialize coop privacy:', privacyError);
   }
   await syncCaptureAlarm(created.state.profile.captureMode);
   await refreshBadge();
@@ -2814,6 +2908,7 @@ async function publishDraftWithContext(input: {
   authSession: Awaited<ReturnType<typeof getAuthSession>>;
   activeCoopId?: string;
   activeMemberId?: string;
+  anonymous?: boolean;
 }) {
   const coops = await getCoops();
   const persistedDraft = await getReviewDraft(db, input.draft.id);
@@ -2839,7 +2934,43 @@ async function publishDraftWithContext(input: {
     draft: validation.draft,
     targetActors: validation.targetActors,
   });
-  for (const state of published.nextStates) {
+
+  // When anonymous, generate membership proof and override artifacts
+  let artifacts = published.artifacts;
+  let nextStates = published.nextStates;
+
+  if (input.anonymous && input.activeMemberId) {
+    let membershipProof = null;
+    try {
+      const originId = artifacts[0]?.originId;
+      if (originId && input.activeCoopId) {
+        membershipProof = await generateAnonymousPublishProof(db, {
+          coopId: input.activeCoopId,
+          memberId: input.activeMemberId,
+          artifactOriginId: originId,
+        });
+      }
+    } catch (proofError) {
+      console.warn('[coop:privacy] Failed to generate membership proof:', proofError);
+    }
+
+    artifacts = artifacts.map((a) => ({
+      ...a,
+      createdBy: 'anonymous-member',
+      ...(membershipProof ? { membershipProof } : {}),
+    }));
+
+    nextStates = nextStates.map((state) => ({
+      ...state,
+      artifacts: state.artifacts.map((a) =>
+        artifacts.some((anon) => anon.id === a.id)
+          ? { ...a, createdBy: 'anonymous-member', ...(membershipProof ? { membershipProof } : {}) }
+          : a,
+      ),
+    }));
+  }
+
+  for (const state of nextStates) {
     await saveState(state);
   }
   await db.reviewDrafts.delete(validation.draft.id);
@@ -2854,7 +2985,7 @@ async function publishDraftWithContext(input: {
 
   return {
     ok: true,
-    data: published.artifacts,
+    data: artifacts,
     soundEvent: 'artifact-published',
   } satisfies RuntimeActionResponse;
 }
@@ -2877,6 +3008,27 @@ async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'join-coo
   });
   await saveState(joined.state);
   await setLocalSetting(stateKeys.activeCoopId, joined.state.profile.id);
+  // Initialize privacy identity for the new member
+  try {
+    const newMember = joined.state.members.find(
+      (m) => m.displayName === message.payload.displayName,
+    );
+    if (newMember) {
+      const privacyRecord = await initializeMemberPrivacy(db, {
+        coopId: joined.state.profile.id,
+        memberId: newMember.id,
+      });
+      const currentCommitments = joined.state.memberCommitments ?? [];
+      if (!currentCommitments.includes(privacyRecord.commitment)) {
+        await saveState({
+          ...joined.state,
+          memberCommitments: [...currentCommitments, privacyRecord.commitment],
+        });
+      }
+    }
+  } catch (privacyError) {
+    console.warn('[coop:privacy] Failed to initialize member privacy:', privacyError);
+  }
   await refreshBadge();
   return {
     ok: true,
@@ -2891,6 +3043,7 @@ async function handlePublishDraft(message: Extract<RuntimeRequest, { type: 'publ
   return publishDraftWithContext({
     draft: message.payload.draft,
     targetCoopIds: message.payload.targetCoopIds,
+    anonymous: message.payload.anonymous,
     authSession,
     activeCoopId: activeContext.activeCoopId,
     activeMemberId: activeContext.activeMemberId,
@@ -2936,10 +3089,16 @@ async function createArchiveReceiptForBundle(input: {
       feature: 'live archive uploads',
     });
 
+    const archiveConfig = await resolveArchiveConfigForCoop(input.coop.profile.id, input.coop);
+    if (!archiveConfig) {
+      throw new Error(
+        'No archive config available for this coop. Connect a Storacha space in Nest Tools.',
+      );
+    }
+
     const client = await createStorachaArchiveClient();
-    const trustedNodeArchiveConfig = await requireTrustedNodeArchiveConfig();
     const delegation = await issueArchiveDelegation({
-      config: trustedNodeArchiveConfig,
+      config: archiveConfig,
       request: {
         audienceDid: client.did(),
         coopId: input.coop.profile.id,
@@ -3054,7 +3213,7 @@ async function handleArchiveArtifact(
     entityId: message.payload.artifactId,
     state: receipt.id,
     title: 'Artifact archived',
-    message: `${receipt.title} was archived and stored locally.`,
+    message: `${coop.artifacts.find((a) => a.id === message.payload.artifactId)?.title ?? 'Artifact'} was archived and stored locally.`,
   });
   await refreshBadge();
   return {
@@ -3255,11 +3414,17 @@ async function handleRefreshArchiveStatus(
   let updatedCount = 0;
   let failedCount = 0;
 
+  const archiveConfig = await resolveArchiveConfigForCoop(coop.profile.id, coop);
+
   for (const receipt of candidates) {
     try {
-      const trustedNodeArchiveConfig = await requireTrustedNodeArchiveConfig();
+      if (!archiveConfig) {
+        throw new Error(
+          'No archive config available for this coop. Connect a Storacha space in Nest Tools.',
+        );
+      }
       const delegation = await issueArchiveDelegation({
-        config: trustedNodeArchiveConfig,
+        config: archiveConfig,
         request: {
           audienceDid: client.did(),
           coopId: coop.profile.id,
@@ -3338,6 +3503,273 @@ async function handleRefreshArchiveStatus(
           : `Refreshed ${updatedCount} receipt(s) with newer Filecoin status.`,
     },
   } satisfies RuntimeActionResponse;
+}
+
+async function handleRetrieveArchiveBundle(
+  message: Extract<RuntimeRequest, { type: 'retrieve-archive-bundle' }>,
+): Promise<RuntimeActionResponse> {
+  const coops = await getCoops();
+  const coop = coops.find((item) => item.profile.id === message.payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+
+  const receipt = coop.archiveReceipts.find((r) => r.id === message.payload.receiptId);
+  if (!receipt) {
+    return { ok: false, error: 'Archive receipt not found.' } satisfies RuntimeActionResponse;
+  }
+
+  try {
+    const result = await retrieveArchiveBundle(receipt);
+    return { ok: true, data: result } satisfies RuntimeActionResponse;
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Retrieval failed.',
+    } satisfies RuntimeActionResponse;
+  }
+}
+
+/**
+ * Poll unsealed archive receipts across all coops for Filecoin status updates.
+ * Triggered by the `archive-status-poll` alarm every 6 hours.
+ * Caps at 5 receipts per poll cycle to avoid overwhelming Storacha.
+ */
+async function pollUnsealedArchiveReceipts() {
+  if (configuredArchiveMode !== 'live') return;
+
+  const coops = await getCoops();
+  let polled = 0;
+  const maxPerCycle = 5;
+
+  for (const coop of coops) {
+    if (polled >= maxPerCycle) break;
+
+    const refreshable = coop.archiveReceipts.filter(isArchiveReceiptRefreshable);
+    if (refreshable.length === 0) continue;
+
+    const batch = refreshable.slice(0, maxPerCycle - polled);
+    for (const receipt of batch) {
+      try {
+        await handleRefreshArchiveStatus({
+          type: 'refresh-archive-status',
+          payload: { coopId: coop.profile.id, receiptId: receipt.id },
+        });
+      } catch (error) {
+        console.warn(
+          `[archive-poll] Failed to refresh receipt ${receipt.id} for coop ${coop.profile.id}:`,
+          error instanceof Error ? error.message : error,
+        );
+      }
+      polled += 1;
+    }
+  }
+}
+
+async function handleSetCoopArchiveConfig(
+  payload: Extract<RuntimeRequest, { type: 'set-coop-archive-config' }>['payload'],
+): Promise<RuntimeActionResponse> {
+  const coops = await getCoops();
+  const coop = coops.find((item) => item.profile.id === payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+
+  const validatedConfig = coopArchiveConfigSchema.parse(payload.publicConfig);
+  const nextState = {
+    ...coop,
+    archiveConfig: validatedConfig,
+  } satisfies CoopSharedState;
+  await saveState(nextState);
+  await setCoopArchiveSecrets(db, payload.coopId, payload.secrets);
+  return { ok: true } satisfies RuntimeActionResponse;
+}
+
+async function handleRemoveCoopArchiveConfig(
+  payload: Extract<RuntimeRequest, { type: 'remove-coop-archive-config' }>['payload'],
+): Promise<RuntimeActionResponse> {
+  const coops = await getCoops();
+  const coop = coops.find((item) => item.profile.id === payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+
+  const nextState: CoopSharedState = { ...coop, archiveConfig: undefined };
+  await saveState(nextState);
+  await removeCoopArchiveSecrets(db, payload.coopId);
+  return { ok: true } satisfies RuntimeActionResponse;
+}
+
+async function handleAnchorArchiveCid(
+  input: Extract<RuntimeRequest, { type: 'anchor-archive-cid' }>['payload'],
+) {
+  // In mock onchain mode, skip anchoring entirely.
+  if (configuredOnchainMode === 'mock') {
+    return {
+      ok: true,
+      data: { status: 'skipped' },
+    } satisfies RuntimeActionResponse;
+  }
+
+  if (!configuredPimlicoApiKey) {
+    return {
+      ok: false,
+      error: 'Pimlico API key is required for on-chain CID anchoring.',
+    } satisfies RuntimeActionResponse;
+  }
+
+  const coops = await getCoops();
+  const coop = coops.find((item) => item.profile.id === input.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+
+  const receipt = coop.archiveReceipts.find((r) => r.id === input.receiptId);
+  if (!receipt) {
+    return { ok: false, error: 'Archive receipt not found.' } satisfies RuntimeActionResponse;
+  }
+
+  if (!receipt.rootCid) {
+    return {
+      ok: false,
+      error: 'Archive receipt has no root CID to anchor.',
+    } satisfies RuntimeActionResponse;
+  }
+
+  const authSession = await getAuthSession(db);
+  const member = resolveReceiverPairingMember(coop, authSession);
+
+  try {
+    requireAnchorModeForFeature({
+      capability: await getAnchorCapability(db),
+      authSession,
+      feature: 'archive CID anchoring',
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Anchor mode is required.';
+    await logPrivilegedAction({
+      actionType: 'archive-anchor',
+      status: 'failed',
+      detail,
+      coop,
+      memberId: member?.id,
+      memberDisplayName: member?.displayName,
+      authSession,
+      receiptId: input.receiptId,
+      archiveScope: receipt.scope,
+    });
+    return { ok: false, error: detail } satisfies RuntimeActionResponse;
+  }
+
+  await logPrivilegedAction({
+    actionType: 'archive-anchor',
+    status: 'attempted',
+    detail: `Anchoring CID ${receipt.rootCid} on-chain for coop ${coop.profile.name}.`,
+    coop,
+    memberId: member?.id,
+    memberDisplayName: member?.displayName,
+    authSession,
+    receiptId: input.receiptId,
+    archiveScope: receipt.scope,
+  });
+
+  try {
+    const calldata = encodeArchiveAnchorCalldata({
+      rootCid: receipt.rootCid,
+      pieceCid: receipt.pieceCids[0],
+      scope: receipt.scope,
+      coopId: input.coopId,
+      timestamp: receipt.uploadedAt,
+    });
+
+    const context = await createOwnerSafeExecutionContext({
+      authSession: (() => {
+        if (!authSession) throw new Error('Auth session required for anchor.');
+        return authSession;
+      })(),
+      onchainState: coop.onchainState,
+    });
+
+    const txHash = await context.smartClient.sendTransaction({
+      to: coop.onchainState.safeAddress as Address,
+      value: 0n,
+      data: calldata,
+    });
+
+    await context.publicClient.waitForTransactionReceipt({ hash: txHash });
+
+    const anchoredReceipt = applyArchiveAnchor(receipt, {
+      txHash,
+      chainKey: configuredChain,
+    });
+
+    const nextState = updateArchiveReceipt(coop, receipt.id, anchoredReceipt);
+    await saveState(nextState);
+
+    await logPrivilegedAction({
+      actionType: 'archive-anchor',
+      status: 'succeeded',
+      detail: `CID ${receipt.rootCid} anchored on-chain via tx ${txHash}.`,
+      coop,
+      memberId: member?.id,
+      memberDisplayName: member?.displayName,
+      authSession,
+      receiptId: input.receiptId,
+      archiveScope: receipt.scope,
+    });
+
+    await notifyExtensionEvent({
+      eventKind: 'archive-anchor',
+      entityId: input.receiptId,
+      state: txHash,
+      title: 'Archive CID anchored',
+      message: `${receipt.rootCid} anchored on-chain for ${coop.profile.name}.`,
+    });
+
+    await refreshBadge();
+
+    // ERC-8004: fire feedback observation after successful archive anchor (self-attestation)
+    if (coop.agentIdentity?.agentId) {
+      await emitAgentObservationIfMissing({
+        trigger: 'erc8004-feedback-due',
+        title: 'ERC-8004 self-attestation due after archive anchor',
+        summary: `Archive CID ${receipt.rootCid} was anchored on-chain. Submit positive self-attestation feedback.`,
+        coopId: input.coopId,
+        payload: {
+          reason: 'archive-anchor',
+          rootCid: receipt.rootCid,
+          txHash,
+          targetAgentId: coop.agentIdentity.agentId,
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      data: { txHash, status: 'anchored' },
+    } satisfies RuntimeActionResponse;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'On-chain CID anchoring failed.';
+    await logPrivilegedAction({
+      actionType: 'archive-anchor',
+      status: 'failed',
+      detail,
+      coop,
+      memberId: member?.id,
+      memberDisplayName: member?.displayName,
+      authSession,
+      receiptId: input.receiptId,
+      archiveScope: receipt.scope,
+    });
+    await notifyExtensionEvent({
+      eventKind: 'archive-anchor',
+      entityId: input.receiptId,
+      state: 'failed',
+      title: 'Archive CID anchoring failed',
+      message: detail,
+    });
+    return { ok: false, error: detail } satisfies RuntimeActionResponse;
+  }
 }
 
 async function handleExportSnapshot(message: Extract<RuntimeRequest, { type: 'export-snapshot' }>) {
@@ -4619,6 +5051,162 @@ async function handleExecuteAction(
         return { ok: false, error: message };
       }
     },
+    'erc8004-register-agent': async (payload) => {
+      const scopedPayload = resolveScopedActionPayload({
+        actionClass: 'erc8004-register-agent',
+        payload,
+        expectedCoopId: bundle.coopId,
+      });
+      if (!scopedPayload.ok) {
+        return { ok: false, error: scopedPayload.reason };
+      }
+
+      try {
+        const coop = trustedNodeContext.coop;
+        const agentURI = scopedPayload.normalizedPayload.agentURI as string;
+        const metadata =
+          (scopedPayload.normalizedPayload.metadata as Array<{ key: string; value: string }>) ?? [];
+
+        let liveExecutor: Erc8004LiveExecutor | undefined;
+        if (configuredOnchainMode === 'live') {
+          const context = await createOwnerSafeExecutionContext({
+            authSession: trustedNodeContext.authSession,
+            onchainState: coop.onchainState,
+          });
+          liveExecutor = async (tx) =>
+            context.smartClient.sendTransaction({ ...tx, value: tx.value ?? 0n });
+        }
+
+        const result = await registerAgentIdentity({
+          mode: configuredOnchainMode,
+          onchainState: coop.onchainState,
+          agentURI,
+          metadata,
+          coopId: bundle.coopId,
+          pimlicoApiKey: configuredPimlicoApiKey,
+          liveExecutor,
+        });
+
+        const nextState: CoopSharedState = {
+          ...coop,
+          agentIdentity: {
+            enabled: true,
+            agentId: result.agentId,
+            agentURI,
+            registrationTxHash: result.txHash,
+            registeredAt: nowIso(),
+            feedbackCount: 0,
+            status: 'registered',
+            statusNote: result.detail,
+          },
+        };
+        await saveState(nextState);
+
+        await logPrivilegedAction({
+          actionType: 'erc8004-registration',
+          status: 'succeeded',
+          detail: `ERC-8004 agent registered (agentId=${result.agentId}) via tx ${result.txHash}.`,
+          coop: nextState,
+          memberId: trustedNodeContext.member.id,
+          memberDisplayName: trustedNodeContext.member.displayName,
+          authSession: trustedNodeContext.authSession,
+        });
+
+        return { ok: true, data: nextState.agentIdentity };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'ERC-8004 agent registration failed.';
+        await logPrivilegedAction({
+          actionType: 'erc8004-registration',
+          status: 'failed',
+          detail: message,
+          coop: trustedNodeContext.coop,
+          memberId: trustedNodeContext.member.id,
+          memberDisplayName: trustedNodeContext.member.displayName,
+          authSession: trustedNodeContext.authSession,
+        });
+        return { ok: false, error: message };
+      }
+    },
+    'erc8004-give-feedback': async (payload) => {
+      const scopedPayload = resolveScopedActionPayload({
+        actionClass: 'erc8004-give-feedback',
+        payload,
+        expectedCoopId: bundle.coopId,
+      });
+      if (!scopedPayload.ok) {
+        return { ok: false, error: scopedPayload.reason };
+      }
+
+      try {
+        const coop = trustedNodeContext.coop;
+        const targetAgentId = scopedPayload.normalizedPayload.targetAgentId as number;
+        const value = scopedPayload.normalizedPayload.value as number;
+        const tag1 = scopedPayload.normalizedPayload.tag1 as string;
+        const tag2 = scopedPayload.normalizedPayload.tag2 as string;
+        const rationale = (scopedPayload.normalizedPayload.rationale as string) ?? '';
+
+        let feedbackExecutor: Erc8004LiveExecutor | undefined;
+        if (configuredOnchainMode === 'live') {
+          const ctx = await createOwnerSafeExecutionContext({
+            authSession: trustedNodeContext.authSession,
+            onchainState: coop.onchainState,
+          });
+          feedbackExecutor = async (tx) =>
+            ctx.smartClient.sendTransaction({ ...tx, value: tx.value ?? 0n });
+        }
+
+        const result = await giveAgentFeedback({
+          mode: configuredOnchainMode,
+          onchainState: coop.onchainState,
+          targetAgentId,
+          value,
+          tag1,
+          tag2,
+          comment: rationale,
+          pimlicoApiKey: configuredPimlicoApiKey,
+          liveExecutor: feedbackExecutor,
+        });
+
+        const currentIdentity = coop.agentIdentity;
+        if (currentIdentity) {
+          const nextState: CoopSharedState = {
+            ...coop,
+            agentIdentity: {
+              ...currentIdentity,
+              feedbackCount: (currentIdentity.feedbackCount ?? 0) + 1,
+              lastFeedbackAt: nowIso(),
+            },
+          };
+          await saveState(nextState);
+        }
+
+        await logPrivilegedAction({
+          actionType: 'erc8004-feedback',
+          status: 'succeeded',
+          detail: `ERC-8004 feedback submitted for agentId=${targetAgentId} via tx ${result.txHash}.`,
+          coop,
+          memberId: trustedNodeContext.member.id,
+          memberDisplayName: trustedNodeContext.member.displayName,
+          authSession: trustedNodeContext.authSession,
+        });
+
+        return { ok: true, data: { txHash: result.txHash } };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'ERC-8004 feedback submission failed.';
+        await logPrivilegedAction({
+          actionType: 'erc8004-feedback',
+          status: 'failed',
+          detail: message,
+          coop: trustedNodeContext.coop,
+          memberId: trustedNodeContext.member.id,
+          memberDisplayName: trustedNodeContext.member.displayName,
+          authSession: trustedNodeContext.authSession,
+        });
+        return { ok: false, error: message };
+      }
+    },
   };
 
   const startLogEntry = createActionLogEntry({
@@ -5453,6 +6041,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ensureDefaults();
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
+  await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -5463,12 +6052,18 @@ chrome.runtime.onStartup.addListener(async () => {
   await ensureDefaults();
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
+  await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await refreshBadge();
 });
 
-chrome.alarms.onAlarm.addListener(async () => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'archive-status-poll') {
+    await pollUnsealedArchiveReceipts();
+    return;
+  }
+
   const captureMode = await getLocalSetting(stateKeys.captureMode, 'manual');
   if (captureMode !== 'manual') {
     await runCaptureCycle();
@@ -5605,6 +6200,18 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         return;
       case 'refresh-archive-status':
         sendResponse(await handleRefreshArchiveStatus(message));
+        return;
+      case 'retrieve-archive-bundle':
+        sendResponse(await handleRetrieveArchiveBundle(message));
+        return;
+      case 'set-coop-archive-config':
+        sendResponse(await handleSetCoopArchiveConfig(message.payload));
+        return;
+      case 'remove-coop-archive-config':
+        sendResponse(await handleRemoveCoopArchiveConfig(message.payload));
+        return;
+      case 'anchor-archive-cid':
+        sendResponse(await handleAnchorArchiveCid(message.payload));
         return;
       case 'export-snapshot':
         sendResponse(await handleExportSnapshot(message));
@@ -5760,6 +6367,79 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
       case 'get-session-capability-log':
         sendResponse(await handleGetSessionCapabilityLog());
         return;
+      case 'export-agent-manifest': {
+        const coops = await getCoops();
+        const coop = coops.find((item) => item.profile.id === message.payload.coopId);
+        if (!coop) {
+          sendResponse({ ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse);
+          return;
+        }
+        const skillEntries = listRegisteredSkills();
+        const manifest = buildAgentManifest({
+          coop,
+          skills: skillEntries.map((e) => e.manifest.id),
+          agentId: coop.agentIdentity?.agentId,
+        });
+        sendResponse({ ok: true, data: manifest } satisfies RuntimeActionResponse);
+        return;
+      }
+      case 'export-agent-log': {
+        const coops = await getCoops();
+        const coop = coops.find((item) => item.profile.id === message.payload.coopId);
+        if (!coop) {
+          sendResponse({ ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse);
+          return;
+        }
+        let logs = await db.agentLogs.orderBy('timestamp').reverse().limit(500).toArray();
+        if (message.payload.traceId) {
+          logs = logs.filter((log) => log.traceId === message.payload.traceId);
+        }
+        const agentLog = buildAgentLogExport({
+          logs,
+          coopName: coop.profile.name,
+          agentId: coop.agentIdentity?.agentId ?? 0,
+        });
+        sendResponse({ ok: true, data: agentLog } satisfies RuntimeActionResponse);
+        return;
+      }
+      case 'get-agent-identity': {
+        const coops = await getCoops();
+        const coop = coops.find((item) => item.profile.id === message.payload.coopId);
+        if (!coop) {
+          sendResponse({ ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse);
+          return;
+        }
+        sendResponse({
+          ok: true,
+          data: coop.agentIdentity ?? null,
+        } satisfies RuntimeActionResponse);
+        return;
+      }
+      case 'get-privacy-identity': {
+        const identityRecord = await getPrivacyIdentity(
+          db,
+          message.payload.coopId,
+          message.payload.memberId,
+        );
+        sendResponse({ ok: true, data: identityRecord ?? null } satisfies RuntimeActionResponse);
+        return;
+      }
+      case 'get-stealth-meta-address': {
+        const stealthKp = await getStealthKeyPair(db, message.payload.coopId);
+        sendResponse({
+          ok: true,
+          data: stealthKp?.metaAddress ?? null,
+        } satisfies RuntimeActionResponse);
+        return;
+      }
+      case 'get-membership-commitments': {
+        const identities = await getPrivacyIdentitiesForCoop(db, message.payload.coopId);
+        sendResponse({
+          ok: true,
+          data: identities.map((id) => id.commitment),
+        } satisfies RuntimeActionResponse);
+        return;
+      }
     }
   })().catch((error: unknown) => {
     sendResponse({
