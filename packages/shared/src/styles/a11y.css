@@ -38,6 +38,16 @@ textarea:focus-visible {
   position: relative;
 }
 
+/* ── Touch targets (WCAG 2.5.8 — 44px minimum) ── */
+.receiver-shell button,
+.receiver-shell a,
+.receiver-shell [role="button"],
+.receiver-shell input,
+.receiver-shell select,
+.receiver-shell textarea {
+  min-height: 44px;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *,

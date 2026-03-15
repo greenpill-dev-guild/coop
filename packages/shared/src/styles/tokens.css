@@ -28,13 +28,34 @@
   --coop-shadow-md: 0 16px 40px rgba(79, 46, 31, 0.12);
   --coop-shadow-lg: 0 24px 60px rgba(79, 46, 31, 0.12);
 
+  /* ── Alpha palette (color-mix) ── */
+  --coop-brown-4: color-mix(in srgb, var(--coop-brown) 4%, transparent);
+  --coop-brown-6: color-mix(in srgb, var(--coop-brown) 6%, transparent);
+  --coop-brown-8: color-mix(in srgb, var(--coop-brown) 8%, transparent);
+  --coop-brown-12: color-mix(in srgb, var(--coop-brown) 12%, transparent);
+  --coop-brown-14: color-mix(in srgb, var(--coop-brown) 14%, transparent);
+  --coop-brown-16: color-mix(in srgb, var(--coop-brown) 16%, transparent);
+  --coop-brown-18: color-mix(in srgb, var(--coop-brown) 18%, transparent);
+  --coop-green-12: color-mix(in srgb, var(--coop-green) 12%, transparent);
+  --coop-green-14: color-mix(in srgb, var(--coop-green) 14%, transparent);
+  --coop-green-16: color-mix(in srgb, var(--coop-green) 16%, transparent);
+  --coop-orange-15: color-mix(in srgb, var(--coop-orange) 15%, transparent);
+  --coop-orange-16: color-mix(in srgb, var(--coop-orange) 16%, transparent);
+  --coop-orange-18: color-mix(in srgb, var(--coop-orange) 18%, transparent);
+
   /* ── Radii ── */
   --coop-radius-pill: 999px;
   --coop-radius-card: 24px;
+  --coop-radius-card-lg: 28px;
+  --coop-radius-card-xl: 30px;
   --coop-radius-input: 16px;
+  --coop-radius-input-lg: 20px;
+  --coop-radius-photo: 18px;
   --coop-radius-chip: 12px;
 
   /* ── Spacing ── */
+  --coop-space-3xs: 0.15rem;
+  --coop-space-2xs: 0.2rem;
   --coop-space-xs: 0.35rem;
   --coop-space-sm: 0.65rem;
   --coop-space-md: 1rem;
@@ -48,4 +69,26 @@
 
   /* ── Transitions ── */
   --coop-ease: 180ms ease;
+}
+
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --coop-cream: #1a1410;
+    --coop-brown: #e8d5c4;
+    --coop-brown-soft: #b8a090;
+    --coop-green: #8ab840;
+    --coop-orange: #ffaa44;
+    --coop-mist: #3a3632;
+    --coop-ink: #f0e8e0;
+    --coop-error: #ff6b4a;
+
+    --coop-line: rgba(232, 213, 196, 0.16);
+
+    --coop-shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.2);
+    --coop-shadow-md: 0 16px 40px rgba(0, 0, 0, 0.24);
+    --coop-shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.24);
+  }
 }
