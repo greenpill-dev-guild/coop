@@ -60,7 +60,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 - `operator`: Anchor/trusted-node runtime behavior
 - `policy`: Action approval workflows, typed action bundles
 - `session`: Scoped execution permissions, time-bounded capabilities
-- `grant`: Execution grants with replay protection
+- `permit`: Execution permits with replay protection
 - `greengoods`: Green Goods garden bootstrap and sync
 - `app`: App shell logic
 

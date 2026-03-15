@@ -1,9 +1,9 @@
-import type { DelegatedActionClass, ExecutionGrant } from '../../contracts/schema';
+import type { DelegatedActionClass, ExecutionPermit } from '../../contracts/schema';
 import { nowIso } from '../../utils';
 import type { ReplayGuard } from '../policy/replay';
 import { checkReplayId } from '../policy/replay';
 
-export type GrantValidationResult =
+export type PermitValidationResult =
   | { ok: true }
   | {
       ok: false;
@@ -19,31 +19,31 @@ export type GrantValidationResult =
         | 'replay-rejected';
     };
 
-export function validateGrantForExecution(input: {
-  grant: ExecutionGrant;
+export function validatePermitForExecution(input: {
+  permit: ExecutionPermit;
   actionClass: DelegatedActionClass;
   coopId: string;
   replayId: string;
   replayGuard: ReplayGuard;
   targetIds?: string[];
-  executor: Pick<ExecutionGrant['executor'], 'label' | 'localIdentityId'>;
+  executor: Pick<ExecutionPermit['executor'], 'label' | 'localIdentityId'>;
   now?: string;
-}): GrantValidationResult {
+}): PermitValidationResult {
   const now = input.now ?? nowIso();
 
   // Check revocation first
-  if (input.grant.revokedAt) {
-    return { ok: false, reason: 'Grant has been revoked.', rejectType: 'revoked' };
+  if (input.permit.revokedAt) {
+    return { ok: false, reason: 'Permit has been revoked.', rejectType: 'revoked' };
   }
 
   // Check expiry
-  if (input.grant.expiresAt <= now) {
-    return { ok: false, reason: 'Grant has expired.', rejectType: 'expired' };
+  if (input.permit.expiresAt <= now) {
+    return { ok: false, reason: 'Permit has expired.', rejectType: 'expired' };
   }
 
   // Check usage limit
-  if (input.grant.usedCount >= input.grant.maxUses) {
-    return { ok: false, reason: 'Grant usage limit has been reached.', rejectType: 'exhausted' };
+  if (input.permit.usedCount >= input.permit.maxUses) {
+    return { ok: false, reason: 'Permit usage limit has been reached.', rejectType: 'exhausted' };
   }
 
   if (input.replayId.trim().length === 0) {
@@ -51,42 +51,42 @@ export function validateGrantForExecution(input: {
   }
 
   // Check coop scope
-  if (input.grant.coopId !== input.coopId) {
-    return { ok: false, reason: 'Grant is not scoped to this coop.', rejectType: 'coop-denied' };
+  if (input.permit.coopId !== input.coopId) {
+    return { ok: false, reason: 'Permit is not scoped to this coop.', rejectType: 'coop-denied' };
   }
 
   // Check action allowlist
-  if (!input.grant.allowedActions.includes(input.actionClass)) {
+  if (!input.permit.allowedActions.includes(input.actionClass)) {
     return {
       ok: false,
-      reason: `Action "${input.actionClass}" is not allowed by this grant.`,
+      reason: `Action "${input.actionClass}" is not allowed by this permit.`,
       rejectType: 'action-denied',
     };
   }
 
-  if (input.grant.executor.label !== input.executor.label) {
+  if (input.permit.executor.label !== input.executor.label) {
     return {
       ok: false,
-      reason: `Grant is bound to executor "${input.grant.executor.label}".`,
+      reason: `Permit is bound to executor "${input.permit.executor.label}".`,
       rejectType: 'executor-denied',
     };
   }
 
   if (
-    input.grant.executor.localIdentityId &&
-    input.grant.executor.localIdentityId !== input.executor.localIdentityId
+    input.permit.executor.localIdentityId &&
+    input.permit.executor.localIdentityId !== input.executor.localIdentityId
   ) {
     return {
       ok: false,
-      reason: 'Grant is bound to a different local passkey identity.',
+      reason: 'Permit is bound to a different local passkey identity.',
       rejectType: 'executor-denied',
     };
   }
 
   // Check target allowlist if present
   const targetIds = Array.from(new Set((input.targetIds ?? []).filter(Boolean)));
-  if (targetIds.length > 0 && input.grant.targetAllowlist) {
-    const allowedTargets = input.grant.targetAllowlist[input.actionClass];
+  if (targetIds.length > 0 && input.permit.targetAllowlist) {
+    const allowedTargets = input.permit.targetAllowlist[input.actionClass];
     const deniedTargets =
       allowedTargets && allowedTargets.length > 0
         ? targetIds.filter((targetId) => !allowedTargets.includes(targetId))
@@ -94,7 +94,7 @@ export function validateGrantForExecution(input: {
     if (deniedTargets.length > 0) {
       return {
         ok: false,
-        reason: `Target "${deniedTargets[0]}" is not in the grant allowlist for "${input.actionClass}".`,
+        reason: `Target "${deniedTargets[0]}" is not in the permit allowlist for "${input.actionClass}".`,
         rejectType: 'target-denied',
       };
     }

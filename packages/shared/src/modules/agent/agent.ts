@@ -170,8 +170,8 @@ export function createActionProposal(input: {
   payload: Record<string, unknown>;
   reason: string;
   approvalMode: ActionProposal['approvalMode'];
-  requiresGrant?: boolean;
-  grantId?: string;
+  requiresPermit?: boolean;
+  permitId?: string;
   generatedBySkillId?: string;
   createdAt?: string;
 }): ActionProposal {
@@ -183,8 +183,8 @@ export function createActionProposal(input: {
     payload: input.payload,
     reason: input.reason,
     approvalMode: input.approvalMode,
-    requiresGrant: input.requiresGrant ?? false,
-    grantId: input.grantId,
+    requiresPermit: input.requiresPermit ?? false,
+    permitId: input.permitId,
     generatedBySkillId: input.generatedBySkillId,
     createdAt: input.createdAt ?? nowIso(),
   });

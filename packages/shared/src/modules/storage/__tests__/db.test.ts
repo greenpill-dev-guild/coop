@@ -7,8 +7,8 @@ import type {
   AgentPlan,
   AnchorCapability,
   EncryptedSessionMaterial,
-  ExecutionGrant,
-  GrantLogEntry,
+  ExecutionPermit,
+  PermitLogEntry,
   PrivilegedActionLogEntry,
   ReviewDraft,
   SessionCapability,
@@ -32,7 +32,7 @@ import {
   getAnchorCapability,
   getAuthSession,
   getEncryptedSessionMaterial,
-  getExecutionGrant,
+  getExecutionPermit,
   getReceiverCapture,
   getReceiverCaptureBlob,
   getReceiverDeviceIdentity,
@@ -51,10 +51,10 @@ import {
   listAgentObservationsByStatus,
   listAgentPlans,
   listAgentPlansByObservationId,
-  listExecutionGrants,
-  listExecutionGrantsByCoopId,
-  listGrantLogEntries,
+  listExecutionPermits,
+  listExecutionPermitsByCoopId,
   listLocalIdentities,
+  listPermitLogEntries,
   listPrivilegedActionLog,
   listReceiverCaptures,
   listReceiverPairings,
@@ -72,8 +72,8 @@ import {
   saveAgentPlan,
   saveCoopState,
   saveEncryptedSessionMaterial,
-  saveExecutionGrant,
-  saveGrantLogEntry,
+  saveExecutionPermit,
+  savePermitLogEntry,
   saveReceiverCapture,
   saveReviewDraft,
   saveSessionCapability,
@@ -200,9 +200,9 @@ function buildActionLogEntry(overrides: Partial<ActionLogEntry> = {}): ActionLog
   };
 }
 
-function buildExecutionGrant(overrides: Partial<ExecutionGrant> = {}): ExecutionGrant {
+function buildExecutionPermit(overrides: Partial<ExecutionPermit> = {}): ExecutionPermit {
   return {
-    id: `grant-${crypto.randomUUID()}`,
+    id: `permit-${crypto.randomUUID()}`,
     coopId: 'coop-1',
     issuedBy: { memberId: 'member-1', displayName: 'Rae' },
     executor: { label: 'Coop Agent' },
@@ -216,12 +216,12 @@ function buildExecutionGrant(overrides: Partial<ExecutionGrant> = {}): Execution
   };
 }
 
-function buildGrantLogEntry(overrides: Partial<GrantLogEntry> = {}): GrantLogEntry {
+function buildPermitLogEntry(overrides: Partial<PermitLogEntry> = {}): PermitLogEntry {
   return {
-    id: `glog-${crypto.randomUUID()}`,
-    grantId: 'grant-1',
-    eventType: 'grant-issued',
-    detail: 'Grant issued',
+    id: `plog-${crypto.randomUUID()}`,
+    permitId: 'permit-1',
+    eventType: 'permit-issued',
+    detail: 'Permit issued',
     createdAt: NOW,
     ...overrides,
   };
@@ -1084,67 +1084,67 @@ describe('replay ID persistence', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Execution grants
+// Execution permits
 // ---------------------------------------------------------------------------
 
-describe('execution grant persistence', () => {
-  it('saves and retrieves an execution grant by id', async () => {
+describe('execution permit persistence', () => {
+  it('saves and retrieves an execution permit by id', async () => {
     const db = freshDb();
-    const grant = buildExecutionGrant();
+    const permit = buildExecutionPermit();
 
-    await saveExecutionGrant(db, grant);
-    const loaded = await getExecutionGrant(db, grant.id);
+    await saveExecutionPermit(db, permit);
+    const loaded = await getExecutionPermit(db, permit.id);
 
     expect(loaded).toBeDefined();
-    expect(loaded?.id).toBe(grant.id);
+    expect(loaded?.id).toBe(permit.id);
     expect(loaded?.status).toBe('active');
   });
 
-  it('returns undefined for a non-existent grant', async () => {
+  it('returns undefined for a non-existent permit', async () => {
     const db = freshDb();
-    expect(await getExecutionGrant(db, 'no-such-grant')).toBeUndefined();
+    expect(await getExecutionPermit(db, 'no-such-permit')).toBeUndefined();
   });
 
-  it('lists execution grants ordered by createdAt descending', async () => {
+  it('lists execution permits ordered by createdAt descending', async () => {
     const db = freshDb();
-    const older = buildExecutionGrant({ createdAt: NOW });
-    const newer = buildExecutionGrant({ createdAt: LATER });
+    const older = buildExecutionPermit({ createdAt: NOW });
+    const newer = buildExecutionPermit({ createdAt: LATER });
 
-    await saveExecutionGrant(db, older);
-    await saveExecutionGrant(db, newer);
+    await saveExecutionPermit(db, older);
+    await saveExecutionPermit(db, newer);
 
-    const list = await listExecutionGrants(db);
+    const list = await listExecutionPermits(db);
     expect(list).toHaveLength(2);
     expect(list[0].id).toBe(newer.id);
   });
 
-  it('filters execution grants by coopId', async () => {
+  it('filters execution permits by coopId', async () => {
     const db = freshDb();
-    const coopA = buildExecutionGrant({ coopId: 'coop-a', createdAt: NOW });
-    const coopB = buildExecutionGrant({ coopId: 'coop-b', createdAt: LATER });
-    const coopA2 = buildExecutionGrant({ coopId: 'coop-a', createdAt: LATER });
+    const coopA = buildExecutionPermit({ coopId: 'coop-a', createdAt: NOW });
+    const coopB = buildExecutionPermit({ coopId: 'coop-b', createdAt: LATER });
+    const coopA2 = buildExecutionPermit({ coopId: 'coop-a', createdAt: LATER });
 
-    await saveExecutionGrant(db, coopA);
-    await saveExecutionGrant(db, coopB);
-    await saveExecutionGrant(db, coopA2);
+    await saveExecutionPermit(db, coopA);
+    await saveExecutionPermit(db, coopB);
+    await saveExecutionPermit(db, coopA2);
 
-    const filtered = await listExecutionGrantsByCoopId(db, 'coop-a');
+    const filtered = await listExecutionPermitsByCoopId(db, 'coop-a');
     expect(filtered).toHaveLength(2);
     expect(filtered.every((g) => g.coopId === 'coop-a')).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Grant log entries
+// Permit log entries
 // ---------------------------------------------------------------------------
 
-describe('grant log entry persistence', () => {
-  it('saves and lists grant log entries', async () => {
+describe('permit log entry persistence', () => {
+  it('saves and lists permit log entries', async () => {
     const db = freshDb();
-    const entry = buildGrantLogEntry();
+    const entry = buildPermitLogEntry();
 
-    await saveGrantLogEntry(db, entry);
-    const list = await listGrantLogEntries(db);
+    await savePermitLogEntry(db, entry);
+    const list = await listPermitLogEntries(db);
 
     expect(list).toHaveLength(1);
     expect(list[0].id).toBe(entry.id);
@@ -1153,14 +1153,14 @@ describe('grant log entry persistence', () => {
   it('respects the limit parameter', async () => {
     const db = freshDb();
     const entries = Array.from({ length: 5 }, (_, i) =>
-      buildGrantLogEntry({ createdAt: `2026-03-13T1${i}:00:00.000Z` }),
+      buildPermitLogEntry({ createdAt: `2026-03-13T1${i}:00:00.000Z` }),
     );
 
     for (const entry of entries) {
-      await saveGrantLogEntry(db, entry);
+      await savePermitLogEntry(db, entry);
     }
 
-    const limited = await listGrantLogEntries(db, 2);
+    const limited = await listPermitLogEntries(db, 2);
     expect(limited).toHaveLength(2);
   });
 });

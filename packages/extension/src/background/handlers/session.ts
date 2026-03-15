@@ -44,9 +44,9 @@ import { createSmartAccountClient } from 'permissionless/clients';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
 import { http, type Address, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { createRuntimeGrantExecutor } from '../../runtime/grant-runtime';
 import type { RuntimeActionResponse } from '../../runtime/messages';
 import type { RuntimeRequest } from '../../runtime/messages';
+import { createRuntimePermitExecutor } from '../../runtime/permit-runtime';
 import { sessionCapabilityChanged } from '../../runtime/session-capability';
 import {
   configuredOnchainMode,
@@ -509,7 +509,7 @@ export async function handleIssueSessionCapability(
     return { ok: false, error: creatorResolution.error };
   }
 
-  const executor = createRuntimeGrantExecutor(authSession);
+  const executor = createRuntimePermitExecutor(authSession);
   if (!executor.localIdentityId) {
     return {
       ok: false,

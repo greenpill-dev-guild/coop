@@ -4,7 +4,7 @@ export * from './archive';
 export * from './auth';
 export * from './coop';
 export * from './erc8004';
-export * from './grant';
+export * from './permit';
 export * from './greengoods';
 export * from './onchain';
 export * from './operator';

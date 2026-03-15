@@ -5,49 +5,49 @@ import {
   type CoopSharedState,
   type DelegatedActionClass,
   type Erc8004LiveExecutor,
-  type ExecutionGrant,
-  type GrantLogEntry,
+  type ExecutionPermit,
   type GreenGoodsGardenState,
+  type PermitLogEntry,
   type PolicyActionClass,
   approveBundle,
   createActionBundle,
   createActionLogEntry,
   createDefaultPolicies,
-  createExecutionGrant,
-  createGrantLogEntry,
+  createExecutionPermit,
   createGreenGoodsAssessment,
   createGreenGoodsGarden,
   createGreenGoodsGardenPools,
+  createPermitLogEntry,
   createReplayGuard,
   executeBundle as executeBundleAction,
   expireStaleBundles,
   findMatchingPolicy,
   getActionBundle,
   getAuthSession,
-  getExecutionGrant,
+  getExecutionPermit,
   getReviewDraft,
   giveAgentFeedback,
-  incrementGrantUsage,
+  incrementPermitUsage,
   listActionBundles,
   listActionBundlesByStatus,
   listActionLogEntries,
   listActionPolicies,
-  listExecutionGrants,
-  listGrantLogEntries,
+  listExecutionPermits,
+  listPermitLogEntries,
   listRecordedReplayIds,
   nowIso,
   pendingBundles,
   recordReplayId,
-  refreshGrantStatus,
+  refreshPermitStatus,
   registerAgentIdentity,
   rejectBundle,
   resolveGreenGoodsGapAdminChanges,
   resolveScopedActionPayload,
-  revokeGrant,
+  revokePermit,
   saveActionBundle,
   saveActionLogEntry,
-  saveExecutionGrant,
-  saveGrantLogEntry,
+  saveExecutionPermit,
+  savePermitLogEntry,
   setActionPolicies,
   setGreenGoodsGardenDomains,
   submitGreenGoodsWorkApproval,
@@ -55,14 +55,14 @@ import {
   syncGreenGoodsGardenProfile,
   updateGreenGoodsState,
   upsertPolicyForActionClass,
-  validateGrantForExecution,
+  validatePermitForExecution,
 } from '@coop/shared';
 import type { Address } from 'viem';
-import {
-  createRuntimeGrantExecutor,
-  resolveDelegatedActionExecution,
-} from '../../runtime/grant-runtime';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
+import {
+  createRuntimePermitExecutor,
+  resolveDelegatedActionExecution,
+} from '../../runtime/permit-runtime';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import { validateReviewDraftPublish } from '../../runtime/review';
 import {
@@ -1229,7 +1229,7 @@ export async function handleGetActionHistory(): Promise<RuntimeActionResponse<Ac
   return { ok: true, data: entries };
 }
 
-// ---- Grant Handlers ----
+// ---- Permit Handlers ----
 
 type PreparedDelegatedExecution =
   | {
@@ -1244,7 +1244,7 @@ type PreparedDelegatedExecution =
     };
 
 async function prepareDelegatedExecution(
-  message: Extract<RuntimeRequest, { type: 'execute-with-grant' }>,
+  message: Extract<RuntimeRequest, { type: 'execute-with-permit' }>,
   authSession: Awaited<ReturnType<typeof getAuthSession>>,
 ): Promise<PreparedDelegatedExecution> {
   const scopedAction = resolveDelegatedActionExecution({
@@ -1341,22 +1341,22 @@ async function prepareDelegatedExecution(
   }
 }
 
-async function reserveGrantExecution(input: {
-  grantId: string;
+async function reservePermitExecution(input: {
+  permitId: string;
   actionClass: DelegatedActionClass;
   coopId: string;
   replayId: string;
   targetIds: string[];
-  executor: Pick<ExecutionGrant['executor'], 'label' | 'localIdentityId'>;
+  executor: Pick<ExecutionPermit['executor'], 'label' | 'localIdentityId'>;
 }) {
-  return db.transaction('rw', db.executionGrants, db.replayIds, async () => {
-    const grant = await getExecutionGrant(db, input.grantId);
-    if (!grant) return { ok: false as const, error: 'Grant not found.' };
-    const refreshed = refreshGrantStatus(grant);
-    if (refreshed.status !== grant.status) await saveExecutionGrant(db, refreshed);
+  return db.transaction('rw', db.executionPermits, db.replayIds, async () => {
+    const permit = await getExecutionPermit(db, input.permitId);
+    if (!permit) return { ok: false as const, error: 'Permit not found.' };
+    const refreshed = refreshPermitStatus(permit);
+    if (refreshed.status !== permit.status) await saveExecutionPermit(db, refreshed);
     const replayExists = (await db.replayIds.get(input.replayId)) !== undefined;
-    const validation = validateGrantForExecution({
-      grant: refreshed,
+    const validation = validatePermitForExecution({
+      permit: refreshed,
       actionClass: input.actionClass,
       coopId: input.coopId,
       replayId: input.replayId,
@@ -1364,29 +1364,29 @@ async function reserveGrantExecution(input: {
       targetIds: input.targetIds,
       executor: input.executor,
     });
-    if (!validation.ok) return { ok: false as const, grant: refreshed, validation };
-    const reservedGrant = incrementGrantUsage(refreshed);
-    await saveExecutionGrant(db, reservedGrant);
-    await recordReplayId(db, input.replayId, reservedGrant.id, nowIso());
-    return { ok: true as const, grant: reservedGrant };
+    if (!validation.ok) return { ok: false as const, permit: refreshed, validation };
+    const reservedPermit = incrementPermitUsage(refreshed);
+    await saveExecutionPermit(db, reservedPermit);
+    await recordReplayId(db, input.replayId, reservedPermit.id, nowIso());
+    return { ok: true as const, permit: reservedPermit };
   });
 }
 
-export async function handleIssueGrant(
-  message: Extract<RuntimeRequest, { type: 'issue-grant' }>,
-): Promise<RuntimeActionResponse<ExecutionGrant>> {
+export async function handleIssuePermit(
+  message: Extract<RuntimeRequest, { type: 'issue-permit' }>,
+): Promise<RuntimeActionResponse<ExecutionPermit>> {
   const authSession = await getAuthSession(db);
-  if (!authSession) return { ok: false, error: 'Authentication required to issue grants.' };
+  if (!authSession) return { ok: false, error: 'Authentication required to issue permits.' };
   const creatorResolution = await requireCreatorGrantManager(
     message.payload.coopId,
     authSession,
-    'Only coop creators can issue execution grants.',
+    'Only coop creators can issue execution permits.',
   );
   if (!creatorResolution.ok) return { ok: false, error: creatorResolution.error };
-  const executor = createRuntimeGrantExecutor(authSession);
+  const executor = createRuntimePermitExecutor(authSession);
   if (!executor.localIdentityId)
-    return { ok: false, error: 'A passkey member session is required to issue execution grants.' };
-  const grant = createExecutionGrant({
+    return { ok: false, error: 'A passkey member session is required to issue execution permits.' };
+  const permit = createExecutionPermit({
     coopId: message.payload.coopId,
     issuedBy: {
       memberId: creatorResolution.member.id,
@@ -1399,54 +1399,54 @@ export async function handleIssueGrant(
     allowedActions: message.payload.allowedActions,
     targetAllowlist: message.payload.targetAllowlist,
   });
-  await saveExecutionGrant(db, grant);
-  const logEntry = createGrantLogEntry({
-    grantId: grant.id,
-    eventType: 'grant-issued',
-    detail: `Grant issued for ${grant.allowedActions.join(', ')} (max ${grant.maxUses} uses, expires ${grant.expiresAt}).`,
-    coopId: grant.coopId,
+  await saveExecutionPermit(db, permit);
+  const logEntry = createPermitLogEntry({
+    permitId: permit.id,
+    eventType: 'permit-issued',
+    detail: `Permit issued for ${permit.allowedActions.join(', ')} (max ${permit.maxUses} uses, expires ${permit.expiresAt}).`,
+    coopId: permit.coopId,
   });
-  await saveGrantLogEntry(db, logEntry);
-  return { ok: true, data: grant };
+  await savePermitLogEntry(db, logEntry);
+  return { ok: true, data: permit };
 }
 
-export async function handleRevokeGrant(
-  message: Extract<RuntimeRequest, { type: 'revoke-grant' }>,
-): Promise<RuntimeActionResponse<ExecutionGrant>> {
-  const grant = await getExecutionGrant(db, message.payload.grantId);
-  if (!grant) return { ok: false, error: 'Grant not found.' };
+export async function handleRevokePermit(
+  message: Extract<RuntimeRequest, { type: 'revoke-permit' }>,
+): Promise<RuntimeActionResponse<ExecutionPermit>> {
+  const permit = await getExecutionPermit(db, message.payload.permitId);
+  if (!permit) return { ok: false, error: 'Permit not found.' };
   const authSession = await getAuthSession(db);
-  if (!authSession) return { ok: false, error: 'Authentication required to revoke grants.' };
+  if (!authSession) return { ok: false, error: 'Authentication required to revoke permits.' };
   const creatorResolution = await requireCreatorGrantManager(
-    grant.coopId,
+    permit.coopId,
     authSession,
-    'Only coop creators can revoke execution grants.',
+    'Only coop creators can revoke execution permits.',
   );
   if (!creatorResolution.ok) return { ok: false, error: creatorResolution.error };
-  const revoked = revokeGrant(grant);
-  await saveExecutionGrant(db, revoked);
-  const logEntry = createGrantLogEntry({
-    grantId: revoked.id,
-    eventType: 'grant-revoked',
-    detail: `Grant ${revoked.id} revoked.`,
+  const revoked = revokePermit(permit);
+  await saveExecutionPermit(db, revoked);
+  const logEntry = createPermitLogEntry({
+    permitId: revoked.id,
+    eventType: 'permit-revoked',
+    detail: `Permit ${revoked.id} revoked.`,
     coopId: revoked.coopId,
   });
-  await saveGrantLogEntry(db, logEntry);
+  await savePermitLogEntry(db, logEntry);
   return { ok: true, data: revoked };
 }
 
-export async function handleExecuteWithGrant(
-  message: Extract<RuntimeRequest, { type: 'execute-with-grant' }>,
+export async function handleExecuteWithPermit(
+  message: Extract<RuntimeRequest, { type: 'execute-with-permit' }>,
 ): Promise<RuntimeActionResponse> {
   const authSession = await getAuthSession(db);
   if (!authSession) return { ok: false, error: 'Authentication required for delegated execution.' };
-  const executor = createRuntimeGrantExecutor(authSession);
+  const executor = createRuntimePermitExecutor(authSession);
   if (!executor.localIdentityId)
     return { ok: false, error: 'A passkey member session is required for delegated execution.' };
   const prepared = await prepareDelegatedExecution(message, authSession);
   if (!prepared.ok) return { ok: false, error: prepared.error };
-  const reservation = await reserveGrantExecution({
-    grantId: message.payload.grantId,
+  const reservation = await reservePermitExecution({
+    permitId: message.payload.permitId,
     actionClass: message.payload.actionClass,
     coopId: message.payload.coopId,
     replayId: message.payload.replayId,
@@ -1461,14 +1461,14 @@ export async function handleExecuteWithGrant(
         : reservation.validation.rejectType === 'exhausted'
           ? ('delegated-exhausted-rejected' as const)
           : reservation.validation.rejectType === 'revoked'
-            ? ('grant-revoked' as const)
+            ? ('permit-revoked' as const)
             : reservation.validation.rejectType === 'expired'
-              ? ('grant-expired' as const)
+              ? ('permit-expired' as const)
               : ('delegated-execution-failed' as const);
-    await saveGrantLogEntry(
+    await savePermitLogEntry(
       db,
-      createGrantLogEntry({
-        grantId: reservation.grant.id,
+      createPermitLogEntry({
+        permitId: reservation.permit.id,
         eventType: logEventType,
         detail: reservation.validation.reason,
         actionClass: message.payload.actionClass,
@@ -1478,10 +1478,10 @@ export async function handleExecuteWithGrant(
     );
     return { ok: false, error: reservation.validation.reason };
   }
-  await saveGrantLogEntry(
+  await savePermitLogEntry(
     db,
-    createGrantLogEntry({
-      grantId: reservation.grant.id,
+    createPermitLogEntry({
+      permitId: reservation.permit.id,
       eventType: 'delegated-execution-attempted',
       detail: `Attempting delegated ${message.payload.actionClass} on coop ${message.payload.coopId}.`,
       actionClass: message.payload.actionClass,
@@ -1499,10 +1499,10 @@ export async function handleExecuteWithGrant(
     };
   }
   if (result.ok) {
-    await saveGrantLogEntry(
+    await savePermitLogEntry(
       db,
-      createGrantLogEntry({
-        grantId: reservation.grant.id,
+      createPermitLogEntry({
+        permitId: reservation.permit.id,
         eventType: 'delegated-execution-succeeded',
         detail: `Delegated ${message.payload.actionClass} succeeded.`,
         actionClass: message.payload.actionClass,
@@ -1511,10 +1511,10 @@ export async function handleExecuteWithGrant(
       }),
     );
   } else {
-    await saveGrantLogEntry(
+    await savePermitLogEntry(
       db,
-      createGrantLogEntry({
-        grantId: reservation.grant.id,
+      createPermitLogEntry({
+        permitId: reservation.permit.id,
         eventType: 'delegated-execution-failed',
         detail: result.error ?? 'Delegated execution failed.',
         actionClass: message.payload.actionClass,
@@ -1526,22 +1526,22 @@ export async function handleExecuteWithGrant(
   return result;
 }
 
-export async function handleGetGrants(): Promise<RuntimeActionResponse<ExecutionGrant[]>> {
-  const { refreshStoredGrantStatuses } = await import('../dashboard');
+export async function handleGetPermits(): Promise<RuntimeActionResponse<ExecutionPermit[]>> {
+  const { refreshStoredPermitStatuses } = await import('../dashboard');
   const trustedNodeContext = await getTrustedNodeContext();
   if (!trustedNodeContext.ok) return { ok: true, data: [] };
   return {
     ok: true,
-    data: (await refreshStoredGrantStatuses()).filter(
-      (grant) => grant.coopId === trustedNodeContext.coop.profile.id,
+    data: (await refreshStoredPermitStatuses()).filter(
+      (permit) => permit.coopId === trustedNodeContext.coop.profile.id,
     ),
   };
 }
 
-export async function handleGetGrantLog(): Promise<RuntimeActionResponse<GrantLogEntry[]>> {
+export async function handleGetPermitLog(): Promise<RuntimeActionResponse<PermitLogEntry[]>> {
   const trustedNodeContext = await getTrustedNodeContext();
   if (!trustedNodeContext.ok) return { ok: true, data: [] };
-  const entries = (await listGrantLogEntries(db)).filter(
+  const entries = (await listPermitLogEntries(db)).filter(
     (entry) => entry.coopId === trustedNodeContext.coop.profile.id,
   );
   return { ok: true, data: entries };

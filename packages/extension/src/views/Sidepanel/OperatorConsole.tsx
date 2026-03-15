@@ -6,11 +6,11 @@ import type {
   AgentPlan,
   AnchorCapability,
   DelegatedActionClass,
-  ExecutionGrant,
-  GrantLogEntry,
+  ExecutionPermit,
   GreenGoodsAssessmentRequest,
   GreenGoodsWorkApprovalRequest,
   IntegrationMode,
+  PermitLogEntry,
   PolicyActionClass,
   PrivilegedActionLogEntry,
   SessionCapability,
@@ -24,8 +24,8 @@ import {
   formatActionClassLabel,
   formatActionLogEventLabel,
   formatDelegatedActionLabel,
-  formatGrantLogEventLabel,
-  formatGrantStatusLabel,
+  formatPermitLogEventLabel,
+  formatPermitStatusLabel,
   formatSessionCapabilityFailureReason,
   formatSessionCapabilityStatusLabel,
 } from '@coop/shared';
@@ -57,17 +57,17 @@ type OperatorConsoleProps = {
   onApproveAction(bundleId: string): void | Promise<void>;
   onRejectAction(bundleId: string): void | Promise<void>;
   onExecuteAction(bundleId: string): void | Promise<void>;
-  grants: ExecutionGrant[];
-  grantLog: GrantLogEntry[];
-  onIssueGrant(input: {
+  permits: ExecutionPermit[];
+  permitLog: PermitLogEntry[];
+  onIssuePermit(input: {
     coopId: string;
     expiresAt: string;
     maxUses: number;
     allowedActions: DelegatedActionClass[];
   }): void | Promise<void>;
-  onRevokeGrant(grantId: string): void | Promise<void>;
-  onExecuteWithGrant(
-    grantId: string,
+  onRevokePermit(permitId: string): void | Promise<void>;
+  onExecuteWithPermit(
+    permitId: string,
     actionClass: DelegatedActionClass,
     actionPayload: Record<string, unknown>,
   ): void | Promise<void>;
@@ -1011,26 +1011,28 @@ export function OperatorConsole(props: OperatorConsoleProps) {
             Issue time-limited passes for low-risk delegated actions. These passes cannot authorize
             treasury operations, arbitrary contract calls, or Safe deployment.
           </p>
-          {props.grants.map((grant) => (
-            <article className="operator-log-entry" key={grant.id}>
+          {props.permits.map((permit) => (
+            <article className="operator-log-entry" key={permit.id}>
               <div className="badge-row">
-                <span className="badge">{formatGrantStatusLabel(grant.status)}</span>
-                <span className="badge">{grant.coopId}</span>
+                <span className="badge">{formatPermitStatusLabel(permit.status)}</span>
+                <span className="badge">{permit.coopId}</span>
                 <span className="badge">
-                  {grant.usedCount}/{grant.maxUses} uses
+                  {permit.usedCount}/{permit.maxUses} uses
                 </span>
               </div>
-              <strong>{grant.allowedActions.map(formatDelegatedActionLabel).join(', ')}</strong>
+              <strong>{permit.allowedActions.map(formatDelegatedActionLabel).join(', ')}</strong>
               <div className="helper-text">
-                Issued by {grant.issuedBy.displayName} · Expires{' '}
-                {new Date(grant.expiresAt).toLocaleString()}
-                {grant.revokedAt ? ` · Revoked ${new Date(grant.revokedAt).toLocaleString()}` : ''}
+                Issued by {permit.issuedBy.displayName} · Expires{' '}
+                {new Date(permit.expiresAt).toLocaleString()}
+                {permit.revokedAt
+                  ? ` · Revoked ${new Date(permit.revokedAt).toLocaleString()}`
+                  : ''}
               </div>
-              {grant.status === 'active' ? (
+              {permit.status === 'active' ? (
                 <div className="action-row">
                   <button
                     className="secondary-button"
-                    onClick={() => void props.onRevokeGrant(grant.id)}
+                    onClick={() => void props.onRevokePermit(permit.id)}
                     type="button"
                   >
                     Turn off pass
@@ -1039,7 +1041,7 @@ export function OperatorConsole(props: OperatorConsoleProps) {
               ) : null}
             </article>
           ))}
-          {props.grants.length === 0 ? (
+          {props.permits.length === 0 ? (
             <div className="empty-state">No helper passes issued yet.</div>
           ) : null}
         </div>
@@ -1050,10 +1052,10 @@ export function OperatorConsole(props: OperatorConsoleProps) {
           <h3>Helper Pass Log</h3>
         </summary>
         <div className="collapsible-card__content">
-          {props.grantLog.slice(0, 20).map((entry) => (
+          {props.permitLog.slice(0, 20).map((entry) => (
             <article className="operator-log-entry" key={entry.id}>
               <div className="badge-row">
-                <span className="badge">{formatGrantLogEventLabel(entry.eventType)}</span>
+                <span className="badge">{formatPermitLogEventLabel(entry.eventType)}</span>
                 {entry.actionClass ? (
                   <span className="badge">{formatDelegatedActionLabel(entry.actionClass)}</span>
                 ) : null}
@@ -1062,7 +1064,7 @@ export function OperatorConsole(props: OperatorConsoleProps) {
               <div className="helper-text">{new Date(entry.createdAt).toLocaleString()}</div>
             </article>
           ))}
-          {props.grantLog.length === 0 ? (
+          {props.permitLog.length === 0 ? (
             <div className="empty-state">No helper-pass activity yet.</div>
           ) : null}
         </div>

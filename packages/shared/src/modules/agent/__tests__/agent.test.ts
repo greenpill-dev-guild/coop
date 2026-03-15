@@ -295,7 +295,7 @@ describe('createActionProposal', () => {
     expect(proposal.coopId).toBe('coop-1');
     expect(proposal.reason).toBe('Draft is ready for publishing.');
     expect(proposal.approvalMode).toBe('proposal');
-    expect(proposal.requiresGrant).toBe(false);
+    expect(proposal.requiresPermit).toBe(false);
     expect(proposal.createdAt).toBeDefined();
   });
 
@@ -307,14 +307,14 @@ describe('createActionProposal', () => {
       payload: { artifactId: 'artifact-1' },
       reason: 'Artifact is archivable.',
       approvalMode: 'advisory',
-      requiresGrant: true,
-      grantId: 'grant-1',
+      requiresPermit: true,
+      permitId: 'permit-1',
       generatedBySkillId: 'capital-formation-brief',
     });
 
     expect(proposal.memberId).toBe('member-1');
-    expect(proposal.requiresGrant).toBe(true);
-    expect(proposal.grantId).toBe('grant-1');
+    expect(proposal.requiresPermit).toBe(true);
+    expect(proposal.permitId).toBe('permit-1');
     expect(proposal.generatedBySkillId).toBe('capital-formation-brief');
   });
 });

@@ -1,8 +1,8 @@
-import type { DelegatedActionClass, ExecutionGrant, GrantStatus } from '../../contracts/schema';
-import { executionGrantSchema } from '../../contracts/schema';
+import type { DelegatedActionClass, ExecutionPermit, PermitStatus } from '../../contracts/schema';
+import { executionPermitSchema } from '../../contracts/schema';
 import { createId, nowIso } from '../../utils';
 
-export function createExecutionGrant(input: {
+export function createExecutionPermit(input: {
   coopId: string;
   issuedBy: { memberId: string; displayName: string; address?: string };
   executor: { label: string; localIdentityId?: string };
@@ -12,9 +12,9 @@ export function createExecutionGrant(input: {
   targetAllowlist?: Record<string, string[]>;
   policyRef?: string;
   createdAt?: string;
-}): ExecutionGrant {
-  return executionGrantSchema.parse({
-    id: createId('grant'),
+}): ExecutionPermit {
+  return executionPermitSchema.parse({
+    id: createId('permit'),
     coopId: input.coopId,
     issuedBy: input.issuedBy,
     executor: input.executor,
@@ -29,50 +29,50 @@ export function createExecutionGrant(input: {
   });
 }
 
-export function revokeGrant(grant: ExecutionGrant, now?: string): ExecutionGrant {
+export function revokePermit(permit: ExecutionPermit, now?: string): ExecutionPermit {
   const timestamp = now ?? nowIso();
-  return executionGrantSchema.parse({
-    ...grant,
+  return executionPermitSchema.parse({
+    ...permit,
     revokedAt: timestamp,
-    status: 'revoked' as GrantStatus,
+    status: 'revoked' as PermitStatus,
   });
 }
 
-export function computeGrantStatus(grant: ExecutionGrant, now?: string): GrantStatus {
-  if (grant.revokedAt) {
+export function computePermitStatus(permit: ExecutionPermit, now?: string): PermitStatus {
+  if (permit.revokedAt) {
     return 'revoked';
   }
   const reference = now ?? nowIso();
-  if (grant.expiresAt <= reference) {
+  if (permit.expiresAt <= reference) {
     return 'expired';
   }
-  if (grant.usedCount >= grant.maxUses) {
+  if (permit.usedCount >= permit.maxUses) {
     return 'exhausted';
   }
   return 'active';
 }
 
-export function refreshGrantStatus(grant: ExecutionGrant, now?: string): ExecutionGrant {
-  const status = computeGrantStatus(grant, now);
-  if (status === grant.status) {
-    return grant;
+export function refreshPermitStatus(permit: ExecutionPermit, now?: string): ExecutionPermit {
+  const status = computePermitStatus(permit, now);
+  if (status === permit.status) {
+    return permit;
   }
-  return executionGrantSchema.parse({ ...grant, status });
+  return executionPermitSchema.parse({ ...permit, status });
 }
 
-export function incrementGrantUsage(grant: ExecutionGrant): ExecutionGrant {
-  return executionGrantSchema.parse({
-    ...grant,
-    usedCount: grant.usedCount + 1,
-    status: grant.usedCount + 1 >= grant.maxUses ? 'exhausted' : grant.status,
+export function incrementPermitUsage(permit: ExecutionPermit): ExecutionPermit {
+  return executionPermitSchema.parse({
+    ...permit,
+    usedCount: permit.usedCount + 1,
+    status: permit.usedCount + 1 >= permit.maxUses ? 'exhausted' : permit.status,
   });
 }
 
-export function isGrantUsable(grant: ExecutionGrant, now?: string): boolean {
-  return computeGrantStatus(grant, now) === 'active';
+export function isPermitUsable(permit: ExecutionPermit, now?: string): boolean {
+  return computePermitStatus(permit, now) === 'active';
 }
 
-export function formatGrantStatusLabel(status: GrantStatus): string {
+export function formatPermitStatusLabel(status: PermitStatus): string {
   switch (status) {
     case 'active':
       return 'Active';

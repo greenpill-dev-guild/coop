@@ -206,12 +206,12 @@ export const delegatedActionClassSchema = z.enum([
   'publish-ready-draft',
 ]);
 
-export const grantStatusSchema = z.enum(['active', 'expired', 'revoked', 'exhausted']);
+export const permitStatusSchema = z.enum(['active', 'expired', 'revoked', 'exhausted']);
 
-export const grantLogEventTypeSchema = z.enum([
-  'grant-issued',
-  'grant-revoked',
-  'grant-expired',
+export const permitLogEventTypeSchema = z.enum([
+  'permit-issued',
+  'permit-revoked',
+  'permit-expired',
   'delegated-execution-attempted',
   'delegated-execution-succeeded',
   'delegated-execution-failed',
@@ -219,7 +219,7 @@ export const grantLogEventTypeSchema = z.enum([
   'delegated-exhausted-rejected',
 ]);
 
-export const executionGrantSchema = z.object({
+export const executionPermitSchema = z.object({
   id: z.string().min(1),
   coopId: z.string().min(1),
   issuedBy: z.object({
@@ -242,13 +242,13 @@ export const executionGrantSchema = z.object({
   allowedActions: z.array(delegatedActionClassSchema).min(1),
   targetAllowlist: z.record(z.array(z.string())).optional(),
   policyRef: z.string().min(1).optional(),
-  status: grantStatusSchema.default('active'),
+  status: permitStatusSchema.default('active'),
 });
 
-export const grantLogEntrySchema = z.object({
+export const permitLogEntrySchema = z.object({
   id: z.string().min(1),
-  grantId: z.string().min(1),
-  eventType: grantLogEventTypeSchema,
+  permitId: z.string().min(1),
+  eventType: permitLogEventTypeSchema,
   actionClass: delegatedActionClassSchema.optional(),
   detail: z.string().min(1),
   createdAt: z.string().datetime(),
@@ -447,8 +447,8 @@ export const actionProposalSchema = z.object({
   payload: z.record(z.any()),
   reason: z.string().min(1),
   approvalMode: skillApprovalModeSchema,
-  requiresGrant: z.boolean().default(false),
-  grantId: z.string().min(1).optional(),
+  requiresPermit: z.boolean().default(false),
+  permitId: z.string().min(1).optional(),
   generatedBySkillId: z.string().min(1).optional(),
   createdAt: z.string().datetime(),
 });
@@ -1688,10 +1688,10 @@ export type ActionBundle = z.infer<typeof actionBundleSchema>;
 export type ActionLogEventType = z.infer<typeof actionLogEventTypeSchema>;
 export type ActionLogEntry = z.infer<typeof actionLogEntrySchema>;
 export type DelegatedActionClass = z.infer<typeof delegatedActionClassSchema>;
-export type GrantStatus = z.infer<typeof grantStatusSchema>;
-export type GrantLogEventType = z.infer<typeof grantLogEventTypeSchema>;
-export type ExecutionGrant = z.infer<typeof executionGrantSchema>;
-export type GrantLogEntry = z.infer<typeof grantLogEntrySchema>;
+export type PermitStatus = z.infer<typeof permitStatusSchema>;
+export type PermitLogEventType = z.infer<typeof permitLogEventTypeSchema>;
+export type ExecutionPermit = z.infer<typeof executionPermitSchema>;
+export type PermitLogEntry = z.infer<typeof permitLogEntrySchema>;
 export type SessionCapableActionClass = z.infer<typeof sessionCapableActionClassSchema>;
 export type SessionCapabilityStatus = z.infer<typeof sessionCapabilityStatusSchema>;
 export type SessionCapabilityFailureReason = z.infer<typeof sessionCapabilityFailureReasonSchema>;

@@ -13,11 +13,11 @@ import type {
   CoopKnowledgeSkillOverride,
   CoopSharedState,
   EncryptedSessionMaterial,
-  ExecutionGrant,
-  GrantLogEntry,
+  ExecutionPermit,
   HapticPreferences,
   KnowledgeSkill,
   LocalPasskeyIdentity,
+  PermitLogEntry,
   PrivacyIdentityRecord,
   PrivilegedActionLogEntry,
   ReadablePageExtract,
@@ -44,10 +44,10 @@ import {
   authSessionSchema,
   coopArchiveSecretsSchema,
   encryptedSessionMaterialSchema,
-  executionGrantSchema,
-  grantLogEntrySchema,
+  executionPermitSchema,
   hapticPreferencesSchema,
   normalizeLegacyOnchainState,
+  permitLogEntrySchema,
   privilegedActionLogEntrySchema,
   receiverDeviceIdentitySchema,
   sessionCapabilityLogEntrySchema,
@@ -102,8 +102,8 @@ export class CoopDexie extends Dexie {
   actionBundles!: EntityTable<ActionBundle, 'id'>;
   actionLogEntries!: EntityTable<ActionLogEntry, 'id'>;
   replayIds!: EntityTable<ReplayIdRecord, 'replayId'>;
-  executionGrants!: EntityTable<ExecutionGrant, 'id'>;
-  grantLogEntries!: EntityTable<GrantLogEntry, 'id'>;
+  executionPermits!: EntityTable<ExecutionPermit, 'id'>;
+  permitLogEntries!: EntityTable<PermitLogEntry, 'id'>;
   sessionCapabilities!: EntityTable<SessionCapability, 'id'>;
   sessionCapabilityLogEntries!: EntityTable<SessionCapabilityLogEntry, 'id'>;
   encryptedSessionMaterials!: EntityTable<EncryptedSessionMaterial, 'capabilityId'>;
@@ -216,8 +216,8 @@ export class CoopDexie extends Dexie {
       actionBundles: 'id, status, coopId, actionClass, createdAt',
       actionLogEntries: 'id, bundleId, eventType, createdAt',
       replayIds: 'replayId, bundleId, executedAt',
-      executionGrants: 'id, coopId, status, createdAt, expiresAt',
-      grantLogEntries: 'id, grantId, eventType, createdAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
     });
     this.version(7).stores({
       tabCandidates: 'id, canonicalUrl, domain, capturedAt',
@@ -234,8 +234,8 @@ export class CoopDexie extends Dexie {
       actionBundles: 'id, status, coopId, actionClass, createdAt',
       actionLogEntries: 'id, bundleId, eventType, createdAt',
       replayIds: 'replayId, bundleId, executedAt',
-      executionGrants: 'id, coopId, status, createdAt, expiresAt',
-      grantLogEntries: 'id, grantId, eventType, createdAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
       agentObservations: 'id, status, trigger, coopId, createdAt, fingerprint',
       agentPlans: 'id, observationId, status, createdAt, updatedAt',
       skillRuns: 'id, observationId, planId, skillId, status, startedAt',
@@ -255,8 +255,8 @@ export class CoopDexie extends Dexie {
       actionBundles: 'id, status, coopId, actionClass, createdAt',
       actionLogEntries: 'id, bundleId, eventType, createdAt',
       replayIds: 'replayId, bundleId, executedAt',
-      executionGrants: 'id, coopId, status, createdAt, expiresAt',
-      grantLogEntries: 'id, grantId, eventType, createdAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
       sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
       sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
       encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
@@ -279,8 +279,8 @@ export class CoopDexie extends Dexie {
       actionBundles: 'id, status, coopId, actionClass, createdAt',
       actionLogEntries: 'id, bundleId, eventType, createdAt',
       replayIds: 'replayId, bundleId, executedAt',
-      executionGrants: 'id, coopId, status, createdAt, expiresAt',
-      grantLogEntries: 'id, grantId, eventType, createdAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
       sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
       sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
       encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
@@ -306,8 +306,8 @@ export class CoopDexie extends Dexie {
       actionBundles: 'id, status, coopId, actionClass, createdAt',
       actionLogEntries: 'id, bundleId, eventType, createdAt',
       replayIds: 'replayId, bundleId, executedAt',
-      executionGrants: 'id, coopId, status, createdAt, expiresAt',
-      grantLogEntries: 'id, grantId, eventType, createdAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
       sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
       sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
       encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
@@ -682,32 +682,32 @@ export async function listRecordedReplayIds(db: CoopDexie) {
   return records.map((r) => r.replayId);
 }
 
-// --- Execution Grant persistence ---
+// --- Execution Permit persistence ---
 
-export async function saveExecutionGrant(db: CoopDexie, grant: ExecutionGrant) {
-  await db.executionGrants.put(executionGrantSchema.parse(grant));
+export async function saveExecutionPermit(db: CoopDexie, permit: ExecutionPermit) {
+  await db.executionPermits.put(executionPermitSchema.parse(permit));
 }
 
-export async function getExecutionGrant(db: CoopDexie, grantId: string) {
-  return db.executionGrants.get(grantId);
+export async function getExecutionPermit(db: CoopDexie, permitId: string) {
+  return db.executionPermits.get(permitId);
 }
 
-export async function listExecutionGrants(db: CoopDexie) {
-  return db.executionGrants.orderBy('createdAt').reverse().toArray();
+export async function listExecutionPermits(db: CoopDexie) {
+  return db.executionPermits.orderBy('createdAt').reverse().toArray();
 }
 
-export async function listExecutionGrantsByCoopId(db: CoopDexie, coopId: string) {
-  return db.executionGrants.where('coopId').equals(coopId).reverse().sortBy('createdAt');
+export async function listExecutionPermitsByCoopId(db: CoopDexie, coopId: string) {
+  return db.executionPermits.where('coopId').equals(coopId).reverse().sortBy('createdAt');
 }
 
-// --- Grant Log persistence ---
+// --- Permit Log persistence ---
 
-export async function saveGrantLogEntry(db: CoopDexie, entry: GrantLogEntry) {
-  await db.grantLogEntries.put(grantLogEntrySchema.parse(entry));
+export async function savePermitLogEntry(db: CoopDexie, entry: PermitLogEntry) {
+  await db.permitLogEntries.put(permitLogEntrySchema.parse(entry));
 }
 
-export async function listGrantLogEntries(db: CoopDexie, limit = 100) {
-  return db.grantLogEntries.orderBy('createdAt').reverse().limit(limit).toArray();
+export async function listPermitLogEntries(db: CoopDexie, limit = 100) {
+  return db.permitLogEntries.orderBy('createdAt').reverse().limit(limit).toArray();
 }
 
 // --- Session capability persistence ---

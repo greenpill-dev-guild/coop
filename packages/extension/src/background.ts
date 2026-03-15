@@ -54,16 +54,16 @@ import { getDashboard, refreshBadge } from './background/dashboard';
 import {
   handleApproveAction,
   handleExecuteAction,
-  handleExecuteWithGrant,
+  handleExecuteWithPermit,
   handleGetActionHistory,
   handleGetActionPolicies,
   handleGetActionQueue,
-  handleGetGrantLog,
-  handleGetGrants,
-  handleIssueGrant,
+  handleGetPermitLog,
+  handleGetPermits,
+  handleIssuePermit,
   handleProposeAction,
   handleRejectAction,
-  handleRevokeGrant,
+  handleRevokePermit,
   handleSetActionPolicy,
 } from './background/handlers/actions';
 import {
@@ -485,20 +485,20 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
       case 'get-action-history':
         sendResponse(await handleGetActionHistory());
         return;
-      case 'issue-grant':
-        sendResponse(await handleIssueGrant(message));
+      case 'issue-permit':
+        sendResponse(await handleIssuePermit(message));
         return;
-      case 'revoke-grant':
-        sendResponse(await handleRevokeGrant(message));
+      case 'revoke-permit':
+        sendResponse(await handleRevokePermit(message));
         return;
-      case 'execute-with-grant':
-        sendResponse(await handleExecuteWithGrant(message));
+      case 'execute-with-permit':
+        sendResponse(await handleExecuteWithPermit(message));
         return;
-      case 'get-grants':
-        sendResponse(await handleGetGrants());
+      case 'get-permits':
+        sendResponse(await handleGetPermits());
         return;
-      case 'get-grant-log':
-        sendResponse(await handleGetGrantLog());
+      case 'get-permit-log':
+        sendResponse(await handleGetPermitLog());
         return;
       case 'issue-session-capability':
         sendResponse(await handleIssueSessionCapability(message));
@@ -585,6 +585,14 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         sendResponse({
           ok: true,
           data: identities.map((id) => id.commitment),
+        } satisfies RuntimeActionResponse);
+        return;
+      }
+      default: {
+        const _exhaustive: never = message;
+        sendResponse({
+          ok: false,
+          error: `Unknown message type: ${(_exhaustive as RuntimeRequest).type}`,
         } satisfies RuntimeActionResponse);
         return;
       }

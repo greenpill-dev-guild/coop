@@ -5,13 +5,13 @@ import {
   resolveScopedActionPayload,
 } from '@coop/shared';
 
-export const runtimeGrantExecutorLabel = 'operator-console';
+export const runtimePermitExecutorLabel = 'operator-console';
 
-export function createRuntimeGrantExecutor(authSession: AuthSession | null | undefined) {
+export function createRuntimePermitExecutor(authSession: AuthSession | null | undefined) {
   const identity = authSession ? authSessionToLocalIdentity(authSession) : null;
 
   return {
-    label: runtimeGrantExecutorLabel,
+    label: runtimePermitExecutorLabel,
     localIdentityId: identity?.id,
   };
 }

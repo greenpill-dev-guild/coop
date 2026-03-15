@@ -1,13 +1,13 @@
 import { createPasskeySession } from '@coop/shared';
 import { describe, expect, it } from 'vitest';
 import {
-  createRuntimeGrantExecutor,
+  createRuntimePermitExecutor,
   resolveDelegatedActionExecution,
-  runtimeGrantExecutorLabel,
-} from '../grant-runtime';
+  runtimePermitExecutorLabel,
+} from '../permit-runtime';
 
-describe('grant runtime helpers', () => {
-  it('binds the current passkey session to the runtime grant executor', async () => {
+describe('permit runtime helpers', () => {
+  it('binds the current passkey session to the runtime permit executor', async () => {
     const session = await createPasskeySession({
       displayName: 'Ari',
       rpId: 'coop.test',
@@ -17,12 +17,12 @@ describe('grant runtime helpers', () => {
       },
     });
 
-    expect(createRuntimeGrantExecutor(session)).toEqual({
-      label: runtimeGrantExecutorLabel,
+    expect(createRuntimePermitExecutor(session)).toEqual({
+      label: runtimePermitExecutorLabel,
       localIdentityId: 'identity-credential-1',
     });
-    expect(createRuntimeGrantExecutor(null)).toEqual({
-      label: runtimeGrantExecutorLabel,
+    expect(createRuntimePermitExecutor(null)).toEqual({
+      label: runtimePermitExecutorLabel,
       localIdentityId: undefined,
     });
   });

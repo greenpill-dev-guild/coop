@@ -1,25 +1,25 @@
 import type {
   DelegatedActionClass,
-  GrantLogEntry,
-  GrantLogEventType,
+  PermitLogEntry,
+  PermitLogEventType,
 } from '../../contracts/schema';
-import { grantLogEntrySchema } from '../../contracts/schema';
+import { permitLogEntrySchema } from '../../contracts/schema';
 import { createId, nowIso } from '../../utils';
 
-const GRANT_LOG_LIMIT = 100;
+const PERMIT_LOG_LIMIT = 100;
 
-export function createGrantLogEntry(input: {
-  grantId: string;
-  eventType: GrantLogEventType;
+export function createPermitLogEntry(input: {
+  permitId: string;
+  eventType: PermitLogEventType;
   detail: string;
   actionClass?: DelegatedActionClass;
   coopId?: string;
   replayId?: string;
   createdAt?: string;
-}): GrantLogEntry {
-  return grantLogEntrySchema.parse({
-    id: createId('glog'),
-    grantId: input.grantId,
+}): PermitLogEntry {
+  return permitLogEntrySchema.parse({
+    id: createId('plog'),
+    permitId: input.permitId,
     eventType: input.eventType,
     actionClass: input.actionClass,
     detail: input.detail,
@@ -29,23 +29,23 @@ export function createGrantLogEntry(input: {
   });
 }
 
-export function appendGrantLog(
-  entries: GrantLogEntry[],
-  entry: GrantLogEntry,
-  limit = GRANT_LOG_LIMIT,
-): GrantLogEntry[] {
+export function appendPermitLog(
+  entries: PermitLogEntry[],
+  entry: PermitLogEntry,
+  limit = PERMIT_LOG_LIMIT,
+): PermitLogEntry[] {
   return [entry, ...entries]
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(0, limit);
 }
 
-export function formatGrantLogEventLabel(eventType: GrantLogEventType): string {
+export function formatPermitLogEventLabel(eventType: PermitLogEventType): string {
   switch (eventType) {
-    case 'grant-issued':
+    case 'permit-issued':
       return 'Issued';
-    case 'grant-revoked':
+    case 'permit-revoked':
       return 'Revoked';
-    case 'grant-expired':
+    case 'permit-expired':
       return 'Expired';
     case 'delegated-execution-attempted':
       return 'Attempted';

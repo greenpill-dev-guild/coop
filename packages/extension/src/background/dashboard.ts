@@ -1,6 +1,6 @@
 import {
   type UiPreferences,
-  createGrantLogEntry,
+  createPermitLogEntry,
   defaultSoundPreferences,
   deriveExtensionIconState,
   extensionIconBadge,
@@ -11,17 +11,17 @@ import {
   getSoundPreferences,
   listActionBundles,
   listActionLogEntries,
-  listExecutionGrants,
-  listGrantLogEntries,
+  listExecutionPermits,
   listLocalIdentities,
+  listPermitLogEntries,
   listReceiverCaptures,
   listReceiverPairings,
   listSessionCapabilities,
   listSessionCapabilityLogEntries,
   pendingBundles,
-  refreshGrantStatus,
-  saveExecutionGrant,
-  saveGrantLogEntry,
+  refreshPermitStatus,
+  saveExecutionPermit,
+  savePermitLogEntry,
 } from '@coop/shared';
 import { isTrustedNodeRole } from '../runtime/agent-harness';
 import type { DashboardResponse, RuntimeSummary } from '../runtime/messages';
@@ -49,26 +49,26 @@ import { getActiveReviewContextForSession, getOperatorState } from './operator';
 
 // ---- Refresh helpers shared by dashboard + other handlers ----
 
-export async function refreshStoredGrantStatuses() {
-  const grants = await listExecutionGrants(db);
-  const refreshed = grants.map((grant) => refreshGrantStatus(grant));
+export async function refreshStoredPermitStatuses() {
+  const permits = await listExecutionPermits(db);
+  const refreshed = permits.map((permit) => refreshPermitStatus(permit));
 
-  for (const grant of refreshed) {
-    const original = grants.find((candidate) => candidate.id === grant.id);
-    if (!original || original.status === grant.status) {
+  for (const permit of refreshed) {
+    const original = permits.find((candidate) => candidate.id === permit.id);
+    if (!original || original.status === permit.status) {
       continue;
     }
 
-    await saveExecutionGrant(db, grant);
+    await saveExecutionPermit(db, permit);
 
-    if (grant.status === 'expired') {
-      await saveGrantLogEntry(
+    if (permit.status === 'expired') {
+      await savePermitLogEntry(
         db,
-        createGrantLogEntry({
-          grantId: grant.id,
-          eventType: 'grant-expired',
-          detail: `Grant ${grant.id} expired at ${grant.expiresAt}.`,
-          coopId: grant.coopId,
+        createPermitLogEntry({
+          permitId: permit.id,
+          eventType: 'permit-expired',
+          detail: `Permit ${permit.id} expired at ${permit.expiresAt}.`,
+          coopId: permit.coopId,
         }),
       );
     }
@@ -220,8 +220,8 @@ export async function getDashboard(): Promise<DashboardResponse> {
     operator,
     actionBundles,
     actionLogEntries,
-    executionGrants,
-    grantLogEntries,
+    executionPermits,
+    permitLogEntries,
     sessionCapabilities,
     sessionCapabilityLogEntries,
   ] = await Promise.all([
@@ -231,8 +231,8 @@ export async function getDashboard(): Promise<DashboardResponse> {
     }),
     listActionBundles(db),
     listActionLogEntries(db, 50),
-    refreshStoredGrantStatuses(),
-    listGrantLogEntries(db),
+    refreshStoredPermitStatuses(),
+    listPermitLogEntries(db),
     refreshStoredSessionCapabilityStatuses(),
     listSessionCapabilityLogEntries(db),
   ]);
@@ -243,11 +243,11 @@ export async function getDashboard(): Promise<DashboardResponse> {
   const scopedActionLogEntries = operatorAccess
     ? actionLogEntries.filter((entry) => entry.coopId === activeContext.activeCoopId)
     : [];
-  const scopedExecutionGrants = operatorAccess
-    ? executionGrants.filter((grant) => grant.coopId === activeContext.activeCoopId)
+  const scopedExecutionPermits = operatorAccess
+    ? executionPermits.filter((permit) => permit.coopId === activeContext.activeCoopId)
     : [];
-  const scopedGrantLogEntries = operatorAccess
-    ? grantLogEntries.filter((entry) => entry.coopId === activeContext.activeCoopId)
+  const scopedPermitLogEntries = operatorAccess
+    ? permitLogEntries.filter((entry) => entry.coopId === activeContext.activeCoopId)
     : [];
   const scopedSessionCapabilities = operatorAccess
     ? sessionCapabilities.filter((capability) => capability.coopId === activeContext.activeCoopId)
@@ -296,8 +296,8 @@ export async function getDashboard(): Promise<DashboardResponse> {
       liveOnchainDetail: operator.liveOnchain.detail,
       policyActionQueue: pendingBundles(scopedActionBundles),
       policyActionLogEntries: scopedActionLogEntries,
-      grants: scopedExecutionGrants,
-      grantLog: scopedGrantLogEntries,
+      permits: scopedExecutionPermits,
+      permitLog: scopedPermitLogEntries,
       sessionCapabilities: scopedSessionCapabilities,
       sessionCapabilityLog: scopedSessionCapabilityLogEntries,
     },

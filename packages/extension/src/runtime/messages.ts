@@ -11,9 +11,8 @@ import type {
   CoopSharedState,
   CoopSpaceType,
   DelegatedActionClass,
-  ExecutionGrant,
+  ExecutionPermit,
   ExtensionIconState,
-  GrantLogEntry,
   GreenGoodsAssessmentRequest,
   GreenGoodsWorkApprovalRequest,
   IntegrationMode,
@@ -22,6 +21,7 @@ import type {
   LocalPasskeyIdentity,
   Member,
   OnchainState,
+  PermitLogEntry,
   PolicyActionClass,
   PrivilegedActionLogEntry,
   ProviderMode,
@@ -91,8 +91,8 @@ export interface DashboardResponse {
     liveOnchainDetail: string;
     policyActionQueue: ActionBundle[];
     policyActionLogEntries: ActionLogEntry[];
-    grants: ExecutionGrant[];
-    grantLog: GrantLogEntry[];
+    permits: ExecutionPermit[];
+    permitLog: PermitLogEntry[];
     sessionCapabilities: SessionCapability[];
     sessionCapabilityLog: SessionCapabilityLogEntry[];
   };
@@ -310,7 +310,7 @@ export type RuntimeRequest =
   | { type: 'get-action-queue' }
   | { type: 'get-action-history' }
   | {
-      type: 'issue-grant';
+      type: 'issue-permit';
       payload: {
         coopId: string;
         expiresAt: string;
@@ -319,19 +319,19 @@ export type RuntimeRequest =
         targetAllowlist?: Record<string, string[]>;
       };
     }
-  | { type: 'revoke-grant'; payload: { grantId: string } }
+  | { type: 'revoke-permit'; payload: { permitId: string } }
   | {
-      type: 'execute-with-grant';
+      type: 'execute-with-permit';
       payload: {
-        grantId: string;
+        permitId: string;
         replayId: string;
         actionClass: DelegatedActionClass;
         coopId: string;
         actionPayload: Record<string, unknown>;
       };
     }
-  | { type: 'get-grants' }
-  | { type: 'get-grant-log' }
+  | { type: 'get-permits' }
+  | { type: 'get-permit-log' }
   | {
       type: 'issue-session-capability';
       payload: {
