@@ -156,26 +156,26 @@ The following decisions are locked for v1.
 
 ### 3.2 Explicit V1 Non-Goals
 
-These are not part of the locked prototype loop:
+These were not part of the locked prototype loop. Items marked *(since shipped)* have been implemented after the original scope was written:
 
-- mobile receiver shell
-- mobile voice capture
+- ~~mobile receiver shell~~ *(since shipped — receiver PWA with pairing, sync, capture)*
+- ~~mobile voice capture~~ *(since shipped — MediaRecorder audio capture in receiver)*
 - transcript capture on mobile
 - local file or folder ingest
 - PDF library ingest
 - app-level capture outside the browser
-- self-hosted signaling infrastructure
-- full React Flow editing
+- ~~self-hosted signaling infrastructure~~ *(since shipped — y-webrtc signaling on Fly.io at signal.coop.town)*
+- full React Flow editing *(read-only board view shipped; full editing remains a non-goal)*
 - automatic archival of raw browsing exhaust
 - full archive browsing and retrieval UI
 - encrypted archive workflows for sensitive content
 - full Green Goods garden binding
 - built-in API-key-based LLM integrations
-- autonomous agent execution
-- session-key based transactions
+- ~~autonomous agent execution~~ *(since shipped — agent harness with 14-skill pipeline, 3-tier inference)*
+- ~~session-key based transactions~~ *(since shipped — session module with time-bounded capabilities)*
 - end-user skill management UI
 
-The app package should keep future expansion in mind, but v1 only builds the landing page.
+The app package started as landing-page-only but now also hosts the receiver PWA shell.
 
 ---
 

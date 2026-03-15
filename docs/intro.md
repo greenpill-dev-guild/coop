@@ -18,7 +18,7 @@ Coop captures knowledge from wherever it lives (browser tabs, audio recordings, 
 ## How it works
 
 1. **Capture**: Round up browser tabs with a shortcut. Record audio, snap photos, attach files, or share links from your phone via the companion PWA.
-2. **Refine**: An in-browser AI agent analyzes captures through a 12-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
+2. **Refine**: An in-browser AI agent analyzes captures through a 14-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
 3. **Review**: Drafts land in the Roost. You decide what's signal and what's noise.
 4. **Share**: Publish to a coop, a shared space backed by a Safe multisig on Arbitrum, syncing peer-to-peer over WebRTC. Shared artifacts are permanently archived to Filecoin via Storacha with full cryptographic provenance. Passkey identity, no wallet required.
 

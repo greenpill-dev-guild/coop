@@ -1,129 +1,249 @@
 # Filecoin Cold Storage Memory Layer
 
-> Strengthen Coop's Filecoin integration from demo-ready archival to a verifiable, permanent memory layer for community knowledge.
+> Coop is a DataDAO for community knowledge. Members capture and curate knowledge collectively, govern what's worth preserving via a review board, and permanently archive it to Filecoin with full cryptographic provenance — hash-chained snapshots, inclusion proofs, and CIDs anchored on-chain via a Safe multisig.
 
 ## Context
 
-Coop archives knowledge (artifacts + snapshots) to Storacha (IPFS hot) which brokers Filecoin deals (cold storage). The pipeline works end-to-end but lacks the provenance and retrieval guarantees needed for a true permanent memory layer.
+Coop archives knowledge (artifacts + snapshots) to Storacha (IPFS hot) which brokers Filecoin deals (cold storage). The core pipeline works end-to-end. This plan covers the remaining work to make archiving self-service for coop creators, visible to users, and verifiable on both Arbitrum and Filecoin's FVM.
 
 **What works today:**
-- Artifact and snapshot bundling with JSON payloads
-- UCAN-delegated uploads to Storacha via trusted-node architecture
-- CID tracking (root, shard, piece)
-- Filecoin deal lifecycle tracking (pending → offered → indexed → sealed)
-- Archive story/narrative layer for dashboard display
-- JSON and text bundle exports
+- [x] Artifact and snapshot bundling with JSON payloads
+- [x] UCAN-delegated uploads to Storacha via trusted-node architecture
+- [x] CID tracking (root, shard, piece)
+- [x] Filecoin deal lifecycle tracking (pending → offered → indexed → sealed)
+- [x] Archive story/narrative layer for dashboard display
+- [x] JSON and text bundle exports
+- [x] Schema versioning (`schemaVersion: 1`) for forward compatibility
+- [x] Hash chain between snapshots (`previousSnapshotCid`)
+- [x] Full inclusion proofs stored (not just boolean)
+- [x] On-chain CID anchoring via Safe calldata (Arbitrum)
+- [x] Per-coop archive config split (public CRDT + private Dexie secrets)
+- [x] Per-coop config resolution (per-coop first, global fallback)
+- [x] Gateway retrieval with CID verification (`retrieveArchiveBundle`)
+- [x] Background polling for unsealed receipts (manual trigger, batched)
 
 **What's missing:**
-- No on-chain link between Safe identity and archive CIDs
-- No schema versioning for forward compatibility
-- No hash chain between snapshots
-- Inclusion proofs discarded (only boolean tracked)
-- No programmatic retrieval from gateway
-- No automated Filecoin status polling
-- JSON-only payloads (binary assets not archived)
-- Unbounded snapshot growth
+- No in-app setup wizard — coop creators must configure 6+ env vars manually
+- No Filecoin deal visibility in the UI (data exists, not surfaced)
+- No public verification page for archived CIDs
+- No FVM registry — archive CIDs only anchored on Arbitrum, not on Filecoin itself
+- No automated polling scheduler (manual refresh only)
+- Anchor UI incomplete (no tx link display)
+- Archive config UI not built (creation form, settings panel)
 
-## Phase 1: Foundation (schema + versioning + chain linking)
+## Phase 1: In-App Storacha Setup Wizard
 
-### 1.1 Add schema version to archive bundles
-- [ ] Add `schemaVersion: z.number().int().positive()` to `archiveBundleSchema` in `contracts/schema.ts`
-- [ ] Set initial version to `1`
-- [ ] Update `createArchiveBundle` in `archive.ts` to include `schemaVersion: 1`
-- [ ] Update mock receipt creation to include schema version
-- [ ] Write migration note: future schema changes bump the version, old bundles self-describe
+> Goal: A coop creator enables Filecoin archiving with just an email address. No CLI, no env vars, no external console.
 
-### 1.2 Add previousSnapshotCid to snapshots
-- [ ] Add `previousSnapshotCid: z.string().optional()` to snapshot bundle payload
-- [ ] In `createArchiveBundle` (scope=snapshot), look up the latest snapshot receipt's `rootCid` from `state.archiveReceipts` and include as `previousSnapshotCid`
-- [ ] This creates a verifiable hash chain: anyone with the latest CID can walk back through the entire history via IPFS
+### 1.1 Storacha space provisioning helper
 
-### 1.3 Store full inclusion proofs
-- [ ] Update `summarizeArchiveFilecoinInfo` in `archive.ts` to store the full inclusion proof bytes (base64-encoded), not just `inclusionProofAvailable: boolean`
-- [ ] Update `archiveFilecoinInfoSchema` in `schema.ts` with `inclusionProof: z.string().optional()` per aggregate
-- [ ] This enables independent verification without going back to Storacha
+Create `shared/src/modules/archive/setup.ts`:
 
-## Phase 2: On-chain CID anchoring
+- [ ] `provisionStorachaSpace(input: { email, coopName, signal? })` — orchestrates the full setup:
+  1. `StorachaClient.create()` → generates Ed25519 agent keypair
+  2. `client.login(email)` → sends verification email, awaits confirmation
+  3. `client.createSpace(`coop-${coopName}`, { account })` → provisions space with gateway auth
+  4. Extracts agent private key, space DID, delegation proofs from client state
+  5. Returns `{ publicConfig: CoopArchiveConfig, secrets: CoopArchiveSecrets }`
+- [ ] `extractClientCredentials(client, space)` — serializes agent key + delegation into the existing schema shapes
+- [ ] Handle errors: email verification timeout, network failures, space creation failures
+- [ ] Unit tests with mocked Storacha client (same pattern as `storacha.test.ts`)
 
-### 2.1 Design the anchoring mechanism
-- [ ] Decide approach: (a) Simple Safe module that stores `rootCid → timestamp` mappings, (b) Safe transaction with CID in calldata, or (c) Dedicated registry contract the Safe calls
-- [ ] Consider gas costs on Arbitrum vs Sepolia
-- [ ] Consider batching: anchor multiple CIDs in one transaction
-- [ ] Design the schema: `anchorArchive(bytes32 rootCid, bytes32 pieceCid, uint8 scope, uint256 timestamp)`
+### 1.2 Background message handler
 
-### 2.2 Implement the anchor contract
-- [ ] Write a minimal Solidity contract (or Safe module) for CID anchoring
-- [ ] Deploy to Sepolia for testing
-- [ ] Add contract address to chain config (`getCoopChainConfig`)
+In `extension/src/background/handlers/archive.ts`:
 
-### 2.3 Wire anchoring into the archive flow
-- [ ] After `uploadArchiveBundleToStoracha` succeeds, submit an anchor transaction via the Safe (ERC-4337 UserOp)
-- [ ] Store the anchor transaction hash in the archive receipt
-- [ ] Add `anchorTxHash: z.string().optional()` to `archiveReceiptSchema`
-- [ ] Update the receipt lifecycle: `uploaded → anchored → offered → sealed`
+- [ ] Add `handle-archive-setup` message type:
+  - Receives `{ coopId, email, coopName }`
+  - Calls `provisionStorachaSpace()`
+  - Stores secrets via `setCoopArchiveSecrets(db, coopId, secrets)`
+  - Writes public config to `CoopSharedState.archiveConfig` (CRDT-synced)
+  - Returns `{ success: true, spaceDid }` or `{ error }`
+- [ ] Add `handle-archive-disconnect` message type:
+  - Clears per-coop secrets from Dexie
+  - Removes `archiveConfig` from shared state
+  - Existing receipts preserved (they're historical records)
 
-### 2.4 Update UI
-- [ ] Show anchor status on archive receipt cards ("Anchored on Arbitrum" with tx link)
-- [ ] Add anchor tx to export bundles
+### 1.3 Setup wizard UI
 
-## Phase 3: Per-coop archive ownership
+Sidepanel component (3-step flow):
 
-### 3.1 Split archive config (public/secret)
-- [ ] Create `coopArchiveConfigSchema` with public fields: `spaceDid`, `delegationIssuer`, `gatewayBaseUrl`, `allowsFilecoinInfo`, `expirationSeconds`
-- [ ] Add `archiveConfig: coopArchiveConfigSchema.optional()` to `CoopSharedState`
-- [ ] Add `'archiveConfig'` to `sharedKeys` in `sync.ts`
-- [ ] Create `setCoopArchiveSecrets(db, coopId, secrets)` / `getCoopArchiveSecrets(db, coopId)` in `db.ts` for private fields (`agentPrivateKey`, `spaceDelegation`, `proofs`)
+- [ ] **Step 1 — Email**: Input field + "Continue" button. Show pricing context ("Free: 5GB · Paid: ~$0.01/GB/mo · Your space, your bill")
+- [ ] **Step 2 — Verify**: "Check your email" with spinner. Auto-advances when `login()` resolves. Timeout after 5 minutes with retry option
+- [ ] **Step 3 — Done**: Shows space DID (truncated), gateway URL, storage usage. "Archiving is live" confirmation
+- [ ] Wire up via `handle-archive-setup` message to background
+- [ ] Add to coop creation flow as optional collapsible section ("Enable Filecoin archiving")
+- [ ] Add to Nest Tools / coop settings as "Filecoin Archiving" section with setup/disconnect
 
-### 3.2 Update background handlers
-- [ ] Replace `requireTrustedNodeArchiveConfig()` with `resolveArchiveConfigForCoop(coopId)` that: checks per-coop config first, falls back to global config
-- [ ] Update `createArchiveReceiptForBundle`, `handleRefreshArchiveStatus` to use per-coop resolution
-- [ ] Add `set-coop-archive-config` message type
+### 1.4 Archive status in coop settings
 
-### 3.3 UI: Archive config in coop creation
-- [ ] Add collapsible "Connect Storacha Space" section to coop creation form
-- [ ] Fields: Space DID, Agent Private Key (password), Space Delegation (paste/upload), Gateway URL
-- [ ] If skipped, coop starts in practice/mock mode
+- [ ] Show archive config status: Off / Setting up / Live
+- [ ] When live: truncated Space DID, gateway URL, receipt count, total archived size
+- [ ] "Disconnect" button (clears config, preserves receipts)
+- [ ] Only coop creator/operator sees setup controls
 
-### 3.4 UI: Archive settings in Nest Tools
-- [ ] Show per-coop archive config status (practice / live / live view-only)
-- [ ] "Connect Storacha Space" button for unconfigured coops
-- [ ] Config display (truncated space DID, gateway, issuer) with Update/Remove actions
-- [ ] Only coop creator/operator sees the secrets form
+## Phase 2: Filecoin Deal Explorer (in-app)
 
-### 3.5 UI: Per-coop archive status
-- [ ] Update "Save mode" indicator to read from `coop.archiveConfig` presence
-- [ ] Update Operator Console to show per-coop save mode
-- [ ] Update "Refresh deep-save check" enablement per-coop
+> Goal: Make the Filecoin integration visible. Users see exactly where their knowledge is stored, which providers hold it, and the full deal lifecycle.
 
-## Phase 4: Retrieval + verification
+### 2.1 Deal details on archive receipt cards
 
-### 4.1 Implement gateway retrieval
-- [ ] Create `retrieveArchiveBundle(receipt)` function in `archive.ts`
-- [ ] Fetch from `gatewayUrl` via HTTP GET
-- [ ] Verify response CID matches `rootCid` (recompute content hash)
-- [ ] Parse and validate payload against `schemaVersion`
-- [ ] Handle gateway errors, timeouts, CID mismatches
+- [ ] Surface existing `filecoinInfo` data in the archive receipt UI:
+  - Piece CID (truncated, copyable)
+  - Provider ID(s) (e.g. `f01234`) with link to `filfox.info/en/address/{provider}`
+  - Deal ID(s) with link to `filfox.info/en/deal/{dealId}`
+  - Deal status badge (pending → offered → indexed → sealed)
+  - Inclusion proof available indicator
+- [ ] Show aggregate info when available (which aggregate contains this piece)
+- [ ] Timestamp of last Filecoin status update
 
-### 4.2 UI: Retrieve and inspect
-- [ ] Add "View archived content" button on receipt cards
-- [ ] Fetch from gateway, display the archived JSON payload
-- [ ] Show verification status (CID match: yes/no)
+### 2.2 Anchor transaction display
 
-### 4.3 Automated follow-up polling
-- [ ] Add periodic background polling for receipts with status != 'sealed'
-- [ ] Poll interval: every 6 hours for offered, every 24 hours for indexed
-- [ ] Cap at N polls before marking as stale
-- [ ] Update receipt follow-up metadata on each poll
+- [ ] Show "Anchored on Arbitrum" badge with tx hash link to block explorer
+- [ ] Show anchor status: pending / anchored
+- [ ] Link format: `arbiscan.io/tx/{anchorTxHash}` (Arbitrum) or `sepolia.arbiscan.io/tx/{anchorTxHash}` (Sepolia)
 
-## Phase 5: Rich payloads (future)
+### 2.3 Coop archive summary
 
-### 5.1 Archive binary assets
-- [ ] For each artifact source URL, attempt to fetch and include as a blob in the archive bundle
-- [ ] Store `previewImageUrl` content inline (base64 or separate CAR block)
+- [ ] Aggregate view in coop dashboard:
+  - Total artifacts archived / total artifacts
+  - Total snapshots taken
+  - Number of unique Filecoin providers storing coop data
+  - Number of sealed deals
+  - Total data size on Filecoin
+- [ ] Use existing `buildCoopArchiveStory()` as data source, extend if needed
+
+## Phase 3: Public CID Verification Page
+
+> Goal: Anyone can verify a coop's archive without the extension. A public page on `coop.town` that fetches from IPFS and shows provenance.
+
+### 3.1 Verification route on landing site
+
+In `packages/app`:
+
+- [ ] Add route: `/verify/:cid`
+- [ ] Fetch content from IPFS gateway (`https://storacha.link/ipfs/{cid}`)
+- [ ] Parse the archive bundle JSON
+- [ ] Display:
+  - Coop name and ID (from `payload.coop`)
+  - Archive scope (artifact or snapshot)
+  - Schema version
+  - Created at timestamp
+  - Previous snapshot CID (if snapshot — link to `/verify/{previousCid}`)
+  - Number of artifacts included
+  - Content preview (artifact titles, tags)
+
+### 3.2 On-chain verification
+
+- [ ] If the bundle includes an anchor tx hash, verify on-chain:
+  - Fetch tx from Arbitrum/Sepolia via public RPC
+  - Decode calldata to confirm CID matches
+  - Show "Anchored on Arbitrum at block N" with explorer link
+- [ ] If FVM registry exists (Phase 4), also check FVM registration
+
+### 3.3 Shareable verification links
+
+- [ ] Archive receipt cards in the extension get a "Share verification link" button
+- [ ] Copies `https://coop.town/verify/{rootCid}` to clipboard
+- [ ] Works for anyone — no extension or account needed
+
+## Phase 4: FVM Data Registry Contract
+
+> Goal: Anchor archive CIDs on Filecoin itself, not just Arbitrum. The archive registry lives on the same network that stores the data.
+
+### 4.1 Registry contract (Solidity on FVM)
+
+- [ ] Write `CoopArchiveRegistry.sol`:
+  ```solidity
+  // Minimal registry — maps coop addresses to their archive CIDs
+  struct ArchiveEntry {
+      bytes32 rootCid;      // content root
+      bytes32 pieceCid;     // Filecoin piece CID
+      uint8 scope;          // 0 = artifact, 1 = snapshot
+      uint48 timestamp;     // block.timestamp at registration
+  }
+
+  mapping(address => ArchiveEntry[]) public archives;
+
+  event ArchiveRegistered(
+      address indexed coop,
+      bytes32 rootCid,
+      bytes32 pieceCid,
+      uint8 scope,
+      uint48 timestamp
+  );
+
+  function register(bytes32 rootCid, bytes32 pieceCid, uint8 scope) external {
+      archives[msg.sender].push(ArchiveEntry(rootCid, pieceCid, scope, uint48(block.timestamp)));
+      emit ArchiveRegistered(msg.sender, rootCid, pieceCid, scope, uint48(block.timestamp));
+  }
+
+  function getArchives(address coop) external view returns (ArchiveEntry[] memory);
+  function getArchiveCount(address coop) external view returns (uint256);
+  ```
+- [ ] Keep it minimal — no access control beyond `msg.sender` (the Safe calls it)
+- [ ] Events for indexing (subgraph-ready)
+- [ ] Deploy to Filecoin Calibration testnet first, then Filecoin mainnet
+
+### 4.2 FVM chain config
+
+In `shared/src/modules/onchain/`:
+
+- [ ] Add Filecoin Calibration and Filecoin mainnet to chain config (`getCoopChainConfig`)
+- [ ] viem already has Filecoin chain definitions (`viem/chains/definitions/filecoin`)
+- [ ] Add registry contract address per chain
+- [ ] Add FVM RPC endpoints
+
+### 4.3 Dual-anchor flow
+
+In `extension/src/background/handlers/archive.ts`:
+
+- [ ] After Storacha upload succeeds, submit registration to FVM registry
+  - Encode `register(rootCid, pieceCid, scope)` calldata
+  - Submit via Safe on FVM (if coop has FVM Safe) or direct EOA tx
+  - Store FVM tx hash in receipt alongside Arbitrum anchor
+- [ ] Add to `archiveReceiptSchema`:
+  - `fvmRegistryTxHash: z.string().optional()`
+  - `fvmChainKey: coopChainKeySchema.optional()`
+- [ ] Update receipt display to show dual-anchor status
+
+### 4.4 FVM verification in public page
+
+- [ ] On `/verify/:cid`, also query the FVM registry contract
+- [ ] Show "Registered on Filecoin" with tx link to `filfox.info/en/tx/{hash}`
+- [ ] Cross-reference: "Stored by provider X (Filecoin deal Y), registered on FVM, anchored on Arbitrum"
+
+## Phase 5: Automated Polling + UI Polish
+
+> Goal: Filecoin deal status tracked to completion without manual intervention.
+
+### 5.1 Background polling scheduler
+
+- [ ] Add periodic alarm/timer in extension background:
+  - Every 6 hours: refresh receipts with status `offered`
+  - Every 24 hours: refresh receipts with status `indexed`
+  - Cap at 30 refresh attempts before marking as stale
+- [ ] Use existing `pollUnsealedArchiveReceipts()` and `requestArchiveReceiptFilecoinInfo()`
+- [ ] Only runs when `archiveMode === 'live'` and receipts exist
+
+### 5.2 Archive receipt timeline
+
+- [ ] Show lifecycle timeline on receipt detail view:
+  ```
+  Uploaded → Offered → Indexed → Sealed
+  Mar 14     Mar 14    Mar 15    Mar 17
+  ```
+- [ ] Use `followUp` metadata for timestamps
+
+## Phase 6: Rich Payloads (future)
+
+### 6.1 Archive binary assets
+- [ ] For each artifact source URL, attempt to fetch and include as a blob
+- [ ] Store preview images inline (base64 or separate CAR block)
 - [ ] Track which assets were successfully captured vs URL-only references
 
-### 5.2 Delta snapshots
-- [ ] Instead of full coop state each time, compute a diff from `previousSnapshotCid`
+### 6.2 Delta snapshots
+- [ ] Compute diff from `previousSnapshotCid` instead of full state
 - [ ] Store only new/changed artifacts and receipts
 - [ ] Reduces payload growth from O(n) to O(delta)
 
@@ -131,29 +251,39 @@ Coop archives knowledge (artifacts + snapshots) to Storacha (IPFS hot) which bro
 
 | File | What changes |
 |---|---|
-| `shared/src/contracts/schema.ts` | Bundle schema (version), receipt schema (anchor), coop state (archiveConfig), filecoin info (proofs) |
-| `shared/src/modules/archive/archive.ts` | Bundle creation (version, previousCid), receipt lifecycle (anchor status), proof storage |
-| `shared/src/modules/archive/storacha.ts` | Per-coop delegation resolution |
-| `shared/src/modules/storage/db.ts` | Per-coop archive secrets storage |
-| `shared/src/modules/coop/sync.ts` | Add archiveConfig to sharedKeys |
-| `extension/src/background.ts` | Per-coop config resolution, anchor transaction submission |
-| `extension/src/runtime/messages.ts` | New message types for per-coop config |
-| `extension/src/views/Sidepanel/SidepanelApp.tsx` | Archive config UI in creation + settings |
-| `extension/src/views/Sidepanel/OperatorConsole.tsx` | Per-coop archive status |
+| `shared/src/modules/archive/setup.ts` | **NEW** — Storacha space provisioning wizard logic |
+| `shared/src/modules/archive/storacha.ts` | Minor — credential extraction helpers |
+| `shared/src/modules/archive/archive.ts` | Minor — FVM anchor fields on receipt |
+| `shared/src/contracts/schema.ts` | FVM anchor fields, archive setup message types |
+| `shared/src/modules/onchain/onchain.ts` | FVM chain config, registry calldata encoding |
+| `extension/src/background/handlers/archive.ts` | Setup handler, disconnect handler, FVM registration, polling scheduler |
+| `extension/src/views/` | Setup wizard UI, deal explorer, archive settings, receipt cards |
+| `packages/app/src/` | `/verify/:cid` public verification page |
+| `contracts/CoopArchiveRegistry.sol` | **NEW** — FVM registry contract |
 
 ## Dependencies
 
-- Phase 1 has no external dependencies (schema + code changes only)
-- Phase 2 requires Solidity contract development + deployment
-- Phase 3 requires Phase 1 (schema version) but not Phase 2
-- Phase 4 requires Phase 1 (schema version for validation)
-- Phase 5 is independent, can happen anytime after Phase 1
+```
+Phase 1 (Setup Wizard)     — No external deps. Storacha SDK already installed.
+Phase 2 (Deal Explorer)    — No deps. Data already exists, needs UI.
+Phase 3 (Verification)     — Depends on Phase 2 (receipt card links). App route only.
+Phase 4 (FVM Registry)     — Independent. Needs Hardhat/Foundry for contract dev.
+Phase 5 (Polling)          — Independent. Extension background only.
+Phase 6 (Rich Payloads)    — Future. No current dependencies.
+```
+
+## Hackathon Priority
+
+1. **Phase 1** — Setup wizard (makes archiving demo-able without env vars)
+2. **Phase 2** — Deal explorer (makes Filecoin integration visible to judges)
+3. **Phase 4** — FVM registry (strongest "we're a Filecoin project" signal)
+4. **Phase 3** — Verification page (shareable proof, great for pitch)
+5. **Phase 5** — Polling (nice-to-have, not demo-critical)
 
 ## Success Criteria
 
-- An archived bundle can self-describe its format (schema version)
-- Snapshot history is walkable via CID chain without any centralized service
-- Archive CIDs are provably linked to the coop's Safe address on-chain
-- Each coop controls its own Storacha space and delegation
-- Archived content can be retrieved, verified, and inspected from the UI
-- Filecoin deal status is tracked to completion without manual intervention
+- A coop creator enables Filecoin archiving with just an email address
+- Users see exactly which Filecoin providers store their knowledge and deal status
+- Archive CIDs are registered on both Arbitrum (Safe anchor) and Filecoin FVM (registry)
+- Anyone can verify a coop's archive via a public URL without the extension
+- The coop is framed as a DataDAO: members govern knowledge, Safe controls the archive, Filecoin provides the storage guarantee

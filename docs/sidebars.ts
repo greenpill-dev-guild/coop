@@ -35,6 +35,7 @@ const sidebars: SidebarsConfig = {
         'product/prd',
         'product/scoped-roadmap-2026-03-11',
         'product/ethereum-foundation-mandate',
+        'ui-review-issues',
       ],
     },
   ],

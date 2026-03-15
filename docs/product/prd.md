@@ -31,7 +31,7 @@ Coop implements the Ethereum Foundation's March 2026 Mandate (CROPS: Censorship 
 | Persona | Description | Primary Surface |
 |---------|-------------|-----------------|
 | **Coop Creator** | Community leader who establishes a coop, defines its purpose and lenses, manages members | Extension Sidepanel |
-| **Trusted Member** | Elevated member with operator access (agent skills, grants, policies, archive) | Extension Sidepanel (Feed tab) |
+| **Trusted Member** | Elevated member with operator access (agent skills, permits, policies, archive) | Extension Sidepanel (Feed tab) |
 | **Member** | Participant who captures tabs, reviews drafts, publishes artifacts | Extension Sidepanel |
 | **Receiver User** | Mobile/secondary-device user who captures audio, photos, files, links | Receiver PWA (App) |
 | **Board Viewer** | Anyone viewing a read-only coop snapshot (shared via deep link) | Board View (App) |
@@ -86,7 +86,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 2. Fill "Create Coop" form:
    - Coop name (required)
    - Purpose statement (required)
-   - Space type: community / worker / donor / regional
+   - Preset: community / project / friends / family / personal
    - Creator display name (required)
    - Seed contribution (text, first artifact)
    - Capture mode: manual / 30-min / 60-min
@@ -712,7 +712,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 1. **Trusted Helpers**: Agent skill auto-run toggles
 2. **Approval Rules**: Action policy toggles (12 action classes)
 3. **Waiting Chores**: Action queue (propose → approve → reject → execute)
-4. **Grants**: Issue/revoke execution grants (time-bound, usage-limited)
+4. **Permits**: Issue/revoke execution permits (time-bound, usage-limited)
 5. **Session Capabilities**: Smart session management (ERC-4337)
 6. **Garden Requests**: Green Goods work approvals, assessments, admin sync
 7. **Agent Dashboard**: Observations, plans, skill runs
@@ -737,7 +737,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | `ritual-review-due` | Weekly review cadence triggered |
 | `green-goods-*` | Garden operations needed |
 
-**Agent Skills** (execution order):
+**Agent Skills** (14 registered, execution order):
 1. `opportunity-extractor`: Identifies funding/opportunity signals
 2. `grant-fit-scorer`: Scores grant fit
 3. `capital-formation-brief`: Generates capital formation summaries
@@ -746,6 +746,8 @@ Handles all business logic, storage, and message routing for the extension. Not 
 6. `theme-clusterer`: Groups related content
 7. `publish-readiness-check`: Validates draft quality
 8. `green-goods-*`: Garden automation (5 skills)
+9. `erc8004-register`: Registers coop as ERC-8004 agent identity on-chain
+10. `erc8004-feedback`: Submits reputation feedback after archive anchor or peer sync
 
 **Flow**:
 1. Observation created → Agent cycle triggered
@@ -919,7 +921,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | ArchiveReceipt | Archive flow | Yjs | y-webrtc |
 | ReceiverCapture | Receiver PWA | IndexedDB | Receiver CRDT |
 | ReceiverPairing | Pairing flow | IndexedDB | Local only |
-| ExecutionGrant | Operator | IndexedDB | Local only |
+| ExecutionPermit | Operator | IndexedDB | Local only |
 | SessionCapability | Operator | IndexedDB | Local only |
 | AgentObservation | Agent cycle | IndexedDB | Local only |
 
@@ -976,7 +978,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | Session encryption | AES-GCM with PBKDF2 (120K iterations) |
 | Archive integrity | Content-addressing (IPFS CIDs) |
 | Smart sessions | ERC-4337 with time + usage limits |
-| Grant delegation | Time-bound, usage-limited, revocable |
+| Permit delegation | Time-bound, usage-limited, revocable |
 
 ### Known Limitations
 

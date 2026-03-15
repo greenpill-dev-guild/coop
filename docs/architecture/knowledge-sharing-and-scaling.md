@@ -170,6 +170,12 @@ review-digest → creates: insight draft
 publish-readiness-check → proposes: publish-ready-draft action
 ```
 
+**ERC-8004 Agent Registry:**
+```
+erc8004-register (root) → provides: agent-identity
+erc8004-feedback (root) → provides: agent-feedback
+```
+
 **Skip conditions** prevent unnecessary execution:
 - `no-candidates`: No opportunity candidates from prior skill
 - `no-scores`: No grant fit scores from prior skill

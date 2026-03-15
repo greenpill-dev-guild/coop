@@ -48,7 +48,7 @@ Coop embodies the mandate structurally, not just rhetorically:
 | Censorship resistance | P2P sync via y-webrtc, no central server owns data |
 | Privacy by default | Local-first, all data stays in browser until explicit publish |
 | Open source | Full monorepo, shared modules are pure functions, no proprietary layers |
-| Security at boundaries | Zod validation, grant enforcement with expiry/replay protection |
+| Security at boundaries | Zod validation, permit enforcement with expiry/replay protection |
 | Disintermediation | Safe smart accounts via passkey + ERC-4337, no wallet intermediary |
 | Sovereignty-preserving coordination | CRDT shared state, explicit publish model, durable Filecoin archives |
 | Walkaway test | Data survives in local exports + content-addressed Filecoin storage |

@@ -1,3 +1,8 @@
+---
+sidebar_label: UI Review Issues
+sidebar_position: 5
+---
+
 # UI Review - Issues, Regressions & Confusion Areas
 
 **Date**: 2026-03-13
@@ -128,7 +133,7 @@ Different UIs, different sync mechanisms, different status labels, independent s
 **Severity**: Low-Medium
 **Status**: CONFIRMED, zero `<details>` or `<summary>` elements
 
-- All sections (Trusted Helpers, Garden Requests, Approval Rules, Waiting Chores, Grants, Session Capabilities) fully visible immediately
+- All sections (Trusted Helpers, Garden Requests, Approval Rules, Waiting Chores, Permits, Session Capabilities) fully visible immediately
 - Contrast: Board sidebar properly uses `<details>` for collapse, Operator Console lacks this pattern
 
 ---

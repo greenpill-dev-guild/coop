@@ -30,7 +30,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 
 ### Product Loop
 1. **Capture**: Browser tabs (extension) + audio, photos, files, links (companion PWA)
-2. **Refine**: In-browser agent with 12-skill pipeline (WebGPU/WASM, no cloud)
+2. **Refine**: In-browser agent with 14-skill pipeline (WebGPU/WASM, no cloud)
 3. **Review**: Drafts land in the Roost for human triage
 4. **Share**: Publish to a coop (Safe multisig on Arbitrum, P2P sync via Yjs + y-webrtc, archived to Filecoin via Storacha)
 
@@ -39,7 +39,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 2. **Local-First**: All data stays local until explicit publish/sync
 3. **Passkey-First**: No wallet-extension-first UX; passkey identity
 4. **Offline Capable**: Works without internet, syncs when connected
-5. **Single Environment**: All packages share root `.env` (never create package-specific .env)
+5. **Single Environment**: All packages share root `.env.local` (never create package-specific .env)
 
 ### Packages & Build Order
 1. **shared** (`@coop/shared`) → Schemas, flows, sync contracts, all domain modules
@@ -62,6 +62,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 - `session`: Scoped execution permissions, time-bounded capabilities
 - `permit`: Execution permits with replay protection
 - `greengoods`: Green Goods garden bootstrap and sync
+- `erc8004`: ERC-8004 on-chain agent registry integration
 - `app`: App shell logic
 
 ## Key Patterns
@@ -90,7 +91,7 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 ## Environment
 
-Single `.env` at root (never create package-specific .env). `.env` vars:
+Single `.env.local` at root (never create package-specific .env). `.env.local` vars:
 - `VITE_COOP_CHAIN`: Target chain (`sepolia` or `arbitrum`)
 - `VITE_COOP_ONCHAIN_MODE`: `mock` (default) or `live`
 - `VITE_COOP_ARCHIVE_MODE`: `mock` (default) or `live`

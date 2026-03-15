@@ -83,7 +83,7 @@ Small models (0.5B parameters) produce unreliable JSON. The harness compensates 
 
 ## Skill System
 
-### Executable Skills (12 registered)
+### Executable Skills (14 registered)
 
 Each skill is a directory containing a `skill.json` manifest and `SKILL.md` instruction file:
 
@@ -100,7 +100,9 @@ packages/extension/src/skills/
 ├── green-goods-garden-sync/
 ├── green-goods-work-approval/
 ├── green-goods-assessment/
-└── green-goods-gap-admin-sync/
+├── green-goods-gap-admin-sync/
+├── erc8004-register/           # Register skills on-chain (ERC-8004)
+└── erc8004-feedback/            # On-chain agent feedback (ERC-8004)
 ```
 
 **Manifest fields:**
@@ -268,7 +270,7 @@ The harness is built entirely on browser-native APIs, with no server dependencie
 | `shared/src/modules/agent/agent.ts` | ~430 | Domain model: observations, plans, skills, drafts |
 | `shared/src/contracts/schema.ts` | | Zod schemas for all agent types |
 | `shared/src/modules/storage/db.ts` | | Dexie tables + CRUD for agent state |
-| `extension/src/skills/*/skill.json` | | 12 skill manifests with dependency graph |
+| `extension/src/skills/*/skill.json` | | 14 skill manifests with dependency graph |
 
 ## Design Principles
 

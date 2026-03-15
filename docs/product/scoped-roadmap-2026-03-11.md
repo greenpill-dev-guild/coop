@@ -465,7 +465,7 @@ Add these named suites after the relevant features land:
 - `arbitrum-safe-live`
 - `agent-policy`
 
-These should plug into `scripts/validate.mjs` so Codex can keep running the product as a set of named flows instead of one monolithic test command.
+These should plug into `scripts/validate.ts` so Codex can keep running the product as a set of named flows instead of one monolithic test command.
 
 ## 7. Bottom Line
 
@@ -497,16 +497,16 @@ Since the roadmap was written, significant new capabilities have landed:
 | `stealth` | **DONE** | ERC-5564 secp256k1 stealth addresses - key generation, one-time address creation, view tag scanning |
 | `policy` | **DONE** | Action approval workflows, typed EIP-712-compatible bundles, replay protection |
 | `session` | **DONE** | Scoped execution permissions, time-bounded capability windows, member constraints |
-| `grant` | **DONE** | Execution grants with expiry, privilege logs for audit trails |
+| `permit` | **DONE** | Execution permits with expiry, privilege logs for audit trails |
 | `operator` | **DONE** | Anchor/trusted-node runtime with OperatorConsole UI (1,072 lines) |
-| `signaling` | **DONE** | Standalone y-webrtc signaling server (Fly.io deployed at `wss://coop.fly.dev`) |
+| `signaling` | **DONE** | Standalone y-webrtc signaling server (Fly.io deployed at `wss://signal.coop.town`) |
 
 ### Updated Workstream Status
 
 | Workstream | Was | Now | Notes |
 |-----------|-----|-----|-------|
 | 4.3 Trusted-Node Runtime | CONCEPTUAL | **DONE** | OperatorConsole built, anchor mode operational, action log panel shipped |
-| 4.10 Session Keys | NOT STARTED | **PARTIAL** | Session capability schema, grant system, and policy engine implemented in shared; UI integration pending |
+| 4.10 Session Keys | NOT STARTED | **PARTIAL** | Session capability schema, permit system, and policy engine implemented in shared; UI integration pending |
 | 3.2 Near-term: Identity | PARTIAL | **PARTIAL** | Stealth addresses and ZK proofs added; DID/signed envelopes still pending |
 
 ### Additional Standards Adopted
