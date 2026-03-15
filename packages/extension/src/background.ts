@@ -132,6 +132,8 @@ import {
   handleRotateSessionCapability,
 } from './background/handlers/session';
 
+import { handleAgentHeartbeat } from './background/handlers/heartbeat';
+
 // ---- Receiver Sync Config ----
 
 async function getReceiverSyncConfig() {
@@ -192,6 +194,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
   await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
+  await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -204,6 +207,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await registerContextMenus();
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
   await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
+  await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await refreshBadge();
@@ -211,6 +215,10 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   await ensureDbReady();
+  if (alarm.name === 'agent-heartbeat') {
+    await handleAgentHeartbeat();
+    return;
+  }
   if (alarm.name === 'archive-status-poll') {
     await pollUnsealedArchiveReceipts();
     return;

@@ -68,6 +68,7 @@ import {
   saveAgentPlan,
   saveReviewDraft,
   saveSkillRun,
+  truncateWords,
   updateAgentObservation,
   updateAgentPlan,
   updateAgentPlanStep,
@@ -314,7 +315,7 @@ async function buildSkillPrompt(input: {
   relatedArtifacts: CoopSharedState['artifacts'];
 }) {
   const coopContext = input.coop
-    ? [
+    ? compact([
         `Coop name: ${input.coop.profile.name}`,
         `Coop purpose: ${input.coop.profile.purpose}`,
         `Ritual cadence: ${input.coop.rituals.map((ritual) => ritual.weeklyReviewCadence).join('; ')}`,
@@ -325,7 +326,19 @@ async function buildSkillPrompt(input: {
             .slice(0, 6)
             .join(', ') || 'none'
         }`,
-      ].join('\n')
+        `Useful signal: ${input.coop.soul.usefulSignalDefinition}`,
+        `Artifact focus: ${input.coop.soul.artifactFocus.join(', ')}`,
+        `Why this coop exists: ${input.coop.soul.whyThisCoopExists}`,
+        `Tone and working style: ${input.coop.soul.toneAndWorkingStyle}`,
+        input.coop.soul.agentPersona ? `Agent persona: ${input.coop.soul.agentPersona}` : undefined,
+        input.coop.soul.vocabularyTerms.length > 0
+          ? `Vocabulary: ${input.coop.soul.vocabularyTerms.join(', ')}`
+          : undefined,
+        input.coop.soul.prohibitedTopics.length > 0
+          ? `Prohibited topics: ${input.coop.soul.prohibitedTopics.join(', ')}`
+          : undefined,
+        `Confidence threshold: ${input.coop.soul.confidenceThreshold}`,
+      ]).join('\n')
     : 'No coop context available.';
 
   const sourceContext = compact([
@@ -387,7 +400,7 @@ async function buildSkillPrompt(input: {
   const knowledgeSkills = await selectKnowledgeSkills(input.observation, input.coop?.profile.id);
   const knowledgeContext =
     knowledgeSkills.length > 0
-      ? `Domain knowledge:\n${knowledgeSkills.map((s) => `### ${s.name}\n${s.content}`).join('\n\n')}`
+      ? `Domain knowledge:\n${knowledgeSkills.map((s) => `### ${s.name}\n${truncateWords(s.content, 80)}`).join('\n\n')}`
       : '';
 
   const prompt = [

@@ -65,6 +65,24 @@ describe('create, join, and publish flows', () => {
     expect(created.state.members[0]?.role).toBe('creator');
   });
 
+  it('derives soul with new identity fields having sensible defaults', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+
+    const soul = created.state.soul;
+    expect(soul.purposeStatement).toBe('Coordinate forest stewardship and shared funding context.');
+    expect(soul.agentPersona).toBeUndefined();
+    expect(soul.vocabularyTerms).toEqual([]);
+    expect(soul.prohibitedTopics).toEqual([]);
+    expect(soul.confidenceThreshold).toBe(0.72);
+  });
+
   it('stores the selected space preset in the coop profile', () => {
     const created = createCoop({
       coopName: 'Personal Research Coop',

@@ -381,6 +381,7 @@ export const agentObservationTriggerSchema = z.enum([
   'green-goods-gap-admin-sync-needed',
   'erc8004-registration-due',
   'erc8004-feedback-due',
+  'stale-draft',
 ]);
 
 export const agentObservationStatusSchema = z.enum([
@@ -763,6 +764,29 @@ export const agentLogSchema = z.object({
   timestamp: z.string().datetime(),
 });
 
+export const agentMemoryTypeSchema = z.enum([
+  'observation-outcome',
+  'skill-pattern',
+  'user-feedback',
+  'domain-pattern',
+  'coop-context',
+]);
+
+export const agentMemorySchema = z.object({
+  id: z.string().min(1),
+  coopId: z.string().min(1),
+  type: agentMemoryTypeSchema,
+  domain: z.string().default('general'),
+  content: z.string().min(1),
+  contentHash: z.string().min(1),
+  confidence: z.number().min(0).max(1),
+  authorMemberId: z.string().optional(),
+  sourceObservationId: z.string().optional(),
+  sourceSkillRunId: z.string().optional(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+});
+
 export const privilegedActionStatusSchema = z.enum(['attempted', 'succeeded', 'failed']);
 export const archiveWorthinessSchema = z.object({
   flagged: z.boolean().default(false),
@@ -828,6 +852,10 @@ export const coopSoulSchema = z.object({
   usefulSignalDefinition: z.string().min(1),
   artifactFocus: z.array(z.string()).min(1),
   whyThisCoopExists: z.string().min(1),
+  agentPersona: z.string().optional(),
+  vocabularyTerms: z.array(z.string()).default([]),
+  prohibitedTopics: z.array(z.string()).default([]),
+  confidenceThreshold: z.number().min(0).max(1).default(0.72),
 });
 
 export const ritualDefinitionSchema = z.object({
@@ -1528,6 +1556,7 @@ export const uiPreferencesSchema = z.object({
   notificationsEnabled: z.boolean().default(true),
   localInferenceOptIn: z.boolean().default(false),
   preferredExportMethod: preferredExportMethodSchema.default('download'),
+  heartbeatEnabled: z.boolean().default(true),
 });
 
 export const coopSharedStateSchema = z.object({
@@ -1750,6 +1779,8 @@ export type CoopKnowledgeSkillOverride = z.infer<typeof coopKnowledgeSkillOverri
 export type AgentLogSpanType = z.infer<typeof agentLogSpanTypeSchema>;
 export type AgentLogLevel = z.infer<typeof agentLogLevelSchema>;
 export type AgentLog = z.infer<typeof agentLogSchema>;
+export type AgentMemoryType = z.infer<typeof agentMemoryTypeSchema>;
+export type AgentMemory = z.infer<typeof agentMemorySchema>;
 
 // ---------------------------------------------------------------------------
 // Privacy / Semaphore v4 + Bandada

@@ -390,6 +390,29 @@ function resolveObservationInactiveReason(input: {
       }
       return null;
     }
+    case 'stale-draft': {
+      const draft = observation.draftId ? input.draftsById.get(observation.draftId) : undefined;
+      if (!draft) {
+        return 'Source draft no longer exists.';
+      }
+      if (draft.workflowStage !== 'ready') {
+        return 'Draft is no longer in the ready stage.';
+      }
+      const nextFingerprint = buildAgentObservationFingerprint({
+        trigger: observation.trigger,
+        coopId: draft.suggestedTargetCoopIds[0],
+        draftId: draft.id,
+        payload: {
+          workflowStage: draft.workflowStage,
+          category: draft.category,
+          confidence: draft.confidence,
+        },
+      });
+      if (nextFingerprint !== observation.fingerprint) {
+        return 'Observation has been superseded by the latest draft state.';
+      }
+      return null;
+    }
   }
 }
 

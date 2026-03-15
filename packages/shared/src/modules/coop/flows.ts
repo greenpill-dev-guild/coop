@@ -184,6 +184,9 @@ function deriveCoopSoul(input: CreateCoopInput) {
       'Artifacts that tighten shared context, surface opportunities, and reduce repeated research.',
     artifactFocus: ['insights', 'funding leads', 'evidence', 'next steps'],
     whyThisCoopExists: `${input.coopName} exists to turn loose tabs into ${focusByType[spaceType]}.`,
+    vocabularyTerms: [],
+    prohibitedTopics: [],
+    confidenceThreshold: 0.72,
   };
 }
 

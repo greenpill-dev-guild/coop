@@ -5,6 +5,7 @@ import type {
   ActionLogEntry,
   ActionPolicy,
   AgentLog,
+  AgentMemory,
   AgentObservation,
   AgentPlan,
   AnchorCapability,
@@ -115,6 +116,7 @@ export class CoopDexie extends Dexie {
   agentLogs!: EntityTable<AgentLog, 'id'>;
   privacyIdentities!: EntityTable<PrivacyIdentityRecord, 'id'>;
   stealthKeyPairs!: EntityTable<StealthKeyPairRecord, 'id'>;
+  agentMemories!: EntityTable<AgentMemory, 'id'>;
 
   constructor(name = 'coop-v1') {
     super(name);
@@ -319,6 +321,36 @@ export class CoopDexie extends Dexie {
       agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
       privacyIdentities: 'id, [coopId+memberId], coopId, memberId, commitment, createdAt',
       stealthKeyPairs: 'id, coopId, createdAt',
+    });
+    this.version(11).stores({
+      tabCandidates: 'id, canonicalUrl, domain, capturedAt',
+      pageExtracts: 'id, canonicalUrl, domain, createdAt',
+      reviewDrafts: 'id, category, createdAt, workflowStage',
+      coopDocs: 'id, updatedAt',
+      captureRuns: 'id, state, capturedAt',
+      settings: 'key',
+      identities: 'id, ownerAddress, displayName, createdAt, lastUsedAt',
+      receiverPairings: 'pairingId, coopId, memberId, roomId, issuedAt, acceptedAt, active',
+      receiverCaptures:
+        'id, kind, createdAt, syncState, pairingId, coopId, memberId, intakeStatus, linkedDraftId',
+      receiverBlobs: 'captureId',
+      actionBundles: 'id, status, coopId, actionClass, createdAt',
+      actionLogEntries: 'id, bundleId, eventType, createdAt',
+      replayIds: 'replayId, bundleId, executedAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
+      sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
+      sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
+      encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
+      agentObservations: 'id, status, trigger, coopId, createdAt, fingerprint',
+      agentPlans: 'id, observationId, status, createdAt, updatedAt',
+      skillRuns: 'id, observationId, planId, skillId, status, startedAt',
+      knowledgeSkills: 'id, &url, name, domain, enabled',
+      coopKnowledgeSkillOverrides: 'id, [coopId+knowledgeSkillId], coopId',
+      agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
+      privacyIdentities: 'id, [coopId+memberId], coopId, memberId, commitment, createdAt',
+      stealthKeyPairs: 'id, coopId, createdAt',
+      agentMemories: 'id, coopId, type, domain, createdAt, expiresAt, contentHash',
     });
   }
 }

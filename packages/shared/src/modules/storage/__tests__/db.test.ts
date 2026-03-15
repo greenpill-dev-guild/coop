@@ -454,12 +454,14 @@ describe('settings persistence', () => {
       notificationsEnabled: false,
       localInferenceOptIn: true,
       preferredExportMethod: 'file-picker',
+      heartbeatEnabled: true,
     });
 
     expect(await getUiPreferences(db)).toEqual({
       notificationsEnabled: false,
       localInferenceOptIn: true,
       preferredExportMethod: 'file-picker',
+      heartbeatEnabled: true,
     });
   });
 
