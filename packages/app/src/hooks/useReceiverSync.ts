@@ -525,15 +525,6 @@ export function useReceiverSync(
     };
   }, [applyRemoteCaptureSync, pairingId, pairingRoomId, pairingSignalingKey, reconcilePairing]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (syncBindingRef.current) {
-        syncBindingRef.current.disconnect();
-      }
-    };
-  }, []);
-
   return {
     reconcilePairing,
     retrySync,

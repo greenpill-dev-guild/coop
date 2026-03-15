@@ -132,11 +132,20 @@ export function BoardView({
 }: { coopId: string; snapshot: CoopBoardSnapshot | null }) {
   const [shareLabel, setShareLabel] = useState('Share snapshot');
 
-  const handleShareSnapshot = useCallback(() => {
-    void navigator.clipboard.writeText(window.location.href).then(() => {
+  const handleShareSnapshot = useCallback(async () => {
+    if (!navigator.clipboard?.writeText) {
+      setShareLabel('Clipboard unavailable');
+      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
       setShareLabel('Copied!');
       setTimeout(() => setShareLabel('Share snapshot'), 2000);
-    });
+    } catch {
+      setShareLabel('Copy failed');
+      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+    }
   }, []);
 
   const invalidSnapshot = snapshot ? snapshot.coopId !== coopId : false;

@@ -60,7 +60,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (request.mode === 'navigate' && ROUTE_SHELLS.includes(url.pathname)) {
+  if (
+    request.mode === 'navigate' &&
+    (ROUTE_SHELLS.includes(url.pathname) || url.pathname.startsWith('/board/'))
+  ) {
     event.respondWith(
       fetch(request)
         .then((response) => {
