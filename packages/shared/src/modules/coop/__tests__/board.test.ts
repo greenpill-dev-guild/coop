@@ -151,7 +151,7 @@ describe('coop board graph', () => {
       'published-to-coop:published to coop',
       'archived-in:archived in',
     ]);
-    expect(graph.metadata.story).toContain('captures moved through 1 drafts');
+    expect(graph.metadata.story).toContain('1 finds moved from loose chickens through 1 drafts');
   });
 
   it('round-trips board snapshots through the fragment handoff payload', () => {
