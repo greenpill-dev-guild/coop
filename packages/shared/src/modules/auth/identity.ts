@@ -4,11 +4,8 @@ import {
   toWebAuthnAccount,
 } from 'viem/account-abstraction';
 import { type LocalPasskeyIdentity, localPasskeyIdentitySchema } from '../../contracts/schema';
-import { createId, hashText, nowIso, toDeterministicAddress } from '../../utils';
-
-function createDeviceBoundWarning(displayName: string) {
-  return `${displayName}'s passkey is stored on this device profile. Clearing extension data may remove access to this account.`;
-}
+import { assertHexString, createId, hashText, nowIso, toDeterministicAddress } from '../../utils';
+import { createDeviceBoundWarning } from '../coop/flows';
 
 export function derivePasskeyRpId(explicitRpId?: string) {
   if (explicitRpId) {
@@ -34,7 +31,7 @@ export function rehydratePasskeyOwner(
   return toWebAuthnAccount({
     credential: {
       id: identity.passkey.id,
-      publicKey: identity.passkey.publicKey as `0x${string}`,
+      publicKey: assertHexString(identity.passkey.publicKey, 'passkey publicKey'),
     },
     rpId,
   });
@@ -59,7 +56,7 @@ export async function createLivePasskeyIdentity(input: {
   const owner = toWebAuthnAccount({
     credential: {
       id: credential.id,
-      publicKey: credential.publicKey as `0x${string}`,
+      publicKey: assertHexString(credential.publicKey, 'passkey publicKey'),
     },
     rpId,
   });

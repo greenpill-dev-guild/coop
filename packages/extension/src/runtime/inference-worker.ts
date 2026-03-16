@@ -59,6 +59,8 @@ async function ensureModel() {
     // Configure for worker context
     env.allowLocalModels = false;
     env.useBrowserCache = true;
+    // Load ONNX WASM from CDN instead of bundling the 22 MB binary
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
 
     pipeline = await createPipeline('text-generation', MODEL_ID, {
       dtype: 'q4',
@@ -159,11 +161,15 @@ self.onmessage = (event: MessageEvent<InferenceWorkerRequest>) => {
 
   switch (msg.type) {
     case 'init':
-      ensureModel().catch(() => {});
+      ensureModel().catch((e) => {
+        self.postMessage({ type: 'status', status: 'failed', error: String(e) });
+      });
       break;
 
     case 'refine':
-      handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch(() => {});
+      handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch((e) => {
+        self.postMessage({ type: 'refine-error', id: msg.id, error: String(e) });
+      });
       break;
 
     case 'cancel':

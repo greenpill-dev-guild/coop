@@ -75,5 +75,5 @@ name = "Run: Signal"
 icon = "tool"
 command = '''
 bun install
-bun dev:signaling
+bun dev:api
 '''

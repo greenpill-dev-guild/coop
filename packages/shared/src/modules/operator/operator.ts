@@ -42,7 +42,7 @@ export function isAnchorCapabilityActive(
     return false;
   }
 
-  return capability.actorAddress === authSession?.primaryAddress;
+  return capability.actorAddress?.toLowerCase() === authSession?.primaryAddress?.toLowerCase();
 }
 
 export function describeAnchorCapabilityStatus(input: {

@@ -1,0 +1,49 @@
+.card {
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 252, 249, 0.8);
+  box-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+  backdrop-filter: blur(12px);
+  padding: 1.4rem;
+  margin: 1.5rem 0;
+}
+
+.cardTitle {
+  margin: 0 0 0.75rem;
+  color: #4f2e1f;
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: 1.15rem;
+}
+
+.cardBody {
+  color: #6b4a36;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.cardBody p:last-child {
+  margin-bottom: 0;
+}
+
+/* Variants */
+.default {
+  /* Base styles from .card are sufficient */
+}
+
+.highlight {
+  border-color: rgba(90, 125, 16, 0.3);
+  background: linear-gradient(135deg, rgba(255, 252, 249, 0.95), rgba(240, 248, 236, 0.9));
+}
+
+.highlight .cardTitle {
+  color: #5a7d10;
+}
+
+.warning {
+  border-color: rgba(253, 138, 1, 0.3);
+  background: linear-gradient(135deg, rgba(255, 252, 249, 0.95), rgba(255, 248, 236, 0.9));
+}
+
+.warning .cardTitle {
+  color: #c46a10;
+}

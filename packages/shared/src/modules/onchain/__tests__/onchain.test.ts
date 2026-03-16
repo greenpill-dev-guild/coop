@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onchainStateSchema } from '../../../contracts/schema';
+import { normalizeLegacyOnchainState, onchainStateSchema } from '../../../contracts/schema';
 import {
   buildPimlicoRpcUrl,
   createMockOnchainState,
@@ -52,31 +52,40 @@ describe('onchain chain support', () => {
     ).toThrow(/chainId must match the configured sepolia network/i);
   });
 
-  it('normalizes legacy celo state when reading stored coop data', () => {
-    const mappedSepolia = onchainStateSchema.parse({
+  it('rejects legacy celo chain keys at parse time (migration handles normalization)', () => {
+    expect(() =>
+      onchainStateSchema.parse({
+        chainId: 11142220,
+        chainKey: 'celo-sepolia',
+        safeAddress: '0x5555555555555555555555555555555555555555',
+        safeCapability: 'stubbed',
+        statusNote: 'Mock onchain mode is active for Celo Sepolia.',
+      }),
+    ).toThrow();
+
+    expect(() =>
+      onchainStateSchema.parse({
+        chainId: 42220,
+        chainKey: 'celo',
+        safeAddress: '0x6666666666666666666666666666666666666666',
+        safeCapability: 'executed',
+        statusNote: 'Safe deployed on Celo via Pimlico account abstraction.',
+      }),
+    ).toThrow();
+  });
+
+  it('normalizeLegacyOnchainState transforms celo keys for migration', () => {
+    const normalized = normalizeLegacyOnchainState({
       chainId: 11142220,
       chainKey: 'celo-sepolia',
       safeAddress: '0x5555555555555555555555555555555555555555',
       safeCapability: 'stubbed',
       statusNote: 'Mock onchain mode is active for Celo Sepolia.',
     });
-    const mappedArbitrum = onchainStateSchema.parse({
-      chainId: 42220,
-      chainKey: 'celo',
-      safeAddress: '0x6666666666666666666666666666666666666666',
-      safeCapability: 'executed',
-      statusNote: 'Safe deployed on Celo via Pimlico account abstraction.',
-    });
 
-    expect(mappedSepolia.chainKey).toBe('sepolia');
-    expect(mappedSepolia.chainId).toBe(11155111);
-    expect(mappedSepolia.statusNote).toContain('Sepolia');
-    expect(mappedSepolia.statusNote).not.toContain('Celo');
-
-    expect(mappedArbitrum.chainKey).toBe('arbitrum');
-    expect(mappedArbitrum.chainId).toBe(42161);
-    expect(mappedArbitrum.statusNote).toContain('Arbitrum');
-    expect(mappedArbitrum.statusNote).not.toContain('Celo');
+    expect(normalized).toHaveProperty('chainKey', 'sepolia');
+    expect(normalized).toHaveProperty('chainId', 11155111);
+    expect((normalized as Record<string, unknown>).statusNote).toContain('Sepolia');
   });
 
   it('creates deterministic mock and unavailable Safe placeholders on supported chains', () => {

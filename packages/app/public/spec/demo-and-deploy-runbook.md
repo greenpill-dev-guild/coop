@@ -23,7 +23,7 @@ Processes:
 bun install
 bun run dev:app
 bun run dev:extension
-bun run dev:signaling
+bun run dev:api
 ```
 
 Chrome:

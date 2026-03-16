@@ -1,4 +1,16 @@
-import type { ArchiveBundle, ArchiveReceipt, CoopSharedState } from '../../contracts/schema';
+import { CID } from 'multiformats/cid';
+import * as raw from 'multiformats/codecs/raw';
+import { sha256 } from 'multiformats/hashes/sha2';
+import type {
+  ArchiveBundle,
+  ArchiveReceipt,
+  CoopArchiveConfig,
+  CoopArchiveSecrets,
+  CoopChainKey,
+  CoopSharedState,
+  TrustedNodeArchiveConfig,
+} from '../../contracts/schema';
+import { trustedNodeArchiveConfigSchema } from '../../contracts/schema';
 import { createId, extractDomain, nowIso, toPseudoCid } from '../../utils';
 
 type ArchiveFilecoinInfoInput = {
@@ -17,6 +29,17 @@ type ArchiveFilecoinInfoInput = {
     };
   }>;
 };
+
+function findLatestSnapshotCid(receipts: readonly ArchiveReceipt[]): string | undefined {
+  let latest: ArchiveReceipt | undefined;
+  for (const receipt of receipts) {
+    if (receipt.scope !== 'snapshot') continue;
+    if (!latest || Date.parse(receipt.uploadedAt) > Date.parse(latest.uploadedAt)) {
+      latest = receipt;
+    }
+  }
+  return latest?.rootCid;
+}
 
 export function createArchiveBundle(input: {
   scope: ArchiveBundle['scope'];
@@ -41,6 +64,7 @@ export function createArchiveBundle(input: {
           artifacts: input.state.artifacts,
           reviewBoard: input.state.reviewBoard,
           archiveReceipts: input.state.archiveReceipts,
+          previousSnapshotCid: findLatestSnapshotCid(input.state.archiveReceipts),
         };
 
   return {
@@ -48,6 +72,7 @@ export function createArchiveBundle(input: {
     scope: input.scope,
     targetCoopId: input.state.profile.id,
     createdAt: nowIso(),
+    schemaVersion: 1,
     payload,
   } satisfies ArchiveBundle;
 }
@@ -80,6 +105,7 @@ export function createMockArchiveReceipt(input: {
       refreshCount: 0,
     },
     filecoinInfo: undefined,
+    anchorStatus: 'pending',
   };
 }
 
@@ -129,6 +155,7 @@ export function createArchiveReceiptFromUpload(input: {
             deals: [],
           }
         : undefined,
+    anchorStatus: 'pending',
   };
 }
 
@@ -178,6 +205,7 @@ export function summarizeArchiveFilecoinInfo(
             ? aggregate.aggregate
             : aggregate.aggregate.toString(),
         inclusionProofAvailable: Boolean(aggregate.inclusion),
+        inclusionProof: aggregate.inclusion ? JSON.stringify(aggregate.inclusion) : undefined,
       })) ?? [],
     deals:
       value.deals?.map((deal) => ({
@@ -226,6 +254,18 @@ export function applyArchiveReceiptFollowUp(input: {
       lastError: input.error,
     },
   } satisfies ArchiveReceipt;
+}
+
+export function applyArchiveAnchor(
+  receipt: ArchiveReceipt,
+  anchor: { txHash: string; chainKey: CoopChainKey },
+): ArchiveReceipt {
+  return {
+    ...receipt,
+    anchorTxHash: anchor.txHash,
+    anchorChainKey: anchor.chainKey,
+    anchorStatus: 'anchored' as const,
+  };
 }
 
 export function updateArchiveReceipt(
@@ -289,4 +329,70 @@ export function recordArchiveReceipt(
         : artifact,
     ),
   };
+}
+
+/**
+ * Merge a public CoopArchiveConfig (from CRDT state) with local
+ * CoopArchiveSecrets (from Dexie) into a full TrustedNodeArchiveConfig.
+ */
+export function mergeCoopArchiveConfig(
+  publicConfig: CoopArchiveConfig,
+  secrets: CoopArchiveSecrets,
+): TrustedNodeArchiveConfig {
+  return trustedNodeArchiveConfigSchema.parse({
+    spaceDid: publicConfig.spaceDid,
+    delegationIssuer: publicConfig.delegationIssuer,
+    gatewayBaseUrl: publicConfig.gatewayBaseUrl,
+    allowsFilecoinInfo: publicConfig.allowsFilecoinInfo,
+    expirationSeconds: publicConfig.expirationSeconds,
+    agentPrivateKey: secrets.agentPrivateKey,
+    spaceDelegation: secrets.spaceDelegation,
+    proofs: secrets.proofs,
+  });
+}
+
+/**
+ * Fetch archived content from the IPFS gateway and verify the CID.
+ *
+ * CID verification attempts to recompute the content hash using the raw
+ * codec + SHA-256.  Because Storacha typically stores content wrapped in
+ * UnixFS (dag-pb), the recomputed CID will usually differ from the rootCid
+ * on the receipt.  When this happens `verified` is `false` -- the payload is
+ * still returned so that callers can decide how to proceed.
+ */
+export async function retrieveArchiveBundle(receipt: ArchiveReceipt): Promise<{
+  payload: Record<string, unknown>;
+  verified: boolean;
+  schemaVersion?: number;
+}> {
+  if (!receipt.gatewayUrl) {
+    throw new Error('Archive receipt has no gateway URL.');
+  }
+
+  const response = await fetch(receipt.gatewayUrl, {
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Gateway fetch failed: ${response.status} ${response.statusText}`);
+  }
+
+  const text = await response.text();
+  const payload = JSON.parse(text) as Record<string, unknown>;
+
+  // Attempt CID verification: recompute from raw bytes and compare to rootCid.
+  let verified = false;
+  try {
+    const bytes = new TextEncoder().encode(text);
+    const hash = await sha256.digest(bytes);
+    const computedCid = CID.create(1, raw.code, hash);
+    verified = computedCid.toString() === receipt.rootCid;
+  } catch {
+    // If CID recomputation fails for any reason, leave verified as false.
+    verified = false;
+  }
+
+  const schemaVersion =
+    typeof payload.schemaVersion === 'number' ? payload.schemaVersion : undefined;
+
+  return { payload, verified, schemaVersion };
 }

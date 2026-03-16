@@ -65,9 +65,9 @@ describe('policy message types', () => {
     expect(message.type).toBe('get-action-history');
   });
 
-  it('accepts issue-grant message', () => {
+  it('accepts issue-permit message', () => {
     const message: RuntimeRequest = {
-      type: 'issue-grant',
+      type: 'issue-permit',
       payload: {
         coopId: 'coop-1',
         expiresAt: '2026-03-13T00:00:00.000Z',
@@ -75,40 +75,40 @@ describe('policy message types', () => {
         allowedActions: ['archive-artifact', 'archive-snapshot'],
       },
     };
-    expect(message.type).toBe('issue-grant');
+    expect(message.type).toBe('issue-permit');
     expect(message.payload.allowedActions).toHaveLength(2);
   });
 
-  it('accepts revoke-grant message', () => {
+  it('accepts revoke-permit message', () => {
     const message: RuntimeRequest = {
-      type: 'revoke-grant',
-      payload: { grantId: 'grant-1' },
+      type: 'revoke-permit',
+      payload: { permitId: 'permit-1' },
     };
-    expect(message.type).toBe('revoke-grant');
+    expect(message.type).toBe('revoke-permit');
   });
 
-  it('accepts execute-with-grant message', () => {
+  it('accepts execute-with-permit message', () => {
     const message: RuntimeRequest = {
-      type: 'execute-with-grant',
+      type: 'execute-with-permit',
       payload: {
-        grantId: 'grant-1',
+        permitId: 'permit-1',
         replayId: 'dreplay-1',
         actionClass: 'archive-artifact',
         coopId: 'coop-1',
         actionPayload: { coopId: 'coop-1', artifactId: 'art-1' },
       },
     };
-    expect(message.type).toBe('execute-with-grant');
+    expect(message.type).toBe('execute-with-permit');
   });
 
-  it('accepts get-grants message', () => {
-    const message: RuntimeRequest = { type: 'get-grants' };
-    expect(message.type).toBe('get-grants');
+  it('accepts get-permits message', () => {
+    const message: RuntimeRequest = { type: 'get-permits' };
+    expect(message.type).toBe('get-permits');
   });
 
-  it('accepts get-grant-log message', () => {
-    const message: RuntimeRequest = { type: 'get-grant-log' };
-    expect(message.type).toBe('get-grant-log');
+  it('accepts get-permit-log message', () => {
+    const message: RuntimeRequest = { type: 'get-permit-log' };
+    expect(message.type).toBe('get-permit-log');
   });
 });
 
@@ -129,12 +129,12 @@ describe('DashboardResponse operator policy fields', () => {
       liveOnchainDetail: '',
       policyActionQueue: [],
       policyActionLogEntries: [],
-      grants: [],
-      grantLog: [],
+      permits: [],
+      permitLog: [],
     };
     expect(mockOperator.policyActionQueue).toEqual([]);
     expect(mockOperator.policyActionLogEntries).toEqual([]);
-    expect(mockOperator.grants).toEqual([]);
-    expect(mockOperator.grantLog).toEqual([]);
+    expect(mockOperator.permits).toEqual([]);
+    expect(mockOperator.permitLog).toEqual([]);
   });
 });

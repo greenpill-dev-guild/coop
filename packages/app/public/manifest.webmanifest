@@ -10,14 +10,31 @@
   "theme_color": "#4f2e1f",
   "icons": [
     {
-      "src": "/branding/coop-mark-flat.png",
+      "src": "/branding/coop-mark-flat-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/branding/coop-mark-glow.png",
+      "src": "/branding/coop-mark-flat-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/branding/coop-mark-flat.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    },
+    {
+      "src": "/branding/coop-mark-glow-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/branding/coop-mark-glow.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ],
   "shortcuts": [

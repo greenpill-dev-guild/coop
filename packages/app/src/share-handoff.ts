@@ -1,3 +1,5 @@
+import { isSafeExternalUrl } from './url-safety';
+
 export type ReceiverShareHandoff = {
   title?: string;
   note?: string;
@@ -12,7 +14,8 @@ export function bootstrapReceiverShareHandoff(targetWindow: Window): ReceiverSha
   const params = new URLSearchParams(targetWindow.location.search);
   const title = params.get('title')?.trim() || undefined;
   const note = params.get('text')?.trim() || undefined;
-  const sourceUrl = params.get('url')?.trim() || undefined;
+  const rawUrl = params.get('url')?.trim() || undefined;
+  const sourceUrl = rawUrl && isSafeExternalUrl(rawUrl) ? rawUrl : undefined;
 
   if (!title && !note && !sourceUrl) {
     return null;

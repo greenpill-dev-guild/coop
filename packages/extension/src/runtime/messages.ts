@@ -1,6 +1,7 @@
 import type {
   ActionBundle,
   ActionLogEntry,
+  AgentMemory,
   AgentObservation,
   AgentPlan,
   AnchorCapability,
@@ -11,9 +12,8 @@ import type {
   CoopSharedState,
   CoopSpaceType,
   DelegatedActionClass,
-  ExecutionGrant,
+  ExecutionPermit,
   ExtensionIconState,
-  GrantLogEntry,
   GreenGoodsAssessmentRequest,
   GreenGoodsWorkApprovalRequest,
   IntegrationMode,
@@ -22,8 +22,10 @@ import type {
   LocalPasskeyIdentity,
   Member,
   OnchainState,
+  PermitLogEntry,
   PolicyActionClass,
   PrivilegedActionLogEntry,
+  ProviderMode,
   ReceiverCapture,
   ReceiverPairingRecord,
   ReceiverSyncEnvelope,
@@ -55,9 +57,18 @@ export interface RuntimeSummary {
   activeCoopId?: string;
 }
 
+export interface CoopBadgeSummary {
+  coopId: string;
+  coopName: string;
+  pendingDrafts: number;
+  artifactCount: number;
+  pendingActions: number;
+}
+
 export interface DashboardResponse {
   coops: CoopSharedState[];
   activeCoopId?: string;
+  coopBadges: CoopBadgeSummary[];
   drafts: ReviewDraft[];
   candidates: TabCandidate[];
   summary: RuntimeSummary;
@@ -72,6 +83,8 @@ export interface DashboardResponse {
     onchainMode: IntegrationMode;
     archiveMode: IntegrationMode;
     sessionMode: SessionMode;
+    providerMode: ProviderMode;
+    privacyMode: 'off' | 'on';
     receiverAppUrl: string;
     signalingUrls: string[];
   };
@@ -88,8 +101,8 @@ export interface DashboardResponse {
     liveOnchainDetail: string;
     policyActionQueue: ActionBundle[];
     policyActionLogEntries: ActionLogEntry[];
-    grants: ExecutionGrant[];
-    grantLog: GrantLogEntry[];
+    permits: ExecutionPermit[];
+    permitLog: PermitLogEntry[];
     sessionCapabilities: SessionCapability[];
     sessionCapabilityLog: SessionCapabilityLogEntry[];
   };
@@ -122,6 +135,7 @@ export interface AgentDashboardResponse {
   skillRuns: SkillRun[];
   manifests: SkillManifest[];
   autoRunSkillIds: string[];
+  memories: AgentMemory[];
 }
 
 export type RuntimeRequest =
@@ -199,6 +213,7 @@ export type RuntimeRequest =
       payload: {
         draft: ReviewDraft;
         targetCoopIds: string[];
+        anonymous?: boolean;
       };
     }
   | {
@@ -306,7 +321,7 @@ export type RuntimeRequest =
   | { type: 'get-action-queue' }
   | { type: 'get-action-history' }
   | {
-      type: 'issue-grant';
+      type: 'issue-permit';
       payload: {
         coopId: string;
         expiresAt: string;
@@ -315,19 +330,19 @@ export type RuntimeRequest =
         targetAllowlist?: Record<string, string[]>;
       };
     }
-  | { type: 'revoke-grant'; payload: { grantId: string } }
+  | { type: 'revoke-permit'; payload: { permitId: string } }
   | {
-      type: 'execute-with-grant';
+      type: 'execute-with-permit';
       payload: {
-        grantId: string;
+        permitId: string;
         replayId: string;
         actionClass: DelegatedActionClass;
         coopId: string;
         actionPayload: Record<string, unknown>;
       };
     }
-  | { type: 'get-grants' }
-  | { type: 'get-grant-log' }
+  | { type: 'get-permits' }
+  | { type: 'get-permit-log' }
   | {
       type: 'issue-session-capability';
       payload: {
@@ -346,7 +361,64 @@ export type RuntimeRequest =
     }
   | { type: 'revoke-session-capability'; payload: { capabilityId: string } }
   | { type: 'get-session-capabilities' }
-  | { type: 'get-session-capability-log' };
+  | { type: 'get-session-capability-log' }
+  | { type: 'export-agent-manifest'; payload: { coopId: string } }
+  | { type: 'export-agent-log'; payload: { coopId: string; traceId?: string } }
+  | { type: 'get-agent-identity'; payload: { coopId: string } }
+  | { type: 'get-privacy-identity'; payload: { coopId: string; memberId: string } }
+  | { type: 'get-stealth-meta-address'; payload: { coopId: string } }
+  | { type: 'get-membership-commitments'; payload: { coopId: string } }
+  | {
+      type: 'provision-archive-space';
+      payload: {
+        coopId: string;
+        email: string;
+        coopName: string;
+      };
+    }
+  | {
+      type: 'set-coop-archive-config';
+      payload: {
+        coopId: string;
+        publicConfig: {
+          spaceDid: string;
+          delegationIssuer: string;
+          gatewayBaseUrl?: string;
+          allowsFilecoinInfo?: boolean;
+          expirationSeconds?: number;
+        };
+        secrets: {
+          agentPrivateKey?: string;
+          spaceDelegation: string;
+          proofs?: string[];
+        };
+      };
+    }
+  | {
+      type: 'remove-coop-archive-config';
+      payload: { coopId: string };
+    }
+  | {
+      type: 'retrieve-archive-bundle';
+      payload: {
+        coopId: string;
+        receiptId: string;
+      };
+    }
+  | {
+      type: 'anchor-archive-cid';
+      payload: {
+        coopId: string;
+        receiptId: string;
+      };
+    }
+  | {
+      type: 'fvm-register-archive';
+      payload: {
+        coopId: string;
+        receiptId: string;
+      };
+    };
 
 export interface RuntimeActionResponse<T = unknown> {
   ok: boolean;
@@ -357,4 +429,26 @@ export interface RuntimeActionResponse<T = unknown> {
 
 export async function sendRuntimeMessage<T = unknown>(message: RuntimeRequest) {
   return chrome.runtime.sendMessage(message) as Promise<RuntimeActionResponse<T>>;
+}
+
+/**
+ * Messages pushed from the background service worker to the sidepanel.
+ * These are fire-and-forget notifications, not request/response pairs.
+ */
+export type BackgroundNotification = { type: 'DASHBOARD_UPDATED' };
+
+/**
+ * Notify the sidepanel that dashboard-relevant state has changed.
+ * Silently ignores the expected "Receiving end does not exist" error
+ * (when no sidepanel listener is open) but warns on unexpected failures.
+ */
+export function notifyDashboardUpdated(): Promise<void> {
+  return chrome.runtime
+    .sendMessage({ type: 'DASHBOARD_UPDATED' } satisfies BackgroundNotification)
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('Receiving end does not exist')) {
+        console.warn('[notifyDashboardUpdated] unexpected error:', err);
+      }
+    });
 }

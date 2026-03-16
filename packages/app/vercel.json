@@ -1,4 +1,7 @@
 {
+  "installCommand": "cd ../.. && bun install",
+  "buildCommand": "bun run vite build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/pair", "destination": "/index.html" },
     { "source": "/receiver", "destination": "/index.html" },

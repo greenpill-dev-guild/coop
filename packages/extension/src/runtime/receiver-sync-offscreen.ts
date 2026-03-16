@@ -1,6 +1,7 @@
 import {
   type ReceiverCapture,
   type ReceiverSyncEnvelope,
+  buildIceServers,
   connectReceiverSyncProviders,
   connectReceiverSyncRelay,
   createReceiverSyncDoc,
@@ -102,7 +103,18 @@ function scheduleProcessQueue(
 
 function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) {
   const doc = createReceiverSyncDoc();
-  const providers = connectReceiverSyncProviders(doc, pairing.roomId, pairing.signalingUrls);
+  const iceServers = buildIceServers({
+    urls: import.meta.env.VITE_COOP_TURN_URLS,
+    username: import.meta.env.VITE_COOP_TURN_USERNAME,
+    credential: import.meta.env.VITE_COOP_TURN_CREDENTIAL,
+  });
+  const providers = connectReceiverSyncProviders(
+    doc,
+    pairing.roomId,
+    pairing.signalingUrls,
+    undefined,
+    iceServers,
+  );
   const relayTransport = resolveBindingTransport({
     webrtcEnabled: Boolean(providers.webrtc),
     relayConfigured: false,
@@ -270,9 +282,6 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
         continue;
       }
       binding.reportedIssues.add(issueKey);
-      console.warn(
-        `[receiver-sync] Skipping malformed room entry ${issue.captureId}: ${issue.reason}`,
-      );
       void reportReceiverSyncRuntime({
         lastError: `Malformed room entry ${issue.captureId}: ${issue.reason}`,
       });

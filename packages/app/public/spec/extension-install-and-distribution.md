@@ -29,7 +29,7 @@ Optional:
 
 ```bash
 bun run dev:app
-bun run dev:signaling
+bun run dev:api
 ```
 
 Then in Chrome:

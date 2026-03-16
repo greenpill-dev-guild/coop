@@ -5,6 +5,7 @@ import {
   createStateFromInviteBootstrap,
   generateInviteCode,
   joinCoop,
+  parseInviteCode,
   verifyInviteCodeProof,
 } from '../flows';
 import {
@@ -62,6 +63,24 @@ describe('create, join, and publish flows', () => {
     expect(created.state.profile.spaceType).toBe('community');
     expect(created.state.artifacts).toHaveLength(4);
     expect(created.state.members[0]?.role).toBe('creator');
+  });
+
+  it('derives soul with new identity fields having sensible defaults', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+
+    const soul = created.state.soul;
+    expect(soul.purposeStatement).toBe('Coordinate forest stewardship and shared funding context.');
+    expect(soul.agentPersona).toBeUndefined();
+    expect(soul.vocabularyTerms).toEqual([]);
+    expect(soul.prohibitedTopics).toEqual([]);
+    expect(soul.confidenceThreshold).toBe(0.72);
   });
 
   it('stores the selected space preset in the coop profile', () => {
@@ -185,6 +204,42 @@ describe('create, join, and publish flows', () => {
     expect(bootstrapped.syncRoom.inviteSigningSecret.startsWith('bootstrap:')).toBe(true);
     expect(joined.state.members).toHaveLength(2);
     expect(joined.state.members[1]?.displayName).toBe('Mina');
+  });
+
+  it('rejects a join attempt with a tampered invite proof', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+    const invite = generateInviteCode({
+      state: created.state,
+      createdBy: created.creator.id,
+      type: 'member',
+    });
+
+    const tampered = {
+      ...invite,
+      bootstrap: {
+        ...invite.bootstrap,
+        inviteProof: '0xdeadbeef',
+      },
+    };
+
+    expect(() =>
+      joinCoop({
+        state: {
+          ...created.state,
+          invites: [invite],
+        },
+        invite: tampered,
+        displayName: 'Attacker',
+        seedContribution: 'Trying to sneak in with a tampered proof.',
+      }),
+    ).toThrow(/integrity check failed/i);
   });
 
   it('rejects duplicate passkey membership within the same coop', () => {
@@ -403,6 +458,16 @@ describe('create, join, and publish flows', () => {
     expect(updatedWatershed?.artifacts.at(-1)?.createdBy).toBe(peerCoop.state.members[0]?.id);
     expect(updatedForest?.artifacts.length).toBe(created.state.artifacts.length + 1);
     expect(updatedWatershed?.artifacts.length).toBe(peerCoop.state.artifacts.length + 1);
+  });
+
+  it('throws a clear error when parseInviteCode receives garbage input', () => {
+    expect(() => parseInviteCode('not-valid-base64!!')).toThrow(
+      'Invite code is malformed or corrupted.',
+    );
+  });
+
+  it('throws a clear error when parseInviteCode receives empty input', () => {
+    expect(() => parseInviteCode('')).toThrow('Invite code is malformed or corrupted.');
   });
 
   it('fails multi-coop publish when the authenticated person is not a member of every target coop', () => {

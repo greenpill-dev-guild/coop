@@ -129,7 +129,7 @@ If you say these, STOP and verify first:
 - Check Dexie for stuck or corrupted records
 - IndexedDB: Chrome DevTools > Application > IndexedDB
 - Yjs document state: inspect Y.Doc in console
-- y-webrtc signaling: check if signaling server is running (`bun dev:signaling`)
+- y-webrtc signaling: check if API server is running (`bun dev:api`)
 - Peer discovery: check WebRTC connection state in console
 
 ### Extension Issues
@@ -193,7 +193,7 @@ bun run probe:onchain-live
 | Passkey auth fails | WebAuthn API issue | Check browser console for DOMException |
 | Dexie version error | Schema migration mismatch | Check Dexie.version() calls |
 | Background worker crash | Unhandled promise rejection | Inspect service worker in chrome://extensions |
-| Receiver not pairing | Signaling server down | Check `bun dev:signaling` output |
+| Receiver not pairing | API server down | Check `bun dev:api` output |
 
 ---
 

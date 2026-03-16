@@ -184,6 +184,9 @@ function deriveCoopSoul(input: CreateCoopInput) {
       'Artifacts that tighten shared context, surface opportunities, and reduce repeated research.',
     artifactFocus: ['insights', 'funding leads', 'evidence', 'next steps'],
     whyThisCoopExists: `${input.coopName} exists to turn loose tabs into ${focusByType[spaceType]}.`,
+    vocabularyTerms: [],
+    prohibitedTopics: [],
+    confidenceThreshold: 0.72,
   };
 }
 
@@ -457,17 +460,21 @@ export function generateInviteCode(input: {
 }
 
 export function parseInviteCode(code: string) {
-  const decoded = JSON.parse(decodeBase64Url(code));
-  return inviteCodeSchema.parse({
-    id: decoded.inviteId,
-    type: decoded.inviteType,
-    expiresAt: decoded.expiresAt,
-    code,
-    bootstrap: decoded,
-    createdAt: nowIso(),
-    createdBy: 'external',
-    usedByMemberIds: [],
-  });
+  try {
+    const decoded = JSON.parse(decodeBase64Url(code));
+    return inviteCodeSchema.parse({
+      id: decoded.inviteId,
+      type: decoded.inviteType,
+      expiresAt: decoded.expiresAt,
+      code,
+      bootstrap: decoded,
+      createdAt: nowIso(),
+      createdBy: 'external',
+      usedByMemberIds: [],
+    });
+  } catch {
+    throw new Error('Invite code is malformed or corrupted.');
+  }
 }
 
 export function validateInvite(input: { invite: InviteCode; now?: Date }) {
@@ -478,6 +485,13 @@ export function validateInvite(input: { invite: InviteCode; now?: Date }) {
 export function joinCoop(input: JoinCoopInput) {
   if (!validateInvite({ invite: input.invite })) {
     throw new Error('Invite has expired.');
+  }
+
+  if (
+    !isBootstrapSyncRoomConfig(input.state.syncRoom) &&
+    !verifyInviteCodeProof(input.invite, input.state.syncRoom.inviteSigningSecret)
+  ) {
+    throw new Error('Invite code integrity check failed.');
   }
 
   const role = input.invite.type === 'trusted' ? 'trusted' : 'member';

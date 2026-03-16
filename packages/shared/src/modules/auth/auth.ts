@@ -6,7 +6,7 @@ import {
   authSessionSchema,
   localPasskeyIdentitySchema,
 } from '../../contracts/schema';
-import { nowIso, toDeterministicAddress } from '../../utils';
+import { assertHexString, nowIso, toDeterministicAddress } from '../../utils';
 import { createDeviceBoundWarning, createMember } from '../coop/flows';
 
 export function resolvePasskeyRpId(explicitRpId?: string) {
@@ -68,7 +68,7 @@ export function restorePasskeyAccount(session: AuthSession) {
   return toWebAuthnAccount({
     credential: {
       id: session.passkey.id,
-      publicKey: session.passkey.publicKey as `0x${string}`,
+      publicKey: assertHexString(session.passkey.publicKey, 'passkey publicKey'),
     },
     rpId: session.passkey.rpId,
   });

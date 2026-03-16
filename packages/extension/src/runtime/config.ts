@@ -1,6 +1,7 @@
 import {
   type CoopChainKey,
   type IntegrationMode,
+  type ProviderMode,
   type SessionMode,
   type TrustedNodeArchiveConfig,
   trustedNodeArchiveConfigSchema,
@@ -25,13 +26,11 @@ export function resolveConfiguredSessionMode(raw?: string): SessionMode {
   return raw === 'live' || raw === 'mock' || raw === 'off' ? raw : 'off';
 }
 
-export function parseConfiguredSignalingUrls(raw?: string) {
-  const urls = raw
-    ?.split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-  return urls && urls.length > 0 ? urls : undefined;
+export function resolveConfiguredProviderMode(raw?: string): ProviderMode {
+  return raw === 'kohaku' ? 'kohaku' : 'standard';
 }
+
+export { parseSignalingUrls as parseConfiguredSignalingUrls } from '@coop/shared';
 
 export function resolveArchiveGatewayUrl(raw?: string) {
   return raw ?? 'https://storacha.link';
@@ -41,8 +40,26 @@ export function resolveReceiverAppUrl(raw?: string) {
   return raw ?? 'http://127.0.0.1:3001';
 }
 
+export function resolveConfiguredPrivacyMode(raw?: string): 'off' | 'on' {
+  return raw === 'on' ? 'on' : 'off';
+}
+
 export function isLocalEnhancementEnabled(raw?: string) {
   return raw !== 'off';
+}
+
+export function resolveConfiguredFvmChain(raw?: string): 'filecoin' | 'filecoin-calibration' {
+  return raw === 'filecoin' ? 'filecoin' : 'filecoin-calibration';
+}
+
+export function resolveConfiguredFvmRegistryAddress(raw?: string): string | undefined {
+  if (!raw || !/^0x[a-fA-F0-9]{40}$/.test(raw)) return undefined;
+  return raw;
+}
+
+export function resolveConfiguredFvmOperatorKey(raw?: string): string | undefined {
+  if (!raw || !/^0x[a-fA-F0-9]{64}$/.test(raw)) return undefined;
+  return raw;
 }
 
 function parseConfiguredProofs(raw?: string) {

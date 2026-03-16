@@ -16,7 +16,8 @@ import {
   Position,
   ReactFlow,
 } from '@xyflow/react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { isSafeExternalUrl } from '../../url-safety';
 import '@xyflow/react/dist/style.css';
 
 type FlowNodeData = CoopBoardNode;
@@ -129,6 +130,24 @@ export function BoardView({
   coopId,
   snapshot,
 }: { coopId: string; snapshot: CoopBoardSnapshot | null }) {
+  const [shareLabel, setShareLabel] = useState('Share snapshot');
+
+  const handleShareSnapshot = useCallback(async () => {
+    if (!navigator.clipboard?.writeText) {
+      setShareLabel('Clipboard unavailable');
+      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareLabel('Copied!');
+      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+    } catch {
+      setShareLabel('Copy failed');
+      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+    }
+  }, []);
+
   const invalidSnapshot = snapshot ? snapshot.coopId !== coopId : false;
   const board = useMemo(
     () => (snapshot && !invalidSnapshot ? mapNodes(snapshot) : null),
@@ -169,11 +188,12 @@ export function BoardView({
         <main className="board-shell-main">
           <section className="board-hero-card">
             <p className="eyebrow">Read-only board</p>
-            <h1>Board snapshot unavailable</h1>
+            <h1>The board needs a coop snapshot</h1>
             <p className="board-lede">
-              Open the board from the extension so it can hand off a member-scoped coop snapshot,
-              then the URL is sanitized after load.
+              Open the board from the extension sidepanel so it can hand off a member-scoped
+              snapshot.
             </p>
+            <div className="board-empty-nest" data-testid="board-empty-nest" />
             <a className="button button-secondary" href="/">
               Back to landing
             </a>
@@ -199,6 +219,20 @@ export function BoardView({
           </a>
         </div>
       </header>
+
+      <div className="board-toolbar">
+        <button className="button button-secondary" onClick={handleShareSnapshot} type="button">
+          {shareLabel}
+        </button>
+        <button
+          className="button button-secondary"
+          disabled
+          title="Image export coming soon"
+          type="button"
+        >
+          Export as image
+        </button>
+      </div>
 
       <main className="board-layout">
         <section className="board-stage-card" data-testid="coop-board-surface">
@@ -280,14 +314,20 @@ export function BoardView({
               <div className="board-story-highlight">
                 <strong>Latest snapshot</strong>
                 <p>{archiveStory.latestSnapshotReceipt.summary}</p>
-                <a
-                  className="source-link"
-                  href={archiveStory.latestSnapshotReceipt.gatewayUrl}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Open saved snapshot
-                </a>
+                {isSafeExternalUrl(archiveStory.latestSnapshotReceipt.gatewayUrl) ? (
+                  <a
+                    className="source-link"
+                    href={archiveStory.latestSnapshotReceipt.gatewayUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Open saved snapshot
+                  </a>
+                ) : (
+                  <span className="source-link">
+                    {archiveStory.latestSnapshotReceipt.gatewayUrl}
+                  </span>
+                )}
               </div>
             ) : (
               <div className="empty-state">
@@ -313,14 +353,18 @@ export function BoardView({
                     <div>
                       <dt>Open</dt>
                       <dd>
-                        <a
-                          className="source-link"
-                          href={detail.gatewayUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Open saved bundle
-                        </a>
+                        {isSafeExternalUrl(detail.gatewayUrl) ? (
+                          <a
+                            className="source-link"
+                            href={detail.gatewayUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Open saved bundle
+                          </a>
+                        ) : (
+                          <span className="source-link">{detail.gatewayUrl}</span>
+                        )}
                       </dd>
                     </div>
                     <div>

@@ -1,0 +1,10 @@
+node_modules
+__tests__
+*.test.ts
+.gitignore
+.env*
+fly.toml
+tsconfig.json
+dist
+coverage
+.plans

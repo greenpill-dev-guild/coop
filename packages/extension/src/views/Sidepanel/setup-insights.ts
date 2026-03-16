@@ -21,6 +21,10 @@ export interface CreateFormState {
   knowledgeCurrent: string;
   knowledgePain: string;
   knowledgeImprove: string;
+  archiveSpaceDid: string;
+  archiveAgentPrivateKey: string;
+  archiveSpaceDelegation: string;
+  archiveGatewayUrl: string;
 }
 
 export const initialCreateForm: CreateFormState = {
@@ -44,7 +48,15 @@ export const initialCreateForm: CreateFormState = {
   knowledgeCurrent: '',
   knowledgePain: '',
   knowledgeImprove: '',
+  archiveSpaceDid: '',
+  archiveAgentPrivateKey: '',
+  archiveSpaceDelegation: '',
+  archiveGatewayUrl: '',
 };
+
+export function hasArchiveConfig(form: CreateFormState): boolean {
+  return form.archiveSpaceDid.trim().length > 0 && form.archiveSpaceDelegation.trim().length > 0;
+}
 
 function clean(value: string) {
   return value.trim().replace(/\s+/g, ' ');

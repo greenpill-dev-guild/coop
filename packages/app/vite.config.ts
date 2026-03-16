@@ -8,7 +8,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@coop/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+      '@coop/api': path.resolve(__dirname, '../api/config.ts'),
     },
+  },
+  build: {
+    sourcemap: 'hidden',
+    target: 'es2022',
   },
   server: {
     port: 3001,

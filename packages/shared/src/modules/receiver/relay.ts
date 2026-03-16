@@ -6,7 +6,7 @@ import {
   receiverCaptureSchema,
   receiverSyncEnvelopeSchema,
 } from '../../contracts/schema';
-import { createId, nowIso } from '../../utils';
+import { bytesToBase64Url, createId, nowIso } from '../../utils';
 import { assertReceiverPairingRecord, filterUsableReceiverSignalingUrls } from './pairing';
 
 const receiverRelayProtocolSchema = z.object({
@@ -60,18 +60,6 @@ type ReceiverSyncRelayQueuedMessage = {
   frame: ReceiverSyncRelayFrame;
 };
 
-function toBase64(bytes: Uint8Array) {
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function toBase64Url(bytes: Uint8Array) {
-  return toBase64(bytes).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '');
-}
-
 function serializeReceiverSyncRelayAckSignatureInput(
   frame: Omit<ReceiverSyncRelayAckFrame, 'signature'>,
 ) {
@@ -112,7 +100,7 @@ async function signReceiverSyncRelayAck(
     key,
     encoder.encode(serializeReceiverSyncRelayAckSignatureInput(frame)),
   );
-  return toBase64Url(new Uint8Array(signature));
+  return bytesToBase64Url(new Uint8Array(signature));
 }
 
 function relayMessageKey(frame: ReceiverSyncRelayFrame) {
@@ -296,12 +284,14 @@ export function connectReceiverSyncRelay(input: {
 
   const queuedMessages = new Map<ReceiverSyncRelayMessageKey, ReceiverSyncRelayQueuedMessage>();
   const reconnectDelayMs = input.reconnectDelayMs ?? 1_200;
+  const maxReconnectAttempts = 15;
   let socket: WebSocket | null = null;
   let currentUrlIndex = 0;
   let currentUrl: string | undefined;
   let disposed = false;
   let reconnectTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
   let connected = false;
+  let reconnectAttempts = 0;
 
   const emitStatus = () => {
     input.onStatusChange?.({
@@ -342,11 +332,24 @@ export function connectReceiverSyncRelay(input: {
       return;
     }
 
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      reportRelayError(
+        input.onError,
+        new Error('Relay exhausted all reconnection attempts'),
+        'Relay exhausted all reconnection attempts',
+      );
+      return;
+    }
+
+    const backoff =
+      Math.min(reconnectDelayMs * 1.5 ** reconnectAttempts, 30_000) + Math.random() * 500;
+    reconnectAttempts++;
+
     reconnectTimer = globalThis.setTimeout(() => {
       reconnectTimer = undefined;
       currentUrlIndex = (currentUrlIndex + 1) % urls.length;
       connect();
-    }, reconnectDelayMs);
+    }, backoff);
   };
 
   const connect = () => {
@@ -366,6 +369,7 @@ export function connectReceiverSyncRelay(input: {
 
     socket.addEventListener('open', () => {
       connected = true;
+      reconnectAttempts = 0;
       emitStatus();
 
       try {

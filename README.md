@@ -1,162 +1,148 @@
 # Coop
 
-Coop is a browser-first knowledge commons for local and bioregional coordination.
+> No more chickens loose.
 
-We are building the first hackathon iteration of Coop for the [PL_Genesis: Frontiers of Collaboration Hackathon](https://pl-genesis-frontiers-of-collaboration-hackathon.devspot.app/) on DevSpot. As of March 10, 2026, submissions for that event close on March 16, 2026.
+**A browser extension and companion PWA that captures scattered knowledge, refines it into clear opportunities, and gives groups a shared space to act on what matters.**
 
-## Why We Are Building Coop
+You have tabs open, voice memos unsaved, photos from a whiteboard session, links shared in a chat. Some of it is a funding lead. Some is a dead end. You won't remember which by Friday. Now multiply that across your whole team.
 
-Communities already generate the raw material for coordination:
+Coop captures knowledge from wherever it lives -- browser tabs, audio recordings, photos, files, shared links -- refines it into clear opportunities, and gives groups a shared space to act on what matters. It runs entirely in the browser. No cloud, no servers, no data leaving your device until you decide to share it.
 
-- tabs
-- articles
-- voice notes
-- field observations
-- funding leads
-- partial plans
+## How It Works
 
-What is usually missing is the membrane that turns scattered knowledge into shared memory, funding readiness, and durable capital formation.
+1. **Capture** -- Round up browser tabs with a shortcut. Record audio, snap photos, attach files, or share links from your phone via the companion PWA.
+2. **Refine** -- An in-browser AI agent analyzes captures through a 14-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
+3. **Review** -- Drafts land in the Roost. You decide what's signal and what's noise.
+4. **Share** -- Publish to a coop -- a shared space backed by a Safe multisig on Arbitrum, syncing peer-to-peer over WebRTC. Shared artifacts are permanently archived to Filecoin via Storacha with full cryptographic provenance. Passkey identity, no wallet required.
 
-Coop exists to close that gap.
+Through its Green Goods integration, coops can also bootstrap on-chain gardens for governance, impact reporting, and capital formation -- turning shared knowledge into coordinated action with verifiable outcomes.
 
-The first version of Coop is a paired landing page and browser extension that helps members:
+## Use Cases
 
-- passively notice relevant context while browsing
-- round up relevant tabs into a review queue
-- route knowledge into one or more coops
-- structure shared evidence into a shared coop memory
-- archive approved artifacts or snapshots into Storacha/Filecoin
-- export structured coop data for use in outside tools
+- **Community coordination groups** -- Bioregional networks, regen communities, and DAO contributor circles can pool knowledge across members and surface funding-ready opportunities without centralizing data on a single platform.
+- **Research teams tracking funding leads** -- Grant writers and research coordinators can capture evidence across dozens of sources, let the agent cluster and score it, and produce structured dossiers ready for submission.
+- **Capital formation groups** -- Assembling funding packages from scattered evidence, attestations, and contributor work logs into coherent on-chain proposals backed by verifiable provenance.
+- **Families and friends** -- Create shared memory capsules: trip planning boards, genealogy collections, community garden documentation, or any group project where everyone contributes pieces.
+- **Personal knowledge management** -- Use Coop solo as a local-first capture and archiving tool with durable Filecoin storage, zero-knowledge privacy, and no vendor lock-in.
 
-## Hackathon Context
+## Key Features
 
-We are participating in:
+### Capture
+Browser tabs (extension), audio recordings, photos, files, and links (companion PWA). Cross-device receiver lets you capture on your phone and review on desktop.
 
-- [PL_Genesis: Frontiers of Collaboration Hackathon](https://pl-genesis-frontiers-of-collaboration-hackathon.devspot.app/)
-- [Coop project page on DevSpot](https://devspot.app/projects/1275)
+### AI Agent
+14-skill pipeline running a three-tier inference cascade (WebGPU, WASM, heuristics). Opportunity extraction, grant fit scoring, theme clustering, brief drafting, and cross-session memory persistence. No API keys, no cloud calls.
 
-This is a strong fit for Coop because the event is centered on coordination, governance, and shared intelligence infrastructure. The current hackathon framing also aligns with where Coop is strongest:
+### Sharing
+Peer-to-peer sync via Yjs CRDTs and y-webrtc. Multi-coop publishing with per-coop feeds and board visualization.
 
-- browser-native collaboration
-- local-first and P2P coordination
-- AI-assisted synthesis
-- Filecoin and Storacha long-memory storage
-- offchain knowledge flowing into onchain capital formation
+### Identity
+Passkey-first authentication via WebAuthn, bridged to Safe smart accounts through ERC-4337 account abstraction. No wallet extension required.
 
-## Long-Term Vision
+### Privacy
+Semaphore zero-knowledge membership proofs for anonymous publishing. ERC-5564 stealth addresses for private on-chain interactions. All captures stay local-only until explicit share.
 
-Coop is not just a capture tool.
+### Archiving
+Storacha/Filecoin permanent storage with verifiable receipt chains. Every archived artifact carries full CID provenance linking capture to human review to permanent storage.
 
-Long term, each coop becomes a living knowledge garden with:
+### Governance
+Operator console for anchor node management. Policy engine with typed action bundles and approval workflows. Session permits with scoped execution permissions, time-bounded capabilities, and replay protection.
 
-- a shared local-first memory membrane
-- anchor nodes that run stronger inference and recurring workflows
-- long-memory publishing into Storacha and Filecoin
-- Green Goods garden bindings for capital formation
-- smart-account mediated execution for proposals, attestations, treasury flows, and other collective actions
+### Green Goods
+Garden bootstrap and sync. Work approvals, impact reporting, and capital formation workflows. On-chain gardens as the substrate for governance and collective treasury flows.
 
-The larger goal is to make it easier for communities to move from context to coordination, from coordination to evidence, and from evidence to capital.
+### On-chain Agent
+ERC-8004 agent registry integration for on-chain agent identity, capability advertisement, and reputation feedback.
 
-## Regen Coordination Foundation
+## Architecture
 
-Coop is being built on top of ideas that have been forming across the wider regen-coordination work:
+Bun monorepo with four runtime packages:
 
-- local-first collaboration over server-centric products
-- explicit shared memory instead of fragmented chat history
-- durable long-memory archives that communities can keep, fork, and migrate
-- impact, governance, and capital formation as connected workflows
-- Green Goods as the onchain substrate for gardens, attestations, and collective capital flows
+| Package | Description |
+|---------|-------------|
+| `@coop/shared` | Schemas, flows, sync contracts, and 16+ domain modules: agent, app, archive, auth, coop, erc8004, greengoods, onchain, operator, permit, policy, privacy, receiver, session, stealth, storage |
+| `@coop/app` | Landing page + receiver PWA shell (audio, photo, file, link capture) |
+| `@coop/extension` | MV3 browser extension (popup, sidepanel, background worker, offscreen) |
+| `@coop/api` | Hono + Bun TypeScript API server, deployed on Fly.io |
 
-In that sense, Coop is the browser-native coordination membrane around Green Goods. It is designed to help a community gather knowledge offchain, structure it collaboratively, and then push the right artifacts into Green Goods capital surfaces such as gardens, smart accounts, conviction voting, cookie-jar style flows, and related treasury mechanisms.
+Build order: shared -> app -> extension (shared is the dependency root).
 
-## Planned Repo Structure
+## Key Principles
 
-```text
-docs/
-packages/
-  app/
-  extension/
-  shared/
-package.json
-README.md
-```
+- **Browser-First** -- The extension is the primary product surface; no cloud servers required for core functionality.
+- **Local-First** -- All data stays on your device until you explicitly share. Dexie for structured data, Yjs for CRDT sync.
+- **Passkey-First** -- No wallet extensions required. WebAuthn passkey identity bridged to on-chain Safe accounts.
+- **Offline Capable** -- Works without internet, syncs when connected.
+- **Privacy by Design** -- Zero-knowledge membership proofs, stealth addresses, local-only captures by default.
 
-`packages/shared` is intended to hold most of the product logic and contracts, with thin runtime packages on top.
+## Standards
 
-At the `src` level, the repo now follows a more modular layout:
-
-- `packages/shared/src/contracts`, `packages/shared/src/modules`, `packages/shared/src/utils`
-- `packages/extension/src/runtime`, `packages/extension/src/views`
-- `packages/app/src` for the landing page plus the paired receiver PWA shell
-
-## Core Documents
-
-- [docs/coop-os-architecture-vnext.md](docs/coop-os-architecture-vnext.md) — canonical Coop v1 build plan
-- [docs/coop-design-direction.md](docs/coop-design-direction.md) — initial visual direction, palette, and asset usage guide
-- [docs/coop-audio-and-asset-ops.md](docs/coop-audio-and-asset-ops.md) — audio sourcing, licensing, naming, and asset handoff guide
-- [docs/extension-install-and-distribution.md](docs/extension-install-and-distribution.md) — local testing install flow, early-access website distribution, and Chrome Web Store rollout
-- [docs/meeting-followups-2026-03-10.md](docs/meeting-followups-2026-03-10.md) — relevant Build 1 follow-ups distilled from the March 10, 2026 meeting notes
-- [docs/current-state-2026-03-11.md](docs/current-state-2026-03-11.md) — implementation review against the March architecture drafts and meeting notes
-- [docs/scoped-roadmap-2026-03-11.md](docs/scoped-roadmap-2026-03-11.md) — phased plan for receiver PWA, Arbitrum, Filecoin, visual flow, and agentic extensions
-- [docs/testing-and-validation.md](docs/testing-and-validation.md) — named validation suites plus manual QA guidance
-- [docs/reference/org-os-context.md](docs/reference/org-os-context.md) — archived Org-OS scope context and reintroduction notes
-- [docs/reference/reactflow-context.md](docs/reference/reactflow-context.md) — React Flow scope boundary and reference context
-
-## Current State
-
-Coop v1 is now implemented as a Bun workspace with:
-
-- `packages/app` for the landing page
-- `packages/extension` for the MV3 runtime and sidepanel-first UX
-- `packages/shared` for schemas, flows, sync contracts, archive contracts, and reusable business logic
-
-The repo currently validates with:
-
-- `bun run lint`
-- `bun run test`
-- `bun run test:coverage`
-- `bun run build`
-- `bun run test:e2e`
-- `bun run validate list`
-- `bun run validate smoke`
-- `bun run validate core-loop`
-- `bun run validate receiver-slice`
-- `bun run validate receiver-hardening`
-- `bun run validate flow-board`
-- `bun run validate arbitrum-safe-live`
-- `bun run validate full`
-
-For targeted E2E runs:
-
-- `bun run test:e2e:app`
-- `bun run test:e2e:app:mobile`
-- `bun run test:e2e:extension`
-- `bun run test:e2e:receiver-sync`
+ERC-4337 (account abstraction), ERC-1271 (signature validation), EIP-712 (typed structured data), ERC-7579 (modular smart accounts), ERC-5564 (stealth addresses), ERC-8004 (on-chain agent registry), Semaphore (ZK group membership), Storacha/Filecoin (permanent archiving), Yjs CRDTs (conflict-free sync).
 
 ## Local Development
 
-Install dependencies with Bun, then run the pieces you need:
-
 ```bash
-bun install
-bun run dev:app
-bun run dev:extension
-bun run dev:signaling
+bun install              # Install dependencies
+bun dev                  # Start app + extension concurrently
+bun dev:app              # Start app only
+bun dev:extension        # Start extension only (watch build)
+bun dev:api              # Start API server
+bun run test             # Run unit tests (vitest)
+bun run test:e2e         # Run Playwright E2E tests
+bun build                # Build everything (shared -> app -> extension)
+bun format && bun lint   # Format (Biome) and lint workspace
+bun run validate full    # Full validation before merging
+bun run validate list    # List all available validation suites
 ```
 
-The extension uses explicit signaling URLs instead of assuming a public signaling service is healthy. For local multi-profile sync and end-to-end tests, run the local signaling server on `ws://127.0.0.1:4444` or point `VITE_COOP_SIGNALING_URLS` at your own hosted `ws://` or `wss://` endpoints.
+> **Note:** Always use `bun run test` (not `bun test`). The former runs vitest with proper environment configuration; the latter uses Bun's built-in runner and ignores vitest config.
 
-## Extension Env
+## Environment
 
-Create `packages/extension/.env.local` from the example file and fill in the values you actually want to use:
+Single `.env.local` at the repository root (never create package-specific `.env` files).
 
-- `VITE_COOP_CHAIN` controls the Safe deployment chain and only accepts `sepolia` or `arbitrum`
-- `VITE_COOP_ONCHAIN_MODE` selects `mock` or `live`
-- `VITE_COOP_SIGNALING_URLS` is a comma-separated list of WebSocket signaling endpoints
-- `VITE_COOP_ARCHIVE_MODE` selects `mock` or `live`
-- `VITE_COOP_TRUSTED_NODE_ARCHIVE_*` bootstraps local trusted-node archive delegation config into the extension
-- leave `VITE_COOP_CHAIN` unset or set it to `sepolia` for the default test and development path
-- set `VITE_COOP_CHAIN=arbitrum` only when you explicitly want the production chain target
-- `bun run validate arbitrum-safe-live` runs non-live checks by default and only attempts a real Sepolia Safe deployment when `VITE_PIMLICO_API_KEY` and `COOP_ONCHAIN_PROBE_PRIVATE_KEY` are exported
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_COOP_CHAIN` | Target chain: `sepolia` or `arbitrum` | `sepolia` |
+| `VITE_COOP_ONCHAIN_MODE` | On-chain mode: `mock` or `live` | `mock` |
+| `VITE_COOP_ARCHIVE_MODE` | Archive mode: `mock` or `live` | `mock` |
+| `VITE_COOP_SIGNALING_URLS` | Comma-separated WebSocket signaling endpoints | -- |
+| `VITE_PIMLICO_API_KEY` | For live Safe/ERC-4337 operations | -- |
+| `VITE_STORACHA_ISSUER_URL` | For live Storacha archive delegation | -- |
 
 For Playwright E2E runs, the repo starts its own local signaling server automatically.
+
+## Documentation
+
+- [Introduction](docs/intro.md)
+- [Architecture Overview](docs/architecture/coop-os-architecture-vnext.md)
+- [Agent Harness](docs/architecture/agent-harness.md)
+- [Knowledge Sharing & Scaling](docs/architecture/knowledge-sharing-and-scaling.md)
+- [Green Goods Integration](docs/architecture/green-goods-integration-spec.md)
+- [Privacy & Stealth Addresses](docs/architecture/privacy-and-stealth.md)
+- [Policy, Sessions & Permits](docs/architecture/policy-session-permit.md)
+- [Agent Registry & API Server](docs/architecture/erc8004-and-api.md)
+- [Product Requirements](docs/product/prd.md)
+- [Scoped Roadmap](docs/product/scoped-roadmap-2026-03-11.md)
+- [EF Mandate Alignment](docs/product/ethereum-foundation-mandate.md)
+- [Extension Install & Distribution](docs/getting-started/extension-install-and-distribution.md)
+- [Design Direction](docs/guides/coop-design-direction.md)
+- [Audio & Asset Ops](docs/guides/coop-audio-and-asset-ops.md)
+- [Testing & Validation](docs/guides/testing-and-validation.md)
+- [Demo & Deploy Runbook](docs/guides/demo-and-deploy-runbook.md)
+
+## Regen Coordination Foundation
+
+Coop is the browser-native coordination membrane built on ideas forming across the wider regen-coordination work:
+
+- Local-first collaboration over server-centric products
+- Explicit shared memory instead of fragmented chat history
+- Durable long-memory archives that communities can keep, fork, and migrate
+- Impact, governance, and capital formation as connected workflows
+- Green Goods as the on-chain substrate for gardens, attestations, and collective capital flows
+
+The goal is to make it easier for communities to move from context to coordination, from coordination to evidence, and from evidence to capital. Each coop becomes a living knowledge garden with a shared local-first memory membrane, anchor nodes running stronger inference, long-memory publishing into Filecoin, Green Goods garden bindings, and smart-account-mediated execution for proposals, attestations, and treasury flows.
+
+## Brand
+
+Coop uses chicken metaphors throughout. Open browser tabs are **Loose Chickens**. The review queue is the **Roost**. The shared feed is the **Coop Feed**. Creating a new shared space is **Launching the Coop**. The success chime is the **Rooster Call**.

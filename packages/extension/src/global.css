@@ -1,14 +1,9 @@
+@import "../../shared/src/styles/tokens.css";
+@import "../../shared/src/styles/a11y.css";
+
 :root {
-  color-scheme: light;
   font-family: "Avenir Next", "Segoe UI", sans-serif;
-  --coop-cream: #fcf5ef;
-  --coop-brown: #4f2e1f;
-  --coop-brown-soft: #6b4a36;
-  --coop-green: #5a7d10;
-  --coop-orange: #fd8a01;
-  --coop-line: rgba(79, 46, 31, 0.16);
   --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
-  --coop-error: #a63b20;
 }
 
 @keyframes coop-rise {
@@ -235,6 +230,13 @@ button:disabled {
   content: "-";
 }
 
+.collapsible-card > summary > h3 {
+  display: inline;
+  font-size: inherit;
+  font-weight: 700;
+  margin: 0;
+}
+
 .collapsible-card__content {
   display: grid;
   gap: 0.9rem;
@@ -448,4 +450,206 @@ button:disabled {
   border-radius: 16px;
   padding: 0.85rem;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--coop-mist, #d8d4d0) 25%,
+    rgba(255, 252, 249, 0.6) 50%,
+    var(--coop-mist, #d8d4d0) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--coop-radius-input, 16px);
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-card {
+  height: 80px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-text {
+  height: 1em;
+  width: 60%;
+  margin-bottom: 0.4rem;
+}
+
+.skeleton-summary {
+  height: 3.5em;
+  border-radius: 18px;
+}
+
+.skeleton-header {
+  height: 1.5em;
+  width: 40%;
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(79, 46, 31, 0.32);
+  border: none;
+  padding: 1rem;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.onboarding-card {
+  background: var(--coop-cream, #fffcf9);
+  border-radius: 22px;
+  padding: 1.5rem;
+  box-shadow: var(--coop-shadow);
+  max-width: 340px;
+  animation: coop-rise 320ms ease both;
+}
+
+.onboarding-card h2 {
+  margin: 0.6rem 0 0.4rem;
+}
+
+.onboarding-card p {
+  color: var(--coop-brown-soft);
+  line-height: 1.5;
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.onboarding-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--coop-line, #e0ddd9);
+  transition: background-color 180ms ease;
+}
+
+.onboarding-dot.is-active {
+  background: var(--coop-orange, #fd8a01);
+}
+
+.onboarding-dot.is-done {
+  background: var(--coop-green, #5a7d10);
+}
+
+/* ---- Coop Switcher ---- */
+
+.coop-switcher {
+  position: relative;
+}
+
+.coop-switcher__label {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.coop-switcher__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--coop-brown);
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.coop-switcher__trigger:hover {
+  background: rgba(253, 138, 1, 0.08);
+  border-color: var(--coop-orange-16, rgba(253, 138, 1, 0.16));
+}
+
+.coop-switcher__caret {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.coop-switcher__menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  border-radius: 16px;
+  border: 1px solid var(--coop-line);
+  background: var(--coop-cream, #fffcf9);
+  box-shadow: var(--coop-shadow);
+  z-index: 10;
+  animation: coop-rise 180ms ease both;
+}
+
+.coop-switcher__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--coop-brown);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.coop-switcher__option:hover {
+  background: rgba(253, 138, 1, 0.08);
+}
+
+.coop-switcher__option.is-active {
+  background: rgba(90, 125, 16, 0.1);
+  font-weight: 700;
+}
+
+.coop-switcher__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coop-switcher__badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.coop-switcher__badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(253, 138, 1, 0.12);
+  color: var(--coop-brown-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
 }

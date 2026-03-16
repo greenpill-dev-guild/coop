@@ -1,7 +1,9 @@
-import { WebWorkerMLCEngineHandler } from '@mlc-ai/web-llm';
+let handler: { onmessage(event: MessageEvent): void } | null = null;
 
-const handler = new WebWorkerMLCEngineHandler();
-
-self.onmessage = (event: MessageEvent) => {
+self.onmessage = async (event: MessageEvent) => {
+  if (!handler) {
+    const { WebWorkerMLCEngineHandler } = await import('@mlc-ai/web-llm');
+    handler = new WebWorkerMLCEngineHandler();
+  }
   handler.onmessage(event);
 };

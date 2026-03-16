@@ -4,8 +4,8 @@ import type {
   ActionPolicy,
   AgentObservation,
   AgentPlan,
-  ExecutionGrant,
-  GrantLogEntry,
+  ExecutionPermit,
+  PermitLogEntry,
   SessionCapability,
   SessionCapabilityLogEntry,
   SkillManifest,
@@ -14,7 +14,7 @@ import type {
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { OperatorConsole } from '../operator-console';
+import { OperatorConsole } from '../OperatorConsole';
 
 const baseProps = {
   actionLog: [
@@ -60,11 +60,11 @@ const baseProps = {
   onApproveAction: vi.fn(),
   onRejectAction: vi.fn(),
   onExecuteAction: vi.fn(),
-  grants: [] as ExecutionGrant[],
-  grantLog: [] as GrantLogEntry[],
-  onIssueGrant: vi.fn(),
-  onRevokeGrant: vi.fn(),
-  onExecuteWithGrant: vi.fn(),
+  permits: [] as ExecutionPermit[],
+  permitLog: [] as PermitLogEntry[],
+  onIssuePermit: vi.fn(),
+  onRevokePermit: vi.fn(),
+  onExecuteWithPermit: vi.fn(),
   sessionCapabilities: [] as SessionCapability[],
   sessionCapabilityLog: [] as SessionCapabilityLogEntry[],
   onIssueSessionCapability: vi.fn(),
@@ -524,21 +524,21 @@ describe('operator console', () => {
     });
   });
 
-  describe('execution grants section', () => {
+  describe('execution permits section', () => {
     it('renders the Helper Passes heading', () => {
       render(<OperatorConsole {...baseProps} />);
       expect(screen.getByRole('heading', { name: 'Helper Passes' })).toBeVisible();
     });
 
-    it('shows empty state when no grants', () => {
-      render(<OperatorConsole {...baseProps} grants={[]} />);
+    it('shows empty state when no permits', () => {
+      render(<OperatorConsole {...baseProps} permits={[]} />);
       expect(screen.getByText('No helper passes issued yet.')).toBeVisible();
     });
 
-    it('renders an active grant with status, coop, usage, and actions', () => {
-      const grants: ExecutionGrant[] = [
+    it('renders an active permit with status, coop, usage, and actions', () => {
+      const permits: ExecutionPermit[] = [
         {
-          id: 'grant-1',
+          id: 'permit-1',
           coopId: 'coop-1',
           issuedBy: { memberId: 'member-1', displayName: 'Ari' },
           executor: { label: 'operator-console' },
@@ -551,7 +551,7 @@ describe('operator console', () => {
         },
       ];
 
-      render(<OperatorConsole {...baseProps} grants={grants} />);
+      render(<OperatorConsole {...baseProps} permits={permits} />);
 
       expect(screen.getByText('Active')).toBeVisible();
       expect(screen.getByText('coop-1')).toBeVisible();
@@ -561,10 +561,10 @@ describe('operator console', () => {
       expect(screen.getByRole('button', { name: /turn off pass/i })).toBeVisible();
     });
 
-    it('does not show Turn off pass button for non-active grants', () => {
-      const grants: ExecutionGrant[] = [
+    it('does not show Turn off pass button for non-active permits', () => {
+      const permits: ExecutionPermit[] = [
         {
-          id: 'grant-1',
+          id: 'permit-1',
           coopId: 'coop-1',
           issuedBy: { memberId: 'member-1', displayName: 'Ari' },
           executor: { label: 'operator-console' },
@@ -577,16 +577,16 @@ describe('operator console', () => {
         },
       ];
 
-      render(<OperatorConsole {...baseProps} grants={grants} />);
+      render(<OperatorConsole {...baseProps} permits={permits} />);
 
       expect(screen.getByText('Expired')).toBeVisible();
       expect(screen.queryByRole('button', { name: /turn off pass/i })).toBeNull();
     });
 
-    it('shows revoked timestamp for revoked grants', () => {
-      const grants: ExecutionGrant[] = [
+    it('shows revoked timestamp for revoked permits', () => {
+      const permits: ExecutionPermit[] = [
         {
-          id: 'grant-1',
+          id: 'permit-1',
           coopId: 'coop-1',
           issuedBy: { memberId: 'member-1', displayName: 'Ari' },
           executor: { label: 'operator-console' },
@@ -600,18 +600,18 @@ describe('operator console', () => {
         },
       ];
 
-      render(<OperatorConsole {...baseProps} grants={grants} />);
+      render(<OperatorConsole {...baseProps} permits={permits} />);
 
       expect(screen.getByText('Revoked')).toBeVisible();
       expect(screen.getByText(/· Revoked/)).toBeVisible();
     });
 
-    it('calls onRevokeGrant when Turn off pass is clicked', async () => {
+    it('calls onRevokePermit when Turn off pass is clicked', async () => {
       const user = userEvent.setup();
-      const onRevokeGrant = vi.fn();
-      const grants: ExecutionGrant[] = [
+      const onRevokePermit = vi.fn();
+      const permits: ExecutionPermit[] = [
         {
-          id: 'grant-1',
+          id: 'permit-1',
           coopId: 'coop-1',
           issuedBy: { memberId: 'member-1', displayName: 'Ari' },
           executor: { label: 'operator-console' },
@@ -624,36 +624,36 @@ describe('operator console', () => {
         },
       ];
 
-      render(<OperatorConsole {...baseProps} grants={grants} onRevokeGrant={onRevokeGrant} />);
+      render(<OperatorConsole {...baseProps} permits={permits} onRevokePermit={onRevokePermit} />);
 
       await user.click(screen.getByRole('button', { name: /turn off pass/i }));
-      expect(onRevokeGrant).toHaveBeenCalledWith('grant-1');
+      expect(onRevokePermit).toHaveBeenCalledWith('permit-1');
     });
   });
 
-  describe('grant audit log section', () => {
+  describe('permit audit log section', () => {
     it('renders the Helper Pass Log heading', () => {
       render(<OperatorConsole {...baseProps} />);
       expect(screen.getByRole('heading', { name: 'Helper Pass Log' })).toBeVisible();
     });
 
-    it('shows empty state when no grant log entries', () => {
-      render(<OperatorConsole {...baseProps} grantLog={[]} />);
+    it('shows empty state when no permit log entries', () => {
+      render(<OperatorConsole {...baseProps} permitLog={[]} />);
       expect(screen.getByText('No helper-pass activity yet.')).toBeVisible();
     });
 
-    it('renders grant log entries with event labels and details', () => {
-      const grantLog: GrantLogEntry[] = [
+    it('renders permit log entries with event labels and details', () => {
+      const permitLog: PermitLogEntry[] = [
         {
           id: 'glog-1',
-          grantId: 'grant-1',
-          eventType: 'grant-issued',
-          detail: 'Grant issued for archive-artifact (max 10 uses).',
+          permitId: 'permit-1',
+          eventType: 'permit-issued',
+          detail: 'Permit issued for archive-artifact (max 10 uses).',
           createdAt: '2026-03-12T00:00:00.000Z',
         },
         {
           id: 'glog-2',
-          grantId: 'grant-1',
+          permitId: 'permit-1',
           eventType: 'delegated-execution-succeeded',
           actionClass: 'archive-artifact',
           detail: 'Delegated archive-artifact succeeded.',
@@ -663,26 +663,26 @@ describe('operator console', () => {
         },
       ];
 
-      render(<OperatorConsole {...baseProps} grantLog={grantLog} />);
+      render(<OperatorConsole {...baseProps} permitLog={permitLog} />);
 
       expect(screen.getByText('Issued')).toBeVisible();
-      expect(screen.getByText('Grant issued for archive-artifact (max 10 uses).')).toBeVisible();
+      expect(screen.getByText('Permit issued for archive-artifact (max 10 uses).')).toBeVisible();
       expect(screen.getByText('Succeeded')).toBeVisible();
       expect(screen.getByText('Delegated archive-artifact succeeded.')).toBeVisible();
       expect(screen.getByText('Archive artifact')).toBeVisible();
     });
 
     it('limits display to 20 entries', () => {
-      const grantLog: GrantLogEntry[] = Array.from({ length: 25 }, (_, i) => ({
+      const permitLog: PermitLogEntry[] = Array.from({ length: 25 }, (_, i) => ({
         id: `glog-${i}`,
-        grantId: 'grant-1',
+        permitId: 'permit-1',
         eventType: 'delegated-execution-attempted' as const,
         detail: `Attempt ${i}`,
         createdAt: `2026-03-12T${String(i).padStart(2, '0')}:00:00.000Z`,
         coopId: 'coop-1',
       }));
 
-      render(<OperatorConsole {...baseProps} grantLog={grantLog} />);
+      render(<OperatorConsole {...baseProps} permitLog={permitLog} />);
 
       const attemptedBadges = screen.getAllByText('Attempted');
       expect(attemptedBadges.length).toBeLessThanOrEqual(20);

@@ -1,8 +1,8 @@
+import { defaultIceServers, filterUsableSignalingUrls } from '@coop/api';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
 import { type ReceiverSyncEnvelope, receiverSyncEnvelopeSchema } from '../../contracts/schema';
-import { filterUsableReceiverSignalingUrls } from './pairing';
 
 const ROOT_KEY = 'receiver-sync';
 const CAPTURES_KEY = 'captures';
@@ -101,6 +101,8 @@ export function connectReceiverSyncProviders(
   doc: Y.Doc,
   roomId: string,
   signalingUrls: string[] = [],
+  password?: string,
+  iceServers?: RTCIceServer[],
 ) {
   if (typeof window === 'undefined') {
     return {
@@ -113,7 +115,7 @@ export function connectReceiverSyncProviders(
 
   const indexeddb = new IndexeddbPersistence(roomId, doc);
   let webrtc: WebrtcProvider | undefined;
-  const usableSignalingUrls = filterUsableReceiverSignalingUrls(signalingUrls);
+  const usableSignalingUrls = filterUsableSignalingUrls(signalingUrls);
   const hasWebRtcRuntime =
     typeof globalThis.RTCPeerConnection !== 'undefined' ||
     typeof (globalThis as typeof globalThis & { webkitRTCPeerConnection?: unknown })
@@ -123,9 +125,12 @@ export function connectReceiverSyncProviders(
     try {
       webrtc = new WebrtcProvider(roomId, doc, {
         signaling: usableSignalingUrls,
+        password: password ?? roomId,
         maxConns: 6,
+        peerOpts: { config: { iceServers: iceServers ?? defaultIceServers } },
       });
-    } catch {
+    } catch (error) {
+      void error;
       webrtc = undefined;
     }
   }

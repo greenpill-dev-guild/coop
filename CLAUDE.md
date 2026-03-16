@@ -9,7 +9,7 @@ bun install                  # Install dependencies
 bun dev                      # Start app + extension (concurrent)
 bun dev:app                  # Start app only
 bun dev:extension            # Start extension only (watch build)
-bun dev:signaling            # Start y-webrtc signaling server
+bun dev:api                  # Start API server (signaling + routes)
 bun format && bun lint       # Format (Biome) and lint workspace
 bun run test                 # Run all unit tests (vitest)
 bun run test:e2e             # Run all Playwright E2E tests
@@ -26,39 +26,44 @@ Per-package: check each package.json for available scripts.
 
 ## Architecture
 
-Coop is a **browser-first, local-first knowledge commons** for communities to coordinate and form shared intelligence. Bun monorepo.
+Coop captures scattered knowledge (browser tabs, audio, photos, files, links), refines it into clear opportunities via an in-browser AI agent, and gives groups a shared space to act on what matters. Bun monorepo.
 
 ### Product Loop
-1. Create a coop → real Safe address
-2. Generate member/trusted invites
-3. Join from second profile (passkey-first)
-4. Round up relevant tabs locally (extension)
-5. Review and edit drafts in the Roost
-6. Publish into shared coop memory
-7. Live sync between peers (Yjs + y-webrtc)
-8. Archive artifacts to Storacha/Filecoin
-9. Export snapshots and receipts
+1. **Capture**: Browser tabs (extension) + audio, photos, files, links (companion PWA)
+2. **Refine**: In-browser agent with 14-skill pipeline (WebGPU/WASM, no cloud)
+3. **Review**: Drafts land in the Roost for human triage
+4. **Share**: Publish to a coop (Safe multisig on Arbitrum, P2P sync via Yjs + y-webrtc, archived to Filecoin via Storacha)
 
 ### Key Principles
 1. **Browser-First**: Extension is the primary product surface
 2. **Local-First**: All data stays local until explicit publish/sync
 3. **Passkey-First**: No wallet-extension-first UX; passkey identity
 4. **Offline Capable**: Works without internet, syncs when connected
-5. **Single Environment**: All packages share root `.env` (never create package-specific .env)
+5. **Single Environment**: All packages share root `.env.local` (never create package-specific .env)
 
 ### Packages & Build Order
-1. **shared** (`@coop/shared`) → Schemas, flows, sync contracts, modules (auth, coop, storage, archive, onchain, receiver)
+1. **shared** (`@coop/shared`) → Schemas, flows, sync contracts, all domain modules
 2. **app** (`@coop/app`) → Landing page + receiver PWA shell
 3. **extension** (`@coop/extension`) → MV3 browser extension (popup, sidepanel, background worker)
+4. **api** (`@coop/api`) → Hono + Bun API server (Fly.io deployed)
 
 ### Shared Modules
-- `auth` — Passkey-first identity + onchain auth
-- `coop` — Core flow board, review, and publish logic
-- `storage` — Dexie + Yjs local persistence
-- `archive` — Storacha/Filecoin upload and lifecycle
-- `onchain` — Safe creation, ERC-4337, contract interactions
-- `receiver` — PWA receiver and cross-device sync
-- `app` — App shell logic
+- `auth`: Passkey-first identity + onchain auth
+- `coop`: Core flow board, review, and publish logic
+- `storage`: Dexie + Yjs local persistence
+- `archive`: Storacha/Filecoin upload and lifecycle
+- `onchain`: Safe creation, ERC-4337, contract interactions, provider factory, signatures
+- `receiver`: PWA receiver and cross-device sync
+- `privacy`: Semaphore ZK membership proofs + anonymous publishing
+- `stealth`: ERC-5564 stealth addresses (secp256k1)
+- `agent`: Agent harness, skills, observation triggers, inference cascade, cross-session memory persistence
+- `operator`: Anchor/trusted-node runtime behavior
+- `policy`: Action approval workflows, typed action bundles
+- `session`: Scoped execution permissions, time-bounded capabilities
+- `permit`: Execution permits with replay protection
+- `greengoods`: Green Goods garden bootstrap and sync
+- `erc8004`: ERC-8004 on-chain agent registry integration
+- `app`: App shell logic
 
 ## Key Patterns
 
@@ -86,23 +91,23 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 ## Environment
 
-Single `.env` at root (never create package-specific .env). `.env` vars:
-- `VITE_COOP_CHAIN` — Target chain (`sepolia` or `arbitrum`)
-- `VITE_COOP_ONCHAIN_MODE` — `mock` (default) or `live`
-- `VITE_COOP_ARCHIVE_MODE` — `mock` (default) or `live`
-- `VITE_PIMLICO_API_KEY` — For live Safe/4337 operations
-- `VITE_STORACHA_ISSUER_URL` — For live archive delegation
+Single `.env.local` at root (never create package-specific .env). `.env.local` vars:
+- `VITE_COOP_CHAIN`: Target chain (`sepolia` or `arbitrum`)
+- `VITE_COOP_ONCHAIN_MODE`: `mock` (default) or `live`
+- `VITE_COOP_ARCHIVE_MODE`: `mock` (default) or `live`
+- `VITE_PIMLICO_API_KEY`: For live Safe/4337 operations
+- `VITE_STORACHA_ISSUER_URL`: For live archive delegation
 
 ## Validation Suites
 
-Named suites via `scripts/validate.mjs`:
-- `smoke` — Unit tests + workspace build
-- `core-loop` — Unit tests, build, two-profile extension flow
-- `flow-board` — Board/archive unit tests + Playwright checks
-- `receiver-slice` — App shell checks + pair/sync into extension
-- `receiver-hardening` — Receiver sync with sidepanel closed
-- `arbitrum-safe-live` — Live Safe probe (needs API keys)
-- `full` — Lint, unit, build, all E2E suites
+Named suites via `scripts/validate.ts`:
+- `smoke`: Unit tests + workspace build
+- `core-loop`: Unit tests, build, two-profile extension flow
+- `flow-board`: Board/archive unit tests + Playwright checks
+- `receiver-slice`: App shell checks + pair/sync into extension
+- `receiver-hardening`: Receiver sync with sidepanel closed
+- `arbitrum-safe-live`: Live Safe probe (needs API keys)
+- `full`: Lint, unit, build, all E2E suites
 
 ## Scope Discipline
 - When instructions say "output in chat" or "just tell me", do NOT edit files

@@ -1,0 +1,314 @@
+/* ==========================================================================
+   Coop Docs — custom.css
+   Bridges Coop design tokens to Docusaurus IFM variables.
+   Light-mode only (dark switch is disabled in docusaurus.config).
+   ========================================================================== */
+
+/* ── Coop Design Tokens (mirrored from packages/shared/src/styles/tokens.css) ── */
+
+:root {
+  /* Palette */
+  --coop-cream: #fcf5ef;
+  --coop-brown: #4f2e1f;
+  --coop-brown-soft: #6b4a36;
+  --coop-green: #5a7d10;
+  --coop-orange: #fd8a01;
+  --coop-mist: #d8d4d0;
+  --coop-ink: #27140e;
+  --coop-error: #a63b20;
+  --coop-line: rgba(79, 46, 31, 0.16);
+
+  /* Shadows */
+  --coop-shadow-sm: 0 8px 20px rgba(79, 46, 31, 0.08);
+  --coop-shadow-md: 0 16px 40px rgba(79, 46, 31, 0.12);
+  --coop-shadow-lg: 0 24px 60px rgba(79, 46, 31, 0.12);
+
+  /* Radii */
+  --coop-radius-pill: 999px;
+  --coop-radius-card: 24px;
+  --coop-radius-input: 16px;
+  --coop-radius-chip: 12px;
+
+  /* Spacing */
+  --coop-space-xs: 0.35rem;
+  --coop-space-sm: 0.65rem;
+  --coop-space-md: 1rem;
+  --coop-space-lg: 1.5rem;
+  --coop-space-xl: 2rem;
+
+  /* Typography */
+  --coop-font-display: "Gill Sans", "Trebuchet MS", sans-serif;
+  --coop-font-body: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  --coop-font-mono: "SFMono-Regular", "JetBrains Mono", monospace;
+
+  /* Transitions */
+  --coop-ease: 180ms ease;
+}
+
+/* ── IFM Bridge ──
+   Maps Coop tokens onto Docusaurus's --ifm-* custom properties.
+   ========================================================================== */
+
+:root {
+  /* Primary — coop-green swatch */
+  --ifm-color-primary: #5a7d10;
+  --ifm-color-primary-dark: #4e6d0e;
+  --ifm-color-primary-darker: #46610c;
+  --ifm-color-primary-darkest: #3a500a;
+  --ifm-color-primary-light: #668d12;
+  --ifm-color-primary-lighter: #729d14;
+  --ifm-color-primary-lightest: #84b518;
+
+  /* Surfaces */
+  --ifm-background-color: var(--coop-cream);
+  --ifm-background-surface-color: rgba(255, 252, 249, 0.8);
+
+  /* Typography */
+  --ifm-font-family-base: var(--coop-font-body);
+  --ifm-font-family-monospace: var(--coop-font-mono);
+  --ifm-heading-font-family: var(--coop-font-display);
+  --ifm-font-color-base: var(--coop-brown);
+  --ifm-font-color-secondary: var(--coop-brown-soft);
+
+  /* Links */
+  --ifm-link-color: var(--coop-green);
+  --ifm-link-hover-color: #4e6d0e;
+
+  /* Navbar */
+  --ifm-navbar-background-color: rgba(252, 245, 239, 0.88);
+  --ifm-navbar-shadow: 0 1px 0 0 var(--coop-line);
+  --ifm-navbar-link-color: var(--coop-brown);
+  --ifm-navbar-link-hover-color: var(--coop-green);
+
+  /* Footer */
+  --ifm-footer-background-color: var(--coop-brown);
+  --ifm-footer-color: rgba(255, 255, 255, 0.9);
+  --ifm-footer-link-color: rgba(255, 255, 255, 0.8);
+  --ifm-footer-link-hover-color: #fff;
+  --ifm-footer-title-color: var(--coop-orange);
+
+  /* Code */
+  --ifm-code-font-size: 90%;
+  --ifm-code-border-radius: var(--coop-radius-chip);
+
+  /* Radii */
+  --ifm-global-radius: var(--coop-radius-input);
+  --ifm-pre-border-radius: var(--coop-radius-input);
+  --ifm-alert-border-radius: var(--coop-radius-input);
+  --ifm-card-border-radius: var(--coop-radius-card);
+  --ifm-button-border-radius: var(--coop-radius-pill);
+  --ifm-pagination-nav-border-radius: var(--coop-radius-input);
+}
+
+/* ── Body Background ──
+   Warm gradient with radial glows matching the Coop app landing page.
+   ========================================================================== */
+
+html {
+  background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.08), transparent 28rem),
+    radial-gradient(circle at top right, rgba(253, 138, 1, 0.08), transparent 24rem),
+    linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 36%, #fffdfb 100%);
+  background-attachment: fixed;
+}
+
+/* ── Grid Backdrop ──
+   Subtle 48px grid pattern from the app landing.
+   ========================================================================== */
+
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(rgba(79, 46, 31, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 46, 31, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Navbar — Frosted Glass ──
+   ========================================================================== */
+
+.navbar {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Sidebar ──
+   Active item pill + eyebrow category labels.
+   ========================================================================== */
+
+.menu__link--active:not(.menu__link--sublist) {
+  background: rgba(90, 125, 16, 0.12);
+  border-radius: var(--coop-radius-pill);
+  color: var(--coop-green);
+  font-weight: 600;
+}
+
+.menu__link:hover {
+  background: rgba(79, 46, 31, 0.06);
+  border-radius: var(--coop-radius-pill);
+  color: var(--coop-brown);
+}
+
+/* Category labels as eyebrow text */
+.menu__list-item-collapsible > .menu__link {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--coop-green);
+}
+
+/* ── Headings ──
+   ========================================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--coop-brown);
+}
+
+.markdown h1:first-child {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+/* ── Code Blocks ──
+   Warm background with subtle border and shadow.
+   ========================================================================== */
+
+pre[class*="language-"],
+div[class*="codeBlockContainer"] {
+  border: 1px solid var(--coop-line);
+  box-shadow: var(--coop-shadow-sm);
+}
+
+:not(pre) > code {
+  background: rgba(79, 46, 31, 0.06);
+  border: 1px solid rgba(79, 46, 31, 0.08);
+  color: var(--coop-brown);
+}
+
+/* ── Admonitions ──
+   Styled as Coop cards with left-border accent.
+   ========================================================================== */
+
+.alert {
+  border-radius: var(--coop-radius-input);
+  border-width: 0 0 0 4px;
+  background: rgba(255, 252, 249, 0.8);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--coop-shadow-sm);
+}
+
+.alert--success {
+  --ifm-alert-border-color: var(--coop-green);
+  --ifm-alert-foreground-color: var(--coop-brown);
+}
+
+.alert--info {
+  --ifm-alert-border-color: var(--coop-brown-soft);
+  --ifm-alert-foreground-color: var(--coop-brown);
+}
+
+.alert--warning {
+  --ifm-alert-border-color: var(--coop-orange);
+  --ifm-alert-foreground-color: var(--coop-brown);
+}
+
+.alert--danger {
+  --ifm-alert-border-color: var(--coop-error);
+  --ifm-alert-foreground-color: var(--coop-brown);
+}
+
+/* ── Tables ──
+   Warm header row and coop-line borders.
+   ========================================================================== */
+
+table {
+  border-collapse: collapse;
+}
+
+table th {
+  background: rgba(79, 46, 31, 0.06);
+  color: var(--coop-brown);
+}
+
+table td,
+table th {
+  border-color: var(--coop-line);
+}
+
+/* ── Pagination Nav ──
+   Pill-shaped buttons with hover lift.
+   ========================================================================== */
+
+.pagination-nav__link {
+  border-color: var(--coop-line);
+  border-radius: var(--coop-radius-input);
+  transition: transform var(--coop-ease), box-shadow var(--coop-ease);
+}
+
+.pagination-nav__link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--coop-shadow-sm);
+  border-color: var(--coop-green);
+}
+
+/* ── Table of Contents ──
+   ========================================================================== */
+
+.table-of-contents__link--active {
+  color: var(--coop-green);
+  font-weight: 600;
+}
+
+/* ── Footer ──
+   ========================================================================== */
+
+.footer--dark {
+  background-color: var(--coop-brown);
+}
+
+.footer__title {
+  color: var(--coop-orange);
+}
+
+/* ── Accessibility — Focus Indicators ──
+   ========================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--coop-orange);
+  outline-offset: 2px;
+}
+
+/* ── Reduced Motion ──
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Animations ──
+   Used by landing page components.
+   ========================================================================== */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

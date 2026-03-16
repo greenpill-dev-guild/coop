@@ -41,15 +41,12 @@ export function assertReceiverCaptureSize(kind: ReceiverCaptureKind, byteSize: n
 
 export function assertReceiverEnvelopeAssetSize(kind: ReceiverCaptureKind, dataBase64: string) {
   const limit = getReceiverCaptureByteLimit(kind);
+  const kindLabel = `${kind[0].toUpperCase()}${kind.slice(1)}`;
   if (dataBase64.length > maxBase64LengthForBytes(limit)) {
-    throw new Error(
-      `${kind[0].toUpperCase()} sync payloads must stay under ${formatBytes(limit)}.`,
-    );
+    throw new Error(`${kindLabel} sync payloads must stay under ${formatBytes(limit)}.`);
   }
 
   if (estimateBase64ByteSize(dataBase64) > limit) {
-    throw new Error(
-      `${kind[0].toUpperCase()} sync payloads must stay under ${formatBytes(limit)}.`,
-    );
+    throw new Error(`${kindLabel} sync payloads must stay under ${formatBytes(limit)}.`);
   }
 }

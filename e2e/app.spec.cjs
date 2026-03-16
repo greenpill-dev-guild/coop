@@ -282,10 +282,10 @@ test('landing page stays legible on mobile', async ({ page, isMobile }) => {
   await expect(page.getByRole('button', { name: /copy helper prompt/i })).toBeVisible();
 });
 
-test('receiver route exposes the egg capture shell and inbox link', async ({ page }) => {
+test('receiver route exposes the egg capture shell and Roost link', async ({ page }) => {
   await page.goto('/receiver');
 
-  await expect(page.getByRole('heading', { name: /hatch something/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Hatch$/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /start recording/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /take photo/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /attach file/i })).toBeVisible();

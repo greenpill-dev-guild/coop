@@ -25,7 +25,7 @@ type TextGenerationPipeline = (
 let transformersPipelinePromise: Promise<TextGenerationPipeline> | null = null;
 const webLlmBridge = new AgentWebLlmBridge();
 
-function extractJsonBlock(raw: string) {
+export function extractJsonBlock(raw: string) {
   const trimmed = raw.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]+?)```/i);
   const content = fenced?.[1] ?? trimmed;
@@ -37,8 +37,115 @@ function extractJsonBlock(raw: string) {
   return content;
 }
 
+/**
+ * Repairs common small-model JSON failures:
+ * - Strips control characters (except \n, \t, \r)
+ * - Fixes trailing commas before } or ]
+ * - Handles truncated strings (adds missing closing quote)
+ * - Adds missing closing braces/brackets (counts unmatched openers)
+ */
+export function repairJson(raw: string): string {
+  // 1. Strip control characters except \n (0x0A), \t (0x09), \r (0x0D)
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control character stripping
+  let result = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+
+  // 2. Fix trailing commas before } or ] (with optional whitespace)
+  result = result.replace(/,(\s*[}\]])/g, '$1');
+
+  // 3. Handle truncated strings and escape raw newlines inside string values.
+  //    Small models sometimes produce unescaped newlines inside JSON strings,
+  //    or truncate mid-string without a closing quote.
+  let inString = false;
+  let escaped = false;
+  let fixed = '';
+  for (let i = 0; i < result.length; i++) {
+    const ch = result[i];
+    if (escaped) {
+      escaped = false;
+      fixed += ch;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      fixed += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      fixed += ch;
+      continue;
+    }
+    // Escape raw newlines/tabs/CRs inside string values
+    if (inString && (ch === '\n' || ch === '\r' || ch === '\t')) {
+      fixed += ch === '\n' ? '\\n' : ch === '\r' ? '\\r' : '\\t';
+      continue;
+    }
+    fixed += ch;
+  }
+  if (inString) {
+    fixed += '"';
+  }
+  result = fixed;
+
+  // 4. Add missing closing braces/brackets by rebuilding with a stack
+  //    When a closer doesn't match the top of the stack, insert the
+  //    expected closer before it (handles e.g. `[1,2}` → `[1,2]}`)
+  inString = false;
+  escaped = false;
+  const stack: string[] = [];
+  let rebuilt = '';
+  for (let i = 0; i < result.length; i++) {
+    const ch = result[i];
+    if (escaped) {
+      escaped = false;
+      rebuilt += ch;
+      continue;
+    }
+    if (ch === '\\' && inString) {
+      escaped = true;
+      rebuilt += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      rebuilt += ch;
+      continue;
+    }
+    if (inString) {
+      rebuilt += ch;
+      continue;
+    }
+    if (ch === '{') {
+      stack.push('}');
+      rebuilt += ch;
+    } else if (ch === '[') {
+      stack.push(']');
+      rebuilt += ch;
+    } else if (ch === '}' || ch === ']') {
+      // Insert missing closers for any mismatched openers above the matching one
+      const matchIdx = stack.lastIndexOf(ch);
+      if (matchIdx >= 0) {
+        for (let j = stack.length - 1; j > matchIdx; j--) {
+          rebuilt += stack.pop();
+        }
+        stack.pop();
+      }
+      rebuilt += ch;
+    } else {
+      rebuilt += ch;
+    }
+  }
+  // Close any remaining unmatched openers (LIFO)
+  while (stack.length > 0) {
+    rebuilt += stack.pop();
+  }
+  result = rebuilt;
+
+  return result;
+}
+
 function parseValidatedOutput<T>(schemaRef: SkillOutputSchemaRef, raw: string) {
-  return validateSkillOutput<T>(schemaRef, JSON.parse(extractJsonBlock(raw)));
+  return validateSkillOutput<T>(schemaRef, JSON.parse(repairJson(extractJsonBlock(raw))));
 }
 
 async function ensureTransformersPipeline() {
@@ -50,6 +157,8 @@ async function ensureTransformersPipeline() {
     const { pipeline, env } = await import('@huggingface/transformers');
     env.allowLocalModels = false;
     env.useBrowserCache = true;
+    // Load ONNX WASM from CDN instead of bundling the 22 MB binary
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
 
     return (await pipeline('text-generation', TRANSFORMERS_MODEL_ID, {
       dtype: 'q4',
@@ -181,10 +290,14 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
 async function runTransformers<T>(input: {
   prompt: string;
   schemaRef: SkillOutputSchemaRef;
+  retryContext?: string;
 }) {
   const start = Date.now();
   const pipeline = await ensureTransformersPipeline();
-  const result = await pipeline([{ role: 'user', content: input.prompt }], {
+  const promptWithRetry = input.retryContext
+    ? `${input.prompt}\n\n${input.retryContext}`
+    : input.prompt;
+  const result = await pipeline([{ role: 'user', content: promptWithRetry }], {
     max_new_tokens: 512,
     temperature: 0.2,
     do_sample: false,
@@ -211,10 +324,14 @@ async function runWebLlm<T>(input: {
   system: string;
   prompt: string;
   schemaRef: SkillOutputSchemaRef;
+  retryContext?: string;
 }) {
+  const promptWithRetry = input.retryContext
+    ? `${input.prompt}\n\n${input.retryContext}`
+    : input.prompt;
   const result = await webLlmBridge.complete({
     system: input.system,
-    prompt: input.prompt,
+    prompt: promptWithRetry,
     temperature: 0.2,
     maxTokens: 700,
   });
@@ -224,6 +341,20 @@ async function runWebLlm<T>(input: {
     output: parseValidatedOutput<T>(input.schemaRef, result.output),
     durationMs: result.durationMs,
   };
+}
+
+function formatRetryContext(error: unknown): string {
+  if (error instanceof SyntaxError) {
+    return `Your previous output had validation errors: ${error.message}. Fix and return valid JSON.`;
+  }
+  if (error && typeof error === 'object' && 'issues' in error) {
+    const issues = (error as { issues: Array<{ path: (string | number)[]; message: string }> })
+      .issues;
+    const msgs = issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+    return `Your previous output had validation errors: ${msgs}. Fix and return valid JSON.`;
+  }
+  const msg = error instanceof Error ? error.message : String(error);
+  return `Your previous output had validation errors: ${msg}. Fix and return valid JSON.`;
 }
 
 export async function completeSkillOutput<T>(input: {
@@ -242,18 +373,45 @@ export async function completeSkillOutput<T>(input: {
 
   try {
     if (input.preferredProvider === 'webllm') {
-      return await runWebLlm<T>({
-        system: input.system,
-        prompt: input.prompt,
-        schemaRef: input.schemaRef,
-      });
+      try {
+        return await runWebLlm<T>({
+          system: input.system,
+          prompt: input.prompt,
+          schemaRef: input.schemaRef,
+        });
+      } catch (firstError) {
+        // Retry once with error context
+        try {
+          return await runWebLlm<T>({
+            system: input.system,
+            prompt: input.prompt,
+            schemaRef: input.schemaRef,
+            retryContext: formatRetryContext(firstError),
+          });
+        } catch {
+          // Both attempts failed — fall through to next provider
+        }
+      }
     }
 
     if (input.preferredProvider === 'transformers') {
-      return await runTransformers<T>({
-        prompt: `${input.system}\n\n${input.prompt}`,
-        schemaRef: input.schemaRef,
-      });
+      try {
+        return await runTransformers<T>({
+          prompt: `${input.system}\n\n${input.prompt}`,
+          schemaRef: input.schemaRef,
+        });
+      } catch (firstError) {
+        try {
+          return await runTransformers<T>({
+            prompt: `${input.system}\n\n${input.prompt}`,
+            schemaRef: input.schemaRef,
+            retryContext: formatRetryContext(firstError),
+          });
+        } catch {
+          // Both attempts failed — fall through to heuristic
+        }
+      }
+      return fallback();
     }
   } catch {
     // Fall through to the next provider or heuristic fallback.

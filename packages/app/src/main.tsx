@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { RootApp } from './app';
+import { ErrorBoundary, RootApp } from './app';
 import { bootstrapCoopBoardHandoff } from './board-handoff';
 import { bootstrapReceiverPairingHandoff } from './pairing-handoff';
 import { bootstrapReceiverShareHandoff } from './share-handoff';
@@ -14,7 +14,9 @@ if (!rootElement) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    void navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.warn('[coop] Service worker registration failed:', error);
+    });
   });
 }
 
@@ -24,10 +26,12 @@ const initialShareInput = bootstrapReceiverShareHandoff(window);
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <RootApp
-      initialBoardSnapshot={initialBoardSnapshot}
-      initialPairingInput={initialPairingInput}
-      initialShareInput={initialShareInput}
-    />
+    <ErrorBoundary>
+      <RootApp
+        initialBoardSnapshot={initialBoardSnapshot}
+        initialPairingInput={initialPairingInput}
+        initialShareInput={initialShareInput}
+      />
+    </ErrorBoundary>
   </React.StrictMode>,
 );

@@ -1,0 +1,7 @@
+{
+  "registryAddress": null,
+  "deployTxHash": null,
+  "deployedAt": null,
+  "chainId": 314159,
+  "note": "Deploy with: forge create --rpc-url https://api.calibration.node.glif.io/rpc/v1 --private-key $DEPLOYER_PRIVATE_KEY src/CoopRegistry.sol:CoopRegistry"
+}

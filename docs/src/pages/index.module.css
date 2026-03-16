@@ -1,0 +1,247 @@
+/* ── Hero ── */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3rem;
+  align-items: center;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 4rem 2rem 3rem;
+}
+
+.heroContent,
+.heroArt {
+  animation: rise-in 480ms ease both;
+}
+
+.heroArt {
+  animation-delay: 120ms;
+}
+
+/* ── Eyebrow (shared) ── */
+
+.eyebrow {
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  color: #5a7d10;
+  font-weight: 700;
+  margin-bottom: 0.65rem;
+}
+
+/* ── Hero Content ── */
+
+.heroTitle {
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: clamp(2.4rem, 5vw, 4.6rem);
+  line-height: 0.98;
+  color: #4f2e1f;
+  margin: 0;
+}
+
+.heroSubtitle {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: #6b4a36;
+  max-width: 32rem;
+}
+
+/* ── CTA Row ── */
+
+.ctaRow {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: 1.6rem;
+}
+
+.buttonPrimary {
+  background: #4f2e1f;
+  color: #fff;
+  padding: 0.9rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 180ms ease;
+}
+
+.buttonPrimary:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  text-decoration: none;
+}
+
+.buttonSecondary {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  color: #4f2e1f;
+  padding: 0.9rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 180ms ease;
+}
+
+.buttonSecondary:hover {
+  transform: translateY(-1px);
+  color: #4f2e1f;
+  text-decoration: none;
+}
+
+/* ── Hero Art (nest card) ── */
+
+.heroArt {
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 252, 249, 0.8);
+  box-shadow: 0 24px 60px rgba(79, 46, 31, 0.12);
+  backdrop-filter: blur(12px);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroArt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+      ellipse 60% 50% at 20% 80%,
+      rgba(90, 125, 16, 0.08) 0%,
+      transparent 70%
+    ), radial-gradient(ellipse 50% 60% at 80% 20%, rgba(253, 138, 1, 0.06) 0%, transparent 70%);
+}
+
+/* ── Hero Flow ── */
+
+.heroFlow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  min-height: 20rem;
+  position: relative;
+}
+
+.flowZone {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.flowCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroMark {
+  width: min(9rem, 26vw);
+  opacity: 0.96;
+}
+
+/* ── Flow Cards ── */
+
+.flowCard {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(79, 46, 31, 0.12);
+  border-radius: 16px;
+  color: #4f2e1f;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+/* Scattered (left column) */
+.scattered {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.scattered:nth-child(1) {
+  transform: rotate(-2deg);
+}
+
+.scattered:nth-child(2) {
+  transform: rotate(1.5deg) translateX(8px);
+}
+
+.scattered:nth-child(3) {
+  transform: rotate(-1deg) translateX(-4px);
+}
+
+/* Organized (right column) */
+.organized {
+  border-color: rgba(90, 125, 16, 0.3);
+  background: linear-gradient(135deg, rgba(255, 252, 249, 0.95), rgba(240, 248, 236, 0.9));
+  box-shadow: 0 8px 20px rgba(79, 46, 31, 0.08);
+}
+
+/* ── Features ── */
+
+.features {
+  padding: 3rem 0;
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.featureCard {
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 252, 249, 0.8);
+  box-shadow: 0 8px 20px rgba(79, 46, 31, 0.08);
+  backdrop-filter: blur(12px);
+  padding: 1.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.featureCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+  text-decoration: none;
+  color: inherit;
+}
+
+.featureCard h3 {
+  color: #4f2e1f;
+  margin: 0.5rem 0;
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+}
+
+.featureCard p {
+  color: #6b4a36;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 2.5rem 1.25rem 2rem;
+  }
+
+  .heroFlow {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  /* Hide scattered zone on mobile, keep center + organized */
+  .heroFlow .flowZone:first-child {
+    display: none;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -26,6 +26,7 @@ import type {
 } from '../../contracts/schema';
 import { greenGoodsGardenStateSchema } from '../../contracts/schema';
 import {
+  assertHexString,
   hashJson,
   nowIso,
   slugify,
@@ -158,7 +159,7 @@ function normalizeBytes32(value: string | undefined) {
   if (!value || !/^0x[a-fA-F0-9]{64}$/.test(value) || value === ZERO_BYTES32) {
     return undefined;
   }
-  return value as `0x${string}`;
+  return assertHexString(value, 'bytes32');
 }
 
 function ensureLiveExecutionReady(input: {
@@ -212,7 +213,7 @@ async function sendViaCoopSafe(input: {
   const account = await toSafeSmartAccount({
     client: publicClient,
     owners: [sender],
-    address: input.onchainState.safeAddress as `0x${string}`,
+    address: assertHexString(input.onchainState.safeAddress, 'safeAddress'),
     version: '1.4.1',
   });
   const pimlicoClient = createPimlicoClient({
@@ -903,7 +904,7 @@ export async function submitGreenGoodsWorkApproval(input: {
     ),
     [
       BigInt(input.output.actionUid),
-      input.output.workUid as `0x${string}`,
+      assertHexString(input.output.workUid, 'workUid'),
       input.output.approved,
       input.output.feedback,
       input.output.confidence,

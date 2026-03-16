@@ -31,6 +31,21 @@ export interface ArchiveReceiptDetails {
   dealCount: number;
   lastRefreshedAt?: string;
   lastRefreshError?: string;
+  anchorTxHash?: string;
+  anchorChainKey?: string;
+  anchorStatus: 'pending' | 'anchored' | 'skipped';
+  fvmRegistryTxHash?: string;
+  fvmChainKey?: string;
+  filecoinDeals: Array<{
+    aggregate: string;
+    provider?: string;
+    dealId?: string;
+  }>;
+  filecoinAggregates: Array<{
+    aggregate: string;
+    inclusionProofAvailable: boolean;
+  }>;
+  filecoinInfoLastUpdatedAt?: string;
 }
 
 export interface CoopArchiveStory {
@@ -39,6 +54,11 @@ export interface CoopArchiveStory {
   latestSnapshotReceipt: ArchiveReceiptDetails | null;
   latestArtifactReceipt: ArchiveReceiptDetails | null;
   snapshotSummary: string;
+  totalArchiveReceipts: number;
+  totalSealedDeals: number;
+  totalArtifacts: number;
+  uniqueProviders: string[];
+  totalDataPoints: number;
 }
 
 function resolveReceiptArtifacts(receipt: ArchiveReceipt, state: CoopSharedState) {
@@ -80,6 +100,42 @@ export function describeArchiveReceipt(input: {
   const artifacts = resolveReceiptArtifacts(input.receipt, input.state);
   const artifactTitles = artifacts.map((artifact) => artifact.title);
 
+  const filecoinInfo = input.receipt.filecoinInfo;
+  const filecoinDeals = (filecoinInfo?.deals ?? []).map((d) => ({
+    aggregate: d.aggregate,
+    provider: d.provider,
+    dealId: d.dealId,
+  }));
+  const filecoinAggregates = (filecoinInfo?.aggregates ?? []).map((a) => ({
+    aggregate: a.aggregate,
+    inclusionProofAvailable: a.inclusionProofAvailable,
+  }));
+  const filecoinInfoLastUpdatedAt = filecoinInfo?.lastUpdatedAt;
+
+  const commonFields = {
+    gatewayUrl: input.receipt.gatewayUrl,
+    rootCid: input.receipt.rootCid,
+    uploadedAt: input.receipt.uploadedAt,
+    filecoinStatus: input.receipt.filecoinStatus,
+    delegationIssuer: input.receipt.delegationIssuer,
+    delegationMode: (input.receipt.delegation?.mode ?? 'mock') as 'live' | 'mock',
+    delegationSource: input.receipt.delegation?.issuerUrl,
+    pieceCids: input.receipt.pieceCids,
+    primaryPieceCid: filecoinInfo?.pieceCid ?? input.receipt.pieceCids[0],
+    aggregateCount: filecoinInfo?.aggregates.length ?? 0,
+    dealCount: filecoinInfo?.deals.length ?? 0,
+    lastRefreshedAt: input.receipt.followUp?.lastRefreshedAt,
+    lastRefreshError: input.receipt.followUp?.lastError,
+    anchorTxHash: input.receipt.anchorTxHash,
+    anchorChainKey: input.receipt.anchorChainKey,
+    anchorStatus: (input.receipt.anchorStatus ?? 'pending') as 'pending' | 'anchored' | 'skipped',
+    fvmRegistryTxHash: input.receipt.fvmRegistryTxHash,
+    fvmChainKey: input.receipt.fvmChainKey,
+    filecoinDeals,
+    filecoinAggregates,
+    filecoinInfoLastUpdatedAt,
+  };
+
   if (input.receipt.scope === 'artifact') {
     const title =
       artifactTitles[0] ??
@@ -98,19 +154,7 @@ export function describeArchiveReceipt(input: {
           : 'Keeps a shared find with its review notes and saved trail.',
       itemCount: Math.max(artifactTitles.length, input.receipt.artifactIds.length, 1),
       artifactTitles,
-      gatewayUrl: input.receipt.gatewayUrl,
-      rootCid: input.receipt.rootCid,
-      uploadedAt: input.receipt.uploadedAt,
-      filecoinStatus: input.receipt.filecoinStatus,
-      delegationIssuer: input.receipt.delegationIssuer,
-      delegationMode: input.receipt.delegation?.mode ?? 'mock',
-      delegationSource: input.receipt.delegation?.issuerUrl,
-      pieceCids: input.receipt.pieceCids,
-      primaryPieceCid: input.receipt.filecoinInfo?.pieceCid ?? input.receipt.pieceCids[0],
-      aggregateCount: input.receipt.filecoinInfo?.aggregates.length ?? 0,
-      dealCount: input.receipt.filecoinInfo?.deals.length ?? 0,
-      lastRefreshedAt: input.receipt.followUp?.lastRefreshedAt,
-      lastRefreshError: input.receipt.followUp?.lastError,
+      ...commonFields,
     };
   }
 
@@ -122,19 +166,7 @@ export function describeArchiveReceipt(input: {
     summary: `Keeps ${input.state.members.length} flock members, ${input.state.artifacts.length} shared finds, ${input.state.reviewBoard.length} board groups, and ${input.state.archiveReceipts.length} saved proof items easy to revisit.`,
     itemCount: input.state.artifacts.length,
     artifactTitles: input.state.artifacts.slice(0, 4).map((artifact) => artifact.title),
-    gatewayUrl: input.receipt.gatewayUrl,
-    rootCid: input.receipt.rootCid,
-    uploadedAt: input.receipt.uploadedAt,
-    filecoinStatus: input.receipt.filecoinStatus,
-    delegationIssuer: input.receipt.delegationIssuer,
-    delegationMode: input.receipt.delegation?.mode ?? 'mock',
-    delegationSource: input.receipt.delegation?.issuerUrl,
-    pieceCids: input.receipt.pieceCids,
-    primaryPieceCid: input.receipt.filecoinInfo?.pieceCid ?? input.receipt.pieceCids[0],
-    aggregateCount: input.receipt.filecoinInfo?.aggregates.length ?? 0,
-    dealCount: input.receipt.filecoinInfo?.deals.length ?? 0,
-    lastRefreshedAt: input.receipt.followUp?.lastRefreshedAt,
-    lastRefreshError: input.receipt.followUp?.lastError,
+    ...commonFields,
   };
 }
 
@@ -143,6 +175,18 @@ export function buildCoopArchiveStory(state: CoopSharedState): CoopArchiveStory 
     [...state.archiveReceipts].reverse().find((receipt) => receipt.scope === 'snapshot') ?? null;
   const latestArtifactReceipt =
     [...state.archiveReceipts].reverse().find((receipt) => receipt.scope === 'artifact') ?? null;
+
+  const providerSet = new Set<string>();
+  let totalSealedDeals = 0;
+  for (const receipt of state.archiveReceipts) {
+    const deals = receipt.filecoinInfo?.deals ?? [];
+    totalSealedDeals += deals.length;
+    for (const deal of deals) {
+      if (deal.provider) {
+        providerSet.add(deal.provider);
+      }
+    }
+  }
 
   return {
     archivedArtifactCount: state.artifacts.filter(
@@ -164,5 +208,10 @@ export function buildCoopArchiveStory(state: CoopSharedState): CoopArchiveStory 
       : null,
     snapshotSummary:
       'Saved snapshots keep the coop easy to revisit beyond the browser: flock members, shared finds, board groupings, and saved proof stay easy to inspect.',
+    totalArchiveReceipts: state.archiveReceipts.length,
+    totalSealedDeals,
+    totalArtifacts: state.artifacts.length,
+    uniqueProviders: [...providerSet],
+    totalDataPoints: state.artifacts.length,
   };
 }

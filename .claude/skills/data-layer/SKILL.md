@@ -235,14 +235,14 @@ provider.on("status", ({ connected }: { connected: boolean }) => {
 provider.destroy();
 ```
 
-### Signaling Server
+### API Server
 
 ```bash
-# Start the signaling server locally
-bun dev:signaling
+# Start the API server locally (includes WebRTC signaling)
+bun dev:api
 ```
 
-The signaling server facilitates WebRTC peer discovery. Once peers discover each other, data flows directly peer-to-peer.
+The API server facilitates WebRTC peer discovery via signaling. Once peers discover each other, data flows directly peer-to-peer.
 
 ### Persistence Bridge (Dexie <-> Yjs)
 
@@ -394,7 +394,7 @@ What data layer work?
 |                                       -> Clean old drafts first
 |
 +-- Peer sync issue? ----------------> Check WebrtcProvider status
-|                                       -> Verify signaling server
+|                                       -> Verify API server
 |
 +-- Form needs auto-save? -----------> Dexie draft persistence
 |

@@ -1,5 +1,6 @@
 import type {
   ActionBundle,
+  AgentMemory,
   AgentObservation,
   AgentPlan,
   AgentPlanStep,
@@ -38,6 +39,7 @@ import {
   completeAgentPlan,
   completeSkillRun,
   createActionProposal,
+  createAgentMemory,
   createAgentPlan,
   createAgentPlanStep,
   createCapitalFormationDraft,
@@ -63,27 +65,50 @@ import {
   listAgentObservationsByStatus,
   listAgentPlansByObservationId,
   nowIso,
+  pruneExpiredMemories,
+  queryMemoriesForSkill,
   readCoopState,
   saveAgentObservation,
   saveAgentPlan,
   saveReviewDraft,
   saveSkillRun,
+  truncateWords,
   updateAgentObservation,
   updateAgentPlan,
   updateAgentPlanStep,
 } from '@coop/shared';
 import {
   AGENT_HIGH_CONFIDENCE_THRESHOLD,
+  AGENT_MAX_CONSECUTIVE_FAILURES,
   AGENT_SETTING_KEYS,
   type AgentCycleRequest,
   type AgentCycleState,
 } from './agent-config';
-import { isTrustedNodeRole, selectSkillIdsForObservation } from './agent-harness';
+import { isTrustedNodeRole, selectSkillIdsForObservation, shouldSkipSkill } from './agent-harness';
+import { selectKnowledgeSkills } from './agent-knowledge';
+import {
+  logActionDispatch,
+  logCycleEnd,
+  logCycleStart,
+  logObservationDismissed,
+  logObservationStart,
+  logSkillComplete,
+  logSkillFailed,
+  logSkillStart,
+} from './agent-logger';
 import { completeSkillOutput } from './agent-models';
 import { getRegisteredSkill, listRegisteredSkills } from './agent-registry';
 import type { RuntimeActionResponse } from './messages';
 
 type CoopDexie = ReturnType<typeof createCoopDb>;
+
+type SkillRunMetric = {
+  skillId: string;
+  provider: AgentProvider;
+  durationMs: number;
+  retryCount: number;
+  skipped: boolean;
+};
 
 type AgentCycleResult = {
   processedObservationIds: string[];
@@ -92,6 +117,9 @@ type AgentCycleResult = {
   completedSkillRunIds: string[];
   autoExecutedActionCount: number;
   errors: string[];
+  traceId?: string;
+  totalDurationMs?: number;
+  skillRunMetrics: SkillRunMetric[];
 };
 
 type SkillExecutionContext = {
@@ -106,6 +134,7 @@ type SkillExecutionContext = {
   createdDraftIds: string[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  memories: AgentMemory[];
 };
 
 const db = createCoopDb('coop-extension');
@@ -278,7 +307,7 @@ function getObservationDismissReason(input: {
   }
 }
 
-function buildSkillPrompt(input: {
+async function buildSkillPrompt(input: {
   manifest: SkillManifest;
   observation: AgentObservation;
   coop?: CoopSharedState;
@@ -289,9 +318,10 @@ function buildSkillPrompt(input: {
   scores: GrantFitScore[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  memories: AgentMemory[];
 }) {
   const coopContext = input.coop
-    ? [
+    ? compact([
         `Coop name: ${input.coop.profile.name}`,
         `Coop purpose: ${input.coop.profile.purpose}`,
         `Ritual cadence: ${input.coop.rituals.map((ritual) => ritual.weeklyReviewCadence).join('; ')}`,
@@ -302,7 +332,19 @@ function buildSkillPrompt(input: {
             .slice(0, 6)
             .join(', ') || 'none'
         }`,
-      ].join('\n')
+        `Useful signal: ${input.coop.soul.usefulSignalDefinition}`,
+        `Artifact focus: ${input.coop.soul.artifactFocus.join(', ')}`,
+        `Why this coop exists: ${input.coop.soul.whyThisCoopExists}`,
+        `Tone and working style: ${input.coop.soul.toneAndWorkingStyle}`,
+        input.coop.soul.agentPersona ? `Agent persona: ${input.coop.soul.agentPersona}` : undefined,
+        input.coop.soul.vocabularyTerms.length > 0
+          ? `Vocabulary: ${input.coop.soul.vocabularyTerms.join(', ')}`
+          : undefined,
+        input.coop.soul.prohibitedTopics.length > 0
+          ? `Prohibited topics: ${input.coop.soul.prohibitedTopics.join(', ')}`
+          : undefined,
+        `Confidence threshold: ${input.coop.soul.confidenceThreshold}`,
+      ]).join('\n')
     : 'No coop context available.';
 
   const sourceContext = compact([
@@ -360,8 +402,27 @@ function buildSkillPrompt(input: {
     `Expected output schema ref: ${input.manifest.outputSchemaRef}`,
   ].join('\n\n');
 
+  // Inject relevant knowledge skills into prompt context
+  const knowledgeSkills = await selectKnowledgeSkills(input.observation, input.coop?.profile.id);
+  const knowledgeContext =
+    knowledgeSkills.length > 0
+      ? `Domain knowledge:\n${knowledgeSkills.map((s) => `### ${s.name}\n${truncateWords(s.content, 80)}`).join('\n\n')}`
+      : '';
+
+  const memoryContext =
+    input.memories.length > 0
+      ? `Agent memories:\n${input.memories
+          .map(
+            (m) =>
+              `- [${m.type}] ${truncateWords(m.content, 40)} (confidence: ${m.confidence.toFixed(2)})`,
+          )
+          .join('\n')}`
+      : '';
+
   const prompt = [
     coopContext,
+    ...(knowledgeContext ? [knowledgeContext] : []),
+    ...(memoryContext ? [memoryContext] : []),
     sourceContext,
     candidateContext,
     scoreContext,
@@ -485,9 +546,10 @@ async function completeSkill<T>(input: {
   scores: GrantFitScore[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  memories: AgentMemory[];
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const { manifest } = input;
-  const prepared = buildSkillPrompt(input);
+  const prepared = await buildSkillPrompt(input);
   const preferredProvider = inferPreferredProvider(manifest);
   const result = await completeSkillOutput<T>({
     preferredProvider,
@@ -693,11 +755,14 @@ async function dispatchActionProposal(input: {
 }
 
 async function buildSkillContext(observation: AgentObservation): Promise<SkillExecutionContext> {
-  const [coops, draft, capture, authSession] = await Promise.all([
+  const [coops, draft, capture, authSession, memories] = await Promise.all([
     getCoops(),
     observation.draftId ? getReviewDraft(db, observation.draftId) : Promise.resolve(null),
     observation.captureId ? db.receiverCaptures.get(observation.captureId) : Promise.resolve(null),
     getAuthSession(db),
+    observation.coopId
+      ? queryMemoriesForSkill(db, observation.coopId, observation.trigger)
+      : Promise.resolve([]),
   ]);
   const coop =
     (observation.coopId
@@ -726,7 +791,125 @@ async function buildSkillContext(observation: AgentObservation): Promise<SkillEx
     createdDraftIds: [],
     relatedDrafts,
     relatedArtifacts: coop?.artifacts ?? [],
+    memories,
   };
+}
+
+function extractMemoriesFromOutput(
+  schemaRef: SkillOutputSchemaRef,
+  output: unknown,
+): Array<{
+  type: AgentMemory['type'];
+  content: string;
+  confidence: number;
+  domain: string;
+  expiresAt?: string;
+}> {
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  switch (schemaRef) {
+    case 'opportunity-extractor-output': {
+      const typed = output as OpportunityExtractorOutput;
+      if (!typed.candidates?.length) return [];
+      const topTitles = typed.candidates
+        .slice(0, 3)
+        .map((c) => c.title)
+        .join(', ');
+      return [
+        {
+          type: 'observation-outcome',
+          content: `Extracted ${typed.candidates.length} opportunity candidates: ${topTitles}`,
+          confidence: 0.7,
+          domain: 'opportunities',
+          expiresAt: thirtyDaysFromNow,
+        },
+      ];
+    }
+    case 'theme-clusterer-output': {
+      const typed = output as ThemeClustererOutput;
+      if (!typed.themes?.length) return [];
+      const labels = typed.themes.map((t) => t.label).join(', ');
+      return [
+        {
+          type: 'domain-pattern',
+          content: `Emerging themes: ${labels}`,
+          confidence: 0.65,
+          domain: 'themes',
+        },
+      ];
+    }
+    case 'review-digest-output': {
+      const typed = output as ReviewDigestOutput;
+      if (!typed.digestMarkdown && !typed.summary) return [];
+      return [
+        {
+          type: 'coop-context',
+          content: `Review digest: ${truncateWords(typed.digestMarkdown ?? typed.summary ?? '', 60)}`,
+          confidence: 0.8,
+          domain: 'reviews',
+        },
+      ];
+    }
+    case 'capital-formation-brief-output': {
+      const typed = output as CapitalFormationBriefOutput;
+      return [
+        {
+          type: 'observation-outcome',
+          content: `Capital formation brief: ${typed.title} — ${truncateWords(typed.rationale, 40)}`,
+          confidence: 0.75,
+          domain: 'funding',
+          expiresAt: thirtyDaysFromNow,
+        },
+      ];
+    }
+    case 'publish-readiness-check-output': {
+      const typed = output as PublishReadinessCheckOutput;
+      const suggestions = typed.suggestions?.join('; ') ?? 'none';
+      return [
+        {
+          type: 'skill-pattern',
+          content: `Publish readiness: ${typed.ready ? 'ready' : 'not ready'}. Suggestions: ${suggestions}`,
+          confidence: 0.7,
+          domain: 'publishing',
+          expiresAt: thirtyDaysFromNow,
+        },
+      ];
+    }
+    default:
+      // Green Goods, ERC-8004, grant-fit-scorer, ecosystem-entity-extractor,
+      // and other transactional/scoring skills — no memories
+      return [];
+  }
+}
+
+async function writeSkillMemories(
+  schemaRef: SkillOutputSchemaRef,
+  output: unknown,
+  observation: AgentObservation,
+  skillRunId: string,
+): Promise<void> {
+  try {
+    const entries = extractMemoriesFromOutput(schemaRef, output);
+    if (entries.length === 0) return;
+    const coopId = observation.coopId;
+    if (!coopId) return;
+
+    for (const entry of entries) {
+      await createAgentMemory(db, {
+        coopId,
+        type: entry.type,
+        content: entry.content,
+        confidence: entry.confidence,
+        domain: entry.domain,
+        expiresAt: entry.expiresAt,
+        sourceObservationId: observation.id,
+        sourceSkillRunId: skillRunId,
+      });
+    }
+  } catch (error) {
+    // Fire-and-forget: never break the agent cycle
+    console.warn('[agent-memory] Failed to write skill memories:', error);
+  }
 }
 
 async function runObservationPlan(observation: AgentObservation): Promise<AgentCycleResult> {
@@ -743,6 +926,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         blockedReason: dismissalReason,
       }),
     );
+    void logObservationDismissed({ observationId: observation.id, reason: dismissalReason });
     return {
       processedObservationIds: [observation.id],
       createdPlanIds: [],
@@ -750,6 +934,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
 
@@ -784,7 +969,10 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
     completedSkillRunIds: [],
     autoExecutedActionCount: 0,
     errors: [],
+    skillRunMetrics: [],
   };
+
+  void logObservationStart({ observationId: observation.id, trigger: observation.trigger });
 
   let workingPlan = plan;
   let workingObservation = updateAgentObservation(observation, {
@@ -854,6 +1042,45 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       continue;
     }
 
+    // Evaluate skip condition before running skill
+    if (
+      shouldSkipSkill(registered.manifest.skipWhen, {
+        candidates: context.candidates,
+        scores: context.scores,
+        draft: context.draft,
+        coop: context.coop,
+      })
+    ) {
+      const skippedStep = createAgentPlanStep({
+        skillId,
+        provider: inferPreferredProvider(registered.manifest),
+        summary: registered.manifest.description,
+        startedAt: nowIso(),
+      });
+      workingPlan = updateAgentPlan(workingPlan, {
+        steps: [
+          ...workingPlan.steps,
+          updateAgentPlanStep(skippedStep, { status: 'skipped', finishedAt: nowIso() }),
+        ],
+      });
+      await saveAgentPlan(db, workingPlan);
+      void logSkillComplete({
+        skillId,
+        observationId: observation.id,
+        provider: inferPreferredProvider(registered.manifest),
+        durationMs: 0,
+        skipped: true,
+      });
+      result.skillRunMetrics.push({
+        skillId,
+        provider: inferPreferredProvider(registered.manifest),
+        durationMs: 0,
+        retryCount: 0,
+        skipped: true,
+      });
+      continue;
+    }
+
     const step = createAgentPlanStep({
       skillId,
       provider: inferPreferredProvider(registered.manifest),
@@ -875,6 +1102,11 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       promptHash: `${registered.manifest.id}:${observation.id}:${observation.updatedAt}`,
     });
     await saveSkillRun(db, run);
+    void logSkillStart({
+      skillId,
+      observationId: observation.id,
+      provider: inferPreferredProvider(registered.manifest),
+    });
 
     try {
       const completed = await completeSkill({
@@ -888,6 +1120,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         scores: context.scores,
         relatedDrafts: context.relatedDrafts,
         relatedArtifacts: context.relatedArtifacts,
+        memories: context.memories,
       });
 
       let output = completed.output;
@@ -1216,7 +1449,22 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
 
       run = completeSkillRun(run, output);
       await saveSkillRun(db, run);
+      void writeSkillMemories(registered.manifest.outputSchemaRef, output, observation, run.id);
       result.completedSkillRunIds.push(run.id);
+      result.skillRunMetrics.push({
+        skillId,
+        provider: completed.provider,
+        durationMs: completed.durationMs,
+        retryCount: 0,
+        skipped: false,
+      });
+      void logSkillComplete({
+        skillId,
+        observationId: observation.id,
+        provider: completed.provider,
+        model: completed.model,
+        durationMs: completed.durationMs,
+      });
 
       currentStep = updateAgentPlanStep(currentStep, {
         provider: completed.provider,
@@ -1234,6 +1482,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       const message = error instanceof Error ? error.message : `Skill ${skillId} failed.`;
       run = failSkillRun(run, message);
       await saveSkillRun(db, run);
+      void logSkillFailed({ skillId, observationId: observation.id, error: message });
 
       currentStep = updateAgentPlanStep(currentStep, {
         status: 'failed',
@@ -1298,6 +1547,7 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
 
@@ -1313,8 +1563,12 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       completedSkillRunIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      skillRunMetrics: [],
     } satisfies AgentCycleResult;
   }
+
+  const cycleStart = Date.now();
+  const traceId = await logCycleStart(pendingObservations.length);
 
   await setCycleState({
     running: true,
@@ -1331,6 +1585,8 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     completedSkillRunIds: [],
     autoExecutedActionCount: 0,
     errors: [],
+    traceId,
+    skillRunMetrics: [],
   };
 
   try {
@@ -1341,10 +1597,23 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     );
 
     for (const observation of runnableObservations.slice(0, 8)) {
+      // Stall detection: skip observations that have failed too many times
       const priorPlans = await listAgentPlansByObservationId(db, observation.id);
       if (priorPlans.some((plan) => plan.status === 'executing')) {
         continue;
       }
+      const failedPlanCount = priorPlans.filter((plan) => plan.status === 'failed').length;
+      if (failedPlanCount >= AGENT_MAX_CONSECUTIVE_FAILURES) {
+        await saveAgentObservation(
+          db,
+          updateAgentObservation(observation, {
+            status: 'stalled',
+            blockedReason: `Stalled after ${failedPlanCount} consecutive failures.`,
+          }),
+        );
+        continue;
+      }
+
       const observationResult = await runObservationPlan(observation);
       result.processedObservationIds.push(...observationResult.processedObservationIds);
       result.createdPlanIds.push(...observationResult.createdPlanIds);
@@ -1352,18 +1621,30 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       result.completedSkillRunIds.push(...observationResult.completedSkillRunIds);
       result.autoExecutedActionCount += observationResult.autoExecutedActionCount;
       result.errors.push(...observationResult.errors);
+      result.skillRunMetrics.push(...observationResult.skillRunMetrics);
     }
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : 'Agent cycle failed.');
   } finally {
+    void pruneExpiredMemories(db).catch((err) => {
+      console.warn('[agent-memory] Failed to prune expired memories:', err);
+    });
+    result.totalDurationMs = Date.now() - cycleStart;
     await setCycleState({
       running: false,
       lastCompletedAt: nowIso(),
       lastError: result.errors[0],
+      consecutiveFailureCount:
+        result.errors.length > 0 ? (cycleState.consecutiveFailureCount ?? 0) + 1 : 0,
     });
     if (request) {
       await setSetting(AGENT_SETTING_KEYS.cycleRequest, null);
     }
+    void logCycleEnd({
+      processedCount: result.processedObservationIds.length,
+      errorCount: result.errors.length,
+      durationMs: result.totalDurationMs,
+    });
   }
 
   return result;

@@ -675,6 +675,30 @@ export function resolveScopedActionPayload(input: {
         targetIds: [gardenAddress.value, ...addAdmins.value, ...removeAdmins.value],
       };
     }
+    case 'erc8004-register-agent': {
+      const coopId = readRequiredString(input.payload, 'coopId');
+      if (!coopId.ok) return coopId;
+      const scopeValidation = validateExpectedCoopId(coopId.value, input.expectedCoopId);
+      if (!scopeValidation.ok) return scopeValidation;
+      return {
+        ok: true,
+        coopId: coopId.value,
+        normalizedPayload: { ...input.payload, coopId: coopId.value },
+        targetIds: [],
+      };
+    }
+    case 'erc8004-give-feedback': {
+      const coopId = readRequiredString(input.payload, 'coopId');
+      if (!coopId.ok) return coopId;
+      const scopeValidation = validateExpectedCoopId(coopId.value, input.expectedCoopId);
+      if (!scopeValidation.ok) return scopeValidation;
+      return {
+        ok: true,
+        coopId: coopId.value,
+        normalizedPayload: { ...input.payload, coopId: coopId.value },
+        targetIds: [],
+      };
+    }
   }
 }
 

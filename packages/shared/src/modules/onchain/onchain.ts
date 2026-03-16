@@ -1,12 +1,22 @@
 import { toSafeSmartAccount } from 'permissionless/accounts';
 import { createSmartAccountClient } from 'permissionless/clients';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
-import { http, type Account, createPublicClient, zeroAddress } from 'viem';
+import {
+  http,
+  type Account,
+  decodeAbiParameters,
+  encodeAbiParameters,
+  keccak256,
+  parseAbiParameters,
+  toHex,
+  zeroAddress,
+} from 'viem';
 import type { WebAuthnAccount } from 'viem/account-abstraction';
 import { arbitrum, sepolia } from 'viem/chains';
 import { type AuthSession, type CoopChainKey, onchainStateSchema } from '../../contracts/schema';
 import { toDeterministicAddress, toDeterministicBigInt } from '../../utils';
 import { restorePasskeyAccount } from '../auth/auth';
+import { createCoopPublicClient } from './provider';
 
 export type CoopOnchainMode = 'live' | 'mock';
 
@@ -87,10 +97,7 @@ export async function deployCoopSafeAccount(input: {
   const chainKey = input.chainKey ?? 'sepolia';
   const config = getCoopChainConfig(chainKey);
   const bundlerUrl = buildPimlicoRpcUrl(chainKey, input.pimlicoApiKey);
-  const publicClient = createPublicClient({
-    chain: config.chain,
-    transport: http(config.chain.rpcUrls.default.http[0]),
-  });
+  const publicClient = await createCoopPublicClient(chainKey);
   const account = await toSafeSmartAccount({
     client: publicClient,
     owners: [input.sender],
@@ -172,4 +179,77 @@ export function createUnavailableOnchainState(input: {
     safeCapability: 'unavailable',
     statusNote: `${describeOnchainModeSummary({ mode: 'live', chainKey })} is unavailable until passkeys and Pimlico are configured.`,
   });
+}
+
+/**
+ * 4-byte function selector for `coopArchiveAnchor(string,string,string,string,string)`.
+ * Computed as `bytes4(keccak256("coopArchiveAnchor(string,string,string,string,string)"))`.
+ * Used as a prefix so indexers can identify anchor calldata in self-transactions.
+ */
+const ARCHIVE_ANCHOR_SELECTOR = keccak256(
+  toHex('coopArchiveAnchor(string,string,string,string,string)'),
+).slice(0, 10) as `0x${string}`;
+
+const archiveAnchorParamTypes = parseAbiParameters(
+  'string rootCid, string pieceCid, string scope, string coopId, string timestamp',
+);
+
+/**
+ * Encodes archive anchor calldata for a 0-value self-transaction from the Safe.
+ * The calldata is structured as a 4-byte selector followed by ABI-encoded parameters,
+ * making it decodable by any indexer that knows the selector.
+ */
+export function encodeArchiveAnchorCalldata(input: {
+  rootCid: string;
+  pieceCid?: string;
+  scope: 'artifact' | 'snapshot';
+  coopId: string;
+  timestamp: string;
+}): `0x${string}` {
+  const encoded = encodeAbiParameters(archiveAnchorParamTypes, [
+    input.rootCid,
+    input.pieceCid ?? '',
+    input.scope,
+    input.coopId,
+    input.timestamp,
+  ]);
+
+  // Concatenate selector + encoded params (drop the 0x from encoded)
+  return `${ARCHIVE_ANCHOR_SELECTOR}${encoded.slice(2)}` as `0x${string}`;
+}
+
+/**
+ * Decodes archive anchor calldata previously encoded with `encodeArchiveAnchorCalldata`.
+ * Returns null if the data does not match the expected selector or is malformed.
+ */
+export function decodeArchiveAnchorCalldata(data: `0x${string}`): {
+  rootCid: string;
+  pieceCid?: string;
+  scope: string;
+  coopId: string;
+  timestamp: string;
+} | null {
+  try {
+    // Need at least selector (4 bytes = 8 hex chars) + some encoded data
+    if (data.length <= 10) return null;
+
+    const selector = data.slice(0, 10);
+    if (selector !== ARCHIVE_ANCHOR_SELECTOR) return null;
+
+    const encodedParams = `0x${data.slice(10)}` as `0x${string}`;
+    const [rootCid, pieceCid, scope, coopId, timestamp] = decodeAbiParameters(
+      archiveAnchorParamTypes,
+      encodedParams,
+    );
+
+    return {
+      rootCid,
+      pieceCid: pieceCid || undefined,
+      scope,
+      coopId,
+      timestamp,
+    };
+  } catch {
+    return null;
+  }
 }

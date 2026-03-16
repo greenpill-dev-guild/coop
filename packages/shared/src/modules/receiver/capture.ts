@@ -8,7 +8,7 @@ import {
   type ReceiverSyncEnvelope,
   receiverSyncEnvelopeSchema,
 } from '../../contracts/schema';
-import { createId, nowIso } from '../../utils';
+import { base64ToBytes, bytesToBase64, bytesToBase64Url, createId, nowIso } from '../../utils';
 import { assertReceiverCaptureSize, assertReceiverEnvelopeAssetSize } from './limits';
 import { assertReceiverPairingRecord } from './pairing';
 
@@ -23,23 +23,6 @@ function formatCaptureLabel(kind: ReceiverCaptureKind) {
     case 'link':
       return 'Shared link';
   }
-}
-
-function toBase64(bytes: Uint8Array) {
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function toBase64Url(bytes: Uint8Array) {
-  return toBase64(bytes).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '');
-}
-
-function fromBase64(value: string) {
-  const binary = atob(value);
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 async function readBlobBytes(blob: Blob) {
@@ -105,7 +88,7 @@ async function signReceiverSyncEnvelope(
     key,
     encoder.encode(serializeReceiverSyncSignatureInput(capture, asset)),
   );
-  return toBase64Url(new Uint8Array(signature));
+  return bytesToBase64Url(new Uint8Array(signature));
 }
 
 export function createReceiverDeviceIdentity(label = 'Pocket Receiver'): ReceiverDeviceIdentity {
@@ -221,7 +204,7 @@ export async function blobToReceiverSyncAsset(
   assertReceiverCaptureSize(capture.kind, blob.size);
 
   const bytes = await readBlobBytes(blob);
-  const dataBase64 = toBase64(bytes);
+  const dataBase64 = bytesToBase64(bytes);
   assertReceiverEnvelopeAssetSize(capture.kind, dataBase64);
 
   return {
@@ -234,7 +217,7 @@ export async function blobToReceiverSyncAsset(
 }
 
 export function receiverSyncAssetToBlob(asset: ReceiverSyncAsset) {
-  const bytes = fromBase64(asset.dataBase64);
+  const bytes = base64ToBytes(asset.dataBase64);
   return new Blob([bytes], {
     type: asset.mimeType,
   });

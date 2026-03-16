@@ -1,0 +1,17 @@
+{
+  "id": "erc8004-feedback",
+  "version": "0.1.0",
+  "description": "Submit reputation feedback to ERC-8004 after archive anchor or peer sync success.",
+  "runtime": "extension-offscreen",
+  "model": "heuristic",
+  "triggers": ["erc8004-feedback-due"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "erc8004-feedback-output",
+  "allowedTools": ["read-coop-context"],
+  "allowedActionClasses": ["erc8004-give-feedback"],
+  "requiredCapabilities": [],
+  "approvalMode": "auto-run-eligible",
+  "timeoutMs": 30000,
+  "depends": [],
+  "provides": ["agent-feedback"]
+}

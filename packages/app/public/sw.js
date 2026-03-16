@@ -3,7 +3,10 @@ const ASSET_CACHE = 'coop-receiver-assets-v2';
 const ROUTE_SHELLS = ['/', '/pair', '/receiver', '/inbox'];
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
+  '/branding/coop-mark-flat-192.png',
+  '/branding/coop-mark-flat-512.png',
   '/branding/coop-mark-flat.png',
+  '/branding/coop-mark-glow-512.png',
   '/branding/coop-mark-glow.png',
   '/branding/coop-wordmark-flat.png',
   '/branding/coop-wordmark-glow.png',
@@ -44,12 +47,23 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/receiver' &&
     (url.searchParams.has('title') || url.searchParams.has('text') || url.searchParams.has('url'));
 
+  // Sensitive routes (pairing payload, share params) are network-first.
+  // Offline fallback intentionally serves the bare shell without query params
+  // to avoid caching secrets. The app handles missing params gracefully.
   if (includesSensitivePairingMaterial || includesReceiverSharePayload) {
-    event.respondWith(fetch(request));
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const shell = await caches.match(url.pathname === '/pair' ? '/pair' : '/receiver');
+        return shell || (await caches.match('/')) || new Response('Offline', { status: 503 });
+      }),
+    );
     return;
   }
 
-  if (request.mode === 'navigate' && ROUTE_SHELLS.includes(url.pathname)) {
+  if (
+    request.mode === 'navigate' &&
+    (ROUTE_SHELLS.includes(url.pathname) || url.pathname.startsWith('/board/'))
+  ) {
     event.respondWith(
       fetch(request)
         .then((response) => {
