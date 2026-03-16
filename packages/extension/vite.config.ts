@@ -61,12 +61,67 @@ function receiverManifestPlugin(rawReceiverAppUrl?: string) {
   };
 }
 
+/**
+ * Replaces Vite's modulepreload polyfill with a service-worker-safe no-op.
+ * The default polyfill uses document/window APIs that crash MV3 service workers.
+ */
+function swSafePreloadPlugin() {
+  return {
+    name: 'sw-safe-preload',
+    renderChunk(code: string, chunk: { fileName: string }) {
+      if (chunk.fileName.includes('preload-helper')) {
+        return 'export const _ = (fn) => fn();';
+      }
+    },
+  };
+}
+
+/**
+ * Replaces permissionless's top-level dynamic `import("ox")` with a static import.
+ *
+ * permissionless@0.3.x treats `ox` as an optional peer dep and probes for it
+ * via a bare top-level `import("ox")` wrapped in try/catch. This crashes in
+ * Chrome MV3 service workers where `import()` is unconditionally forbidden.
+ * Since `ox` IS installed in this project (bundled statically), we can safely
+ * replace the dynamic probe with a static import.
+ */
+function swSafePermissionlessOxPlugin() {
+  return {
+    name: 'sw-safe-permissionless-ox',
+    transform(code: string, id: string) {
+      if (!id.includes('permissionless') || !id.endsWith('utils/ox.js')) return;
+      return {
+        code: `
+import * as ox from "ox";
+export async function getOxModule() { return ox; }
+export function hasOxModule() { return true; }
+export async function getOxExports() {
+  return {
+    Base64: ox.Base64,
+    Hex: ox.Hex,
+    PublicKey: ox.PublicKey,
+    Signature: ox.Signature,
+    WebAuthnP256: ox.WebAuthnP256,
+  };
+}
+`,
+        map: null,
+      };
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const envDir = path.resolve(__dirname, '../..');
   const env = loadEnv(mode, envDir, '');
 
   return {
-    plugins: [react(), receiverManifestPlugin(env.VITE_COOP_RECEIVER_APP_URL)],
+    plugins: [
+      react(),
+      receiverManifestPlugin(env.VITE_COOP_RECEIVER_APP_URL),
+      swSafePreloadPlugin(),
+      swSafePermissionlessOxPlugin(),
+    ],
     envDir,
     publicDir: 'public',
     resolve: {
@@ -88,6 +143,18 @@ export default defineConfig(({ mode }) => {
           background: path.resolve(__dirname, 'src/background.ts'),
           'inference-worker': path.resolve(__dirname, 'src/runtime/inference-worker.ts'),
           'agent-webllm-worker': path.resolve(__dirname, 'src/runtime/agent-webllm-worker.ts'),
+        },
+        treeshake: {
+          moduleSideEffects(id) {
+            // Mark shared source and Semaphore-related packages as side-effect-free
+            // so Rollup can drop unused proof/WASM code from the background SW.
+            if (id.includes('/packages/shared/src/')) return false;
+            if (id.includes('@semaphore-protocol')) return false;
+            if (id.includes('snarkjs')) return false;
+            if (id.includes('ffjavascript')) return false;
+            if (id.includes('@zk-kit')) return false;
+            return true;
+          },
         },
         output: {
           entryFileNames: (chunkInfo) => {

@@ -22,10 +22,9 @@ import {
 import {
   createMembershipGroup,
   createPrivacyIdentity,
-  generateMembershipProof,
   restorePrivacyIdentity,
-  verifyMembershipProof,
 } from '../membership';
+import { generateMembershipProof, verifyMembershipProof } from '../membership-proof';
 
 describe('privacy membership', () => {
   beforeEach(() => {

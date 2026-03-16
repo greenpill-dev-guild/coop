@@ -26,6 +26,7 @@ import {
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import { validateReviewDraftPublish } from '../../runtime/review';
 import { db, getCoops } from '../context';
+import { refreshStoredPermitStatuses } from '../dashboard';
 import {
   findAuthenticatedCoopMember,
   getTrustedNodeContext,
@@ -338,7 +339,6 @@ export async function handleExecuteWithPermit(
 }
 
 export async function handleGetPermits(): Promise<RuntimeActionResponse<ExecutionPermit[]>> {
-  const { refreshStoredPermitStatuses } = await import('../dashboard');
   const trustedNodeContext = await getTrustedNodeContext();
   if (!trustedNodeContext.ok) return { ok: true, data: [] };
   return {

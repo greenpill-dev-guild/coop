@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { type CoopDexie, createCoopDb } from '../../storage/db';
 import { generateAnonymousPublishProof } from '../anonymous-publish';
 import { initializeCoopPrivacy, initializeMemberPrivacy } from '../lifecycle';
-import { verifyMembershipProof } from '../membership';
+import { verifyMembershipProof } from '../membership-proof';
 
 const databases: CoopDexie[] = [];
 

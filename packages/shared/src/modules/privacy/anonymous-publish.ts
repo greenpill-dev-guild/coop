@@ -1,7 +1,8 @@
 import { Identity } from '@semaphore-protocol/core';
 import type { MembershipProof } from '../../contracts/schema';
 import { type CoopDexie, getPrivacyIdentitiesForCoop, getPrivacyIdentity } from '../storage/db';
-import { createMembershipGroup, generateMembershipProof } from './membership';
+import { createMembershipGroup } from './membership';
+import { generateMembershipProof } from './membership-proof';
 
 /**
  * Generate a Semaphore membership proof for anonymous publishing.

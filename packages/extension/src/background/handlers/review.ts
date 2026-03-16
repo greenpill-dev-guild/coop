@@ -1,7 +1,6 @@
 import {
   type CoopSharedState,
   type ReviewDraft,
-  generateAnonymousPublishProof,
   getAuthSession,
   getReviewDraft,
   nowIso,
@@ -53,19 +52,10 @@ export async function publishDraftWithContext(input: {
   let nextStates = published.nextStates;
 
   if (input.anonymous && input.activeMemberId) {
-    let membershipProof = null;
-    try {
-      const originId = artifacts[0]?.originId;
-      if (originId && input.activeCoopId) {
-        membershipProof = await generateAnonymousPublishProof(db, {
-          coopId: input.activeCoopId,
-          memberId: input.activeMemberId,
-          artifactOriginId: originId,
-        });
-      }
-    } catch (proofError) {
-      console.warn('[coop:privacy] Failed to generate membership proof:', proofError);
-    }
+    // TODO: Delegate ZK proof generation to the offscreen document.
+    // generateAnonymousPublishProof pulls in snarkjs WASM workers
+    // (URL.createObjectURL + new Worker) which are unavailable in MV3 service workers.
+    const membershipProof = null;
 
     artifacts = artifacts.map((a) => ({
       ...a,
