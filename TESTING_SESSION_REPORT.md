@@ -7,6 +7,39 @@
 
 ---
 
+## 🔗 Quick Links
+
+### Testing Infrastructure
+- **[TESTING_ISSUES.md](TESTING_ISSUES.md)** – Centralized issue tracker (14 issues: 1 blocker, 8 major, 5 minor)
+- **[SETUP_FOR_TESTING.md](SETUP_FOR_TESTING.md)** – Complete setup walkthrough (10KB+)
+- **[START_HERE.md](START_HERE.md)** – Entry point for testing
+- **[QUICK_TEST_REFERENCE.md](QUICK_TEST_REFERENCE.md)** – One-page cheat sheet
+
+### Issue & Fix Documentation
+- **[ISSUE_001_COOP_CREATION_BLOCKER.md](ISSUE_001_COOP_CREATION_BLOCKER.md)** – Detailed blocker report with repro steps
+- **[BLOCKER_FIX_PROPOSAL.md](BLOCKER_FIX_PROPOSAL.md)** – Technical fix proposal with code changes (ready to implement)
+
+### Testing Guides
+- **[ALTERNATIVE_TESTING_GUIDANCE.md](ALTERNATIVE_TESTING_GUIDANCE.md)** – Alternative testing roadmap (11KB+, 6 testing areas)
+- **[PARALLEL_FIX_AND_TEST.md](PARALLEL_FIX_AND_TEST.md)** – Coordination document for parallel work
+
+### Analysis & Intelligence
+- **[AFO_DEVELOPMENT_REPORT.md](AFO_DEVELOPMENT_REPORT.md)** – Analysis of 10 major developments (signaling refactor, agent v2, PWA polish, etc.)
+- **[EXTENSION_APP_STRUCTURE_MAP.md](EXTENSION_APP_STRUCTURE_MAP.md)** – Visual architecture guide (20KB+ with ASCII diagrams of all tabs)
+
+### Feedback Templates
+- **[FEEDBACK_LANDING_PAGE.md](FEEDBACK_LANDING_PAGE.md)** – Landing page review template
+- **[FEEDBACK_RECEIVER_UX.md](FEEDBACK_RECEIVER_UX.md)** – PWA receiver UX template
+- **[FEEDBACK_EXTENSION_POLISH.md](FEEDBACK_EXTENSION_POLISH.md)** – Extension UI polish template
+- **[FEEDBACK_QUALITATIVE.md](FEEDBACK_QUALITATIVE.md)** – Qualitative assessment template (brand, clarity, completeness)
+
+### Reference Documents
+- **[GIT_STATUS_REPORT.md](GIT_STATUS_REPORT.md)** – Branch status & merge analysis
+- **[MESSAGE_TO_AFO_FINAL.md](MESSAGE_TO_AFO_FINAL.md)** – Message to Afo with findings
+- **[EXTENSION_APP_STRUCTURE_MAP.md](EXTENSION_APP_STRUCTURE_MAP.md)** – Complete UI/component map with all flows
+
+---
+
 ## Executive Summary
 
 Testing session began with successful extension load and environment setup. Core Flow 1 (Extension Basics) identified 6 major UX issues. Flow 2 (Coop Creation) hit a **blocker: WebAuthn credential error** preventing downstream testing. Parallel approach: agents implementing fix while tester conducted alternative testing on landing page, receiver PWA, and app UX. Sessions are now ready to resume core flows once blocker is cleared.
