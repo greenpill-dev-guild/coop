@@ -1,0 +1,106 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    UPDATE TO LATEST – COPY & PASTE                           ║
+║                    (2026-03-16 13:21 UTC – Afo's main)                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+STEP 1: Backup current branch
+────────────────────────────────
+
+  cd /root/Zettelkasten/03\ Libraries/coop
+  git branch backup/luiz-testing-2026-03-16
+
+
+STEP 2: Fetch latest from Afo
+────────────────────────────────
+
+  git fetch origin
+
+
+STEP 3: Merge into your branch
+────────────────────────────────
+
+  git merge origin/main -m "merge: pull latest from Afo's main branch for testing"
+
+
+STEP 4: Reinstall dependencies
+────────────────────────────────
+
+  bun install
+
+
+STEP 5: Kill all dev servers
+────────────────────────────────
+
+  Ctrl+C in each terminal tab (dev:app, dev:extension, dev:api)
+
+
+STEP 6: Restart dev servers (in 3 new tabs)
+────────────────────────────────────────────
+
+  Tab 1:  bun run dev:app
+  Tab 2:  bun run dev:extension
+  Tab 3:  bun run dev:api
+
+
+STEP 7: Reload extension in Chrome
+────────────────────────────────────
+
+  1. Open chrome://extensions/
+  2. Find "Coop" extension
+  3. Click the "Reload" button (↻)
+
+
+STEP 8: Ready to test!
+──────────────────────
+
+  Continue testing flows 1-6 with latest code
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+IF YOU HIT MERGE CONFLICTS:
+──────────────────────────
+
+  1. You'll see "CONFLICT" messages
+  2. Open files in Cursor (it has great conflict UI)
+  3. Resolve conflicts (usually just pick latest from Afo)
+  4. Run:  git add .
+  5. Run:  git commit -m "resolve: merge conflicts"
+  6. Continue with STEP 4 above
+
+
+IF SOMETHING GOES WRONG:
+────────────────────────
+
+  Revert to backup:
+
+    git reset --hard backup/luiz-testing-2026-03-16
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+KEY CHANGES IN THIS UPDATE:
+
+✅ MV3 Service Worker Compatibility Fix (important for Chrome!)
+✅ Signaling Server Refactor (packages/api with Hono + Bun)
+✅ Agent Runtime & Memory Layer
+✅ PWA UI Polish
+✅ Documentation updates
+✅ New CI/CD workflows
+
+════════════════════════════════════════════════════════════════════════════════
+
+WHAT STAYS WITH YOU (not overwritten):
+
+✅ TESTING_ISSUES.md (your bug tracker)
+✅ SETUP_FOR_TESTING.md (your testing guide)
+✅ QUICK_TEST_REFERENCE.md (your cheat sheet)
+✅ .openclaw/ (your personal config)
+✅ memory/ (your personal memory)
+
+════════════════════════════════════════════════════════════════════════════════
+
+Ready? Execute STEP 1 through STEP 8 in your terminal, then let me know status!
+
+════════════════════════════════════════════════════════════════════════════════
