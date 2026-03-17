@@ -6,6 +6,7 @@ import {
   extensionIconStateLabel,
 } from '../icon-state';
 import { defaultSoundPreferences, shouldPlaySound, soundPattern } from '../sound';
+import { detectAppSurface } from '../surface';
 
 describe('shared app helpers', () => {
   it('derives icon states, labels, and badges for all runtime cases', () => {
@@ -132,6 +133,71 @@ describe('shared app helpers', () => {
       canSaveFile: true,
       canSetBadge: true,
       canShare: true,
+    });
+  });
+
+  it('detects mobile app surfaces from standalone mode and platform context', () => {
+    const iosSurface = detectAppSurface({
+      innerWidth: 390,
+      matchMedia(query: string) {
+        return {
+          matches: query === '(display-mode: standalone)',
+        } as MediaQueryList;
+      },
+      navigator: {
+        standalone: true,
+        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        maxTouchPoints: 5,
+      } as unknown as Navigator,
+    } as unknown as typeof globalThis);
+
+    expect(iosSurface).toEqual({
+      isMobile: true,
+      isStandalone: true,
+      platform: 'ios',
+    });
+  });
+
+  it('falls back to coarse-pointer mobile detection when the user agent is ambiguous', () => {
+    const fallbackSurface = detectAppSurface({
+      innerWidth: 768,
+      matchMedia(query: string) {
+        return {
+          matches: query === '(pointer: coarse)',
+        } as MediaQueryList;
+      },
+      navigator: {
+        userAgent: 'Mozilla/5.0',
+        maxTouchPoints: 1,
+      } as unknown as Navigator,
+    } as unknown as typeof globalThis);
+
+    expect(fallbackSurface).toEqual({
+      isMobile: true,
+      isStandalone: false,
+      platform: 'unknown',
+    });
+  });
+
+  it('keeps standard desktop browsers out of the mobile bootstrap path', () => {
+    const desktopSurface = detectAppSurface({
+      innerWidth: 1280,
+      matchMedia() {
+        return {
+          matches: false,
+        } as MediaQueryList;
+      },
+      navigator: {
+        userAgent:
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15',
+        maxTouchPoints: 0,
+      } as unknown as Navigator,
+    } as unknown as typeof globalThis);
+
+    expect(desktopSurface).toEqual({
+      isMobile: false,
+      isStandalone: false,
+      platform: 'desktop',
     });
   });
 });

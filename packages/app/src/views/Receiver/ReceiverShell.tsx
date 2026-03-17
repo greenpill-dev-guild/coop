@@ -6,13 +6,15 @@ import { type ReceiverNavKind, receiverNavItems } from './icons';
 type ReceiverShellProps = {
   screenTitle: string;
   activeRoute: ReceiverNavKind;
-  navigate: (path: '/pair' | '/receiver' | '/inbox' | '/') => void;
+  navigate: (path: '/pair' | '/receiver' | '/inbox' | '/landing' | '/') => void;
   online: boolean;
   pairingStatusLabel: string;
   captureCount: number;
   message: string | null;
   pairedNestLabel: string | null;
   installPrompt: unknown;
+  showInstallNudge: boolean;
+  installNudgeMessage: string;
   canNotify: boolean;
   notificationsEnabled: boolean;
   onInstall: () => void;
@@ -31,6 +33,8 @@ export function ReceiverShell({
   message,
   pairedNestLabel,
   installPrompt,
+  showInstallNudge,
+  installNudgeMessage,
   canNotify,
   notificationsEnabled,
   onInstall,
@@ -69,10 +73,10 @@ export function ReceiverShell({
       <header className="receiver-topbar">
         <a
           className="receiver-mark-link"
-          href="/"
+          href="/receiver"
           onClick={(event) => {
             event.preventDefault();
-            navigate('/');
+            navigate('/receiver');
           }}
         >
           <img className="receiver-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
@@ -115,6 +119,26 @@ export function ReceiverShell({
           ) : null}
         </button>
 
+        {showInstallNudge ? (
+          <section className="receiver-install-banner">
+            <div className="receiver-install-copy">
+              <p className="eyebrow">Install</p>
+              <h2>Keep Coop one tap away.</h2>
+              <p className="quiet-note">{installNudgeMessage}</p>
+            </div>
+            <div className="receiver-install-actions">
+              {installPrompt ? (
+                <Button variant="primary" size="small" onClick={onInstall}>
+                  Install Coop
+                </Button>
+              ) : null}
+              <a className="button button-secondary button-small" href="/landing">
+                About Coop
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         <BottomSheet
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
@@ -147,6 +171,9 @@ export function ReceiverShell({
                 {notificationsEnabled ? 'Notifications off' : 'Notifications on'}
               </Button>
             ) : null}
+            <a className="button button-secondary button-small" href="/landing">
+              About Coop
+            </a>
           </div>
         </BottomSheet>
 

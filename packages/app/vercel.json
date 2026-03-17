@@ -3,6 +3,7 @@
   "buildCommand": "bun run vite build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/landing", "destination": "/index.html" },
     { "source": "/pair", "destination": "/index.html" },
     { "source": "/receiver", "destination": "/index.html" },
     { "source": "/inbox", "destination": "/index.html" },

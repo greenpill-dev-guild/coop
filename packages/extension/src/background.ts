@@ -198,7 +198,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
-  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
   await refreshBadge();
 });
 
@@ -211,6 +211,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
+  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
   await refreshBadge();
 });
 

@@ -1,7 +1,9 @@
 import {
+  type AppSurface,
   type CoopBoardSnapshot,
   type ReceiverPairingRecord,
   createCoopDb,
+  detectAppSurface,
   detectBrowserUxCapabilities,
   getActiveReceiverPairing,
   getReceiverPairingStatus,
@@ -59,7 +61,10 @@ export class ErrorBoundary extends React.Component<
 
 export const receiverDb = createCoopDb('coop-receiver');
 
+type AppPathname = '/' | '/landing' | '/pair' | '/receiver' | '/inbox';
+
 type RoutePath =
+  | { kind: 'root' }
   | { kind: 'landing' }
   | { kind: 'pair' }
   | { kind: 'receiver' }
@@ -71,21 +76,71 @@ type NavigatorWithUx = Navigator & {
   clearAppBadge?: () => Promise<void>;
 };
 
-function resolveRoute(pathname: string): RoutePath {
-  if (pathname === '/pair') {
+function normalizePathname(pathname: string) {
+  if (pathname !== '/' && pathname.endsWith('/')) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
+}
+
+export function resolveRoute(pathname: string): RoutePath {
+  const normalizedPath = normalizePathname(pathname);
+
+  if (normalizedPath === '/') {
+    return { kind: 'root' };
+  }
+  if (normalizedPath === '/landing') {
+    return { kind: 'landing' };
+  }
+  if (normalizedPath === '/pair') {
     return { kind: 'pair' };
   }
-  if (pathname === '/receiver') {
+  if (normalizedPath === '/receiver') {
     return { kind: 'receiver' };
   }
-  if (pathname === '/inbox') {
+  if (normalizedPath === '/inbox') {
     return { kind: 'inbox' };
   }
-  const boardMatch = pathname.match(/^\/board\/([^/]+)$/);
+  const boardMatch = normalizedPath.match(/^\/board\/([^/]+)$/);
   if (boardMatch?.[1]) {
     return { kind: 'board', coopId: decodeURIComponent(boardMatch[1]) };
   }
   return { kind: 'landing' };
+}
+
+export function resolveRootDestination(
+  surface: Pick<AppSurface, 'isMobile' | 'isStandalone'>,
+  hasActivePairing: boolean,
+): Extract<AppPathname, '/landing' | '/pair' | '/receiver'> {
+  if (!surface.isMobile && !surface.isStandalone) {
+    return '/landing';
+  }
+
+  return hasActivePairing ? '/receiver' : '/pair';
+}
+
+function resolveDocumentTitle(route: RoutePath) {
+  if (route.kind === 'pair') {
+    return 'Coop Mate';
+  }
+
+  if (route.kind === 'receiver') {
+    return 'Coop Hatch';
+  }
+
+  if (route.kind === 'inbox') {
+    return 'Coop Roost';
+  }
+
+  if (route.kind === 'board') {
+    return 'Coop Board';
+  }
+
+  return 'Coop | Turn knowledge into opportunity';
+}
+
+function supportsBridgeFlag(pathname: AppPathname) {
+  return pathname === '/pair' || pathname === '/receiver' || pathname === '/inbox';
 }
 
 function pairingStatusLabel(status?: ReturnType<typeof getReceiverPairingStatus>['status'] | null) {
@@ -121,6 +176,22 @@ export async function resetReceiverDb() {
   );
 }
 
+function RootBootstrapSplash() {
+  return (
+    <div className="boot-shell">
+      <div className="boot-card">
+        <img className="boot-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
+        <p className="eyebrow">Pocket Coop</p>
+        <h1>Opening your receiver.</h1>
+        <p className="quiet-note">
+          Coop is checking this device so it can drop you into pairing or capture without showing
+          the landing page first.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function RootApp({
   initialPairingInput,
   initialBoardSnapshot,
@@ -130,6 +201,8 @@ export function RootApp({
   initialBoardSnapshot?: CoopBoardSnapshot | null;
   initialShareInput?: ReceiverShareHandoff | null;
 } = {}) {
+  const appSurfaceRef = useRef(detectAppSurface(globalThis));
+  const appSurface = appSurfaceRef.current;
   const browserUxCapabilities = detectBrowserUxCapabilities(globalThis);
   const [route, setRoute] = useState<RoutePath>(() => resolveRoute(window.location.pathname));
   const [boardSnapshot] = useState<CoopBoardSnapshot | null>(initialBoardSnapshot ?? null);
@@ -218,18 +291,36 @@ export function RootApp({
   const { reconcilePairing, retrySync } = sync;
 
   // --- Navigation (with View Transitions API when available) ---
-  const navigate = useCallback(
-    (nextRoute: '/pair' | '/receiver' | '/inbox' | '/') => {
-      const nextUrl = bridgeOptimizationDisabled ? `${nextRoute}?bridge=off` : nextRoute;
-      window.history.pushState({}, '', nextUrl);
-      const nextPath = resolveRoute(nextRoute);
-      if (document.startViewTransition) {
-        document.startViewTransition(() => setRoute(nextPath));
-      } else {
-        setRoute(nextPath);
-      }
-    },
+  const toRouteUrl = useCallback(
+    (nextRoute: AppPathname) =>
+      bridgeOptimizationDisabled && supportsBridgeFlag(nextRoute)
+        ? `${nextRoute}?bridge=off`
+        : nextRoute,
     [bridgeOptimizationDisabled],
+  );
+
+  const transitionRoute = useCallback((nextPath: RoutePath) => {
+    if (document.startViewTransition) {
+      document.startViewTransition(() => setRoute(nextPath));
+    } else {
+      setRoute(nextPath);
+    }
+  }, []);
+
+  const navigate = useCallback(
+    (nextRoute: AppPathname) => {
+      window.history.pushState({}, '', toRouteUrl(nextRoute));
+      transitionRoute(resolveRoute(nextRoute));
+    },
+    [toRouteUrl, transitionRoute],
+  );
+
+  const replaceRoute = useCallback(
+    (nextRoute: AppPathname) => {
+      window.history.replaceState({}, '', toRouteUrl(nextRoute));
+      transitionRoute(resolveRoute(nextRoute));
+    },
+    [toRouteUrl, transitionRoute],
   );
 
   // --- Composite refresh ---
@@ -306,6 +397,10 @@ export function RootApp({
 
   // --- App-level effects ---
   useEffect(() => {
+    document.title = resolveDocumentTitle(route);
+  }, [route]);
+
+  useEffect(() => {
     void refreshLocalState();
 
     const onPopState = () => {
@@ -317,10 +412,35 @@ export function RootApp({
 
   // Toggle html class for receiver scroll containment
   useEffect(() => {
-    const isReceiver = route.kind !== 'landing' && route.kind !== 'board';
+    const isReceiver = route.kind === 'pair' || route.kind === 'receiver' || route.kind === 'inbox';
     document.documentElement.classList.toggle('has-receiver', isReceiver);
     return () => document.documentElement.classList.remove('has-receiver');
   }, [route.kind]);
+
+  // Root bootstrap route
+  useEffect(() => {
+    if (route.kind !== 'root') {
+      return;
+    }
+
+    if (!appSurface.isMobile && !appSurface.isStandalone) {
+      replaceRoute('/landing');
+      return;
+    }
+
+    let cancelled = false;
+    void getActiveReceiverPairing(receiverDb).then((nextPairing) => {
+      if (cancelled) {
+        return;
+      }
+      setPairing(nextPairing);
+      replaceRoute(resolveRootDestination(appSurface, Boolean(nextPairing)));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appSurface, replaceRoute, route.kind]);
 
   // Initial pairing handoff
   useEffect(() => {
@@ -428,15 +548,24 @@ export function RootApp({
     void badgeNavigator.clearAppBadge?.().catch(() => undefined);
   }, [browserUxCapabilities.canSetBadge, captures, receiverNotificationsEnabled]);
 
+  if (route.kind === 'root') {
+    return <RootBootstrapSplash />;
+  }
+
   if (route.kind === 'landing') {
-    return <LandingPage />;
+    return <LandingPage appHref="/pair" />;
   }
 
   if (route.kind === 'board') {
     return <BoardView coopId={route.coopId} snapshot={boardSnapshot} />;
   }
 
-  const screenTitle = route.kind === 'pair' ? 'Pair' : route.kind === 'inbox' ? 'Roost' : 'Hatch';
+  const screenTitle = route.kind === 'pair' ? 'Mate' : route.kind === 'inbox' ? 'Roost' : 'Hatch';
+  const installNudgeMessage = installPrompt
+    ? 'Install Coop for one-tap capture, home-screen launch, and better share-target behavior.'
+    : appSurface.platform === 'ios'
+      ? 'Add Coop to your Home Screen from Safari’s Share menu for the cleanest mobile capture flow.'
+      : 'Use your browser menu to install Coop for faster capture and easier return on this device.';
 
   return (
     <ReceiverShell
@@ -449,6 +578,8 @@ export function RootApp({
       message={message}
       pairedNestLabel={pairedNestLabel}
       installPrompt={installPrompt}
+      showInstallNudge={appSurface.isMobile && !appSurface.isStandalone}
+      installNudgeMessage={installNudgeMessage}
       canNotify={browserUxCapabilities.canNotify}
       notificationsEnabled={receiverNotificationsEnabled}
       onInstall={installApp}

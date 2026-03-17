@@ -2,7 +2,7 @@
   "name": "Coop Receiver",
   "short_name": "Coop",
   "description": "No more chickens loose. A local-first receiver nest for audio, photos, and files before they sync into Coop.",
-  "start_url": "/receiver",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -60,11 +60,5 @@
       "text": "text",
       "url": "url"
     }
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+coop-receiver",
-      "url": "/pair?payload=%s"
-    }
-  ]
+  }
 }

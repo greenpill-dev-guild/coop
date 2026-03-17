@@ -690,14 +690,6 @@ export function NestTab({
                 value={activeReceiverPairing.deepLink ?? ''}
               />
             </div>
-            <div className="field-grid">
-              <label htmlFor="receiver-pairing-protocol-link">Open Pocket Coop</label>
-              <input
-                id="receiver-pairing-protocol-link"
-                readOnly
-                value={activeReceiverProtocolLink}
-              />
-            </div>
             <div className="action-row">
               <button
                 className="secondary-button"
@@ -720,7 +712,7 @@ export function NestTab({
                 onClick={() => void copyText('Open Pocket Coop', activeReceiverProtocolLink)}
                 type="button"
               >
-                Copy open link
+                Copy open app link
               </button>
               <button
                 className="secondary-button"

@@ -67,7 +67,7 @@ describe('receiver app routes', () => {
       render(<RootApp />);
     });
 
-    expect(await screen.findByRole('heading', { name: /^Pair$/i })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
 
     fireEvent.change(screen.getByLabelText(/nest code or coop link/i), {
       target: { value: pairingCode },

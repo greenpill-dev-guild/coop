@@ -11,7 +11,6 @@ import {
   buildCoopArchiveStory,
   buildCoopBoardDeepLink,
   buildMeetingModeSections,
-  buildReceiverPairingProtocolLink,
   createCoopBoardSnapshot,
   defaultSignalingUrls,
   defaultSoundPreferences,
@@ -128,11 +127,8 @@ export function useDashboard() {
     : null;
 
   const activeReceiverProtocolLink = useMemo(
-    () =>
-      activeReceiverPairing?.pairingCode
-        ? buildReceiverPairingProtocolLink(activeReceiverPairing.pairingCode)
-        : '',
-    [activeReceiverPairing?.pairingCode],
+    () => activeReceiverPairing?.deepLink ?? '',
+    [activeReceiverPairing?.deepLink],
   );
 
   const receiverIntake = filterPrivateReceiverIntake(

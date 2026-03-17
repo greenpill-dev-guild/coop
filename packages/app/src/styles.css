@@ -151,10 +151,15 @@ pre {
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--coop-radius-pill);
   padding: 0.9rem 1.2rem;
   border: 1px solid transparent;
   transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .button:hover {
@@ -1229,6 +1234,36 @@ audio {
   text-align: left;
 }
 
+.receiver-install-banner {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: var(--coop-radius-card);
+  border: 1px solid var(--coop-line);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.94) 0%, rgba(255, 248, 242, 0.92) 100%);
+  box-shadow: var(--coop-shadow);
+}
+
+.receiver-install-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.receiver-install-copy h2 {
+  margin: 0;
+}
+
+.receiver-install-copy .quiet-note {
+  margin: 0;
+  font-size: 0.94rem;
+}
+
+.receiver-install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 /* ── Receiver: touch feedback ── */
 
 .receiver-shell button,
@@ -1337,6 +1372,44 @@ audio {
   line-height: 1.35;
 }
 
+.boot-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.12), transparent 24rem),
+    radial-gradient(circle at top right, rgba(253, 138, 1, 0.12), transparent 22rem),
+    linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 42%, #fffdfb 100%);
+}
+
+.boot-card {
+  max-width: 26rem;
+  padding: 1.5rem;
+  border-radius: var(--coop-radius-card-xl);
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 252, 249, 0.9);
+  box-shadow: var(--coop-shadow);
+  text-align: center;
+}
+
+.boot-card h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  line-height: 1.08;
+}
+
+.boot-card .quiet-note {
+  margin: 0.85rem 0 0;
+}
+
+.boot-mark {
+  width: 3.75rem;
+  height: 3.75rem;
+  margin-bottom: 1rem;
+  border-radius: var(--coop-radius-card);
+}
+
 .receiver-shell .eyebrow {
   font-size: 0.7rem;
   margin-bottom: 0.35rem;
@@ -1354,6 +1427,11 @@ audio {
 
   .receiver-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .receiver-install-banner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 }
 

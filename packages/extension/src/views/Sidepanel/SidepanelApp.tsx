@@ -14,13 +14,11 @@ import { InferenceBridge, type InferenceBridgeState } from '../../runtime/infere
 import { type AgentDashboardResponse, sendRuntimeMessage } from '../../runtime/messages';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { CoopSwitcher } from './CoopSwitcher';
-import { OnboardingOverlay } from './OnboardingOverlay';
 import { TabStrip } from './TabStrip';
 import { describeLocalHelperState, formatRoundUpTiming } from './helpers';
 import { useCoopForm } from './hooks/useCoopForm';
 import { useDashboard } from './hooks/useDashboard';
 import { useDraftEditor } from './hooks/useDraftEditor';
-import { useOnboarding } from './hooks/useOnboarding';
 import { useSyncBindings } from './hooks/useSyncBindings';
 import { useTabCapture } from './hooks/useTabCapture';
 import {
@@ -103,8 +101,6 @@ export function SidepanelApp() {
     configuredSignalingUrls,
     configuredReceiverAppUrl,
   } = useDashboard();
-
-  const onboarding = useOnboarding();
 
   // --- State not covered by hooks (kept local) ---
   const [inviteResult, setInviteResult] = useState<InviteCode | null>(null);
@@ -839,18 +835,8 @@ export function SidepanelApp() {
 
   // --- Main render ---
 
-  if (onboarding.loading) {
-    return null;
-  }
-
   return (
     <div className="coop-shell sidepanel-shell">
-      <OnboardingOverlay
-        step={onboarding.step}
-        onAdvance={onboarding.advance}
-        onDismiss={onboarding.dismiss}
-      />
-
       <header className="panel-header">
         <div className="panel-brand">
           <img src="/branding/coop-wordmark-flat.png" alt="Coop" />

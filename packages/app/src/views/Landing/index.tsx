@@ -59,7 +59,7 @@ Then produce:
 
 Return the output as concise editable JSON.`;
 
-export function App() {
+export function App({ appHref = '/pair' }: { appHref?: string }) {
   const [copied, setCopied] = useState(false);
   const copyStateText = useMemo(() => (copied ? 'Copied' : 'Copy helper prompt'), [copied]);
 
@@ -104,6 +104,9 @@ export function App() {
               </a>
               <a className="button button-secondary" href="#install">
                 Install extension
+              </a>
+              <a className="button button-secondary" href={appHref}>
+                Open receiver app
               </a>
             </div>
             <div className="quiet-note">
@@ -273,10 +276,11 @@ export function App() {
               </p>
             </article>
             <article className="nest-card">
-              <h3>Primary UX</h3>
+              <h3>Open the receiver app</h3>
               <p>
-                The sidepanel is home base for starting a coop, rounding up finds, checking the
-                Roost, and saving what matters. The popup stays compact and launcher-like.
+                On a phone, open the receiver shell directly to pair your device, capture notes, and
+                send private intake back into the extension. If you are already on a phone, go
+                straight to <a href={appHref}>the receiver app</a>.
               </p>
             </article>
           </div>

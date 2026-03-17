@@ -1,6 +1,6 @@
-const SHELL_CACHE = 'coop-receiver-shell-v2';
-const ASSET_CACHE = 'coop-receiver-assets-v2';
-const ROUTE_SHELLS = ['/', '/pair', '/receiver', '/inbox'];
+const SHELL_CACHE = 'coop-receiver-shell-v3';
+const ASSET_CACHE = 'coop-receiver-assets-v3';
+const ROUTE_SHELLS = ['/', '/landing', '/pair', '/receiver', '/inbox'];
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/branding/coop-mark-flat-192.png',
