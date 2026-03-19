@@ -1,6 +1,6 @@
 # Coop
 
-> No more chickens loose.
+![Coop No more Chickens running loose](https://media.discordapp.net/attachments/1334366927094677575/1483276398956118127/signal-2026-03-11-173838.png?ex=69ba004b&is=69b8aecb&hm=f30d70ad2b2baa3c187601210d55b7a80b89a1e5b4cd9406b45f2f6105535d73&=&format=webp&quality=lossless&width=2240&height=298)
 
 **A browser extension and companion PWA that captures scattered knowledge, refines it into clear opportunities, and gives groups a shared space to act on what matters.**
 
@@ -146,3 +146,5 @@ The goal is to make it easier for communities to move from context to coordinati
 ## Brand
 
 Coop uses chicken metaphors throughout. Open browser tabs are **Loose Chickens**. The review queue is the **Roost**. The shared feed is the **Coop Feed**. Creating a new shared space is **Launching the Coop**. The success chime is the **Rooster Call**.
+
+![Coop Logo](https://media.discordapp.net/attachments/1334366927094677575/1483276397873987786/signal-2026-03-11-143552.png?ex=69ba004b&is=69b8aecb&hm=e2bcc8442bb7287a93a879c5e7e7336f028564053b6cfaa58ffc135383ae0d5e&=&format=webp&quality=lossless&width=1080&height=1080)
