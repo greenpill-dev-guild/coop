@@ -17,6 +17,6 @@
       "@coop/shared/*": ["packages/shared/src/*"],
       "@coop/api": ["packages/api/config.ts"]
     },
-    "types": ["chrome", "node"]
+    "types": ["chrome", "node", "vite/client"]
   }
 }

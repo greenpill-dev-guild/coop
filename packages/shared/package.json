@@ -20,12 +20,9 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@coop/api": "workspace:*",
     "@rhinestone/module-sdk": "^0.4.0",
-    "@safe-global/protocol-kit": "^6.1.2",
-    "@safe-global/relay-kit": "^4.1.1",
-    "@safe-global/sdk-starter-kit": "^3.0.2",
-    "@safe-global/types-kit": "^3.0.0",
-    "@storacha/client": "^2.1.1",
+    "@storacha/client": "2.1.1",
     "@ucanto/principal": "^9.0.3",
     "dexie": "^4.0.10",
     "multiformats": "^13.3.6",
