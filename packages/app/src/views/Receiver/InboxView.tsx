@@ -3,6 +3,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { SyncPill } from '../../components/SyncPill';
 import { isSafeExternalUrl } from '../../url-safety';
+import { sizeLabel } from './format';
 import type { CaptureCard } from './index';
 
 type InboxViewProps = {
@@ -14,16 +15,6 @@ type InboxViewProps = {
   onDownloadCapture: (card: CaptureCard) => void;
   onRetrySync: (captureId: string) => void;
 };
-
-function sizeLabel(byteSize: number) {
-  if (byteSize < 1024) {
-    return `${byteSize} B`;
-  }
-  if (byteSize < 1024 * 1024) {
-    return `${Math.max(1, Math.round(byteSize / 102.4) / 10)} KB`;
-  }
-  return `${Math.max(0.1, Math.round(byteSize / (1024 * 102.4)) / 10)} MB`;
-}
 
 function receiverItemLabel(kind: ReceiverCapture['kind']) {
   switch (kind) {

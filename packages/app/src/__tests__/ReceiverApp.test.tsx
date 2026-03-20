@@ -41,9 +41,9 @@ describe('receiver app routes', () => {
 
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
     expect(screen.getByRole('navigation', { name: /receiver navigation/i })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Mate', exact: true })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Hatch', exact: true })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Roost', exact: true })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Mate' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Hatch' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
     expect(screen.getByRole('button', { name: /start recording/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /take photo/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /attach file/i })).toBeVisible();
@@ -169,7 +169,7 @@ describe('receiver app routes', () => {
     expect(screen.getByText(/local only/i)).toBeVisible();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('link', { name: 'Roost', exact: true }));
+      fireEvent.click(screen.getByRole('link', { name: 'Roost' }));
     });
 
     await waitFor(() => {
@@ -194,10 +194,10 @@ describe('receiver app routes', () => {
 
     expect((await screen.findAllByText('Shared Grant')).length).toBeGreaterThan(0);
     expect(screen.getByText(/shared link saved locally/i)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Roost', exact: true })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('link', { name: 'Roost', exact: true }));
+      fireEvent.click(screen.getByRole('link', { name: 'Roost' }));
     });
 
     expect(await screen.findByText('https://example.com/grant')).toBeVisible();

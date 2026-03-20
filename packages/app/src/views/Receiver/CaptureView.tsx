@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { SyncPill } from '../../components/SyncPill';
+import { sizeLabel } from './format';
 import type { CaptureCard } from './index';
 
 type CaptureViewProps = {
@@ -21,16 +22,6 @@ type CaptureViewProps = {
   onNavigateInbox: () => void;
   onNavigatePair: () => void;
 };
-
-function sizeLabel(byteSize: number) {
-  if (byteSize < 1024) {
-    return `${byteSize} B`;
-  }
-  if (byteSize < 1024 * 1024) {
-    return `${Math.max(1, Math.round(byteSize / 102.4) / 10)} KB`;
-  }
-  return `${Math.max(0.1, Math.round(byteSize / (1024 * 102.4)) / 10)} MB`;
-}
 
 function receiverPreviewLabel(kind: ReceiverCapture['kind']) {
   switch (kind) {

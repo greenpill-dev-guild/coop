@@ -1,8 +1,10 @@
+import type React from 'react';
+
 type ReceiverAppBarIconProps = {
   active: boolean;
 };
 
-export function ReceiverPairIcon({ active }: ReceiverAppBarIconProps) {
+function ReceiverPairIcon({ active }: ReceiverAppBarIconProps) {
   return (
     <svg aria-hidden="true" className="receiver-appbar-icon" fill="none" viewBox="0 0 24 24">
       <path
@@ -30,7 +32,7 @@ export function ReceiverPairIcon({ active }: ReceiverAppBarIconProps) {
   );
 }
 
-export function ReceiverCaptureIcon({ active }: ReceiverAppBarIconProps) {
+function ReceiverCaptureIcon({ active }: ReceiverAppBarIconProps) {
   return (
     <svg aria-hidden="true" className="receiver-appbar-icon" fill="none" viewBox="0 0 24 24">
       <path
@@ -45,7 +47,7 @@ export function ReceiverCaptureIcon({ active }: ReceiverAppBarIconProps) {
   );
 }
 
-export function ReceiverInboxIcon({ active }: ReceiverAppBarIconProps) {
+function ReceiverInboxIcon({ active }: ReceiverAppBarIconProps) {
   return (
     <svg aria-hidden="true" className="receiver-appbar-icon" fill="none" viewBox="0 0 24 24">
       <path
@@ -78,7 +80,7 @@ export const receiverNavItems: Array<{
   kind: ReceiverNavKind;
   href: '/pair' | '/receiver' | '/inbox';
   label: string;
-  Icon: ({ active }: ReceiverAppBarIconProps) => JSX.Element;
+  Icon: ({ active }: ReceiverAppBarIconProps) => React.ReactElement;
 }> = [
   {
     kind: 'pair',

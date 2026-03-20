@@ -617,7 +617,7 @@ export function RootApp({
       {!isLoading && route.kind === 'receiver' ? (
         <CaptureView
           isRecording={isRecording}
-          newestCapture={newestCapture}
+          newestCapture={newestCapture ?? null}
           hatchedCaptureId={hatchedCaptureId}
           captures={captures}
           pairingReady={pairingStatus?.status === 'ready'}

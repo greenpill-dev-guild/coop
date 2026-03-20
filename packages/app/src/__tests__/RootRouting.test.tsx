@@ -109,7 +109,9 @@ describe('root routing bootstrap', () => {
       expect(window.location.pathname).toBe('/landing');
     });
     expect(
-      await screen.findByRole('heading', { name: /turn knowledge into opportunity/i }),
+      await screen.findByRole('heading', {
+        name: /gather your flock before the good stuff runs loose/i,
+      }),
     ).toBeVisible();
     expect(document.title).toBe('Coop | Turn knowledge into opportunity');
   });
