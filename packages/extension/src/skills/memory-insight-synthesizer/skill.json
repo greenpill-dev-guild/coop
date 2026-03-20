@@ -1,0 +1,17 @@
+{
+  "id": "memory-insight-synthesizer",
+  "version": "0.1.0",
+  "description": "Synthesize newly routed local signals and memory into local-only insight drafts or digests for a coop.",
+  "runtime": "extension-offscreen",
+  "model": "webllm",
+  "triggers": ["memory-insight-due"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "memory-insight-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "create-review-draft"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 45000,
+  "depends": ["theme-clusterer"],
+  "provides": ["drafts"]
+}

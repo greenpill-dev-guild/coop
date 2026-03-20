@@ -41,7 +41,11 @@ import {
 } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getActiveReviewContextForSession } from '../operator';
-import { emitAgentObservationIfMissing, syncHighConfidenceDraftObservations } from './agent';
+import {
+  emitAgentObservationIfMissing,
+  requestAgentCycle,
+  syncHighConfidenceDraftObservations,
+} from './agent';
 
 function isIdempotentReceiverReplay(
   existing: Awaited<ReturnType<typeof getReceiverCapture>>,
@@ -348,6 +352,7 @@ export async function handleConvertReceiverIntake(
 
   await saveReviewDraft(db, draft);
   await syncHighConfidenceDraftObservations([draft]);
+  await requestAgentCycle(`receiver-draft:${draft.id}`);
   await updateReceiverCapture(db, capture.id, {
     intakeStatus: receiverDraftStageToIntakeStatus(draft.workflowStage),
     linkedDraftId: draft.id,
@@ -380,6 +385,7 @@ export async function handleArchiveReceiverIntake(
     linkedDraftId: undefined,
     updatedAt: nowIso(),
   });
+  await requestAgentCycle(`receiver-archive:${capture.id}`);
   await refreshBadge();
 
   return { ok: true } satisfies RuntimeActionResponse;

@@ -3,15 +3,18 @@ import {
   type ReviewDraft,
   getAuthSession,
   getReviewDraft,
+  getTabRoutingByExtractAndCoop,
   nowIso,
   publishDraftAcrossCoops,
   saveReviewDraft,
+  saveTabRouting,
 } from '@coop/shared';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { validateReviewDraftPublish, validateReviewDraftUpdate } from '../../runtime/review';
 import { db, getCoops, saveState } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getActiveReviewContextForSession } from '../operator';
+import { requestAgentCycle } from './agent';
 import { syncReceiverCaptureFromDraft } from './receiver';
 
 export async function publishDraftWithContext(input: {
@@ -81,6 +84,20 @@ export async function publishDraftWithContext(input: {
     await saveState(state);
   }
   await db.reviewDrafts.delete(validation.draft.id);
+  if (validation.draft.provenance.type === 'tab') {
+    for (const coopId of validation.targetActors.map((target) => target.coopId)) {
+      const routing = await getTabRoutingByExtractAndCoop(db, validation.draft.extractId, coopId);
+      if (!routing) {
+        continue;
+      }
+      await saveTabRouting(db, {
+        ...routing,
+        status: 'published',
+        draftId: validation.draft.id,
+        updatedAt: nowIso(),
+      });
+    }
+  }
   if (validation.draft.provenance.type === 'receiver') {
     await syncReceiverCaptureFromDraft(validation.draft, {
       intakeStatus: 'published',
@@ -88,6 +105,7 @@ export async function publishDraftWithContext(input: {
       updatedAt: nowIso(),
     });
   }
+  await requestAgentCycle(`publish:${validation.draft.id}`);
   await refreshBadge();
 
   return {
@@ -117,6 +135,7 @@ export async function handleUpdateReviewDraft(
 
   await saveReviewDraft(db, validation.draft);
   await syncReceiverCaptureFromDraft(validation.draft);
+  await requestAgentCycle(`draft-update:${validation.draft.id}`);
   await refreshBadge();
 
   return {

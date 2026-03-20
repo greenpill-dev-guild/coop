@@ -284,4 +284,38 @@ describe('agent model provider fallback', () => {
     expect(result.provider).toBe('transformers');
     expect(webLlmComplete).toHaveBeenCalledTimes(2);
   });
+
+  it('uses heuristic tab routing on transformers cold start while warming the pipeline', async () => {
+    transformersPipeline.mockResolvedValue([
+      {
+        generated_text: JSON.stringify({
+          routings: [
+            {
+              sourceCandidateId: 'candidate-1',
+              extractId: 'extract-1',
+              coopId: 'coop-1',
+              relevanceScore: 0.42,
+              matchedRitualLenses: ['capital-formation'],
+              category: 'funding-lead',
+              tags: ['funding'],
+              rationale: 'Funding overlap.',
+              suggestedNextStep: 'Review it.',
+              archiveWorthinessHint: true,
+            },
+          ],
+        }),
+      },
+    ]);
+
+    const result = await completeSkillOutput({
+      preferredProvider: 'transformers',
+      schemaRef: 'tab-router-output',
+      system: 'Return JSON only.',
+      prompt: 'Route this extract.',
+      heuristicContext: 'Funding roundup for Coop Town Test.',
+    });
+
+    expect(result.provider).toBe('heuristic');
+    expect(result.output).toEqual({ routings: [] });
+  });
 });

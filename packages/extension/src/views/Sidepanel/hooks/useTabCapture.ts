@@ -1,4 +1,4 @@
-import type { CaptureMode, ReceiverCapture } from '@coop/shared';
+import type { ReceiverCapture, UiPreferences } from '@coop/shared';
 import { sendRuntimeMessage } from '../../../runtime/messages';
 
 export function useTabCapture(deps: {
@@ -43,16 +43,26 @@ export function useTabCapture(deps: {
     await loadDashboard();
   }
 
-  async function updateCaptureMode(captureMode: CaptureMode) {
-    const response = await sendRuntimeMessage({
-      type: 'set-capture-mode',
-      payload: { captureMode },
+  async function updateAgentCadence(agentCadenceMinutes: UiPreferences['agentCadenceMinutes']) {
+    const currentPreferences = await sendRuntimeMessage<UiPreferences>({
+      type: 'get-ui-preferences',
     });
-    if (!response.ok) {
-      setMessage(response.error ?? 'Could not update capture mode.');
+    if (!currentPreferences.ok || !currentPreferences.data) {
+      setMessage(currentPreferences.error ?? 'Could not load settings.');
       return;
     }
-    setMessage(`Round-up timing updated to ${formatRoundUpTiming(captureMode)}.`);
+    const response = await sendRuntimeMessage<UiPreferences>({
+      type: 'set-ui-preferences',
+      payload: {
+        ...currentPreferences.data,
+        agentCadenceMinutes,
+      },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update agent cadence.');
+      return;
+    }
+    setMessage(`Agent cadence updated to ${formatAgentCadence(agentCadenceMinutes)}.`);
     await loadDashboard();
   }
 
@@ -60,17 +70,10 @@ export function useTabCapture(deps: {
     runManualCapture,
     runActiveTabCapture,
     captureVisibleScreenshotAction,
-    updateCaptureMode,
+    updateAgentCadence,
   };
 }
 
-function formatRoundUpTiming(mode: CaptureMode) {
-  switch (mode) {
-    case '30-min':
-      return 'Every 30 min';
-    case '60-min':
-      return 'Every 60 min';
-    default:
-      return 'Only when you choose';
-  }
+function formatAgentCadence(minutes: UiPreferences['agentCadenceMinutes']) {
+  return `${minutes} min`;
 }

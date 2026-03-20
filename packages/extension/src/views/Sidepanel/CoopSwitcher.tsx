@@ -33,7 +33,7 @@ export function CoopSwitcher({ coops, activeCoopId, coopBadges, onSwitch }: Coop
       return false;
     }
     const badge = badgeMap.get(coop.id);
-    return (badge?.pendingDrafts ?? 0) > 0 || (badge?.pendingActions ?? 0) > 0;
+    return (badge?.pendingAttentionCount ?? 0) > 0;
   });
   const hasOtherCoopActivity = otherCoopsWithActivity.length > 0;
 
@@ -85,7 +85,7 @@ export function CoopSwitcher({ coops, activeCoopId, coopBadges, onSwitch }: Coop
           {coops.map((coop) => {
             const badge = badgeMap.get(coop.id);
             const isActive = coop.id === activeCoopId;
-            const hasActivity = (badge?.pendingDrafts ?? 0) > 0 || (badge?.pendingActions ?? 0) > 0;
+            const hasActivity = (badge?.pendingAttentionCount ?? 0) > 0;
             return (
               <div key={coop.id} role="menuitem" tabIndex={0} aria-current={isActive || undefined}>
                 <button
@@ -103,6 +103,12 @@ export function CoopSwitcher({ coops, activeCoopId, coopBadges, onSwitch }: Coop
                     <span className="coop-switcher__badges">
                       {badge.pendingDrafts > 0 ? (
                         <span className="coop-switcher__badge">{badge.pendingDrafts} drafts</span>
+                      ) : null}
+                      {badge.routedTabs > 0 ? (
+                        <span className="coop-switcher__badge">{badge.routedTabs} routes</span>
+                      ) : null}
+                      {badge.insightDrafts > 0 ? (
+                        <span className="coop-switcher__badge">{badge.insightDrafts} insights</span>
                       ) : null}
                       {badge.pendingActions > 0 ? (
                         <span className="coop-switcher__badge">{badge.pendingActions} actions</span>

@@ -11,7 +11,6 @@ import {
   markReceiverCaptureSyncFailed,
   patchReceiverSyncEnvelope,
 } from '@coop/shared';
-import { AGENT_LOOP_POLL_INTERVAL_MS } from './agent-config';
 import { runAgentCycle } from './agent-runner';
 import type {
   ReceiverSyncConfigResponse,
@@ -355,9 +354,17 @@ void refreshBindings();
 window.setInterval(() => {
   void refreshBindings();
 }, pollIntervalMs);
-window.setInterval(() => {
-  void runAgentCycle();
-}, AGENT_LOOP_POLL_INTERVAL_MS);
+
+chrome.runtime.onMessage.addListener(
+  (message: { type?: string; payload?: { force?: boolean; reason?: string } }) => {
+    if (message.type === 'run-agent-cycle-if-pending') {
+      void runAgentCycle({
+        force: Boolean(message.payload?.force),
+        reason: message.payload?.reason,
+      });
+    }
+  },
+);
 
 window.addEventListener('unload', () => {
   for (const binding of bindings.values()) {

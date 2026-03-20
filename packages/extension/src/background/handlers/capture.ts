@@ -1,19 +1,14 @@
 import {
   type CoopSharedState,
   type ReceiverCapture,
-  type ReviewDraft,
   type TabCandidate,
+  buildReadablePageExtract,
   createId,
-  createLocalEnhancementAdapter,
   createReceiverCapture,
   getAuthSession,
-  interpretExtractForCoop,
   nowIso,
-  runPassivePipeline,
   saveReceiverCapture,
-  shapeReviewDraft,
 } from '@coop/shared';
-import type { RuntimeActionResponse } from '../../runtime/messages';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import {
   type CaptureSnapshot,
@@ -26,20 +21,11 @@ import {
   extensionCaptureDeviceId,
   getCoops,
   notifyExtensionEvent,
-  prefersLocalEnhancement,
   setRuntimeHealth,
 } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getActiveReviewContextForSession } from '../operator';
-import { syncHighConfidenceDraftObservations } from './agent';
-
-function createPassiveInferenceAdapter() {
-  return createLocalEnhancementAdapter({
-    prefersLocalModels: prefersLocalEnhancement,
-    hasWorkerRuntime: true,
-    hasWebGpu: typeof navigator !== 'undefined' && 'gpu' in navigator,
-  });
-}
+import { drainAgentCycles, emitRoundupBatchObservation } from './agent';
 
 export async function collectCandidate(
   tab: chrome.tabs.Tab,
@@ -76,10 +62,13 @@ export async function collectCandidate(
   };
 }
 
-export async function runCaptureForTabs(tabs: chrome.tabs.Tab[]) {
+export async function runCaptureForTabs(
+  tabs: chrome.tabs.Tab[],
+  options: { drainAgent?: boolean } = {},
+) {
   const coops = await getCoops();
   const candidates: TabCandidate[] = [];
-  const inferenceAdapter = createPassiveInferenceAdapter();
+  const newExtractIds: string[] = [];
   let lastCaptureError: string | undefined;
 
   for (const tab of tabs) {
@@ -96,20 +85,32 @@ export async function runCaptureForTabs(tabs: chrome.tabs.Tab[]) {
       candidates.push(candidate);
       await db.tabCandidates.put(candidate);
 
-      if (coops.length > 0) {
-        const { extract, drafts } = runPassivePipeline({
-          candidate,
-          page: snapshot,
-          coops,
-          inferenceAdapter,
-        });
-        await db.pageExtracts.put(extract);
-        await db.reviewDrafts.bulkPut(drafts);
-        await syncHighConfidenceDraftObservations(drafts);
-      }
+      const extract = buildReadablePageExtract({
+        candidate,
+        metaDescription: snapshot.metaDescription,
+        headings: snapshot.headings,
+        paragraphs: snapshot.paragraphs,
+        previewImageUrl: snapshot.previewImageUrl,
+      });
+      await db.pageExtracts.put(extract);
+      newExtractIds.push(extract.id);
     } catch (error) {
       lastCaptureError =
         error instanceof Error ? error.message : `Capture failed for ${tab.url ?? 'unknown tab'}.`;
+    }
+  }
+
+  if (coops.length > 0) {
+    await emitRoundupBatchObservation({
+      extractIds: newExtractIds,
+      eligibleCoopIds: coops.map((coop) => coop.profile.id),
+    });
+    if (options.drainAgent && newExtractIds.length > 0) {
+      await drainAgentCycles({
+        reason: 'capture-complete',
+        force: true,
+        maxPasses: 2,
+      });
     }
   }
 
@@ -129,36 +130,22 @@ export async function runCaptureForTabs(tabs: chrome.tabs.Tab[]) {
 }
 
 export async function seedCoopFromStoredRoundup(coop: CoopSharedState) {
-  const [extracts, existingDrafts] = await Promise.all([
-    db.pageExtracts.toArray(),
-    db.reviewDrafts.toArray(),
-  ]);
-
-  const existingExtractIds = new Set(
-    existingDrafts
-      .filter((draft) => draft.suggestedTargetCoopIds.includes(coop.profile.id))
-      .map((draft) => draft.extractId),
-  );
-  const inferenceAdapter = createPassiveInferenceAdapter();
-  const drafts = extracts
-    .filter((extract) => !existingExtractIds.has(extract.id))
-    .map((extract) => {
-      const interpretation = interpretExtractForCoop(extract, coop, inferenceAdapter);
-      if (interpretation.relevanceScore < 0.18) {
-        return null;
-      }
-      return shapeReviewDraft(extract, interpretation, coop.profile);
-    })
-    .filter((draft): draft is ReviewDraft => draft !== null);
-
-  if (drafts.length === 0) {
+  const extracts = await db.pageExtracts.toArray();
+  if (extracts.length === 0) {
     return 0;
   }
 
-  await db.reviewDrafts.bulkPut(drafts);
-  await syncHighConfidenceDraftObservations(drafts);
+  await emitRoundupBatchObservation({
+    extractIds: extracts.map((extract) => extract.id),
+    eligibleCoopIds: [coop.profile.id],
+  });
+  await drainAgentCycles({
+    reason: `seed-coop:${coop.profile.id}`,
+    force: true,
+    maxPasses: 2,
+  });
   await refreshBadge();
-  return drafts.length;
+  return extracts.length;
 }
 
 export async function primeCoopRoundup(
@@ -174,7 +161,7 @@ export async function primeCoopRoundup(
 }
 
 export async function runCaptureCycle() {
-  return runCaptureForTabs(await chrome.tabs.query({}));
+  return runCaptureForTabs(await chrome.tabs.query({}), { drainAgent: true });
 }
 
 export async function captureActiveTab() {
@@ -182,7 +169,7 @@ export async function captureActiveTab() {
   if (!tab) {
     return 0;
   }
-  return runCaptureForTabs([tab]);
+  return runCaptureForTabs([tab], { drainAgent: true });
 }
 
 export async function captureVisibleScreenshot(): Promise<ReceiverCapture> {

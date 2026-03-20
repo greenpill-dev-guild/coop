@@ -12,6 +12,7 @@ import {
   getCoopChainLabel,
   getReceiverPairingStatus,
 } from '@coop/shared';
+import { useState } from 'react';
 import type { InferenceBridgeState } from '../../runtime/inference-bridge';
 import type { AgentDashboardResponse, DashboardResponse } from '../../runtime/messages';
 import { ArchiveSetupWizard } from './ArchiveSetupWizard';
@@ -26,8 +27,8 @@ import {
 } from './cards';
 import {
   describeLocalHelperState,
+  formatAgentCadence,
   formatGardenPassMode,
-  formatRoundUpTiming,
   formatSharedWalletMode,
 } from './helpers';
 import type { useCoopForm } from './hooks/useCoopForm';
@@ -53,6 +54,37 @@ export interface LooseChickensTabProps {
 }
 
 export function LooseChickensTab({ dashboard, tabCapture }: LooseChickensTabProps) {
+  const [activeRoutingIndex, setActiveRoutingIndex] = useState<Record<string, number>>({});
+
+  async function openRoutingCandidate(
+    candidate: DashboardResponse['candidates'][number],
+    coopId: string,
+  ) {
+    await chrome.runtime.sendMessage({
+      type: 'set-active-coop',
+      payload: { coopId },
+    });
+    if (candidate.tabId) {
+      try {
+        await chrome.tabs.update(candidate.tabId, { active: true });
+      } catch {
+        window.open(candidate.url, '_blank');
+      }
+    } else {
+      window.open(candidate.url, '_blank');
+    }
+  }
+
+  function chipTone(score: number) {
+    if (score >= 0.24) {
+      return 'strong';
+    }
+    if (score >= 0.18) {
+      return 'candidate';
+    }
+    return 'weak';
+  }
+
   return (
     <section className="panel-card">
       <h2>Loose Chickens</h2>
@@ -87,6 +119,89 @@ export function LooseChickensTab({ dashboard, tabCapture }: LooseChickensTabProp
                 <a className="source-link" href={candidate.url} rel="noreferrer" target="_blank">
                   {candidate.url}
                 </a>
+                {(() => {
+                  const routings = dashboard.tabRoutings
+                    .filter((routing) => routing.sourceCandidateId === candidate.id)
+                    .sort((left, right) => right.relevanceScore - left.relevanceScore)
+                    .slice(0, 3);
+                  if (routings.length === 0) {
+                    return null;
+                  }
+                  const activeIndex = Math.min(
+                    activeRoutingIndex[candidate.id] ?? 0,
+                    Math.max(routings.length - 1, 0),
+                  );
+                  const activeRouting = routings[activeIndex];
+                  return (
+                    <div className="stack" style={{ marginTop: '0.75rem' }}>
+                      <div className="action-row">
+                        {routings.map((routing, index) => (
+                          <button
+                            className="secondary-button"
+                            key={routing.id}
+                            onClick={() => {
+                              setActiveRoutingIndex((current) => ({
+                                ...current,
+                                [candidate.id]: index,
+                              }));
+                              void openRoutingCandidate(candidate, routing.coopId);
+                            }}
+                            type="button"
+                          >
+                            {chipTone(routing.relevanceScore)} · {routing.coopId} ·{' '}
+                            {routing.relevanceScore.toFixed(2)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="detail-grid">
+                        <div>
+                          <strong>Current route</strong>
+                          <p className="helper-text">
+                            {activeRouting.category} · {activeRouting.tags.join(', ') || 'no tags'}
+                          </p>
+                        </div>
+                        <div>
+                          <strong>Why it fits</strong>
+                          <p className="helper-text">{activeRouting.rationale}</p>
+                        </div>
+                        <div>
+                          <strong>Next step</strong>
+                          <p className="helper-text">{activeRouting.suggestedNextStep}</p>
+                        </div>
+                      </div>
+                      {routings.length > 1 ? (
+                        <div className="action-row">
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              setActiveRoutingIndex((current) => ({
+                                ...current,
+                                [candidate.id]:
+                                  activeIndex === 0 ? routings.length - 1 : activeIndex - 1,
+                              }))
+                            }
+                            type="button"
+                          >
+                            Previous coop
+                          </button>
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              setActiveRoutingIndex((current) => ({
+                                ...current,
+                                [candidate.id]:
+                                  activeIndex === routings.length - 1 ? 0 : activeIndex + 1,
+                              }))
+                            }
+                            type="button"
+                          >
+                            Next coop
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </li>
             ))}
           </ul>
@@ -977,7 +1092,7 @@ export function CoopFeedTab({
           onApproveAction={handleApproveAction}
           onRejectAction={handleRejectAction}
           onExecuteAction={handleExecuteAction}
-          grants={dashboard?.operator.permits ?? []}
+          permits={dashboard?.operator.permits ?? []}
           permitLog={dashboard?.operator.permitLog ?? []}
           onIssuePermit={handleIssuePermit}
           onRevokePermit={handleRevokePermit}
@@ -1371,17 +1486,18 @@ export function NestToolsTab({
           </div>
         </div>
         <div className="field-grid">
-          <label htmlFor="settings-capture-mode">Round-up timing</label>
+          <label htmlFor="settings-agent-cadence">Agent cadence</label>
           <select
-            id="settings-capture-mode"
+            id="settings-agent-cadence"
             onChange={(event) =>
-              void tabCapture.updateCaptureMode(event.target.value as CaptureMode)
+              void tabCapture.updateAgentCadence(Number(event.target.value) as 10 | 15 | 30 | 60)
             }
-            value={dashboard?.summary.captureMode ?? 'manual'}
+            value={dashboard?.uiPreferences.agentCadenceMinutes ?? 60}
           >
-            <option value="manual">Only when I choose</option>
-            <option value="30-min">Every 30 min</option>
-            <option value="60-min">Every 60 min</option>
+            <option value="10">{formatAgentCadence(10)}</option>
+            <option value="15">{formatAgentCadence(15)}</option>
+            <option value="30">{formatAgentCadence(30)}</option>
+            <option value="60">{formatAgentCadence(60)}</option>
           </select>
         </div>
         <div className="field-grid">
@@ -1461,7 +1577,7 @@ export function NestToolsTab({
               Notifications {browserUxCapabilities.canNotify ? 'ready' : 'unavailable'} · QR{' '}
               {browserUxCapabilities.canScanQr ? 'ready' : 'unavailable'} · Share{' '}
               {browserUxCapabilities.canShare ? 'ready' : 'unavailable'} · Badge{' '}
-              {browserUxCapabilities.canBadgeApp ? 'ready' : 'unavailable'} · File picker{' '}
+              {browserUxCapabilities.canSetBadge ? 'ready' : 'unavailable'} · File picker{' '}
               {browserUxCapabilities.canSaveFile ? 'ready' : 'unavailable'}
             </p>
           </div>

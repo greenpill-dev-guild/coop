@@ -6,10 +6,12 @@ import type {
   GreenGoodsAssessmentOutput,
   GreenGoodsGapAdminSyncOutput,
   GreenGoodsWorkApprovalOutput,
+  MemoryInsightOutput,
   OpportunityExtractorOutput,
   PublishReadinessCheckOutput,
   ReviewDigestOutput,
   SkillOutputSchemaRef,
+  TabRouterOutput,
   ThemeClustererOutput,
 } from '@coop/shared';
 import { validateSkillOutput } from '@coop/shared';
@@ -24,6 +26,12 @@ type TextGenerationPipeline = (
 
 let transformersPipelinePromise: Promise<TextGenerationPipeline> | null = null;
 const webLlmBridge = new AgentWebLlmBridge();
+
+function warmTransformersPipeline() {
+  void ensureTransformersPipeline().catch(() => {
+    transformersPipelinePromise = null;
+  });
+}
 
 export function extractJsonBlock(raw: string) {
   const trimmed = raw.trim();
@@ -171,6 +179,10 @@ async function ensureTransformersPipeline() {
 
 function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
   switch (schemaRef) {
+    case 'tab-router-output':
+      return {
+        routings: [],
+      } satisfies TabRouterOutput;
     case 'opportunity-extractor-output':
       return {
         candidates: [
@@ -205,6 +217,22 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
         targetCoopIds: [],
         supportingCandidateIds: [],
       } satisfies CapitalFormationBriefOutput;
+    case 'memory-insight-output':
+      return {
+        insights: [
+          {
+            title: 'Local routing insight',
+            summary:
+              rawContext.slice(0, 220) || 'Recent routed tabs suggest a reusable local insight.',
+            whyItMatters: 'A compact local insight helps the member decide what to review next.',
+            suggestedNextStep:
+              'Review the routed tabs and decide whether this should stay local or be polished.',
+            tags: ['insight', 'routing'],
+            category: 'insight',
+            confidence: 0.68,
+          },
+        ],
+      } satisfies MemoryInsightOutput;
     case 'review-digest-output':
       return {
         title: 'Weekly review digest',
@@ -370,6 +398,15 @@ export async function completeSkillOutput<T>(input: {
     output: heuristicOutput(input.schemaRef, input.heuristicContext) as T,
     durationMs: 0,
   });
+
+  // Keep first-pass tab routing responsive. If the Transformers pipeline is
+  // still cold, warm it in the background and route heuristically now.
+  if (input.preferredProvider === 'transformers' && input.schemaRef === 'tab-router-output') {
+    if (!transformersPipelinePromise) {
+      warmTransformersPipeline();
+      return fallback();
+    }
+  }
 
   try {
     if (input.preferredProvider === 'webllm') {

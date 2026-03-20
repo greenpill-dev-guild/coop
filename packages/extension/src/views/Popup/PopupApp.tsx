@@ -406,6 +406,7 @@ export function PopupApp() {
         onToggleNotifications={(enabled) =>
           void updateUiPreferences({ notificationsEnabled: enabled })
         }
+        onSetAgentCadence={(minutes) => void updateUiPreferences({ agentCadenceMinutes: minutes })}
         onToggleLocalHelper={(enabled) =>
           void updateUiPreferences({ localInferenceOptIn: enabled })
         }
@@ -421,7 +422,9 @@ export function PopupApp() {
             id: coop.profile.id,
             name: coop.profile.name,
             badgeText:
-              badge && badge.pendingDrafts > 0 ? `${badge.pendingDrafts} drafts` : undefined,
+              badge && badge.pendingAttentionCount > 0
+                ? `${badge.pendingAttentionCount} waiting`
+                : undefined,
           };
         })}
         activeCoopId={dashboard.activeCoopId}

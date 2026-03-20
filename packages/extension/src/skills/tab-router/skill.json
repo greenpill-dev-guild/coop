@@ -1,0 +1,17 @@
+{
+  "id": "tab-router",
+  "version": "0.1.0",
+  "description": "Route newly captured extracts into local coop contexts, preserve weak matches, and seed local drafts for stronger matches.",
+  "runtime": "extension-offscreen",
+  "model": "transformers",
+  "triggers": ["roundup-batch-ready"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "tab-router-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "create-review-draft"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000,
+  "depends": [],
+  "provides": ["routings", "drafts"]
+}

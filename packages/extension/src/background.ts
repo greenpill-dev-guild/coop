@@ -27,6 +27,7 @@ import { filterVisibleReceiverPairings } from './runtime/receiver';
 
 // ---- Context (shared state) ----
 import {
+  alarmNames,
   contextMenuIds,
   db,
   ensureDbReady,
@@ -42,6 +43,7 @@ import {
   setLocalSetting,
   setRuntimeHealth,
   stateKeys,
+  syncAgentCadenceAlarm,
   syncCaptureAlarm,
   uiPreferences,
 } from './background/context';
@@ -68,6 +70,8 @@ import {
   handleSetActionPolicy,
 } from './background/handlers/actions';
 import {
+  completeOnboardingBurst,
+  ensureOnboardingBurst,
   handleApproveAgentPlan,
   handleGetAgentDashboard,
   handleListSkillManifests,
@@ -78,6 +82,7 @@ import {
   handleRetrySkillRun,
   handleRunAgentCycle,
   handleSetAgentSkillAutoRun,
+  runProactiveAgentCycle,
   syncAgentObservations,
 } from './background/handlers/agent';
 import {
@@ -192,9 +197,9 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ensureDbReady();
   await ensureDefaults();
   await registerContextMenus();
-  await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
-  await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
-  await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
+  await syncAgentCadenceAlarm((await hydrateUiPreferences()).agentCadenceMinutes);
+  await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
+  await chrome.alarms.create(alarmNames.agentHeartbeat, { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
@@ -205,9 +210,9 @@ chrome.runtime.onStartup.addListener(async () => {
   await ensureDbReady();
   await ensureDefaults();
   await registerContextMenus();
-  await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
-  await chrome.alarms.create('archive-status-poll', { periodInMinutes: 360 });
-  await chrome.alarms.create('agent-heartbeat', { periodInMinutes: 5 });
+  await syncAgentCadenceAlarm((await hydrateUiPreferences()).agentCadenceMinutes);
+  await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
+  await chrome.alarms.create(alarmNames.agentHeartbeat, { periodInMinutes: 5 });
   await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
@@ -216,20 +221,27 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   await ensureDbReady();
-  if (alarm.name === 'agent-heartbeat') {
+  if (alarm.name === alarmNames.agentHeartbeat) {
     await handleAgentHeartbeat();
     return;
   }
-  if (alarm.name === 'archive-status-poll') {
+  if (alarm.name === alarmNames.archiveStatusPoll) {
     await pollUnsealedArchiveReceipts();
     return;
   }
-
-  const captureMode = await getLocalSetting(stateKeys.captureMode, 'manual');
-  if (captureMode !== 'manual') {
-    await runCaptureCycle();
+  if (alarm.name === alarmNames.agentCadence) {
+    await runProactiveAgentCycle({ reason: 'cadence-alarm' });
+    return;
   }
-  await syncAgentObservations();
+  if (alarm.name.startsWith(alarmNames.onboardingFollowUpPrefix)) {
+    const onboardingKey = alarm.name.slice(alarmNames.onboardingFollowUpPrefix.length);
+    await runProactiveAgentCycle({
+      reason: 'onboarding-followup',
+      onboardingKey,
+    });
+    await completeOnboardingBurst(onboardingKey);
+    return;
+  }
 });
 
 // ---- Message Dispatcher ----
@@ -239,7 +251,9 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
     await ensureDbReady();
     await ensureDefaults();
 
-    const isExtensionContext = !sender.tab && sender.id === chrome.runtime.id;
+    const extensionOrigin = `chrome-extension://${chrome.runtime.id}`;
+    const senderUrl = sender.url ?? sender.documentUrl ?? sender.origin ?? sender.tab?.url ?? '';
+    const isExtensionContext = senderUrl.startsWith(extensionOrigin);
     const isAllowedBridgeMessage = message.type === 'ingest-receiver-capture';
 
     if (!isExtensionContext && !isAllowedBridgeMessage) {
@@ -271,6 +285,18 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         sendResponse(await handleSetAnchorMode(message));
         return;
       case 'get-dashboard':
+        if (sender.url?.endsWith('/sidepanel.html')) {
+          const coops = await getCoops();
+          const authSession = await getAuthSession(db);
+          const activeContext = await getActiveReviewContextForSession(coops, authSession);
+          if (activeContext.activeCoop?.profile.id && activeContext.activeMemberId) {
+            await ensureOnboardingBurst({
+              coopId: activeContext.activeCoop.profile.id,
+              memberId: activeContext.activeMemberId,
+              reason: 'sidepanel-open',
+            });
+          }
+        }
         sendResponse({
           ok: true,
           data: await getDashboard(),
@@ -403,10 +429,14 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         } satisfies RuntimeActionResponse<UiPreferences>);
         return;
       case 'set-ui-preferences':
-        sendResponse({
-          ok: true,
-          data: await saveResolvedUiPreferences(message.payload),
-        } satisfies RuntimeActionResponse<UiPreferences>);
+        {
+          const nextPreferences = await saveResolvedUiPreferences(message.payload);
+          await syncAgentCadenceAlarm(nextPreferences.agentCadenceMinutes);
+          sendResponse({
+            ok: true,
+            data: nextPreferences,
+          } satisfies RuntimeActionResponse<UiPreferences>);
+        }
         return;
       case 'set-capture-mode':
         await setLocalSetting(stateKeys.captureMode, message.payload.captureMode);

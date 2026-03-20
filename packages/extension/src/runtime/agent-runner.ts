@@ -17,15 +17,19 @@ import type {
   GreenGoodsGardenBootstrapOutput,
   GreenGoodsGardenSyncOutput,
   GreenGoodsWorkApprovalOutput,
+  MemoryInsightOutput,
   OpportunityCandidate,
   OpportunityExtractorOutput,
   PublishReadinessCheckOutput,
+  ReadablePageExtract,
   ReceiverCapture,
   ReviewDigestOutput,
   ReviewDraft,
   SkillManifest,
   SkillOutputSchemaRef,
   SkillRun,
+  TabRouterOutput,
+  TabRouting,
   ThemeClustererOutput,
 } from '@coop/shared';
 import {
@@ -40,6 +44,7 @@ import {
   completeSkillRun,
   createActionProposal,
   createAgentMemory,
+  createAgentObservation,
   createAgentPlan,
   createAgentPlanStep,
   createCapitalFormationDraft,
@@ -49,21 +54,26 @@ import {
   createGreenGoodsGapAdminSyncOutput,
   createGreenGoodsSyncOutput,
   createGreenGoodsWorkApprovalOutput,
+  createMemoryInsightDraft,
   createReviewDigestDraft,
   createSkillRun,
   failAgentPlan,
   failSkillRun,
+  findAgentObservationByFingerprint,
   getAuthSession,
   getReviewDraft,
   getSkillRun,
+  getTabRoutingByExtractAndCoop,
   greenGoodsAssessmentRequestSchema,
   greenGoodsWorkApprovalRequestSchema,
   hydrateCoopDoc,
+  interpretExtractForCoop,
   isArchiveReceiptRefreshable,
   isReceiverCaptureVisibleForMemberContext,
   isReviewDraftVisibleForMemberContext,
   listAgentObservationsByStatus,
   listAgentPlansByObservationId,
+  listTabRoutings,
   nowIso,
   pruneExpiredMemories,
   queryMemoriesForSkill,
@@ -72,6 +82,8 @@ import {
   saveAgentPlan,
   saveReviewDraft,
   saveSkillRun,
+  saveTabRouting,
+  shapeReviewDraft,
   truncateWords,
   updateAgentObservation,
   updateAgentPlan,
@@ -98,7 +110,7 @@ import {
 } from './agent-logger';
 import { completeSkillOutput } from './agent-models';
 import { getRegisteredSkill, listRegisteredSkills } from './agent-registry';
-import type { RuntimeActionResponse } from './messages';
+import { notifyDashboardUpdated, type RuntimeActionResponse } from './messages';
 
 type CoopDexie = ReturnType<typeof createCoopDb>;
 
@@ -132,8 +144,10 @@ type SkillExecutionContext = {
   candidates: OpportunityCandidate[];
   scores: GrantFitScore[];
   createdDraftIds: string[];
+  extracts: ReadablePageExtract[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  relatedRoutings: TabRouting[];
   memories: AgentMemory[];
 };
 
@@ -213,6 +227,55 @@ function listAuthorizedOperatorCoopIds(coops: CoopSharedState[], authSession: Au
   );
 }
 
+function isObservationRunnableForAuthorizedCoops(input: {
+  observation: AgentObservation;
+  authorizedCoopIds: Set<string>;
+  coops: CoopSharedState[];
+}) {
+  if (input.observation.coopId) {
+    return input.authorizedCoopIds.has(input.observation.coopId);
+  }
+
+  return resolveObservationEligibleCoopIds(input.observation, input.coops).some((coopId) =>
+    input.authorizedCoopIds.has(coopId),
+  );
+}
+
+function observationPriority(trigger: AgentObservation['trigger']) {
+  switch (trigger) {
+    case 'roundup-batch-ready':
+      return 0;
+    case 'high-confidence-draft':
+    case 'receiver-backlog':
+      return 1;
+    case 'memory-insight-due':
+      return 2;
+    case 'stale-draft':
+    case 'stale-archive-receipt':
+      return 3;
+    case 'green-goods-garden-requested':
+    case 'green-goods-sync-needed':
+    case 'green-goods-work-approval-requested':
+    case 'green-goods-assessment-requested':
+    case 'green-goods-gap-admin-sync-needed':
+    case 'erc8004-registration-due':
+    case 'erc8004-feedback-due':
+      return 4;
+    case 'ritual-review-due':
+      return 5;
+  }
+}
+
+function prioritizeObservations(observations: AgentObservation[]) {
+  return [...observations].sort((left, right) => {
+    const priorityDelta = observationPriority(left.trigger) - observationPriority(right.trigger);
+    if (priorityDelta !== 0) {
+      return priorityDelta;
+    }
+    return right.createdAt.localeCompare(left.createdAt);
+  });
+}
+
 function getObservationDismissReason(input: {
   observation: AgentObservation;
   context: SkillExecutionContext;
@@ -223,6 +286,10 @@ function getObservationDismissReason(input: {
     : undefined;
 
   switch (input.observation.trigger) {
+    case 'roundup-batch-ready':
+      return input.context.extracts.length > 0
+        ? null
+        : 'Roundup batch no longer has captured extracts to route.';
     case 'high-confidence-draft':
       if (!input.context.draft) {
         return 'Source draft no longer exists.';
@@ -257,6 +324,10 @@ function getObservationDismissReason(input: {
       return input.context.coop
         ? null
         : 'Coop context is unavailable for review digest generation.';
+    case 'memory-insight-due':
+      return input.context.coop
+        ? null
+        : 'Coop context is unavailable for memory insight synthesis.';
     case 'green-goods-garden-requested':
       if (!input.context.coop?.greenGoods?.enabled) {
         return 'Green Goods is not enabled for this coop.';
@@ -316,8 +387,10 @@ async function buildSkillPrompt(input: {
   receipt?: ArchiveReceipt | null;
   candidates: OpportunityCandidate[];
   scores: GrantFitScore[];
+  extracts: ReadablePageExtract[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  relatedRoutings: TabRouting[];
   memories: AgentMemory[];
 }) {
   const coopContext = input.coop
@@ -360,6 +433,21 @@ async function buildSkillPrompt(input: {
     input.receipt?.rootCid ? `Archive root CID: ${input.receipt.rootCid}` : undefined,
   ]).join('\n');
 
+  const extractContext =
+    input.extracts.length > 0
+      ? `Captured extracts:\n${input.extracts
+          .map(
+            (extract) =>
+              `- ${extract.id}: ${extract.cleanedTitle} (${extract.domain})\n  ${truncateWords(
+                [extract.metaDescription, ...extract.topHeadings, ...extract.leadParagraphs]
+                  .filter(Boolean)
+                  .join(' '),
+                48,
+              )}`,
+          )
+          .join('\n')}`
+      : 'Captured extracts: none.';
+
   const candidateContext =
     input.candidates.length > 0
       ? `Opportunity candidates:\n${input.candidates
@@ -381,6 +469,14 @@ async function buildSkillPrompt(input: {
       : 'Grant fit scores: none yet.';
 
   const recentContext = [
+    `Recent routed items: ${
+      input.relatedRoutings
+        .slice(0, 4)
+        .map(
+          (routing) => `${routing.coopId}:${routing.category}:${routing.relevanceScore.toFixed(2)}`,
+        )
+        .join(', ') || 'none'
+    }`,
     `Recent related drafts: ${
       input.relatedDrafts
         .slice(0, 4)
@@ -409,9 +505,21 @@ async function buildSkillPrompt(input: {
       ? `Domain knowledge:\n${knowledgeSkills.map((s) => `### ${s.name}\n${truncateWords(s.content, 80)}`).join('\n\n')}`
       : '';
 
-  const memoryContext =
-    input.memories.length > 0
-      ? `Agent memories:\n${input.memories
+  const memberMemoryContext =
+    input.memories.filter((memory) => memory.scope === 'member').length > 0
+      ? `Member memories:\n${input.memories
+          .filter((memory) => memory.scope === 'member')
+          .map(
+            (m) =>
+              `- [${m.type}] ${truncateWords(m.content, 40)} (confidence: ${m.confidence.toFixed(2)})`,
+          )
+          .join('\n')}`
+      : '';
+
+  const coopMemoryContext =
+    input.memories.filter((memory) => memory.scope === 'coop').length > 0
+      ? `Coop memories:\n${input.memories
+          .filter((memory) => memory.scope === 'coop')
           .map(
             (m) =>
               `- [${m.type}] ${truncateWords(m.content, 40)} (confidence: ${m.confidence.toFixed(2)})`,
@@ -421,19 +529,23 @@ async function buildSkillPrompt(input: {
 
   const prompt = [
     coopContext,
-    ...(knowledgeContext ? [knowledgeContext] : []),
-    ...(memoryContext ? [memoryContext] : []),
+    ...(memberMemoryContext ? [memberMemoryContext] : []),
+    ...(coopMemoryContext ? [coopMemoryContext] : []),
+    extractContext,
     sourceContext,
     candidateContext,
     scoreContext,
     recentContext,
+    ...(knowledgeContext ? [knowledgeContext] : []),
     'Return JSON that matches the requested schema exactly.',
   ].join('\n\n');
 
   return {
     system,
     prompt,
-    heuristicContext: [sourceContext, candidateContext, scoreContext].filter(Boolean).join('\n'),
+    heuristicContext: [extractContext, sourceContext, candidateContext, scoreContext]
+      .filter(Boolean)
+      .join('\n'),
   };
 }
 
@@ -544,8 +656,10 @@ async function completeSkill<T>(input: {
   receipt?: ArchiveReceipt | null;
   candidates: OpportunityCandidate[];
   scores: GrantFitScore[];
+  extracts: ReadablePageExtract[];
   relatedDrafts: ReviewDraft[];
   relatedArtifacts: CoopSharedState['artifacts'];
+  relatedRoutings: TabRouting[];
   memories: AgentMemory[];
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const { manifest } = input;
@@ -558,6 +672,22 @@ async function completeSkill<T>(input: {
     prompt: prepared.prompt,
     heuristicContext: prepared.heuristicContext,
   });
+
+  if (
+    manifest.outputSchemaRef === 'tab-router-output' &&
+    ((result.output as TabRouterOutput).routings?.length ?? 0) === 0
+  ) {
+    return {
+      provider: 'heuristic',
+      model: result.model,
+      durationMs: result.durationMs,
+      output: inferTabRoutingsHeuristically({
+        observation: input.observation,
+        extracts: input.extracts,
+        coops: input.coop ? [input.coop] : await getCoops(),
+      }) as T,
+    };
+  }
 
   if (
     manifest.outputSchemaRef === 'grant-fit-scorer-output' &&
@@ -754,15 +884,231 @@ async function dispatchActionProposal(input: {
   return { ok: true, executed: true };
 }
 
+function uniqueById<T extends { id: string }>(items: T[]) {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+    seen.add(item.id);
+    unique.push(item);
+  }
+  return unique;
+}
+
+function resolveObservationExtractIds(observation: AgentObservation) {
+  const payloadExtractIds = Array.isArray(observation.payload?.extractIds)
+    ? observation.payload.extractIds.filter((value): value is string => typeof value === 'string')
+    : [];
+  return [...new Set(compact([observation.extractId, ...payloadExtractIds]))];
+}
+
+function resolveObservationRoutingIds(observation: AgentObservation) {
+  return Array.isArray(observation.payload?.routingIds)
+    ? observation.payload.routingIds.filter((value): value is string => typeof value === 'string')
+    : [];
+}
+
+function resolveObservationEligibleCoopIds(
+  observation: AgentObservation,
+  coops: CoopSharedState[],
+): string[] {
+  const payloadCoopIds = Array.isArray(observation.payload?.eligibleCoopIds)
+    ? observation.payload.eligibleCoopIds.filter(
+        (value): value is string => typeof value === 'string',
+      )
+    : [];
+  if (payloadCoopIds.length > 0) {
+    return payloadCoopIds;
+  }
+  return coops.map((coop) => coop.profile.id);
+}
+
+async function loadExtractsForObservation(observation: AgentObservation) {
+  const extracts = await Promise.all(
+    resolveObservationExtractIds(observation).map((extractId) => db.pageExtracts.get(extractId)),
+  );
+  return extracts.filter((extract): extract is ReadablePageExtract => Boolean(extract));
+}
+
+function inferTabRoutingsHeuristically(input: {
+  observation: AgentObservation;
+  extracts: ReadablePageExtract[];
+  coops: CoopSharedState[];
+}): TabRouterOutput {
+  const eligibleCoopIds = new Set(
+    resolveObservationEligibleCoopIds(input.observation, input.coops),
+  );
+  return {
+    routings: input.extracts.flatMap((extract) =>
+      input.coops
+        .filter((coop) => eligibleCoopIds.has(coop.profile.id))
+        .map((coop) => {
+          const interpretation = interpretExtractForCoop(extract, coop);
+          return {
+            sourceCandidateId: extract.sourceCandidateId,
+            extractId: extract.id,
+            coopId: coop.profile.id,
+            relevanceScore: interpretation.relevanceScore,
+            matchedRitualLenses: interpretation.matchedRitualLenses,
+            category: interpretation.categoryCandidates[0],
+            tags: interpretation.tagCandidates,
+            rationale: interpretation.rationale,
+            suggestedNextStep: interpretation.suggestedNextStep,
+            archiveWorthinessHint: interpretation.archiveWorthinessHint,
+          };
+        }),
+    ),
+  };
+}
+
+async function emitObservationIfMissing(observation: AgentObservation) {
+  const existing = await findAgentObservationByFingerprint(db, observation.fingerprint);
+  if (existing) {
+    return existing;
+  }
+  await saveAgentObservation(db, observation);
+  return observation;
+}
+
+async function findExistingDraftForRouting(extractId: string, coopId: string) {
+  const drafts = (await db.reviewDrafts.toArray()).filter((draft) => draft.extractId === extractId);
+  return drafts.find((draft) => draft.suggestedTargetCoopIds.includes(coopId));
+}
+
+async function persistTabRouterOutput(input: {
+  observation: AgentObservation;
+  coops: CoopSharedState[];
+  extracts: ReadablePageExtract[];
+  output: TabRouterOutput;
+  provider: AgentProvider;
+}) {
+  const extractsById = new Map(input.extracts.map((extract) => [extract.id, extract] as const));
+  const coopsById = new Map(input.coops.map((coop) => [coop.profile.id, coop] as const));
+  const createdDraftIds: string[] = [];
+  const routedByCoop = new Map<string, TabRouting[]>();
+
+  for (const rawRouting of input.output.routings) {
+    const extract = extractsById.get(rawRouting.extractId);
+    const coop = coopsById.get(rawRouting.coopId);
+    if (!extract || !coop) {
+      continue;
+    }
+
+    const existingRouting = await getTabRoutingByExtractAndCoop(db, extract.id, coop.profile.id);
+    let draftId = existingRouting?.draftId;
+    let status: TabRouting['status'] =
+      existingRouting?.status === 'published' || existingRouting?.status === 'dismissed'
+        ? existingRouting.status
+        : 'routed';
+
+    if (rawRouting.relevanceScore >= 0.18) {
+      let draft =
+        (draftId ? await getReviewDraft(db, draftId) : null) ??
+        (await findExistingDraftForRouting(extract.id, coop.profile.id));
+      if (!draft) {
+        draft = shapeReviewDraft(
+          extract,
+          {
+            id: `routing-interpretation-${extract.id}-${coop.profile.id}`,
+            targetCoopId: coop.profile.id,
+            relevanceScore: rawRouting.relevanceScore,
+            matchedRitualLenses: rawRouting.matchedRitualLenses,
+            categoryCandidates: [rawRouting.category],
+            tagCandidates: rawRouting.tags,
+            rationale: rawRouting.rationale,
+            suggestedNextStep: rawRouting.suggestedNextStep,
+            archiveWorthinessHint: rawRouting.archiveWorthinessHint,
+          },
+          coop.profile,
+        );
+        await saveReviewDraft(db, draft);
+        createdDraftIds.push(draft.id);
+      }
+      draftId = draft.id;
+      status = existingRouting?.status === 'published' ? 'published' : 'drafted';
+
+      if (rawRouting.relevanceScore >= AGENT_HIGH_CONFIDENCE_THRESHOLD) {
+        await emitObservationIfMissing(
+          createAgentObservation({
+            trigger: 'high-confidence-draft',
+            title: `High-confidence draft: ${draft.title}`,
+            summary: draft.summary,
+            coopId: coop.profile.id,
+            draftId: draft.id,
+            extractId: draft.extractId,
+            payload: {
+              confidence: rawRouting.relevanceScore,
+              category: rawRouting.category,
+              workflowStage: draft.workflowStage,
+            },
+          }),
+        );
+      }
+    }
+
+    const now = nowIso();
+    const nextRouting: TabRouting = {
+      id: existingRouting?.id ?? `tab-routing:${extract.id}:${coop.profile.id}`,
+      sourceCandidateId: rawRouting.sourceCandidateId,
+      extractId: rawRouting.extractId,
+      coopId: rawRouting.coopId,
+      relevanceScore: rawRouting.relevanceScore,
+      matchedRitualLenses: rawRouting.matchedRitualLenses,
+      category: rawRouting.category,
+      tags: rawRouting.tags,
+      rationale: rawRouting.rationale,
+      suggestedNextStep: rawRouting.suggestedNextStep,
+      archiveWorthinessHint: rawRouting.archiveWorthinessHint,
+      provider: input.provider,
+      status,
+      draftId,
+      createdAt: existingRouting?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await saveTabRouting(db, nextRouting);
+
+    if (rawRouting.relevanceScore >= 0.18) {
+      const routed = routedByCoop.get(coop.profile.id) ?? [];
+      routed.push(nextRouting);
+      routedByCoop.set(coop.profile.id, routed);
+    }
+  }
+
+  for (const [coopId, routings] of routedByCoop) {
+    const newStrongMatches = routings.filter(
+      (routing) => routing.relevanceScore >= AGENT_HIGH_CONFIDENCE_THRESHOLD,
+    );
+    if (routings.length < 3 && newStrongMatches.length === 0) {
+      continue;
+    }
+    await emitObservationIfMissing(
+      createAgentObservation({
+        trigger: 'memory-insight-due',
+        title: `Memory insight due for ${coopsById.get(coopId)?.profile.name ?? 'this coop'}`,
+        summary: 'New routed tabs suggest a reusable local insight or digest.',
+        coopId,
+        payload: {
+          routingIds: routings.map((routing) => routing.id),
+          draftIds: compact(routings.map((routing) => routing.draftId)),
+          matchCount: routings.length,
+          strongMatchCount: newStrongMatches.length,
+        },
+      }),
+    );
+  }
+
+  return { createdDraftIds };
+}
+
 async function buildSkillContext(observation: AgentObservation): Promise<SkillExecutionContext> {
-  const [coops, draft, capture, authSession, memories] = await Promise.all([
+  const [coops, draft, capture, authSession, extracts] = await Promise.all([
     getCoops(),
     observation.draftId ? getReviewDraft(db, observation.draftId) : Promise.resolve(null),
     observation.captureId ? db.receiverCaptures.get(observation.captureId) : Promise.resolve(null),
     getAuthSession(db),
-    observation.coopId
-      ? queryMemoriesForSkill(db, observation.coopId, observation.trigger)
-      : Promise.resolve([]),
+    loadExtractsForObservation(observation),
   ]);
   const coop =
     (observation.coopId
@@ -775,9 +1121,22 @@ async function buildSkillContext(observation: AgentObservation): Promise<SkillEx
   const receipt = observation.receiptId
     ? (coop?.archiveReceipts.find((item) => item.id === observation.receiptId) ?? null)
     : null;
-  const relatedDrafts = (await db.reviewDrafts.reverse().sortBy('createdAt'))
-    .filter((candidate) => !coop || candidate.suggestedTargetCoopIds.includes(coop.profile.id))
-    .slice(0, 12);
+  const memberId = coop ? findAuthenticatedCoopMember(coop, authSession)?.id : undefined;
+  const [memories, relatedDrafts, relatedRoutings] = await Promise.all([
+    coop
+      ? queryMemoriesForSkill(db, { coopId: coop.profile.id, memberId }, observation.trigger)
+      : Promise.resolve([]),
+    (await db.reviewDrafts.reverse().sortBy('createdAt'))
+      .filter((candidate) => !coop || candidate.suggestedTargetCoopIds.includes(coop.profile.id))
+      .slice(0, 12),
+    coop
+      ? listTabRoutings(db, {
+          coopId: coop.profile.id,
+          status: ['routed', 'drafted', 'published'],
+          limit: 12,
+        })
+      : Promise.resolve([]),
+  ]);
 
   return {
     observation,
@@ -789,8 +1148,15 @@ async function buildSkillContext(observation: AgentObservation): Promise<SkillEx
     candidates: [],
     scores: [],
     createdDraftIds: [],
+    extracts,
     relatedDrafts,
     relatedArtifacts: coop?.artifacts ?? [],
+    relatedRoutings:
+      resolveObservationRoutingIds(observation).length > 0
+        ? relatedRoutings.filter((routing) =>
+            resolveObservationRoutingIds(observation).includes(routing.id),
+          )
+        : relatedRoutings,
     memories,
   };
 }
@@ -840,11 +1206,11 @@ function extractMemoriesFromOutput(
     }
     case 'review-digest-output': {
       const typed = output as ReviewDigestOutput;
-      if (!typed.digestMarkdown && !typed.summary) return [];
+      if (!typed.summary) return [];
       return [
         {
           type: 'coop-context',
-          content: `Review digest: ${truncateWords(typed.digestMarkdown ?? typed.summary ?? '', 60)}`,
+          content: `Review digest: ${truncateWords(typed.summary, 60)}`,
           confidence: 0.8,
           domain: 'reviews',
         },
@@ -855,12 +1221,23 @@ function extractMemoriesFromOutput(
       return [
         {
           type: 'observation-outcome',
-          content: `Capital formation brief: ${typed.title} — ${truncateWords(typed.rationale, 40)}`,
+          content: `Capital formation brief: ${typed.title} — ${truncateWords(typed.whyItMatters, 40)}`,
           confidence: 0.75,
           domain: 'funding',
           expiresAt: thirtyDaysFromNow,
         },
       ];
+    }
+    case 'memory-insight-output': {
+      const typed = output as MemoryInsightOutput;
+      if (!typed.insights.length) return [];
+      return typed.insights.slice(0, 2).map((insight) => ({
+        type: 'coop-context' as const,
+        content: `Memory insight: ${insight.title} — ${truncateWords(insight.summary, 32)}`,
+        confidence: insight.confidence,
+        domain: 'insights',
+        expiresAt: thirtyDaysFromNow,
+      }));
     }
     case 'publish-readiness-check-output': {
       const typed = output as PublishReadinessCheckOutput;
@@ -1118,8 +1495,10 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         receipt: context.receipt,
         candidates: context.candidates,
         scores: context.scores,
+        extracts: context.extracts,
         relatedDrafts: context.relatedDrafts,
         relatedArtifacts: context.relatedArtifacts,
+        relatedRoutings: context.relatedRoutings,
         memories: context.memories,
       });
 
@@ -1138,6 +1517,18 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         context.scores = (output as GrantFitScorerOutput).scores;
       }
 
+      if (registered.manifest.outputSchemaRef === 'tab-router-output') {
+        const persisted = await persistTabRouterOutput({
+          observation,
+          coops: context.coop ? [context.coop] : await getCoops(),
+          extracts: context.extracts,
+          output: output as TabRouterOutput,
+          provider: completed.provider,
+        });
+        context.createdDraftIds.push(...persisted.createdDraftIds);
+        result.createdDraftIds.push(...persisted.createdDraftIds);
+      }
+
       if (
         registered.manifest.outputSchemaRef === 'capital-formation-brief-output' &&
         context.coop
@@ -1153,6 +1544,22 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         await saveReviewDraft(db, draft);
         context.createdDraftIds.push(draft.id);
         result.createdDraftIds.push(draft.id);
+      }
+
+      if (registered.manifest.outputSchemaRef === 'memory-insight-output' && context.coop) {
+        for (const insight of (output as MemoryInsightOutput).insights) {
+          const draft = createMemoryInsightDraft({
+            observationId: observation.id,
+            planId: workingPlan.id,
+            skillRunId: run.id,
+            skillId,
+            coopId: context.coop.profile.id,
+            output: insight,
+          });
+          await saveReviewDraft(db, draft);
+          context.createdDraftIds.push(draft.id);
+          result.createdDraftIds.push(draft.id);
+        }
       }
 
       if (registered.manifest.outputSchemaRef === 'review-digest-output' && context.coop) {
@@ -1177,7 +1584,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         const readiness = output as PublishReadinessCheckOutput;
         context.draft = await maybePatchDraft(context.draft, readiness);
 
-        if (readiness.ready) {
+        if (readiness.ready && context.draft) {
           const proposal = createActionProposal({
             actionClass: 'publish-ready-draft',
             coopId: context.coop.profile.id,
@@ -1588,12 +1995,21 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     traceId,
     skillRunMetrics: [],
   };
+  let authorizedCoopIds = new Set<string>();
+  let authorizedCoops: CoopSharedState[] = [];
 
   try {
     const [coops, authSession] = await Promise.all([getCoops(), getAuthSession(db)]);
-    const authorizedCoopIds = listAuthorizedOperatorCoopIds(coops, authSession);
-    const runnableObservations = pendingObservations.filter(
-      (observation) => observation.coopId && authorizedCoopIds.has(observation.coopId),
+    authorizedCoops = coops;
+    authorizedCoopIds = listAuthorizedOperatorCoopIds(coops, authSession);
+    const runnableObservations = prioritizeObservations(
+      pendingObservations.filter((observation) =>
+        isObservationRunnableForAuthorizedCoops({
+          observation,
+          authorizedCoopIds,
+          coops,
+        }),
+      ),
     );
 
     for (const observation of runnableObservations.slice(0, 8)) {
@@ -1645,6 +2061,29 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       errorCount: result.errors.length,
       durationMs: result.totalDurationMs,
     });
+    const remainingPending = await listAgentObservationsByStatus(db, ['pending']);
+    if (
+      remainingPending.some(
+        (observation) =>
+          isObservationRunnableForAuthorizedCoops({
+            observation,
+            authorizedCoopIds,
+            coops: authorizedCoops,
+          }),
+      )
+    ) {
+      queueMicrotask(() => {
+        void runAgentCycle();
+      });
+    }
+    if (
+      result.processedObservationIds.length > 0 ||
+      result.createdDraftIds.length > 0 ||
+      result.completedSkillRunIds.length > 0 ||
+      result.errors.length > 0
+    ) {
+      void notifyDashboardUpdated();
+    }
   }
 
   return result;

@@ -41,6 +41,7 @@ import type {
   SoundEvent,
   SoundPreferences,
   TabCandidate,
+  TabRouting,
   UiPreferences,
 } from '@coop/shared';
 
@@ -48,10 +49,15 @@ export interface RuntimeSummary {
   iconState: ExtensionIconState;
   iconLabel: string;
   pendingDrafts: number;
+  routedTabs: number;
+  insightDrafts: number;
+  pendingActions: number;
+  pendingAttentionCount: number;
   coopCount: number;
   syncState: string;
   lastCaptureAt?: string;
   captureMode: CaptureMode;
+  agentCadenceMinutes: UiPreferences['agentCadenceMinutes'];
   localEnhancement: string;
   localInferenceOptIn: boolean;
   activeCoopId?: string;
@@ -61,8 +67,11 @@ export interface CoopBadgeSummary {
   coopId: string;
   coopName: string;
   pendingDrafts: number;
+  routedTabs: number;
+  insightDrafts: number;
   artifactCount: number;
   pendingActions: number;
+  pendingAttentionCount: number;
 }
 
 export interface DashboardResponse {
@@ -71,6 +80,7 @@ export interface DashboardResponse {
   coopBadges: CoopBadgeSummary[];
   drafts: ReviewDraft[];
   candidates: TabCandidate[];
+  tabRoutings: TabRouting[];
   summary: RuntimeSummary;
   soundPreferences: SoundPreferences;
   uiPreferences: UiPreferences;

@@ -916,6 +916,7 @@ export function SessionCapabilitySection(props: SessionCapabilitySectionProps) {
     ttlHours: '24',
     maxUses: '12',
   });
+  const sessionCapabilities = props.sessionCapabilities ?? [];
 
   return (
     <>
@@ -981,7 +982,7 @@ export function SessionCapabilitySection(props: SessionCapabilitySectionProps) {
               Enable Green Goods on this coop before issuing a garden pass.
             </div>
           )}
-          {props.sessionCapabilities.map((capability) => (
+          {sessionCapabilities.map((capability) => (
             <article className="operator-log-entry" key={capability.id}>
               <div className="badge-row">
                 <span className="badge">
@@ -993,7 +994,7 @@ export function SessionCapabilitySection(props: SessionCapabilitySectionProps) {
                 <span className="badge">{capability.scope.chainKey}</span>
               </div>
               <strong>
-                {capability.scope.allowedActions.map(formatActionClassLabel).join(', ')}
+                {(capability.scope.allowedActions ?? []).map(formatActionClassLabel).join(', ')}
               </strong>
               <div className="helper-text">
                 Garden pass {capability.sessionAddress} · Expires{' '}
@@ -1031,7 +1032,7 @@ export function SessionCapabilitySection(props: SessionCapabilitySectionProps) {
               </div>
             </article>
           ))}
-          {props.sessionCapabilities.length === 0 ? (
+          {sessionCapabilities.length === 0 ? (
             <div className="empty-state">
               No garden passes yet. Hatch one when this coop is ready for bounded Green Goods work.
             </div>
@@ -1092,6 +1093,8 @@ export type PermitSectionProps = {
 };
 
 export function PermitSection(props: PermitSectionProps) {
+  const permits = props.permits ?? [];
+
   return (
     <>
       <details className="panel-card collapsible-card" open>
@@ -1103,7 +1106,7 @@ export function PermitSection(props: PermitSectionProps) {
             Issue time-limited passes for low-risk delegated actions. These passes cannot authorize
             treasury operations, arbitrary contract calls, or Safe deployment.
           </p>
-          {props.permits.map((permit) => (
+          {permits.map((permit) => (
             <article className="operator-log-entry" key={permit.id}>
               <div className="badge-row">
                 <span className="badge">{formatPermitStatusLabel(permit.status)}</span>
@@ -1112,7 +1115,9 @@ export function PermitSection(props: PermitSectionProps) {
                   {permit.usedCount}/{permit.maxUses} uses
                 </span>
               </div>
-              <strong>{permit.allowedActions.map(formatDelegatedActionLabel).join(', ')}</strong>
+              <strong>
+                {(permit.allowedActions ?? []).map(formatDelegatedActionLabel).join(', ')}
+              </strong>
               <div className="helper-text">
                 Issued by {permit.issuedBy.displayName} · Expires{' '}
                 {new Date(permit.expiresAt).toLocaleString()}
@@ -1133,7 +1138,7 @@ export function PermitSection(props: PermitSectionProps) {
               ) : null}
             </article>
           ))}
-          {props.permits.length === 0 ? (
+          {permits.length === 0 ? (
             <div className="empty-state">No helper passes issued yet.</div>
           ) : null}
         </div>

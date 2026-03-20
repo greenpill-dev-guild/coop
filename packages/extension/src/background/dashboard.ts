@@ -18,6 +18,7 @@ import {
   listReceiverPairings,
   listSessionCapabilities,
   listSessionCapabilityLogEntries,
+  listTabRoutings,
   pendingBundles,
   refreshPermitStatus,
   saveExecutionPermit,
@@ -120,26 +121,54 @@ export function extensionIconPaths(state: RuntimeSummary['iconState']) {
 // ---- Badge / Summary ----
 
 export async function buildSummary(): Promise<RuntimeSummary> {
-  const [drafts, coops, captureMode, runtimeHealth, authSession, lastCapture, prefs] =
-    await Promise.all([
-      db.reviewDrafts.toArray(),
-      getCoops(),
-      getLocalSetting(stateKeys.captureMode, 'manual'),
-      getRuntimeHealth(),
-      getAuthSession(db),
-      db.captureRuns.orderBy('capturedAt').last(),
-      hydrateUiPreferences(),
-    ]);
+  const [
+    drafts,
+    coops,
+    captureMode,
+    runtimeHealth,
+    authSession,
+    lastCapture,
+    prefs,
+    tabRoutings,
+    actionBundles,
+  ] = await Promise.all([
+    db.reviewDrafts.toArray(),
+    getCoops(),
+    getLocalSetting<RuntimeSummary['captureMode']>(stateKeys.captureMode, 'manual'),
+    getRuntimeHealth(),
+    getAuthSession(db),
+    db.captureRuns.orderBy('capturedAt').last(),
+    hydrateUiPreferences(),
+    listTabRoutings(db, { status: ['routed', 'drafted'], limit: 500 }),
+    listActionBundles(db),
+  ]);
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
   const visibleDrafts = filterVisibleReviewDrafts(
     drafts,
     activeContext.activeCoopId,
     activeContext.activeMemberId,
   );
+  const routedTabs = new Set(
+    tabRoutings
+      .filter(
+        (routing) => !activeContext.activeCoopId || routing.coopId === activeContext.activeCoopId,
+      )
+      .map((routing) => routing.sourceCandidateId),
+  ).size;
+  const insightDrafts = visibleDrafts.filter(
+    (draft) =>
+      draft.provenance.type === 'agent' &&
+      draft.provenance.skillId === 'memory-insight-synthesizer',
+  ).length;
+  const pendingActions = activeContext.activeCoopId
+    ? pendingBundles(actionBundles.filter((bundle) => bundle.coopId === activeContext.activeCoopId))
+        .length
+    : 0;
+  const pendingAttentionCount = visibleDrafts.length + routedTabs + pendingActions;
   const enhancement = localEnhancementAvailability();
   const iconState = deriveExtensionIconState({
-    pendingDrafts: visibleDrafts.length,
-    watching: captureMode !== 'manual',
+    pendingDrafts: pendingAttentionCount,
+    watching: coops.length > 0,
     offline: runtimeHealth.offline,
     missingPermission: runtimeHealth.missingPermission,
     syncError: runtimeHealth.syncError || Boolean(runtimeHealth.lastCaptureError),
@@ -149,6 +178,10 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     iconState,
     iconLabel: extensionIconStateLabel(iconState),
     pendingDrafts: visibleDrafts.length,
+    routedTabs,
+    insightDrafts,
+    pendingActions,
+    pendingAttentionCount,
     coopCount: coops.length,
     syncState:
       runtimeHealth.syncError || runtimeHealth.lastCaptureError
@@ -160,6 +193,7 @@ export async function buildSummary(): Promise<RuntimeSummary> {
           : 'No coop yet',
     lastCaptureAt: lastCapture?.capturedAt,
     captureMode,
+    agentCadenceMinutes: prefs.agentCadenceMinutes,
     localEnhancement:
       enhancement.status === 'ready'
         ? (enhancement.model ?? enhancement.reason)
@@ -188,6 +222,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     coops,
     drafts,
     candidates,
+    tabRoutings,
     summary,
     soundPreferences,
     resolvedUiPreferences,
@@ -199,6 +234,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     getCoops(),
     db.reviewDrafts.reverse().sortBy('createdAt'),
     db.tabCandidates.reverse().sortBy('capturedAt'),
+    listTabRoutings(db, { status: ['routed', 'drafted', 'published'], limit: 500 }),
     buildSummary(),
     getSoundPreferences(db),
     hydrateUiPreferences(),
@@ -268,16 +304,56 @@ export async function getDashboard(): Promise<DashboardResponse> {
         (entry) => !entry.context.coopId || entry.context.coopId === activeContext.activeCoopId,
       )
     : [];
+  const visibleTabRoutings = [...tabRoutings]
+    .filter((routing) => routing.status !== 'dismissed')
+    .reduce((grouped, routing) => {
+      const bucket = grouped.get(routing.sourceCandidateId) ?? [];
+      bucket.push(routing);
+      grouped.set(routing.sourceCandidateId, bucket);
+      return grouped;
+    }, new Map<string, typeof tabRoutings>());
+  const topTabRoutings = [...visibleTabRoutings.values()].flatMap((routings) =>
+    [...routings].sort((left, right) => right.relevanceScore - left.relevanceScore).slice(0, 3),
+  );
 
   const coopBadges: CoopBadgeSummary[] = coops.map((coop) => ({
     coopId: coop.profile.id,
     coopName: coop.profile.name,
     pendingDrafts: orderedDrafts.filter((d) => d.suggestedTargetCoopIds.includes(coop.profile.id))
       .length,
+    routedTabs: new Set(
+      tabRoutings
+        .filter(
+          (routing) =>
+            routing.coopId === coop.profile.id &&
+            (routing.status === 'routed' || routing.status === 'drafted'),
+        )
+        .map((routing) => routing.sourceCandidateId),
+    ).size,
+    insightDrafts: orderedDrafts.filter(
+      (draft) =>
+        draft.suggestedTargetCoopIds.includes(coop.profile.id) &&
+        draft.provenance.type === 'agent' &&
+        draft.provenance.skillId === 'memory-insight-synthesizer',
+    ).length,
     artifactCount: coop.artifacts.length,
     pendingActions: operatorAccess
       ? pendingBundles(actionBundles.filter((b) => b.coopId === coop.profile.id)).length
       : 0,
+    pendingAttentionCount:
+      orderedDrafts.filter((d) => d.suggestedTargetCoopIds.includes(coop.profile.id)).length +
+      new Set(
+        tabRoutings
+          .filter(
+            (routing) =>
+              routing.coopId === coop.profile.id &&
+              (routing.status === 'routed' || routing.status === 'drafted'),
+          )
+          .map((routing) => routing.sourceCandidateId),
+      ).size +
+      (operatorAccess
+        ? pendingBundles(actionBundles.filter((b) => b.coopId === coop.profile.id)).length
+        : 0),
   }));
 
   return {
@@ -286,6 +362,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     coopBadges,
     drafts: visibleDrafts,
     candidates: candidates.reverse().slice(-12).reverse(),
+    tabRoutings: topTabRoutings,
     summary,
     soundPreferences: soundPreferences ?? defaultSoundPreferences,
     uiPreferences: resolvedUiPreferences,

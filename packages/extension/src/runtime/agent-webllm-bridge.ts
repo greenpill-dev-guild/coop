@@ -1,4 +1,5 @@
 const WEBLLM_MODEL_ID = 'Qwen2-0.5B-Instruct-q4f16_1-MLC';
+const WEBLLM_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
 type CompletionResult = {
   provider: 'webllm';
@@ -36,6 +37,7 @@ export class AgentWebLlmBridge {
   private lastError: string | undefined;
   private initProgress = 0;
   private initMessage = '';
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   get status() {
     return {
@@ -48,6 +50,7 @@ export class AgentWebLlmBridge {
   }
 
   private async ensureEngine() {
+    this.bumpIdleTimer();
     if (this.enginePromise) {
       return this.enginePromise;
     }
@@ -98,6 +101,7 @@ export class AgentWebLlmBridge {
       response_format: { type: 'json_object' },
     });
     const output = response.choices?.[0]?.message?.content ?? '';
+    this.bumpIdleTimer();
 
     return {
       provider: 'webllm',
@@ -107,7 +111,20 @@ export class AgentWebLlmBridge {
     };
   }
 
+  private bumpIdleTimer() {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+    }
+    this.idleTimer = setTimeout(() => {
+      this.teardown();
+    }, WEBLLM_IDLE_TIMEOUT_MS);
+  }
+
   teardown() {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
     this.worker?.terminate();
     this.worker = null;
     this.enginePromise = null;

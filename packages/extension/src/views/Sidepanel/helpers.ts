@@ -1,4 +1,4 @@
-import { type CaptureMode, getFvmExplorerTxUrl } from '@coop/shared';
+import { type CaptureMode, type UiPreferences, getFvmExplorerTxUrl } from '@coop/shared';
 import type { InferenceBridgeState } from '../../runtime/inference-bridge';
 
 export function formatRoundUpTiming(mode: CaptureMode) {
@@ -10,6 +10,10 @@ export function formatRoundUpTiming(mode: CaptureMode) {
     default:
       return 'Only when you choose';
   }
+}
+
+export function formatAgentCadence(minutes: UiPreferences['agentCadenceMinutes']) {
+  return `${minutes} min`;
 }
 
 export function formatSharedWalletMode(mode: string) {

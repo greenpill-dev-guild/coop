@@ -107,17 +107,35 @@ export type RuntimeHealth = {
 };
 
 export type NotificationRegistry = Record<string, string>;
+export type AgentOnboardingStatus = 'pending-followup' | 'steady';
+export type AgentOnboardingState = Record<
+  string,
+  {
+    status: AgentOnboardingStatus;
+    triggeredAt: string;
+    followUpAt?: string;
+    completedAt?: string;
+  }
+>;
 
 // ---- Constants ----
 
 export const stateKeys = {
   activeCoopId: 'active-coop-id',
+  agentOnboarding: 'agent-onboarding',
   captureMode: 'capture-mode',
   notificationRegistry: 'notification-registry',
   receiverSyncRuntime: 'receiver-sync-runtime',
   runtimeHealth: 'runtime-health',
   sessionWrappingSecret: 'session-wrapping-secret',
 };
+
+export const alarmNames = {
+  agentCadence: 'agent-proactive-cycle',
+  agentHeartbeat: 'agent-heartbeat',
+  archiveStatusPoll: 'archive-status-poll',
+  onboardingFollowUpPrefix: 'agent-onboarding-followup:',
+} as const;
 
 export const defaultRuntimeHealth: RuntimeHealth = {
   offline: false,
@@ -249,6 +267,18 @@ export async function saveResolvedUiPreferences(value: UiPreferences) {
 
 export async function getNotificationRegistry() {
   return getLocalSetting<NotificationRegistry>(stateKeys.notificationRegistry, {});
+}
+
+export function agentOnboardingKey(coopId: string, memberId: string) {
+  return `${coopId}:${memberId}`;
+}
+
+export async function getAgentOnboardingState() {
+  return getLocalSetting<AgentOnboardingState>(stateKeys.agentOnboarding, {});
+}
+
+export async function setAgentOnboardingState(value: AgentOnboardingState) {
+  await setLocalSetting(stateKeys.agentOnboarding, value);
 }
 
 export async function notifyExtensionEvent(input: {
@@ -507,6 +537,15 @@ export async function ensureDefaults() {
   if (!runtimeHealth) {
     await setLocalSetting(stateKeys.runtimeHealth, defaultRuntimeHealth);
   }
+}
+
+export async function syncAgentCadenceAlarm(
+  agentCadenceMinutes: UiPreferences['agentCadenceMinutes'],
+) {
+  await chrome.alarms.clear(alarmNames.agentCadence);
+  await chrome.alarms.create(alarmNames.agentCadence, {
+    periodInMinutes: agentCadenceMinutes,
+  });
 }
 
 export async function syncCaptureAlarm(captureMode: string) {

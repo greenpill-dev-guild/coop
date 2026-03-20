@@ -125,6 +125,9 @@ describe('review handlers', () => {
       payload: {
         draft: {
           id: 'nonexistent-draft',
+          interpretationId: 'interp-ghost',
+          extractId: 'extract-ghost',
+          sourceCandidateId: 'candidate-ghost',
           title: 'Ghost',
           summary: 'Does not exist',
           sources: [],

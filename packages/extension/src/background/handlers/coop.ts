@@ -22,18 +22,15 @@ import {
   configuredChain,
   configuredOnchainMode,
   db,
-  ensureReceiverSyncOffscreenDocument,
   getCoops,
   notifyExtensionEvent,
   saveState,
   setLocalSetting,
   stateKeys,
-  syncCaptureAlarm,
 } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getOperatorState, logPrivilegedAction } from '../operator';
-import { emitAgentObservationIfMissing, requestAgentCycle } from './agent';
-import { primeCoopRoundup } from './capture';
+import { emitAgentObservationIfMissing, ensureOnboardingBurst, requestAgentCycle } from './agent';
 
 export async function handleSetAnchorMode(
   message: Extract<RuntimeRequest, { type: 'set-anchor-mode' }>,
@@ -197,7 +194,6 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
         domainMask: created.state.greenGoods.domainMask,
       },
     });
-    await ensureReceiverSyncOffscreenDocument();
     await requestAgentCycle(`green-goods-create:${created.state.profile.id}`, true);
   }
   // Initialize privacy primitives for the new coop
@@ -217,13 +213,20 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
   } catch (privacyError) {
     console.warn('[coop:privacy] Failed to initialize coop privacy:', privacyError);
   }
-  await syncCaptureAlarm(created.state.profile.captureMode);
   try {
-    await primeCoopRoundup(created.state, {
-      captureOpenTabs: existingCoops.length === 0,
-    });
-  } catch (roundupError) {
-    console.warn('[coop:roundup] Failed to bootstrap roundup for new coop:', roundupError);
+    const creatorMemberId = created.state.members[0]?.id;
+    if (creatorMemberId) {
+      await ensureOnboardingBurst({
+        coopId: created.state.profile.id,
+        memberId: creatorMemberId,
+        reason: existingCoops.length === 0 ? 'coop-create-first' : 'coop-create',
+      });
+    }
+  } catch (onboardingError) {
+    console.warn(
+      '[coop:onboarding] Failed to schedule onboarding proactive cycle:',
+      onboardingError,
+    );
   }
   await refreshBadge();
   return {
@@ -271,6 +274,20 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
     }
   } catch (privacyError) {
     console.warn('[coop:privacy] Failed to initialize member privacy:', privacyError);
+  }
+  try {
+    const joinedMember = joined.state.members.find(
+      (member) => member.displayName === message.payload.displayName,
+    );
+    if (joinedMember) {
+      await ensureOnboardingBurst({
+        coopId: joined.state.profile.id,
+        memberId: joinedMember.id,
+        reason: 'coop-join',
+      });
+    }
+  } catch (onboardingError) {
+    console.warn('[coop:onboarding] Failed to schedule join proactive cycle:', onboardingError);
   }
   await refreshBadge();
   return {

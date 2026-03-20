@@ -11,7 +11,8 @@ export type PrivilegedFeature =
   | 'live Safe deployments'
   | 'archive follow-up jobs'
   | 'archive CID anchoring'
-  | 'erc8004 identity registration';
+  | 'erc8004 identity registration'
+  | 'Filecoin registry registration';
 
 export function requireAnchorModeForFeature(input: {
   capability: AnchorCapability | null | undefined;

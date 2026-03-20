@@ -19,13 +19,17 @@ import {
   greenGoodsAssessmentRequestSchema,
   greenGoodsWorkApprovalRequestSchema,
   isArchiveReceiptRefreshable,
+  listActionBundles,
   listAgentObservations,
+  listAgentObservationsByStatus,
   listAgentPlans,
   listReceiverCaptures,
   listSkillRuns,
+  listTabRoutings,
   approveAgentPlan as markAgentPlanApproved,
   rejectAgentPlan as markAgentPlanRejected,
   nowIso,
+  pendingBundles,
   queryRecentMemories,
   resolveGreenGoodsGapAdminChanges,
   saveAgentObservation,
@@ -48,10 +52,15 @@ import type {
   RuntimeRequest,
 } from '../../runtime/messages';
 import {
+  agentOnboardingKey,
+  alarmNames,
   db,
   ensureReceiverSyncOffscreenDocument,
+  getAgentOnboardingState,
   getCoops,
   getLocalSetting,
+  notifyExtensionEvent,
+  setAgentOnboardingState,
   setLocalSetting,
 } from '../context';
 import { findAuthenticatedCoopMember, getTrustedNodeContext } from '../operator';
@@ -76,7 +85,32 @@ export async function requestAgentCycle(reason: string, force = false) {
     force,
   };
   await setLocalSetting(AGENT_SETTING_KEYS.cycleRequest, request);
+  await ensureReceiverSyncOffscreenDocument();
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'run-agent-cycle-if-pending',
+      payload: { reason, force },
+    });
+  } catch (error) {
+    console.warn('[agent-cycle] Could not poke offscreen agent runner:', error);
+  }
   return request;
+}
+
+export async function drainAgentCycles(input: {
+  reason: string;
+  force?: boolean;
+  maxPasses?: number;
+}) {
+  const maxPasses = input.maxPasses ?? 2;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const pending = await listAgentObservationsByStatus(db, ['pending']);
+    if (pending.length === 0 && pass > 0) {
+      break;
+    }
+    const request = await requestAgentCycle(`${input.reason}:pass-${pass + 1}`, input.force);
+    await waitForAgentCycle(request);
+  }
 }
 
 async function waitForAgentCycle(
@@ -105,6 +139,7 @@ async function waitForAgentCycle(
 
 export async function emitAgentObservationIfMissing(
   input: Parameters<typeof createAgentObservation>[0],
+  options: { requestCycle?: boolean } = {},
 ): Promise<AgentObservation> {
   const observation = createAgentObservation(input);
   const existing = await findAgentObservationByFingerprint(db, observation.fingerprint);
@@ -112,7 +147,29 @@ export async function emitAgentObservationIfMissing(
     return existing;
   }
   await saveAgentObservation(db, observation);
+  if (options.requestCycle ?? true) {
+    await requestAgentCycle(`observation:${observation.trigger}`);
+  }
   return observation;
+}
+
+export async function emitRoundupBatchObservation(input: {
+  extractIds: string[];
+  eligibleCoopIds: string[];
+}) {
+  if (input.extractIds.length === 0 || input.eligibleCoopIds.length === 0) {
+    return null;
+  }
+
+  return emitAgentObservationIfMissing({
+    trigger: 'roundup-batch-ready',
+    title: 'Captured tabs ready for routing',
+    summary: `Route ${input.extractIds.length} freshly captured tab extracts into local coop contexts.`,
+    payload: {
+      extractIds: input.extractIds,
+      eligibleCoopIds: input.eligibleCoopIds,
+    },
+  });
 }
 
 export async function syncHighConfidenceDraftObservations(drafts: ReviewDraft[]) {
@@ -202,6 +259,17 @@ function resolveObservationInactiveReason(input: {
   const { observation } = input;
 
   switch (observation.trigger) {
+    case 'roundup-batch-ready': {
+      const extractIds = Array.isArray(observation.payload.extractIds)
+        ? observation.payload.extractIds.filter(
+            (value): value is string => typeof value === 'string',
+          )
+        : [];
+      if (extractIds.length === 0) {
+        return 'Roundup batch no longer has captured extracts to route.';
+      }
+      return null;
+    }
     case 'high-confidence-draft': {
       const draft = observation.draftId ? input.draftsById.get(observation.draftId) : undefined;
       if (!draft) {
@@ -255,7 +323,7 @@ function resolveObservationInactiveReason(input: {
       const receipt = observation.receiptId
         ? coop?.archiveReceipts.find((candidate) => candidate.id === observation.receiptId)
         : undefined;
-      if (!receipt || !isArchiveReceiptRefreshable(receipt)) {
+      if (!coop || !receipt || !isArchiveReceiptRefreshable(receipt)) {
         return 'Archive receipt no longer needs follow-up.';
       }
       const nextFingerprint = buildAgentObservationFingerprint({
@@ -299,6 +367,13 @@ function resolveObservationInactiveReason(input: {
       }
       return null;
     }
+    case 'memory-insight-due': {
+      const coop = observation.coopId ? input.coopsById.get(observation.coopId) : undefined;
+      if (!coop) {
+        return 'Coop context is unavailable for memory insight synthesis.';
+      }
+      return null;
+    }
     case 'green-goods-garden-requested': {
       const coop = observation.coopId ? input.coopsById.get(observation.coopId) : undefined;
       if (!coop?.greenGoods?.enabled || coop.greenGoods.gardenAddress) {
@@ -321,7 +396,7 @@ function resolveObservationInactiveReason(input: {
     }
     case 'green-goods-sync-needed': {
       const coop = observation.coopId ? input.coopsById.get(observation.coopId) : undefined;
-      if (!isGreenGoodsSyncNeeded(coop?.greenGoods)) {
+      if (!coop || !isGreenGoodsSyncNeeded(coop.greenGoods)) {
         return 'Green Goods garden sync is no longer needed.';
       }
       const nextFingerprint = buildAgentObservationFingerprint({
@@ -581,6 +656,8 @@ export async function syncAgentObservations() {
           weeklyReviewCadence: coop.rituals[0]?.weeklyReviewCadence,
           latestDigestCreatedAt: latestDigest?.createdAt,
         },
+      }, {
+        requestCycle: false,
       });
     }
   }
@@ -621,6 +698,187 @@ async function getAgentDashboard(): Promise<AgentDashboardResponse> {
     autoRunSkillIds,
     memories,
   };
+}
+
+type ProactiveSnapshot = {
+  routingMarkers: Set<string>;
+  insightDraftIds: Set<string>;
+  digestDraftIds: Set<string>;
+  pendingActionIds: Set<string>;
+};
+
+async function captureProactiveSnapshot(): Promise<ProactiveSnapshot> {
+  const [routings, drafts, actionBundles] = await Promise.all([
+    listTabRoutings(db, { status: ['routed', 'drafted'], limit: 500 }),
+    db.reviewDrafts.toArray(),
+    listActionBundles(db),
+  ]);
+
+  return {
+    routingMarkers: new Set(routings.map((routing) => `${routing.id}:${routing.updatedAt}`)),
+    insightDraftIds: new Set(
+      drafts
+        .filter(
+          (draft) =>
+            draft.provenance.type === 'agent' &&
+            draft.provenance.skillId === 'memory-insight-synthesizer',
+        )
+        .map((draft) => draft.id),
+    ),
+    digestDraftIds: new Set(
+      drafts
+        .filter(
+          (draft) =>
+            draft.provenance.type === 'agent' && draft.provenance.skillId === 'review-digest',
+        )
+        .map((draft) => draft.id),
+    ),
+    pendingActionIds: new Set(pendingBundles(actionBundles).map((bundle) => bundle.id)),
+  };
+}
+
+function diffProactiveSnapshot(before: ProactiveSnapshot, after: ProactiveSnapshot) {
+  return {
+    routedTabs: [...after.routingMarkers].filter((marker) => !before.routingMarkers.has(marker))
+      .length,
+    insightDrafts: [...after.insightDraftIds].filter((id) => !before.insightDraftIds.has(id))
+      .length,
+    reviewDigests: [...after.digestDraftIds].filter((id) => !before.digestDraftIds.has(id)).length,
+    pendingActions: [...after.pendingActionIds].filter((id) => !before.pendingActionIds.has(id))
+      .length,
+  };
+}
+
+async function notifyProactiveDelta(input: {
+  delta: ReturnType<typeof diffProactiveSnapshot>;
+  onboardingKey?: string;
+}) {
+  const { delta } = input;
+  if (
+    delta.routedTabs === 0 &&
+    delta.insightDrafts === 0 &&
+    delta.reviewDigests === 0 &&
+    delta.pendingActions === 0
+  ) {
+    return;
+  }
+
+  if (input.onboardingKey) {
+    await notifyExtensionEvent({
+      eventKind: 'roundup-summary',
+      entityId: `onboarding:${input.onboardingKey}`,
+      state: 'complete',
+      title: 'Coop is routing locally',
+      message:
+        delta.pendingActions > 0
+          ? `Your onboarding run surfaced ${delta.pendingActions} action bundle(s) awaiting review.`
+          : delta.reviewDigests > 0
+            ? `Your onboarding run prepared ${delta.reviewDigests} review digest draft(s).`
+            : delta.insightDrafts > 0
+              ? `Your onboarding run prepared ${delta.insightDrafts} local insight draft(s).`
+              : `Your onboarding run routed ${delta.routedTabs} tab signal(s).`,
+    });
+    return;
+  }
+
+  if (delta.pendingActions > 0) {
+    await notifyExtensionEvent({
+      eventKind: 'action-awaiting-review',
+      entityId: `actions:${nowIso()}`,
+      state: `${delta.pendingActions}`,
+      title: 'Action awaiting review',
+      message: `${delta.pendingActions} new action bundle(s) need review.`,
+    });
+    return;
+  }
+
+  if (delta.reviewDigests > 0) {
+    await notifyExtensionEvent({
+      eventKind: 'review-digest-ready',
+      entityId: `digest:${nowIso()}`,
+      state: `${delta.reviewDigests}`,
+      title: 'Review digest ready',
+      message: `${delta.reviewDigests} new review digest draft(s) are ready in the Roost.`,
+    });
+    return;
+  }
+
+  if (delta.insightDrafts > 0) {
+    await notifyExtensionEvent({
+      eventKind: 'memory-insight-ready',
+      entityId: `insight:${nowIso()}`,
+      state: `${delta.insightDrafts}`,
+      title: 'Local insight ready',
+      message: `${delta.insightDrafts} new local insight draft(s) are ready for review.`,
+    });
+    return;
+  }
+
+  await notifyExtensionEvent({
+    eventKind: 'roundup-summary',
+    entityId: `roundup:${nowIso()}`,
+    state: `${delta.routedTabs}`,
+    title: 'Roundup summary',
+    message: `${delta.routedTabs} new routed tab signal(s) are ready locally.`,
+  });
+}
+
+export async function runProactiveAgentCycle(input: { reason: string; onboardingKey?: string }) {
+  const before = await captureProactiveSnapshot();
+  const { runCaptureCycle } = await import('./capture');
+  await runCaptureCycle();
+  const after = await captureProactiveSnapshot();
+  const delta = diffProactiveSnapshot(before, after);
+  await notifyProactiveDelta({
+    delta,
+    onboardingKey: input.onboardingKey,
+  });
+  return delta;
+}
+
+export async function ensureOnboardingBurst(input: {
+  coopId: string;
+  memberId: string;
+  reason: string;
+}) {
+  const key = agentOnboardingKey(input.coopId, input.memberId);
+  const state = await getAgentOnboardingState();
+  if (state[key]) {
+    return state[key];
+  }
+
+  state[key] = {
+    status: 'pending-followup',
+    triggeredAt: nowIso(),
+    followUpAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+  };
+  await setAgentOnboardingState(state);
+  await chrome.alarms.create(`${alarmNames.onboardingFollowUpPrefix}${key}`, {
+    when: Date.now() + 5 * 60 * 1000,
+  });
+
+  void runProactiveAgentCycle({
+    reason: input.reason,
+    onboardingKey: key,
+  }).catch((error) => {
+    console.warn('[agent-onboarding] Immediate proactive cycle failed:', error);
+  });
+
+  return state[key];
+}
+
+export async function completeOnboardingBurst(key: string) {
+  const state = await getAgentOnboardingState();
+  const current = state[key];
+  if (!current) {
+    return;
+  }
+  state[key] = {
+    ...current,
+    status: 'steady',
+    completedAt: nowIso(),
+  };
+  await setAgentOnboardingState(state);
 }
 
 // ---- Execute Plan Proposals ----
@@ -693,10 +951,8 @@ export async function handleRunAgentCycle(): Promise<
   if (!trustedNodeContext.ok) {
     return { ok: false, error: trustedNodeContext.error };
   }
-  await ensureReceiverSyncOffscreenDocument();
   await syncAgentObservations();
-  const request = await requestAgentCycle('manual-run', true);
-  await waitForAgentCycle(request);
+  await runProactiveAgentCycle({ reason: 'manual-run' });
   return {
     ok: true,
     data: await getAgentDashboard(),

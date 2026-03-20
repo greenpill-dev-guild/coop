@@ -6,6 +6,7 @@ export function PopupSettingsScreen(props: {
   onToggleSound: (enabled: boolean) => void | Promise<void>;
   onToggleNotifications: (enabled: boolean) => void | Promise<void>;
   onToggleLocalHelper: (enabled: boolean) => void | Promise<void>;
+  onSetAgentCadence: (minutes: UiPreferences['agentCadenceMinutes']) => void | Promise<void>;
   onOpenWorkspace: () => void;
 }) {
   const {
@@ -14,6 +15,7 @@ export function PopupSettingsScreen(props: {
     onToggleSound,
     onToggleNotifications,
     onToggleLocalHelper,
+    onSetAgentCadence,
     onOpenWorkspace,
   } = props;
 
@@ -44,6 +46,23 @@ export function PopupSettingsScreen(props: {
           >
             <option value="on">On</option>
             <option value="off">Off</option>
+          </select>
+        </label>
+
+        <label className="popup-setting-row">
+          <span>Agent cadence</span>
+          <select
+            onChange={(event) =>
+              void onSetAgentCadence(
+                Number(event.target.value) as UiPreferences['agentCadenceMinutes'],
+              )
+            }
+            value={uiPreferences.agentCadenceMinutes}
+          >
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">60 min</option>
           </select>
         </label>
 

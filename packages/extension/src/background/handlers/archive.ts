@@ -624,7 +624,10 @@ export async function handleSetCoopArchiveConfig(
     archiveConfig: validatedConfig,
   } satisfies CoopSharedState;
   await saveState(nextState);
-  await setCoopArchiveSecrets(db, payload.coopId, payload.secrets);
+  await setCoopArchiveSecrets(db, payload.coopId, {
+    ...payload.secrets,
+    coopId: payload.coopId,
+  });
   return { ok: true } satisfies RuntimeActionResponse;
 }
 

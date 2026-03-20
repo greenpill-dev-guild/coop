@@ -4,7 +4,7 @@
   "description": "Cluster related local signals into reusable themes for shared memory and coordination.",
   "runtime": "extension-offscreen",
   "model": "transformers",
-  "triggers": ["ritual-review-due", "high-confidence-draft"],
+  "triggers": ["ritual-review-due", "high-confidence-draft", "memory-insight-due"],
   "inputSchemaRef": "agent-observation",
   "outputSchemaRef": "theme-clusterer-output",
   "allowedTools": ["read-coop-context", "list-related-artifacts", "list-related-drafts"],

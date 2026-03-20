@@ -15,7 +15,7 @@ import { type AgentDashboardResponse, sendRuntimeMessage } from '../../runtime/m
 import { ErrorBoundary } from '../ErrorBoundary';
 import { CoopSwitcher } from './CoopSwitcher';
 import { TabStrip } from './TabStrip';
-import { describeLocalHelperState, formatRoundUpTiming } from './helpers';
+import { describeLocalHelperState, formatAgentCadence } from './helpers';
 import { useCoopForm } from './hooks/useCoopForm';
 import { useDashboard } from './hooks/useDashboard';
 import { useDraftEditor } from './hooks/useDraftEditor';
@@ -882,8 +882,8 @@ export function SidepanelApp() {
           onSwitch={selectActiveCoop}
         />
         <div className="state-text">
-          Local-first unless you share · Round-up:{' '}
-          {formatRoundUpTiming(dashboard?.summary.captureMode ?? 'manual')} · Local helper:{' '}
+          Local-first unless you share · Agent cadence:{' '}
+          {formatAgentCadence(dashboard?.summary.agentCadenceMinutes ?? 60)} · Local helper:{' '}
           {inferenceState
             ? describeLocalHelperState(inferenceState.capability)
             : (dashboard?.summary.localEnhancement ?? 'Quick rules first')}
