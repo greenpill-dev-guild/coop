@@ -13,7 +13,7 @@ slug: /reference/agent-os-roadmap
 
 ## 1. Current Architecture Assessment
 
-Coop already has strong OS-like qualities: a 14-skill DAG with observation-driven triggers, a three-tier inference cascade, capability-based auth (policy/session/permit), CRDT sync via Yjs, and passkey identity. This section documents what exists, what works well, and where the architecture needs to evolve.
+Coop already has strong OS-like qualities: a 16-skill DAG with observation-driven triggers, a three-tier inference cascade, capability-based auth (policy/session/permit), CRDT sync via Yjs, and passkey identity. This section documents what exists, what works well, and where the architecture needs to evolve.
 
 ### 1.1 What Exists Today
 

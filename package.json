@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.10",
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "docs"],
   "scripts": {
     "dev": "bunx concurrently -n app,extension \"bun run --filter @coop/app dev\" \"bun run --filter @coop/extension dev\"",
     "dev:app": "bun run --filter @coop/app dev",
@@ -25,7 +25,7 @@
     "test:unit:onchain-config": "vitest run packages/shared/src/modules/onchain/__tests__/onchain.test.ts packages/shared/src/modules/auth/__tests__/auth-onchain.test.ts packages/shared/src/modules/archive/__tests__/storacha.test.ts packages/extension/src/runtime/__tests__/config.test.ts",
     "test:unit:session-key": "vitest run packages/shared/src/modules/session/__tests__/session.test.ts packages/shared/src/modules/policy/__tests__/action-bundle.test.ts packages/extension/src/runtime/__tests__/config.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx",
     "test:unit:local-inference": "vitest run packages/shared/src/modules/coop/__tests__/inference.test.ts packages/extension/src/runtime/__tests__/inference-bridge.test.ts",
-    "test:unit:agent-loop": "vitest run packages/shared/src/modules/agent/__tests__/agent.test.ts packages/shared/src/modules/greengoods/__tests__/greengoods.test.ts packages/shared/src/modules/coop/__tests__/flows.test.ts packages/extension/src/runtime/__tests__/agent-registry.test.ts packages/extension/src/runtime/__tests__/agent-models.test.ts packages/extension/src/runtime/__tests__/agent-harness.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx",
+    "test:unit:agent-loop": "vitest run packages/shared/src/modules/agent/__tests__/agent.test.ts packages/shared/src/modules/greengoods/__tests__/greengoods.test.ts packages/shared/src/modules/coop/__tests__/flows.test.ts packages/extension/src/runtime/__tests__/agent-registry.test.ts packages/extension/src/runtime/__tests__/agent-models.test.ts packages/extension/src/runtime/__tests__/agent-harness.test.ts packages/extension/src/runtime/__tests__/agent-eval.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx",
     "test:unit:agent-policy": "vitest run packages/shared/src/modules/policy/__tests__/policy.test.ts packages/shared/src/modules/policy/__tests__/action-bundle.test.ts packages/shared/src/modules/policy/__tests__/replay.test.ts packages/shared/src/modules/policy/__tests__/approval.test.ts packages/shared/src/modules/policy/__tests__/executor.test.ts",
     "test:unit:delegated-execution": "vitest run packages/shared/src/modules/grant/__tests__/grant.test.ts packages/extension/src/runtime/__tests__/policy-messages.test.ts packages/extension/src/runtime/__tests__/grant-runtime.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx",
     "probe:onchain-live": "bun run ./scripts/probe-onchain-live.ts",
@@ -45,9 +45,9 @@
     "validate:full": "bun run ./scripts/validate.ts full",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "docs:dev": "cd docs && npx docusaurus start",
-    "docs:build": "cd docs && npx docusaurus build",
-    "docs:serve": "cd docs && npx docusaurus serve"
+    "docs:dev": "mise exec -- bun run --filter @coop/docs start",
+    "docs:build": "mise exec -- bun run --filter @coop/docs build",
+    "docs:serve": "mise exec -- bun run --filter @coop/docs serve"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

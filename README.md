@@ -11,7 +11,7 @@ Coop captures knowledge from wherever it lives -- browser tabs, audio recordings
 ## How It Works
 
 1. **Capture** -- Round up browser tabs with a shortcut. Record audio, snap photos, attach files, or share links from your phone via the companion PWA.
-2. **Refine** -- An in-browser AI agent analyzes captures through a 14-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
+2. **Refine** -- An in-browser AI agent analyzes captures through a 16-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
 3. **Review** -- Drafts land in the Roost. You decide what's signal and what's noise.
 4. **Share** -- Publish to a coop -- a shared space backed by a Safe multisig on Arbitrum, syncing peer-to-peer over WebRTC. Shared artifacts are permanently archived to Filecoin via Storacha with full cryptographic provenance. Passkey identity, no wallet required.
 
@@ -31,7 +31,7 @@ Through its Green Goods integration, coops can also bootstrap on-chain gardens f
 Browser tabs (extension), audio recordings, photos, files, and links (companion PWA). Cross-device receiver lets you capture on your phone and review on desktop.
 
 ### AI Agent
-14-skill pipeline running a three-tier inference cascade (WebGPU, WASM, heuristics). Opportunity extraction, grant fit scoring, theme clustering, brief drafting, and cross-session memory persistence. No API keys, no cloud calls.
+16-skill pipeline running a three-tier inference cascade (WebGPU, WASM, heuristics). Opportunity extraction, grant fit scoring, theme clustering, brief drafting, and cross-session memory persistence. No API keys, no cloud calls.
 
 ### Sharing
 Peer-to-peer sync via Yjs CRDTs and y-webrtc. Multi-coop publishing with per-coop feeds and board visualization.

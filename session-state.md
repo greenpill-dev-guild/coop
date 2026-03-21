@@ -1,21 +1,104 @@
-## Session State
-- **Current task**: Finish Playwright/e2e extension validation for the active harness, routed roundup, and receiver sync changes.
-- **Progress**: Shared sync bootstrap bug fixed for invited members; extension and receiver e2e assertions updated to follow current UI/runtime behavior; `e2e/extension.spec.cjs` and `e2e/receiver-sync.spec.cjs` now pass on the desktop Playwright project.
+## Session State (Skills, 2026-03-20)
+- **Current task**: Harden the skills system end to end: baseline fixes, `SKILL.md` prompt integration, output-handler extraction, manifest enforcement, fixture-based evals, and an operator-facing knowledge-skill surface.
+- **Progress**: Bundled executable skills now require frontmatter-backed `SKILL.md` metadata and their instructions are injected into prompt assembly. The runner now enforces `requiredCapabilities`, passes manifest `maxTokens` into inference, routes output handling through `agent-output-handlers.ts`, and covers ERC-8004 registration/feedback action proposals. Skill manifests were updated with concrete capability requirements and token ceilings, docs were corrected from 14 to 16 skills, and a deterministic eval harness with five representative fixtures now runs in the agent-loop test slice. The operator console also now exposes knowledge-skill import, refresh, coop-level enable/disable, trigger-pattern editing, and freshness state through new runtime/background actions.
 - **Files modified**:
-  - `e2e/extension.spec.cjs`
-  - `e2e/receiver-sync.spec.cjs`
-  - `packages/shared/src/contracts/schema.ts`
-  - `packages/shared/src/modules/coop/sync.ts`
-  - `packages/shared/src/modules/coop/__tests__/sync.test.ts`
-  - `packages/shared/src/modules/coop/__tests__/flows.test.ts`
-  - `packages/shared/src/modules/storage/__tests__/db.test.ts`
+  - `package.json`
+  - `README.md`
+  - `CLAUDE.md`
+  - `docs/reference/agent-harness.md`
+  - `docs/reference/original-introduction.md`
+  - `docs/reference/coop-os-architecture-vnext.md`
+  - `docs/reference/agent-os-roadmap.md`
+  - `packages/extension/src/runtime/skill-markdown.ts`
+  - `packages/extension/src/runtime/agent-registry.ts`
+  - `packages/extension/src/runtime/agent-knowledge.ts`
+  - `packages/extension/src/runtime/agent-harness.ts`
+  - `packages/extension/src/runtime/agent-models.ts`
+  - `packages/extension/src/runtime/agent-output-handlers.ts`
+  - `packages/extension/src/runtime/agent-runner.ts`
+  - `packages/extension/src/runtime/agent-eval.ts`
+  - `packages/extension/src/runtime/messages.ts`
+  - `packages/extension/src/runtime/__tests__/agent-registry.test.ts`
+  - `packages/extension/src/runtime/__tests__/agent-models.test.ts`
+  - `packages/extension/src/runtime/__tests__/agent-harness.test.ts`
+  - `packages/extension/src/runtime/__tests__/agent-eval.test.ts`
+  - `packages/extension/src/runtime/__tests__/agent-knowledge.test.ts`
+  - `packages/extension/src/views/Sidepanel/OperatorConsole.tsx`
+  - `packages/extension/src/views/Sidepanel/operator-sections.tsx`
+  - `packages/extension/src/views/Sidepanel/SidepanelApp.tsx`
+  - `packages/extension/src/views/Sidepanel/tabs.tsx`
+  - `packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`
+  - `packages/extension/src/views/Sidepanel/hooks/__tests__/useDashboard.test.ts`
+  - `packages/extension/src/background.ts`
+  - `packages/extension/src/background/handlers/agent.ts`
+  - `packages/extension/src/skills/*/SKILL.md`
+  - `packages/extension/src/skills/*/skill.json`
+  - `packages/extension/src/skills/capital-formation-brief/eval/review-brief.json`
+  - `packages/extension/src/skills/grant-fit-scorer/eval/high-fit-score.json`
+  - `packages/extension/src/skills/opportunity-extractor/eval/funding-signal.json`
+  - `packages/extension/src/skills/publish-readiness-check/eval/ready-draft.json`
+  - `packages/extension/src/skills/review-digest/eval/weekly-digest.json`
 - **Tests**:
-  - Passed: `bun run test -- packages/shared/src/modules/coop/__tests__/flows.test.ts packages/shared/src/modules/coop/__tests__/sync.test.ts`
-  - Passed: `bun run test -- packages/shared/src/modules/storage/__tests__/db.test.ts`
-  - Passed: `bunx tsc -p packages/shared/tsconfig.json --noEmit`
-  - Passed: `bunx playwright test e2e/extension.spec.cjs --project=desktop --reporter=line`
-  - Passed: `bunx playwright test e2e/receiver-sync.spec.cjs --project=desktop --reporter=line`
+  - Passed: `bun run test:unit:agent-loop`
+  - Passed: `bunx vitest run packages/extension/src/views/Sidepanel/hooks/__tests__/useDashboard.test.ts packages/extension/src/runtime/__tests__/messages.test.ts packages/extension/src/runtime/__tests__/agent-knowledge.test.ts`
 - **Next steps**:
-  - If desired, run the broader `bun run test:e2e` or `bun run validate core-loop` / `bun run validate full` suites.
-  - Decide whether to keep the local API/signaling server running (`session 3798`) or stop it.
-- **Blocked by**: No current blocker.
+  - Add background-handler tests for the new knowledge-skill runtime actions so the UI path is covered below the component layer.
+  - Decide whether knowledge-skill trigger patterns should stay global or become per-coop overrides like enablement.
+  - If third-party executable skills remain a target, the next architectural step is to lift more behavior from central runtime branches into manifest-registered execution/handler modules.
+- **Blocked by**: No immediate blocker. The remaining gaps are mostly hardening and product decisions, not runtime breakage.
+
+## Session State
+- **Current task**: Push the Green Goods/member-account slice through a real Sepolia run and harden the live path around actual protocol constraints.
+- **Progress**: Added a live Green Goods garden-mint authorization preflight in shared code so Sepolia failures now stop with an explicit allowlist/owner message instead of an opaque `UserOperation reverted during simulation with reason: 0x`. The live Playwright spec now checks that preflight before proposing the garden action and is ready to submit both an impact report and a work submission once the Coop Safe is authorized. A real Sepolia run confirmed the actual blocker: the freshly created Coop Safe is not on the Green Goods deployment allowlist, so garden minting cannot proceed yet.
+- **Files modified**:
+  - `packages/shared/src/contracts/schema.ts`
+  - `packages/shared/src/modules/member-account/member-account.ts`
+  - `packages/shared/src/modules/greengoods/greengoods.ts`
+  - `packages/shared/src/modules/greengoods/__tests__/greengoods.test.ts`
+  - `packages/shared/src/modules/greengoods/__tests__/gardener-lifecycle.test.ts`
+  - `packages/shared/src/modules/policy/action-bundle.ts`
+  - `packages/extension/src/runtime/messages.ts`
+  - `packages/extension/src/background.ts`
+  - `packages/extension/src/background/handlers/actions.ts`
+  - `packages/extension/src/background/handlers/action-executors.ts`
+  - `packages/extension/src/background/handlers/member-account.ts`
+  - `packages/extension/src/background/handlers/__tests__/actions-handlers.test.ts`
+  - `packages/extension/src/background/handlers/__tests__/member-account-handlers.test.ts`
+  - `packages/extension/src/views/Sidepanel/OperatorConsole.tsx`
+  - `packages/extension/src/views/Sidepanel/operator-sections.tsx`
+  - `packages/extension/src/views/Sidepanel/SidepanelApp.tsx`
+  - `packages/extension/src/views/Sidepanel/tabs.tsx`
+  - `packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`
+  - `packages/extension/src/views/Sidepanel/__tests__/tabs.test.tsx`
+  - `e2e/member-account-live.spec.cjs`
+- **Tests**:
+  - Passed: `bun run test packages/shared/src/modules/greengoods/__tests__/greengoods.test.ts packages/shared/src/modules/greengoods/__tests__/gardener-lifecycle.test.ts`
+  - Passed: `node -c e2e/member-account-live.spec.cjs`
+  - Passed: `bunx biome check packages/shared/src/modules/greengoods/greengoods.ts packages/shared/src/modules/greengoods/__tests__/greengoods.test.ts e2e/member-account-live.spec.cjs`
+  - Passed: `bun run test packages/extension/src/background/handlers/__tests__/member-account-handlers.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx packages/extension/src/views/Sidepanel/__tests__/tabs.test.tsx`
+  - Passed: `bunx biome check packages/extension/src/background/handlers/member-account.ts packages/extension/src/background/handlers/__tests__/member-account-handlers.test.ts packages/extension/src/views/Sidepanel/OperatorConsole.tsx packages/extension/src/views/Sidepanel/operator-sections.tsx packages/extension/src/views/Sidepanel/tabs.tsx packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx packages/extension/src/views/Sidepanel/__tests__/tabs.test.tsx packages/shared/src/modules/greengoods/greengoods.ts packages/shared/src/contracts/schema.ts e2e/member-account-live.spec.cjs`
+  - Passed: `bunx playwright test e2e/member-account-live.spec.cjs --project=desktop` (skipped by default without live env)
+  - Failed as expected with actionable preflight: `COOP_RUN_MEMBER_ACCOUNT_LIVE=1 bunx playwright test e2e/member-account-live.spec.cjs --project=desktop`
+  - `bun run build` currently still fails on pre-existing TypeScript issues in `packages/shared/src/modules/auth/{auth,identity}.ts` unrelated to this Green Goods slice.
+- **Next steps**:
+  - Ask Green Goods governance to allowlist the new Coop Safe on Sepolia or enable open minting for garden creation.
+  - Re-run `COOP_RUN_MEMBER_ACCOUNT_LIVE=1 bunx playwright test e2e/member-account-live.spec.cjs --project=desktop` once that authorization is in place.
+  - After garden mint succeeds, verify the rest of the live spec reaches member account lazy deployment plus impact/work attestations.
+- **Blocked by**: Green Goods Sepolia currently restricts `mintGarden()` to the GardenToken owner or deployment-allowlisted callers. The latest blocked Safe was `0xF1fB67B65c3660805D79d954f05B19E85aCed9b1`; the GardenToken owner is `0xFBAf2A9734eAe75497e1695706CC45ddfA346ad6`, and the deployment registry is `0x029DF9E43E6133fc5FED32ab6d3307d6bcA1A3cA`. There are unrelated worktree changes outside this feature surface that should be left untouched.
+
+## Session State (Landing, 2026-03-20)
+- **Current task**: Fix landing flashcard focus/transcript issues, do a second UI review pass, and assess whether OpenAI Whisper-style transcription would be a better fit.
+- **Progress**: Flashcard focus now moves into the opened card and returns to the originating trigger on close. Live transcript accumulation now appends only new final segments instead of duplicating earlier speech chunks. A second browser review pass confirmed those fixes, verified the staged "How Coop works" reveal, and surfaced remaining UI issues on mobile hero layout and desktop footer layout.
+- **Files modified**:
+  - `packages/app/src/views/Landing/index.tsx`
+  - `packages/app/src/__tests__/Landing.test.tsx`
+- **Tests**:
+  - Passed: `bunx vitest run packages/app/src/__tests__/Landing.test.tsx`
+  - Passed: `bun run --filter @coop/app build`
+  - Passed: `bunx @biomejs/biome check packages/app/src/views/Landing/index.tsx packages/app/src/__tests__/Landing.test.tsx`
+  - Browser-verified: desktop `/`, mobile `/landing`, plus mocked speech-recognition checks via Playwright
+- **Next steps**:
+  - Tighten the mobile `/landing` hero so title, subtitle, and primary CTAs fit within the initial viewport.
+  - Decide whether the footer should remain four-across or be changed to a single stacked column to match the original brief.
+  - If transcription accuracy becomes a priority over local-first positioning, prototype an opt-in OpenAI transcription path behind the existing local draft flow.
+- **Blocked by**: No technical blocker. The main product tradeoff is whether landing transcription should stay device-local in spirit, or explicitly send audio to an external transcription service for better accuracy.

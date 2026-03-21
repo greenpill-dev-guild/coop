@@ -170,7 +170,7 @@ These were not part of the locked prototype loop. Items marked *(since shipped)*
 - encrypted archive workflows for sensitive content
 - full Green Goods garden binding
 - built-in API-key-based LLM integrations
-- ~~autonomous agent execution~~ *(since shipped -- agent harness with 14-skill pipeline, 3-tier inference)*
+- ~~autonomous agent execution~~ *(since shipped -- agent harness with 16-skill pipeline, 3-tier inference)*
 - ~~session-key based transactions~~ *(since shipped -- session module with time-bounded capabilities)*
 - ~~ZK membership proofs~~ *(since shipped -- privacy module with Semaphore v4 proofs and anonymous publishing)*
 - ~~stealth addresses~~ *(since shipped -- stealth module with ERC-5564 secp256k1 stealth addresses)*

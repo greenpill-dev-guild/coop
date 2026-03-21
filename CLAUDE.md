@@ -30,7 +30,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 
 ### Product Loop
 1. **Capture**: Browser tabs (extension) + audio, photos, files, links (companion PWA)
-2. **Refine**: In-browser agent with 14-skill pipeline (WebGPU/WASM, no cloud)
+2. **Refine**: In-browser agent with 16-skill pipeline (WebGPU/WASM, no cloud)
 3. **Review**: Drafts land in the Roost for human triage
 4. **Share**: Publish to a coop (Safe multisig on Arbitrum, P2P sync via Yjs + y-webrtc, archived to Filecoin via Storacha)
 

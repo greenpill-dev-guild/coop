@@ -269,7 +269,7 @@ The harness is built entirely on browser-native APIs, with no server dependencie
 | `shared/src/modules/agent/agent.ts` | ~430 | Domain model: observations, plans, skills, drafts |
 | `shared/src/contracts/schema.ts` | | Zod schemas for all agent types |
 | `shared/src/modules/storage/db.ts` | | Dexie tables + CRUD for agent state |
-| `extension/src/skills/*/skill.json` | | 14 skill manifests with dependency graph |
+| `extension/src/skills/*/skill.json` | | 16 skill manifests with dependency graph |
 
 ## Design Principles
 
