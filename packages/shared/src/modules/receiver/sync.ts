@@ -1,6 +1,7 @@
-import { defaultIceServers, filterUsableSignalingUrls } from '@coop/api';
+import { defaultIceServers, defaultWebsocketSyncUrl, filterUsableSignalingUrls } from '@coop/api';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
 import { type ReceiverSyncEnvelope, receiverSyncEnvelopeSchema } from '../../contracts/schema';
 
@@ -103,12 +104,14 @@ export function connectReceiverSyncProviders(
   signalingUrls: string[] = [],
   password?: string,
   iceServers?: RTCIceServer[],
+  websocketSyncUrl?: string,
 ) {
   if (typeof window === 'undefined') {
     return {
       roomId,
       indexeddb: undefined,
       webrtc: undefined,
+      websocket: undefined,
       disconnect() {},
     };
   }
@@ -135,11 +138,26 @@ export function connectReceiverSyncProviders(
     }
   }
 
+  let websocket: WebsocketProvider | undefined;
+  const resolvedWsUrl = websocketSyncUrl ?? defaultWebsocketSyncUrl;
+  if (resolvedWsUrl) {
+    try {
+      websocket = new WebsocketProvider(resolvedWsUrl, roomId, doc, {
+        connect: true,
+      });
+    } catch (error) {
+      void error;
+      websocket = undefined;
+    }
+  }
+
   return {
     roomId,
     indexeddb,
     webrtc,
+    websocket,
     disconnect() {
+      websocket?.destroy();
       webrtc?.destroy();
       indexeddb.destroy();
     },

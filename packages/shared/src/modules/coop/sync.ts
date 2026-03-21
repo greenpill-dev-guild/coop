@@ -1,6 +1,7 @@
-import { defaultIceServers, defaultSignalingUrls } from '@coop/api';
+import { defaultIceServers, defaultSignalingUrls, defaultWebsocketSyncUrl } from '@coop/api';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { type SignalingConn, WebrtcProvider } from 'y-webrtc';
+import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
 import {
   type CoopSharedState,
@@ -15,6 +16,7 @@ export {
   buildIceServers,
   defaultIceServers,
   defaultSignalingUrls,
+  defaultWebsocketSyncUrl,
   parseSignalingUrls,
 } from '@coop/api';
 const sharedKeys = [
@@ -135,12 +137,14 @@ export function connectSyncProviders(
   doc: Y.Doc,
   room: SyncRoomConfig,
   iceServers?: RTCIceServer[],
+  websocketSyncUrl?: string,
 ) {
   if (typeof window === 'undefined') {
     return {
       roomId: room.roomId,
       indexeddb: undefined,
       webrtc: undefined,
+      websocket: undefined,
       disconnect() {},
     };
   }
@@ -160,11 +164,26 @@ export function connectSyncProviders(
     webrtc = undefined;
   }
 
+  let websocket: WebsocketProvider | undefined;
+  const resolvedWsUrl = websocketSyncUrl ?? defaultWebsocketSyncUrl;
+  if (resolvedWsUrl) {
+    try {
+      websocket = new WebsocketProvider(resolvedWsUrl, room.roomId, doc, {
+        connect: true,
+      });
+    } catch (error) {
+      void error;
+      websocket = undefined;
+    }
+  }
+
   return {
     roomId: room.roomId,
     indexeddb,
     webrtc,
+    websocket,
     disconnect() {
+      websocket?.destroy();
       webrtc?.destroy();
       indexeddb.destroy();
     },
@@ -178,19 +197,26 @@ export interface SyncTransportHealth {
   signalingConnectionCount: number;
   peerCount: number;
   broadcastPeerCount: number;
+  websocketConnected: boolean;
 }
 
 export function summarizeSyncTransportHealth(
   webrtc?: Pick<WebrtcProvider, 'room' | 'signalingUrls' | 'signalingConns'>,
+  websocket?: Pick<WebsocketProvider, 'wsconnected'>,
 ): SyncTransportHealth {
+  const websocketConnected = websocket?.wsconnected ?? false;
+
   if (!webrtc) {
     return {
-      syncError: true,
-      note: 'Peer sync is unavailable in this extension context right now.',
+      syncError: !websocketConnected,
+      note: websocketConnected
+        ? 'WebSocket sync connected. Peer sync is unavailable.'
+        : 'Peer sync is unavailable in this extension context right now.',
       configuredSignalingCount: 0,
       signalingConnectionCount: 0,
       peerCount: 0,
       broadcastPeerCount: 0,
+      websocketConnected,
     };
   }
 
@@ -203,12 +229,15 @@ export function summarizeSyncTransportHealth(
 
   if (signalingConnectionCount === 0 && peerCount === 0 && broadcastPeerCount === 0) {
     return {
-      syncError: true,
-      note: 'No signaling server connection. Shared sync is currently limited to this browser profile.',
+      syncError: !websocketConnected,
+      note: websocketConnected
+        ? 'WebSocket sync connected. No signaling server connection.'
+        : 'No signaling server connection. Shared sync is currently limited to this browser profile.',
       configuredSignalingCount: webrtc.signalingUrls.length,
       signalingConnectionCount,
       peerCount,
       broadcastPeerCount,
+      websocketConnected,
     };
   }
 
@@ -221,6 +250,7 @@ export function summarizeSyncTransportHealth(
       signalingConnectionCount,
       peerCount,
       broadcastPeerCount,
+      websocketConnected,
     };
   }
 
@@ -231,5 +261,6 @@ export function summarizeSyncTransportHealth(
     signalingConnectionCount,
     peerCount,
     broadcastPeerCount,
+    websocketConnected,
   };
 }

@@ -1,5 +1,8 @@
-/** Default signaling server URL (Fly.io-hosted). */
-export const defaultSignalingUrls: string[] = ['wss://signal.coop.town'];
+/** Default signaling server URL. */
+export const defaultSignalingUrls: string[] = ['wss://api.coop.town'];
+
+/** Default Yjs document sync URL (y-websocket endpoint). */
+export const defaultWebsocketSyncUrl = 'wss://api.coop.town/yws';
 
 /** Default ICE servers for WebRTC peer connections (STUN only). */
 export const defaultIceServers: RTCIceServer[] = [
