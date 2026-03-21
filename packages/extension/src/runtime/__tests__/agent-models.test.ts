@@ -138,6 +138,7 @@ describe('agent model provider fallback', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     teardownAgentModels();
   });
 
@@ -200,6 +201,39 @@ describe('agent model provider fallback', () => {
 
     expect(result.provider).toBe('transformers');
     expect(result.output.title).toBe('Capital brief');
+  });
+
+  it('falls back from a hung WebLLM call to transformers after the skill timeout', async () => {
+    vi.useFakeTimers();
+    webLlmComplete.mockImplementation(() => new Promise(() => {}));
+    transformersPipeline.mockResolvedValue([
+      {
+        generated_text: JSON.stringify({
+          title: 'Capital brief',
+          summary: 'A concise funding brief.',
+          whyItMatters: 'It matches coop purpose.',
+          suggestedNextStep: 'Review with the funding circle.',
+          tags: ['funding'],
+          targetCoopIds: ['coop-1'],
+          supportingCandidateIds: ['candidate-1'],
+        }),
+      },
+    ]);
+
+    const resultPromise = completeSkillOutput({
+      preferredProvider: 'webllm',
+      schemaRef: 'capital-formation-brief-output',
+      system: 'Return JSON only.',
+      prompt: 'Write a funding brief.',
+      heuristicContext: 'Potential funding opportunity.',
+    });
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    const result = await resultPromise;
+
+    expect(result.provider).toBe('transformers');
+    expect(result.output.title).toBe('Capital brief');
+    expect(webLlmComplete).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to heuristics when model providers fail', async () => {

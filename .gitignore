@@ -12,3 +12,5 @@ docs/build
 docs/.docusaurus
 
 .env*
+packages/app/public/__coop_dev__/*
+!packages/app/public/__coop_dev__/.gitkeep

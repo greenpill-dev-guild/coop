@@ -17,6 +17,7 @@ import type {
   ThemeClustererOutput,
 } from '@coop/shared';
 import { validateSkillOutput } from '@coop/shared';
+import { AGENT_SKILL_TIMEOUT_MS } from './agent-config';
 import { AgentWebLlmBridge } from './agent-webllm-bridge';
 
 const TRANSFORMERS_MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
@@ -28,6 +29,24 @@ type TextGenerationPipeline = (
 
 let transformersPipelinePromise: Promise<TextGenerationPipeline> | null = null;
 const webLlmBridge = new AgentWebLlmBridge();
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms.`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 function warmTransformersPipeline() {
   void ensureTransformersPipeline().catch(() => {
@@ -375,12 +394,16 @@ async function runWebLlm<T>(input: {
   const promptWithRetry = input.retryContext
     ? `${input.prompt}\n\n${input.retryContext}`
     : input.prompt;
-  const result = await webLlmBridge.complete({
-    system: input.system,
-    prompt: promptWithRetry,
-    temperature: 0.2,
-    maxTokens: input.maxTokens ?? 700,
-  });
+  const result = await withTimeout(
+    webLlmBridge.complete({
+      system: input.system,
+      prompt: promptWithRetry,
+      temperature: 0.2,
+      maxTokens: input.maxTokens ?? 700,
+    }),
+    AGENT_SKILL_TIMEOUT_MS,
+    'WebLLM completion',
+  );
   return {
     provider: result.provider,
     model: result.model,
@@ -437,6 +460,9 @@ export async function completeSkillOutput<T>(input: {
           maxTokens: input.maxTokens,
         });
       } catch (firstError) {
+        if (firstError instanceof Error && /timed out/i.test(firstError.message)) {
+          throw firstError;
+        }
         // Retry once with error context
         try {
           return await runWebLlm<T>({

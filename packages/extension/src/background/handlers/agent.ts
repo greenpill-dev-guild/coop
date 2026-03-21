@@ -6,13 +6,13 @@ import {
   type GreenGoodsAssessmentRequest,
   type GreenGoodsGardenState,
   type GreenGoodsWorkApprovalRequest,
-  type KnowledgeSkill,
   type ReceiverCapture,
   type ReviewDraft,
   buildAgentObservationFingerprint,
   completeAgentPlan,
   createAgentObservation,
   createId,
+  deleteCoopKnowledgeSkillOverride,
   findAgentObservationByFingerprint,
   getAgentObservation,
   getAgentPlan,
@@ -40,7 +40,6 @@ import {
   saveAgentObservation,
   saveAgentPlan,
   saveCoopKnowledgeSkillOverride,
-  saveKnowledgeSkill,
   updateAgentObservation,
   updateAgentPlan,
 } from '@coop/shared';
@@ -52,7 +51,12 @@ import {
   type AgentCycleState,
 } from '../../runtime/agent-config';
 import { filterAgentDashboardState, isTrustedNodeRole } from '../../runtime/agent-harness';
-import { importKnowledgeSkill, refreshKnowledgeSkill } from '../../runtime/agent-knowledge';
+import {
+  importKnowledgeSkill,
+  normalizeKnowledgeSkillTriggerPatterns,
+  refreshKnowledgeSkill,
+  resolveKnowledgeSkillTriggerPatterns,
+} from '../../runtime/agent-knowledge';
 import { listRegisteredSkills } from '../../runtime/agent-registry';
 import type {
   AgentDashboardKnowledgeSkill,
@@ -75,6 +79,10 @@ import {
 import { findAuthenticatedCoopMember, getTrustedNodeContext } from '../operator';
 
 // ---- Agent Cycle State ----
+
+function arraysEqual(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
 
 export async function getAgentCycleState() {
   return getLocalSetting<AgentCycleState>(AGENT_SETTING_KEYS.cycleState, {
@@ -710,6 +718,7 @@ async function listDashboardKnowledgeSkills(
         skill,
         override,
         effectiveEnabled: override?.enabled ?? skill.enabled,
+        effectiveTriggerPatterns: resolveKnowledgeSkillTriggerPatterns(skill, override),
         freshness: resolveKnowledgeSkillFreshness(skill.fetchedAt),
       };
     });
@@ -1278,39 +1287,77 @@ export async function handleSetCoopKnowledgeSkillEnabled(
   const existingOverride = overrides.find(
     (override) => override.knowledgeSkillId === message.payload.knowledgeSkillId,
   );
+  if (!existingOverride && message.payload.enabled === skill.enabled) {
+    return { ok: true, data: await getAgentDashboard() };
+  }
+  if (
+    existingOverride &&
+    message.payload.enabled === skill.enabled &&
+    existingOverride.triggerPatterns === undefined
+  ) {
+    await deleteCoopKnowledgeSkillOverride(db, existingOverride.id);
+    return { ok: true, data: await getAgentDashboard() };
+  }
   const nextOverride: CoopKnowledgeSkillOverride = {
     id: existingOverride?.id ?? createId('knowledge-override'),
     coopId: trustedNodeContext.coop.profile.id,
     knowledgeSkillId: message.payload.knowledgeSkillId,
     enabled: message.payload.enabled,
+    triggerPatterns: existingOverride?.triggerPatterns,
   };
   await saveCoopKnowledgeSkillOverride(db, nextOverride);
 
   return { ok: true, data: await getAgentDashboard() };
 }
 
-export async function handleSetKnowledgeSkillTriggerPatterns(
-  message: Extract<RuntimeRequest, { type: 'set-knowledge-skill-trigger-patterns' }>,
+export async function handleSetCoopKnowledgeSkillTriggerPatterns(
+  message: Extract<RuntimeRequest, { type: 'set-coop-knowledge-skill-trigger-patterns' }>,
 ): Promise<RuntimeActionResponse<AgentDashboardResponse>> {
-  const trustedNodeContext = await getTrustedNodeContext();
+  const trustedNodeContext = await getTrustedNodeContext({
+    coopId: message.payload.coopId,
+  });
   if (!trustedNodeContext.ok) {
     return { ok: false, error: trustedNodeContext.error };
   }
 
-  const skill = await getKnowledgeSkill(db, message.payload.skillId);
+  const skill = await getKnowledgeSkill(db, message.payload.knowledgeSkillId);
   if (!skill) {
     return { ok: false, error: 'Knowledge skill not found.' };
   }
 
-  const nextSkill: KnowledgeSkill = {
-    ...skill,
-    triggerPatterns: message.payload.triggerPatterns
-      .map((pattern) => pattern.trim())
-      .filter(
-        (pattern, index, patterns) => pattern.length > 0 && patterns.indexOf(pattern) === index,
-      ),
+  const overrides = await listCoopKnowledgeSkillOverrides(db, trustedNodeContext.coop.profile.id);
+  const existingOverride = overrides.find(
+    (override) => override.knowledgeSkillId === message.payload.knowledgeSkillId,
+  );
+  const nextTriggerPatterns = normalizeKnowledgeSkillTriggerPatterns(
+    message.payload.triggerPatterns,
+  );
+  const preservedEnabled = existingOverride?.enabled ?? skill.enabled;
+  const storedTriggerPatterns = arraysEqual(nextTriggerPatterns, skill.triggerPatterns)
+    ? undefined
+    : nextTriggerPatterns;
+
+  if (!existingOverride && !storedTriggerPatterns) {
+    return { ok: true, data: await getAgentDashboard() };
+  }
+
+  if (
+    existingOverride &&
+    preservedEnabled === skill.enabled &&
+    storedTriggerPatterns === undefined
+  ) {
+    await deleteCoopKnowledgeSkillOverride(db, existingOverride.id);
+    return { ok: true, data: await getAgentDashboard() };
+  }
+
+  const nextOverride: CoopKnowledgeSkillOverride = {
+    id: existingOverride?.id ?? createId('knowledge-override'),
+    coopId: trustedNodeContext.coop.profile.id,
+    knowledgeSkillId: message.payload.knowledgeSkillId,
+    enabled: preservedEnabled,
+    triggerPatterns: storedTriggerPatterns,
   };
-  await saveKnowledgeSkill(db, nextSkill);
+  await saveCoopKnowledgeSkillOverride(db, nextOverride);
 
   return { ok: true, data: await getAgentDashboard() };
 }

@@ -1358,13 +1358,13 @@ export interface CoopFeedTabProps {
   handleRejectAgentPlan: (planId: string) => Promise<void>;
   handleRetrySkillRun: (skillRunId: string) => Promise<void>;
   handleToggleSkillAutoRun: (skillId: string, enabled: boolean) => Promise<void>;
-  handleImportKnowledgeSkill: (url: string) => Promise<void>;
-  handleRefreshKnowledgeSkill: (skillId: string) => Promise<void>;
+  handleImportKnowledgeSkill: (url: string) => Promise<boolean>;
+  handleRefreshKnowledgeSkill: (skillId: string) => Promise<boolean>;
   handleSetCoopKnowledgeSkillEnabled: (skillId: string, enabled: boolean) => Promise<void>;
   handleSaveKnowledgeSkillTriggerPatterns: (
     skillId: string,
     triggerPatterns: string[],
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   handleSetPolicy: (
     actionClass: import('@coop/shared').PolicyActionClass,
     approvalRequired: boolean,
@@ -1589,6 +1589,7 @@ export function CoopFeedTab({
           onQueueGreenGoodsAssessment={handleQueueGreenGoodsAssessment}
           onQueueGreenGoodsGapAdminSync={handleQueueGreenGoodsGapAdminSync}
           onQueueGreenGoodsMemberSync={handleQueueGreenGoodsMemberSync}
+          activeCoopId={activeCoop?.profile.id}
           activeCoopName={activeCoop?.profile.name}
           knowledgeSkills={agentDashboard?.knowledgeSkills ?? []}
           skillManifests={agentDashboard?.manifests ?? []}

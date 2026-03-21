@@ -1,5 +1,7 @@
 import { type SetupInsightsInput, emptySetupInsightsInput, toSetupInsights } from '@coop/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { DevTunnelBadge } from '../../components/DevTunnelBadge';
+import type { DevEnvironmentState } from '../../dev-environment';
 
 type TranscriptKey = 'capital' | 'impact' | 'governance' | 'knowledge';
 type TranscriptMap = Record<TranscriptKey, string>;
@@ -46,9 +48,12 @@ type SpeechWindow = Window &
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
   };
 
+type ChickenVariant = 'adult' | 'young' | 'chick';
+
 type JourneyChicken = {
   id: string;
   label: string;
+  variant?: ChickenVariant;
 };
 
 type RitualCard = {
@@ -107,6 +112,10 @@ const journeyChickens: JourneyChicken[] = [
   { id: 'notes', label: 'Notes' },
   { id: 'ideas', label: 'Ideas' },
   { id: 'signals', label: 'Signals' },
+  { id: 'links', label: 'Links', variant: 'young' },
+  { id: 'drafts', label: 'Drafts', variant: 'chick' },
+  { id: 'threads', label: 'Threads', variant: 'young' },
+  { id: 'clips', label: 'Clips', variant: 'chick' },
 ];
 
 const audienceOptions: AudienceOption[] = [
@@ -179,6 +188,26 @@ const storyFlightPaths: Record<
     { x: '-18vw', y: '-5vh', rotate: 4, scale: 0.98 },
     { x: '-28vw', y: '-7vh', rotate: 0, scale: 0.92 },
   ],
+  links: [
+    { x: '5vw', y: '-1vh', rotate: -6, scale: 1.0 },
+    { x: '14vw', y: '-4vh', rotate: -2, scale: 0.95 },
+    { x: '22vw', y: '-6vh', rotate: 0, scale: 0.88 },
+  ],
+  drafts: [
+    { x: '4vw', y: '1vh', rotate: 5, scale: 1.0 },
+    { x: '10vw', y: '-2vh', rotate: 2, scale: 0.94 },
+    { x: '16vw', y: '-5vh', rotate: 0, scale: 0.86 },
+  ],
+  threads: [
+    { x: '-5vw', y: '-1vh', rotate: 6, scale: 1.0 },
+    { x: '-14vw', y: '-4vh', rotate: 2, scale: 0.95 },
+    { x: '-22vw', y: '-6vh', rotate: 0, scale: 0.88 },
+  ],
+  clips: [
+    { x: '-4vw', y: '1vh', rotate: -5, scale: 1.0 },
+    { x: '-10vw', y: '-2vh', rotate: -2, scale: 0.94 },
+    { x: '-16vw', y: '-5vh', rotate: 0, scale: 0.86 },
+  ],
 };
 
 const arrivalFlightPaths: Record<
@@ -204,6 +233,26 @@ const arrivalFlightPaths: Record<
     { x: '-8vw', y: '-3vh', rotate: 8, scale: 0.95, opacity: 1 },
     { x: '-16vw', y: '-8vh', rotate: 3, scale: 0.72, opacity: 0.82 },
     { x: '-20vw', y: '-11vh', rotate: 0, scale: 0.38, opacity: 0 },
+  ],
+  links: [
+    { x: '6vw', y: '-2vh', rotate: -5, scale: 0.92, opacity: 1 },
+    { x: '13vw', y: '-6vh', rotate: -2, scale: 0.68, opacity: 0.78 },
+    { x: '17vw', y: '-9vh', rotate: 0, scale: 0.34, opacity: 0 },
+  ],
+  drafts: [
+    { x: '5vw', y: '-1vh', rotate: 4, scale: 0.9, opacity: 1 },
+    { x: '11vw', y: '-4vh', rotate: 1, scale: 0.65, opacity: 0.76 },
+    { x: '14vw', y: '-7vh', rotate: 0, scale: 0.32, opacity: 0 },
+  ],
+  threads: [
+    { x: '-6vw', y: '-2vh', rotate: 5, scale: 0.92, opacity: 1 },
+    { x: '-13vw', y: '-6vh', rotate: 2, scale: 0.68, opacity: 0.78 },
+    { x: '-17vw', y: '-9vh', rotate: 0, scale: 0.34, opacity: 0 },
+  ],
+  clips: [
+    { x: '-5vw', y: '-1vh', rotate: -4, scale: 0.9, opacity: 1 },
+    { x: '-11vw', y: '-4vh', rotate: -1, scale: 0.65, opacity: 0.76 },
+    { x: '-14vw', y: '-7vh', rotate: 0, scale: 0.32, opacity: 0 },
   ],
 };
 
@@ -498,12 +547,18 @@ export function buildLandingSetupPacket(
   };
 }
 
-function ChickenSprite({ label, showLabel = true }: { label: string; showLabel?: boolean }) {
+function ChickenSprite({
+  label,
+  showLabel = true,
+  variant = 'adult',
+}: { label: string; showLabel?: boolean; variant?: ChickenVariant }) {
+  const variantClass = variant !== 'adult' ? ` chicken-${variant}` : '';
+
   return (
     <>
       <svg
         aria-hidden="true"
-        className="scene-chicken-svg"
+        className={`scene-chicken-svg${variantClass}`}
         viewBox="0 0 150 118"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -556,7 +611,13 @@ function CoopIllustration() {
   );
 }
 
-export function App({ appHref = '/pair' }: { appHref?: string }) {
+export function App({
+  appHref = '/pair',
+  devEnvironment = null,
+}: {
+  appHref?: string;
+  devEnvironment?: DevEnvironmentState | null;
+}) {
   const initialDraftRef = useRef<LandingDraft | null>(null);
 
   if (!initialDraftRef.current) {
@@ -1306,7 +1367,11 @@ export function App({ appHref = '/pair' }: { appHref?: string }) {
                   key={chicken.id}
                   ref={setStoryChickenRef(chicken.id)}
                 >
-                  <ChickenSprite label={chicken.label} showLabel={false} />
+                  <ChickenSprite
+                    label={chicken.label}
+                    showLabel={false}
+                    variant={chicken.variant}
+                  />
                 </div>
               ))}
             </div>
@@ -1320,27 +1385,40 @@ export function App({ appHref = '/pair' }: { appHref?: string }) {
                     <img className="wordmark" src="/branding/coop-wordmark-flat.png" alt="Coop" />
                   </a>
                   <p className="eyebrow">Turning knowledge into opportunity</p>
-                  <h1 className="hero-title">No more loose chickens.</h1>
+                  <h1 className="hero-title">
+                    No more
+                    <br />
+                    chickens loose.
+                  </h1>
                   <p className="hero-subtitle">
                     Coop turns scattered tabs, notes, and signals into shared momentum, helping
                     communities turn knowledge into opportunity.
                   </p>
                   <p className="sr-only">
-                    Four chickens start apart in the meadow and converge as you scroll.
+                    Eight chickens start apart in the meadow and converge as you scroll.
                   </p>
-                  <div className="cta-row">
-                    <a className="button button-primary" href="#ritual">
-                      Curate your coop
-                    </a>
-                    <a className="button button-secondary" href="#how-it-works">
-                      How Coop works
-                    </a>
+                  <div className="hero-scroll-hint" aria-hidden="true">
+                    <svg
+                      className="hero-scroll-arrow"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      role="img"
+                      aria-label="Scroll down"
+                    >
+                      <path
+                        d="M12 5v14M5 12l7 7 7-7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </div>
                 </div>
 
-                <div aria-hidden="true" className="hero-stage">
-                  <div className="hero-stage-note">Scroll to gather the flock.</div>
-                </div>
+                <div aria-hidden="true" className="hero-stage" />
+                <DevTunnelBadge environment={devEnvironment} />
               </div>
             </article>
 
@@ -1383,52 +1461,12 @@ export function App({ appHref = '/pair' }: { appHref?: string }) {
             <p className="eyebrow">Setup Ritual</p>
             <h2>Curate your coop</h2>
             <p className="lede ritual-section-copy">
-              Pick who this coop is for, flip the cards, answer three simple questions on each lens,
-              and leave with one clean setup packet you can copy or download later.
+              Pick who this coop is for, flip each card, capture what matters, and walk away with a
+              clean setup packet.
             </p>
           </div>
 
           <div className="ritual-game-shell nest-card">
-            <div className="ritual-step-strip" aria-label="Game states">
-              <div className="ritual-step">
-                <strong>1.</strong>
-                <span>Choose your audience</span>
-              </div>
-              <div className="ritual-step">
-                <strong>2.</strong>
-                <span>Flip the cards</span>
-              </div>
-              <div className="ritual-step">
-                <strong>3.</strong>
-                <span>Add notes or record</span>
-              </div>
-              <div className="ritual-step">
-                <strong>4.</strong>
-                <span>Copy or download</span>
-              </div>
-            </div>
-
-            <div className="ritual-setup-grid">
-              <label className="ritual-field">
-                <span>Coop name</span>
-                <input
-                  onChange={(event) => updateField('coopName', event.target.value)}
-                  placeholder="Pocket Coop"
-                  type="text"
-                  value={setupInput.coopName}
-                />
-              </label>
-
-              <label className="ritual-field">
-                <span>What opportunity are you organizing around?</span>
-                <textarea
-                  onChange={(event) => updateField('purpose', event.target.value)}
-                  placeholder="Turn scattered knowledge into clearer coordination for the group."
-                  value={setupInput.purpose}
-                />
-              </label>
-            </div>
-
             <div className="audience-picker">
               <span>Who is this coop for?</span>
               <div className="audience-chip-group">
@@ -1446,222 +1484,212 @@ export function App({ appHref = '/pair' }: { appHref?: string }) {
               </div>
             </div>
 
-            <div className="ritual-status-row">
-              <span>{activeDraftCount} of 4 cards in motion</span>
-              <span>{allLensesReady ? 'Ready to launch the packet' : 'Saved on this device'}</span>
-            </div>
-
             <div className="flashcard-grid">
               {ritualCards.map((card, index) => {
                 const progress = lensProgress[index];
-                const isOpen = openCardId === card.id;
+                const isFlipped = openCardId === card.id;
+                const isDone = progress.status === 'ready';
 
                 return (
                   <article
-                    className={isOpen ? 'flashcard nest-card is-open' : 'flashcard nest-card'}
+                    className={[
+                      'flashcard',
+                      `flashcard-${card.id}`,
+                      isFlipped ? 'is-flipped' : '',
+                      isDone ? 'is-done' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     key={card.id}
                   >
-                    {isOpen ? (
+                    <div className="flashcard-inner">
+                      <button
+                        aria-expanded={isFlipped}
+                        aria-controls={`flashcard-panel-${card.id}`}
+                        className="flashcard-front"
+                        onClick={() => toggleCard(card.id)}
+                        ref={setFlashcardTriggerRef(card.id)}
+                        type="button"
+                        tabIndex={isFlipped ? -1 : 0}
+                      >
+                        <div className="flashcard-front-top">
+                          <span className="flashcard-number">{card.eyebrow}</span>
+                          <h3>{card.title}</h3>
+                          <p>{card.detail}</p>
+                        </div>
+                        <div className="flashcard-front-bottom">
+                          <span className="flashcard-flip-hint">Tap to flip</span>
+                          {isDone ? (
+                            <span className="flashcard-check" aria-label="Complete">
+                              &#10003;
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
+
                       <section
                         aria-label={card.title}
+                        aria-hidden={!isFlipped}
                         className="flashcard-back"
                         id={`flashcard-panel-${card.id}`}
+                        inert={!isFlipped ? true : undefined}
                       >
-                        <div className="flashcard-header">
-                          <div>
-                            <span className="flashcard-number">{card.eyebrow}</span>
-                            <h3>{card.title}</h3>
-                          </div>
+                        <div className="flashcard-back-header">
+                          <span className="flashcard-number">{card.eyebrow}</span>
                           <button
                             className="button button-secondary button-small"
                             onClick={() => toggleCard(card.id)}
                             ref={setFlashcardCloseRef(card.id)}
                             type="button"
                           >
-                            Close card
+                            Flip back
                           </button>
                         </div>
 
-                        <p className="flashcard-detail">{card.detail}</p>
+                        <h3>{card.title}</h3>
+                        <p className="flashcard-detail">{card.transcriptPrompt}</p>
 
-                        <div className="ritual-transcript-shell">
-                          <div className="ritual-transcript-header">
-                            <div>
-                              <strong>Call notes</strong>
-                              <p>{card.transcriptPrompt}</p>
-                            </div>
-                            <button
-                              className={
-                                recordingLens === card.id
-                                  ? 'button button-primary ritual-record-button is-recording'
-                                  : 'button button-secondary ritual-record-button'
-                              }
-                              onClick={() =>
-                                recordingLens === card.id
-                                  ? stopRecording()
-                                  : startRecording(card.id)
-                              }
-                              type="button"
-                            >
-                              {recordingLens === card.id
-                                ? `Stop ${card.title.toLowerCase()} notes`
-                                : `Record ${card.title.toLowerCase()} notes`}
-                            </button>
-                          </div>
+                        <div className="ritual-transcript-header">
+                          <button
+                            className={
+                              recordingLens === card.id
+                                ? 'button button-primary ritual-record-button is-recording'
+                                : 'button button-secondary ritual-record-button'
+                            }
+                            onClick={() =>
+                              recordingLens === card.id ? stopRecording() : startRecording(card.id)
+                            }
+                            type="button"
+                          >
+                            {recordingLens === card.id ? 'Stop recording' : 'Record'}
+                          </button>
+                        </div>
 
+                        {recordingLens === card.id || transcripts[card.id] ? (
                           <output aria-live="polite" className="ritual-transcript-status">
                             {transcriptStatus}
                           </output>
+                        ) : null}
 
-                          <label className="ritual-field">
-                            <span>Transcript notes for {card.title}</span>
-                            <textarea
-                              onChange={(event) => updateTranscript(card.id, event.target.value)}
-                              placeholder="Paste notes here or let live transcript drop into this card."
-                              ref={setFlashcardNotesRef(card.id)}
-                              value={transcripts[card.id]}
-                            />
-                          </label>
-                        </div>
+                        <label className="ritual-field">
+                          <span>Notes</span>
+                          <textarea
+                            onChange={(event) => updateTranscript(card.id, event.target.value)}
+                            placeholder="Paste notes or let live transcript fill this in."
+                            ref={setFlashcardNotesRef(card.id)}
+                            value={transcripts[card.id]}
+                          />
+                        </label>
 
-                        <div className="flashcard-question-grid">
-                          <label className="ritual-field">
-                            <span>{buildCurrentQuestion(card, audience)}</span>
-                            <textarea
-                              onChange={(event) => updateField(card.currentKey, event.target.value)}
-                              placeholder={card.currentPlaceholder}
-                              value={setupInput[card.currentKey]}
-                            />
-                          </label>
-
-                          <label className="ritual-field">
-                            <span>{buildPainQuestion(card, audience)}</span>
-                            <textarea
-                              onChange={(event) => updateField(card.painKey, event.target.value)}
-                              placeholder={card.painPlaceholder}
-                              value={setupInput[card.painKey]}
-                            />
-                          </label>
-
-                          <label className="ritual-field">
-                            <span>{buildImproveQuestion(audience)}</span>
-                            <textarea
-                              onChange={(event) => updateField(card.improveKey, event.target.value)}
-                              placeholder={card.improvePlaceholder}
-                              value={setupInput[card.improveKey]}
-                            />
-                          </label>
-                        </div>
+                        <button
+                          className={
+                            isDone ? 'flashcard-complete-btn is-done' : 'flashcard-complete-btn'
+                          }
+                          onClick={() => {
+                            if (!isDone) {
+                              updateField(
+                                card.currentKey,
+                                setupInput[card.currentKey] || 'Captured',
+                              );
+                              updateField(card.painKey, setupInput[card.painKey] || 'Captured');
+                              updateField(
+                                card.improveKey,
+                                setupInput[card.improveKey] || 'Captured',
+                              );
+                            }
+                            toggleCard(card.id);
+                          }}
+                          type="button"
+                        >
+                          {isDone ? '\u2713 Complete' : 'Mark complete'}
+                        </button>
                       </section>
-                    ) : (
-                      <button
-                        aria-expanded={isOpen}
-                        className="flashcard-front"
-                        onClick={() => toggleCard(card.id)}
-                        ref={setFlashcardTriggerRef(card.id)}
-                        type="button"
-                      >
-                        <span className="flashcard-number">{card.eyebrow}</span>
-                        <h3>{card.title}</h3>
-                        <p>{card.detail}</p>
-                        <div className="flashcard-meta">
-                          <span>{progress.filledCount} / 4 captured</span>
-                          <span>{statusLabel(progress.status)}</span>
-                        </div>
-                        <span className="flashcard-open">Open {card.title} flashcard</span>
-                      </button>
-                    )}
+                    </div>
                   </article>
                 );
               })}
             </div>
 
-            <div className="ritual-output-grid">
-              <div className="ritual-output-copy">
-                <div>
-                  <h3>Shared notes</h3>
+            {allLensesReady ? (
+              <div className="ritual-synthesis">
+                <div className="section-heading">
+                  <h3>Your setup packet is ready</h3>
                   <p className="lede">
-                    Paste meeting notes here if you want to keep a rough transcript nearby while you
-                    shape the packet.
+                    All four lenses are captured. Name your coop and take the packet with you.
                   </p>
                 </div>
 
+                <div className="ritual-setup-grid">
+                  <label className="ritual-field">
+                    <span>Coop name</span>
+                    <input
+                      onChange={(event) => updateField('coopName', event.target.value)}
+                      placeholder="Pocket Coop"
+                      type="text"
+                      value={setupInput.coopName}
+                    />
+                  </label>
+
+                  <label className="ritual-field">
+                    <span>What opportunity are you organizing around?</span>
+                    <textarea
+                      onChange={(event) => updateField('purpose', event.target.value)}
+                      placeholder="Turn scattered knowledge into clearer coordination for the group."
+                      value={setupInput.purpose}
+                    />
+                  </label>
+                </div>
+
                 <label className="ritual-field">
-                  <span>Meeting notes or transcript paste-in</span>
+                  <span>Shared notes</span>
                   <textarea
                     onChange={(event) => setSharedNotes(event.target.value)}
-                    placeholder="Paste longer notes here. This will stay saved locally too."
+                    placeholder="Paste meeting notes or additional context here."
                     value={sharedNotes}
                   />
                 </label>
 
-                <div className="ritual-output-summary">
-                  <article className="ritual-summary-card">
-                    <strong>What keeps slipping</strong>
-                    <ul className="ritual-bullet-list">
-                      {setupPacket.setupInsights.crossCuttingPainPoints.length > 0 ? (
-                        setupPacket.setupInsights.crossCuttingPainPoints.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))
-                      ) : (
-                        <li>Add a few card answers and the shared friction will appear here.</li>
-                      )}
-                    </ul>
-                  </article>
-
-                  <article className="ritual-summary-card">
-                    <strong>What Coop can unlock</strong>
-                    <ul className="ritual-bullet-list">
-                      {setupPacket.setupInsights.crossCuttingOpportunities.length > 0 ? (
-                        setupPacket.setupInsights.crossCuttingOpportunities.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))
-                      ) : (
-                        <li>Use the cards to name the opportunity the coop should protect.</li>
-                      )}
-                    </ul>
-                  </article>
-                </div>
-              </div>
-
-              <div className="prompt-shell ritual-packet-shell">
-                <div className="prompt-toolbar">
-                  <div>
-                    <strong>Setup packet</strong>
+                <div className="prompt-shell ritual-packet-shell">
+                  <div className="prompt-toolbar">
                     <div>
-                      {allLensesReady
-                        ? 'All four cards are shaped and ready to hand off.'
-                        : 'A draft packet is already available even before every card is complete.'}
+                      <strong>Setup packet</strong>
+                      <div>All four cards are shaped and ready to hand off.</div>
+                    </div>
+                    <div className="cta-row packet-actions">
+                      <button
+                        className={
+                          copyState === 'copied'
+                            ? 'button button-primary button-small'
+                            : 'button button-secondary button-small'
+                        }
+                        onClick={() => void copySetupNotes()}
+                        type="button"
+                      >
+                        {copyState === 'copied'
+                          ? 'Copied'
+                          : copyState === 'failed'
+                            ? 'Clipboard unavailable'
+                            : 'Copy packet'}
+                      </button>
+                      <button
+                        className="button button-secondary button-small"
+                        onClick={downloadSetupNotes}
+                        type="button"
+                      >
+                        Download
+                      </button>
                     </div>
                   </div>
-                  <div className="cta-row packet-actions">
-                    <button
-                      className={
-                        copyState === 'copied'
-                          ? 'button button-primary button-small'
-                          : 'button button-secondary button-small'
-                      }
-                      onClick={() => void copySetupNotes()}
-                      type="button"
-                    >
-                      {copyState === 'copied'
-                        ? 'Copied setup packet'
-                        : copyState === 'failed'
-                          ? 'Clipboard unavailable'
-                          : 'Copy setup packet'}
-                    </button>
-                    <button
-                      className="button button-secondary button-small"
-                      onClick={downloadSetupNotes}
-                      type="button"
-                    >
-                      Download setup packet
-                    </button>
-                  </div>
+                  <pre>{setupPacketText}</pre>
                 </div>
-                <pre>{setupPacketText}</pre>
               </div>
-            </div>
+            ) : (
+              <p className="ritual-progress-hint">
+                {completedLensCount > 0
+                  ? `${completedLensCount} of 4 lenses complete — flip and capture the rest.`
+                  : 'Flip a card to start capturing.'}
+              </p>
+            )}
           </div>
         </section>
 
@@ -1699,7 +1727,11 @@ export function App({ appHref = '/pair' }: { appHref?: string }) {
                   key={chicken.id}
                   ref={setArrivalChickenRef(chicken.id)}
                 >
-                  <ChickenSprite label={chicken.label} showLabel={false} />
+                  <ChickenSprite
+                    label={chicken.label}
+                    showLabel={false}
+                    variant={chicken.variant}
+                  />
                 </div>
               ))}
             </div>

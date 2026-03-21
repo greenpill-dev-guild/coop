@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReviewDraft } from '@coop/shared';
 
 export function PopupDraftDetailScreen(props: {
@@ -10,12 +11,13 @@ export function PopupDraftDetailScreen(props: {
   onOpenWorkspace: () => void;
 }) {
   const { draft, saving, onChange, onSave, onToggleReady, onShare, onOpenWorkspace } = props;
+  const [previewMissing, setPreviewMissing] = useState(false);
 
   return (
     <section className="popup-screen">
       <div className="popup-copy-block">
         <h1>Review draft</h1>
-        <p>Tighten it up, then mark it ready to share.</p>
+        <p>Make quick edits here, then use the sidepanel for synthesis or heavier formatting.</p>
       </div>
 
       <div className="popup-copy-block popup-copy-block--compact">
@@ -24,6 +26,17 @@ export function PopupDraftDetailScreen(props: {
           {new Date(draft.createdAt).toLocaleDateString()}
         </p>
       </div>
+
+      {draft.previewImageUrl && !previewMissing ? (
+        <div className="popup-preview-card">
+          <img
+            alt=""
+            className="popup-preview-card__image"
+            onError={() => setPreviewMissing(true)}
+            src={draft.previewImageUrl}
+          />
+        </div>
+      ) : null}
 
       <div className="popup-form">
         <label className="popup-field">
@@ -74,7 +87,7 @@ export function PopupDraftDetailScreen(props: {
 
       <div className="popup-inline-actions">
         <button className="popup-text-button" onClick={onOpenWorkspace} type="button">
-          Open full editor
+          Open sidepanel for synthesis
         </button>
       </div>
     </section>

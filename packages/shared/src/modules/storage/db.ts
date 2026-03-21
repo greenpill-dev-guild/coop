@@ -1010,6 +1010,10 @@ export async function saveCoopKnowledgeSkillOverride(
   await db.coopKnowledgeSkillOverrides.put(override);
 }
 
+export async function deleteCoopKnowledgeSkillOverride(db: CoopDexie, overrideId: string) {
+  await db.coopKnowledgeSkillOverrides.delete(overrideId);
+}
+
 export async function listCoopKnowledgeSkillOverrides(db: CoopDexie, coopId: string) {
   return db.coopKnowledgeSkillOverrides.where('coopId').equals(coopId).toArray();
 }

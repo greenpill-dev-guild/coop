@@ -341,7 +341,7 @@ export function SidepanelApp() {
       setMessage(response.error ?? 'Could not switch coops.');
       return;
     }
-    await loadDashboard();
+    await Promise.all([loadDashboard(), loadAgentDashboard()]);
   }
 
   async function toggleLocalInferenceOptIn() {
@@ -713,10 +713,11 @@ export function SidepanelApp() {
     });
     if (!response.ok || !response.data) {
       setMessage(response.error ?? 'Could not import the knowledge skill.');
-      return;
+      return false;
     }
     setAgentDashboard(response.data);
     setMessage('Knowledge skill imported.');
+    return true;
   }
 
   async function handleRefreshKnowledgeSkill(skillId: string) {
@@ -726,10 +727,11 @@ export function SidepanelApp() {
     });
     if (!response.ok || !response.data) {
       setMessage(response.error ?? 'Could not refresh the knowledge skill.');
-      return;
+      return false;
     }
     setAgentDashboard(response.data);
     setMessage('Knowledge skill refreshed.');
+    return true;
   }
 
   async function handleSetCoopKnowledgeSkillEnabled(skillId: string, enabled: boolean) {
@@ -760,16 +762,26 @@ export function SidepanelApp() {
     skillId: string,
     triggerPatterns: string[],
   ) {
+    if (!activeCoop) {
+      setMessage('Select a coop before updating knowledge-skill trigger patterns.');
+      return false;
+    }
+
     const response = await sendRuntimeMessage<AgentDashboardResponse>({
-      type: 'set-knowledge-skill-trigger-patterns',
-      payload: { skillId, triggerPatterns },
+      type: 'set-coop-knowledge-skill-trigger-patterns',
+      payload: {
+        coopId: activeCoop.profile.id,
+        knowledgeSkillId: skillId,
+        triggerPatterns,
+      },
     });
     if (!response.ok || !response.data) {
       setMessage(response.error ?? 'Could not save trigger patterns.');
-      return;
+      return false;
     }
     setAgentDashboard(response.data);
-    setMessage('Knowledge skill trigger patterns saved.');
+    setMessage(`Knowledge skill trigger patterns saved for ${activeCoop.profile.name}.`);
+    return true;
   }
 
   async function handleQueueGreenGoodsWorkApproval(

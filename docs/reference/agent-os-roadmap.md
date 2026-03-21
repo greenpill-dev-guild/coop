@@ -705,6 +705,14 @@ function skillManifestToMcpTool(manifest: SkillManifest): McpToolDefinition {
 
 **Design principle:** Shape the registry now, defer the protocol implementation until WebMCP stabilizes. The cost of adding `mcpToolId` and `sideEffects` fields is near zero; the benefit is avoiding a later retrofit.
 
+**Future exploration: `just-bash` as a scripted skill runtime.** [`just-bash`](https://github.com/vercel-labs/just-bash) is a browser-capable simulated Bash environment with a virtual filesystem and opt-in networking. It is a plausible fit for **deterministic, local-only executable skills** that transform structured observation/context files into validated JSON outputs, and for **fixture-driven eval cases** where shell-style assertions (`jq`, `rg`, `sed`, `diff`) are useful. It should be treated as a bounded scripting/tool layer, not as a replacement for the inference cascade or the typed TypeScript action/permit pipeline. If explored, the first use cases should be:
+
+1. advisory or local-only scripted skills with no privileged side effects
+2. eval harness cases that materialize fixture input as files and score structured output
+3. read-only custom commands before any write or proposal-capable commands
+
+**Constraints to preserve:** lazy-load in offscreen/worker contexts to avoid inflating the primary extension bundle; keep proposal creation, permit enforcement, session capability checks, and onchain/shared-state mutations in typed runtime code outside the shell; prefer one script per skill run with explicit file-based inputs/outputs over long-lived mutable shell sessions.
+
 ---
 
 ### Phase 5: Portability
@@ -948,6 +956,7 @@ Phase 5A + 5B (portability)    ────────────────�
 - [Transformers.js](https://huggingface.co/docs/transformers.js/en/index) — Browser ML with ONNX Runtime
 - [Transformers.js v4 preview](https://huggingface.co/blog/transformersjs-v4) — WebGPU runtime rewrite
 - [Whisper Web](https://huggingface.co/spaces/Xenova/whisper-web) — Browser speech-to-text reference
+- [just-bash](https://github.com/vercel-labs/just-bash) — Browser-capable simulated Bash runtime; candidate for deterministic scripted skills and eval tooling
 
 ### Chrome Platform & Standards
 - [New in WebGPU (Chrome 146)](https://developer.chrome.com/blog/new-in-webgpu-146) — FP16, subgroups, compatibility mode

@@ -118,6 +118,74 @@ export function extensionIconPaths(state: RuntimeSummary['iconState']) {
   }
 }
 
+export function summarizeSyncStatus(input: {
+  coopCount: number;
+  runtimeHealth: Awaited<ReturnType<typeof getRuntimeHealth>>;
+}): Pick<RuntimeSummary, 'syncState' | 'syncLabel' | 'syncDetail' | 'syncTone'> {
+  const { coopCount, runtimeHealth } = input;
+
+  if (coopCount === 0) {
+    return {
+      syncState: 'No coop yet',
+      syncLabel: 'No coop',
+      syncDetail: 'Create or join a coop to enable shared sync.',
+      syncTone: 'warning',
+    };
+  }
+
+  if (runtimeHealth.offline) {
+    return {
+      syncState: 'Browser is offline. Shared sync will resume when the connection returns.',
+      syncLabel: 'Offline',
+      syncDetail: 'Browser is offline. Shared sync will resume when the connection returns.',
+      syncTone: 'warning',
+    };
+  }
+
+  const syncDetail =
+    runtimeHealth.lastSyncError ??
+    runtimeHealth.lastCaptureError ??
+    'Runtime needs attention. Shared sync may be degraded.';
+  const normalizedDetail = syncDetail.toLowerCase();
+
+  if (runtimeHealth.syncError || runtimeHealth.lastCaptureError) {
+    if (
+      normalizedDetail.includes('no signaling server connection') ||
+      normalizedDetail.includes('limited to this browser profile')
+    ) {
+      return {
+        syncState: syncDetail,
+        syncLabel: 'Local only',
+        syncDetail,
+        syncTone: 'warning',
+      };
+    }
+
+    if (normalizedDetail.includes('permission')) {
+      return {
+        syncState: syncDetail,
+        syncLabel: 'Permission',
+        syncDetail,
+        syncTone: 'error',
+      };
+    }
+
+    return {
+      syncState: syncDetail,
+      syncLabel: 'Needs attention',
+      syncDetail,
+      syncTone: 'error',
+    };
+  }
+
+  return {
+    syncState: 'Peer-ready local-first sync',
+    syncLabel: 'Healthy',
+    syncDetail: 'Peer-ready local-first sync.',
+    syncTone: 'ok',
+  };
+}
+
 // ---- Badge / Summary ----
 
 export async function buildSummary(): Promise<RuntimeSummary> {
@@ -173,6 +241,10 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     missingPermission: runtimeHealth.missingPermission,
     syncError: runtimeHealth.syncError || Boolean(runtimeHealth.lastCaptureError),
   });
+  const syncSummary = summarizeSyncStatus({
+    coopCount: coops.length,
+    runtimeHealth,
+  });
 
   return {
     iconState,
@@ -183,14 +255,10 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     pendingActions,
     pendingAttentionCount,
     coopCount: coops.length,
-    syncState:
-      runtimeHealth.syncError || runtimeHealth.lastCaptureError
-        ? (runtimeHealth.lastSyncError ??
-          runtimeHealth.lastCaptureError ??
-          'Runtime needs attention')
-        : coops.length > 0
-          ? 'Peer-ready local-first sync'
-          : 'No coop yet',
+    syncState: syncSummary.syncState,
+    syncLabel: syncSummary.syncLabel,
+    syncDetail: syncSummary.syncDetail,
+    syncTone: syncSummary.syncTone,
     lastCaptureAt: lastCapture?.capturedAt,
     captureMode,
     agentCadenceMinutes: prefs.agentCadenceMinutes,

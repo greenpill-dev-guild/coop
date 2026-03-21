@@ -865,6 +865,7 @@ export const coopKnowledgeSkillOverrideSchema = z.object({
   coopId: z.string().min(1),
   knowledgeSkillId: z.string().min(1),
   enabled: z.boolean(),
+  triggerPatterns: z.array(z.string()).optional(),
 });
 
 export const agentLogSpanTypeSchema = z.enum([

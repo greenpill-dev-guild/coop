@@ -1,26 +1,61 @@
-import type { PopupActivityItem } from './popup-types';
+import { useState } from 'react';
+import { PopupTooltip } from './PopupTooltip';
+import type { PopupHomeQueueItem } from './popup-types';
+
+function formatCategoryLabel(value: string) {
+  return value
+    .split('-')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
+function QueueThumbnail(props: { item: PopupHomeQueueItem }) {
+  const { item } = props;
+  const [imageMissing, setImageMissing] = useState(!item.previewImageUrl);
+
+  if (item.previewImageUrl && !imageMissing) {
+    return (
+      <img
+        alt=""
+        className="popup-review-queue__thumb-image"
+        onError={() => setImageMissing(true)}
+        src={item.previewImageUrl}
+      />
+    );
+  }
+
+  return (
+    <span aria-hidden="true" className="popup-review-queue__thumb-fallback">
+      {item.title.charAt(0).toUpperCase()}
+    </span>
+  );
+}
 
 export function PopupHomeScreen(props: {
   draftCount: number;
   lastCaptureLabel: string;
   syncLabel: string;
-  recentItems: PopupActivityItem[];
+  syncDetail: string;
+  syncTone: 'ok' | 'warning' | 'error';
+  reviewQueue: PopupHomeQueueItem[];
   onPrimaryAction: () => void;
   primaryActionLabel: string;
   onCaptureTab: () => void;
-  onOpenFeed: () => void;
   onOpenDrafts: () => void;
+  onOpenDraft: (draftId: string) => void;
 }) {
   const {
     draftCount,
     lastCaptureLabel,
     syncLabel,
-    recentItems,
+    syncDetail,
+    syncTone,
+    reviewQueue,
     onPrimaryAction,
     primaryActionLabel,
     onCaptureTab,
-    onOpenFeed,
     onOpenDrafts,
+    onOpenDraft,
   } = props;
 
   return (
@@ -34,50 +69,67 @@ export function PopupHomeScreen(props: {
           <span>Last roundup</span>
           <strong>{lastCaptureLabel}</strong>
         </div>
-        <div className="popup-stat">
-          <span>Sync</span>
-          <strong>{syncLabel}</strong>
-        </div>
+        <PopupTooltip content={syncDetail}>
+          {({ targetProps }) => (
+            <div
+              {...targetProps}
+              className={`popup-stat popup-stat--interactive popup-stat--tone-${syncTone}`}
+              tabIndex={0}
+            >
+              <span>Sync</span>
+              <strong>{syncLabel}</strong>
+            </div>
+          )}
+        </PopupTooltip>
       </div>
 
       <div className="popup-stack">
         <button className="popup-primary-action" onClick={onPrimaryAction} type="button">
           {primaryActionLabel}
         </button>
-        <div className="popup-split-actions">
-          <button className="popup-secondary-action" onClick={onCaptureTab} type="button">
-            Capture this tab
-          </button>
-          <button className="popup-secondary-action" onClick={onOpenFeed} type="button">
-            Open feed
-          </button>
-        </div>
+        <button className="popup-secondary-action" onClick={onCaptureTab} type="button">
+          Capture this tab
+        </button>
       </div>
 
       <section className="popup-list-section">
         <div className="popup-section-heading">
-          <strong>What&apos;s waiting</strong>
+          <strong>Review queue</strong>
           {draftCount > 0 ? (
             <button className="popup-text-button" onClick={onOpenDrafts} type="button">
-              Review drafts
+              See all
             </button>
           ) : null}
         </div>
-        {recentItems.length > 0 ? (
-          <ul className="popup-list-reset popup-activity-list">
-            {recentItems.map((item) => (
-              <li className="popup-activity-row" key={item.id}>
-                <div className="popup-activity-row__copy">
-                  <strong>{item.title}</strong>
-                  <span>{item.meta}</span>
-                </div>
-                <span className="popup-mini-pill">{item.status}</span>
+        {reviewQueue.length > 0 ? (
+          <ul className="popup-list-reset popup-review-queue">
+            {reviewQueue.map((item) => (
+              <li key={item.id}>
+                <button
+                  className="popup-review-queue__card"
+                  onClick={() => onOpenDraft(item.id)}
+                  type="button"
+                >
+                  <span className="popup-review-queue__thumb">
+                    <QueueThumbnail item={item} />
+                  </span>
+                  <span className="popup-review-queue__body">
+                    <strong>{item.title}</strong>
+                    <span className="popup-review-queue__summary">{item.summary}</span>
+                    <span className="popup-review-queue__pills">
+                      <span className="popup-mini-pill">
+                        {formatCategoryLabel(item.category)}
+                      </span>
+                      <span className="popup-mini-pill popup-mini-pill--muted">{item.coopLabel}</span>
+                    </span>
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
         ) : (
           <p className="popup-empty-state">
-            Nothing&apos;s loose right now. Capture a tab to start.
+            Nothing is waiting for review right now. Round up a tab to start a fresh queue.
           </p>
         )}
       </section>

@@ -1,3 +1,57 @@
+## Session State (E2E Hardening, 2026-03-20)
+- **Current task**: Harden the extension and receiver Playwright flows after review findings, and remove the WebLLM pending-state hole exposed by the stricter agent-loop coverage.
+- **Progress**: The receiver sync flow now switches coops through the real UI controls after waiting for coop readiness, and all receiver draft edits/publish actions are scoped to the specific converted draft card instead of whichever duplicate button appears first. The extension agent-loop flow now rewrites the roundup fixture in-browser so the captured page actually matches the coop’s trusted-node/funding vocabulary, waits long enough for serialized synthesis work, and validates the visible capital-formation run in the Coop Feed before checking that the agent draft lands in the Roost. Under the hood, WebLLM synthesis calls now time out and fall through to the documented fallback chain instead of leaving skill runs stuck in `pending`, and that timeout path is covered by a focused runtime unit test.
+- **Files modified**:
+  - `e2e/extension.spec.cjs`
+  - `e2e/receiver-sync.spec.cjs`
+  - `packages/extension/src/runtime/agent-models.ts`
+  - `packages/extension/src/runtime/__tests__/agent-models.test.ts`
+- **Tests**:
+  - Passed: `bun run test packages/extension/src/runtime/__tests__/agent-models.test.ts`
+  - Passed: `bunx playwright test e2e/extension.spec.cjs --project=desktop --reporter=line --grep '@agent-loop'`
+  - Passed: `bunx playwright test e2e/extension.spec.cjs --project=desktop --reporter=line`
+  - Passed: `bunx playwright test e2e/receiver-sync.spec.cjs --project=desktop --reporter=line`
+- **Next steps**:
+  - If the full E2E suite becomes noticeably slower, consider splitting the WebLLM-heavy trusted-node path into its own named validation tier while keeping this stronger coverage.
+  - Consider adding a dedicated integration test around WebLLM timeout fallback at the background/agent-runner layer, not just `agent-models`.
+- **Blocked by**: No blocker. The targeted review findings are addressed, the Playwright flows are green, and the WebLLM fallback bug that the stricter coverage exposed is fixed locally.
+
+## Session State (Knowledge Skill Hardening, 2026-03-20)
+- **Current task**: Fix the final coop-switching sync race in the knowledge-skill/operator flow and re-run validation to production quality.
+- **Progress**: Knowledge-skill trigger patterns are now truly coop-scoped via `CoopKnowledgeSkillOverride.triggerPatterns`, dashboard responses expose `effectiveTriggerPatterns`, and runtime selection now uses those coop-local patterns without leaking across coops. The operator UI now only clears the import URL on successful import, clears local trigger-pattern drafts after successful save/refresh, and keys unsaved drafts by active coop so they cannot leak across coop switches. The remaining stale-state race is now closed in the sidepanel itself: coop switching reloads both the main dashboard and the agent dashboard together, so the Coop Feed cannot briefly show old-coop knowledge-skill overrides under a new coop header. The stale landing test expectations that were blocking the smoke suite were also updated to match the current landing copy and link structure.
+- **Files modified**:
+  - `packages/shared/src/contracts/schema.ts`
+  - `packages/shared/src/modules/storage/db.ts`
+  - `packages/extension/src/runtime/messages.ts`
+  - `packages/extension/src/runtime/agent-knowledge.ts`
+  - `packages/extension/src/runtime/__tests__/agent-knowledge.test.ts`
+  - `packages/extension/src/background/handlers/agent.ts`
+  - `packages/extension/src/background.ts`
+  - `packages/extension/src/views/Sidepanel/operator-sections.tsx`
+  - `packages/extension/src/views/Sidepanel/OperatorConsole.tsx`
+  - `packages/extension/src/views/Sidepanel/SidepanelApp.tsx`
+  - `packages/extension/src/views/Sidepanel/__tests__/SidepanelApp.test.tsx`
+  - `packages/extension/src/views/Sidepanel/tabs.tsx`
+  - `packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`
+  - `packages/app/src/__tests__/Landing.test.tsx`
+  - `packages/app/src/__tests__/RootRouting.test.tsx`
+- **Tests**:
+  - Passed: `bunx vitest run packages/extension/src/runtime/__tests__/agent-knowledge.test.ts packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx packages/extension/src/runtime/__tests__/messages.test.ts`
+  - Passed: `bun run test:unit:agent-loop`
+  - Passed: `bunx vitest run packages/app/src/__tests__/Landing.test.tsx packages/app/src/__tests__/RootRouting.test.tsx`
+  - Passed: `bun run build`
+  - Passed: `bun run validate smoke`
+  - Passed: `bunx vitest run packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`
+  - Passed: `bunx vitest run packages/extension/src/views/Sidepanel/__tests__/SidepanelApp.test.tsx packages/extension/src/views/Sidepanel/hooks/__tests__/useDashboard.test.ts`
+  - Passed: `bunx @biomejs/biome check packages/shared/src/contracts/schema.ts packages/shared/src/modules/storage/db.ts packages/extension/src/runtime/messages.ts packages/extension/src/runtime/agent-knowledge.ts packages/extension/src/runtime/__tests__/agent-knowledge.test.ts packages/extension/src/background/handlers/agent.ts packages/extension/src/background.ts packages/extension/src/views/Sidepanel/operator-sections.tsx packages/extension/src/views/Sidepanel/OperatorConsole.tsx packages/extension/src/views/Sidepanel/SidepanelApp.tsx packages/extension/src/views/Sidepanel/tabs.tsx packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx packages/app/src/__tests__/Landing.test.tsx packages/app/src/__tests__/RootRouting.test.tsx`
+  - Passed: `bunx @biomejs/biome check packages/extension/src/views/Sidepanel/SidepanelApp.tsx packages/extension/src/views/Sidepanel/__tests__/SidepanelApp.test.tsx`
+- **Next steps**:
+  - Add direct background-handler tests for the knowledge-skill runtime actions now that the coop-scoped contract is stable.
+  - Consider whether `refreshBadge()` should await `notifyDashboardUpdated()` to eliminate similar UI timing windows anywhere else state changes rely on sidepanel push refreshes.
+  - Decide whether operators should also get an explicit “reset to global trigger patterns” affordance in the UI.
+  - Revisit bundle-size warnings and the existing dynamic-import warnings in the extension build separately from this feature slice.
+- **Blocked by**: No blocker. The targeted fixes are in, the coop-switch regression is covered, and smoke validation is green; remaining work is hardening and follow-on UX cleanup.
+
 ## Session State (Skills, 2026-03-20)
 - **Current task**: Harden the skills system end to end: baseline fixes, `SKILL.md` prompt integration, output-handler extraction, manifest enforcement, fixture-based evals, and an operator-facing knowledge-skill surface.
 - **Progress**: Bundled executable skills now require frontmatter-backed `SKILL.md` metadata and their instructions are injected into prompt assembly. The runner now enforces `requiredCapabilities`, passes manifest `maxTokens` into inference, routes output handling through `agent-output-handlers.ts`, and covers ERC-8004 registration/feedback action proposals. Skill manifests were updated with concrete capability requirements and token ceilings, docs were corrected from 14 to 16 skills, and a deterministic eval harness with five representative fixtures now runs in the agent-loop test slice. The operator console also now exposes knowledge-skill import, refresh, coop-level enable/disable, trigger-pattern editing, and freshness state through new runtime/background actions.

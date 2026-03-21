@@ -91,19 +91,20 @@ type OperatorConsoleProps = {
   skillManifests: SkillManifest[];
   autoRunSkillIds: string[];
   knowledgeSkills: AgentDashboardKnowledgeSkill[];
+  activeCoopId?: string;
   activeCoopName?: string;
   onRunAgentCycle(): void | Promise<void>;
   onApprovePlan(planId: string): void | Promise<void>;
   onRejectPlan(planId: string): void | Promise<void>;
   onRetrySkillRun(skillRunId: string): void | Promise<void>;
   onToggleSkillAutoRun(skillId: string, enabled: boolean): void | Promise<void>;
-  onImportKnowledgeSkill(url: string): void | Promise<void>;
-  onRefreshKnowledgeSkill(skillId: string): void | Promise<void>;
+  onImportKnowledgeSkill(url: string): boolean | Promise<boolean>;
+  onRefreshKnowledgeSkill(skillId: string): boolean | Promise<boolean>;
   onSetCoopKnowledgeSkillEnabled(skillId: string, enabled: boolean): void | Promise<void>;
   onSaveKnowledgeSkillTriggerPatterns(
     skillId: string,
     triggerPatterns: string[],
-  ): void | Promise<void>;
+  ): boolean | Promise<boolean>;
   greenGoodsContext?: {
     coopId: string;
     coopName: string;
@@ -135,6 +136,7 @@ export function OperatorConsole(props: OperatorConsoleProps) {
       />
 
       <KnowledgeSkillsSection
+        activeCoopId={props.activeCoopId}
         activeCoopName={props.activeCoopName}
         knowledgeSkills={props.knowledgeSkills}
         onImportKnowledgeSkill={props.onImportKnowledgeSkill}

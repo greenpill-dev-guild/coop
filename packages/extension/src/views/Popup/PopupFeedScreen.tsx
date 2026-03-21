@@ -31,7 +31,7 @@ export function PopupFeedScreen(props: {
 
       <div className="popup-inline-actions">
         <button className="popup-text-button" onClick={onOpenWorkspace} type="button">
-          Open full workspace
+          Open sidepanel for the full feed
         </button>
       </div>
     </section>

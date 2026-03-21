@@ -13,7 +13,7 @@ export function PopupDraftListScreen(props: {
     <section className="popup-screen">
       <div className="popup-copy-block popup-copy-block--compact">
         <h1>Drafts</h1>
-        <p>Sort the loose chickens before they pile up.</p>
+        <p>Move quickly here, then hand off to the sidepanel for deeper review.</p>
       </div>
 
       {drafts.length > 0 ? (
@@ -57,12 +57,12 @@ export function PopupDraftListScreen(props: {
           ))}
         </ul>
       ) : (
-        <p className="popup-empty-state">No loose chickens waiting right now.</p>
+        <p className="popup-empty-state">No items are waiting for review right now.</p>
       )}
 
       <div className="popup-inline-actions">
         <button className="popup-text-button" onClick={onOpenWorkspace} type="button">
-          Open full workspace
+          Open sidepanel for deeper review
         </button>
       </div>
     </section>

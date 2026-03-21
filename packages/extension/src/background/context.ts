@@ -106,6 +106,8 @@ export type RuntimeHealth = {
   lastSyncError?: string;
 };
 
+export type SidepanelStateRegistry = Record<string, boolean>;
+
 export type NotificationRegistry = Record<string, string>;
 export type AgentOnboardingStatus = 'pending-followup' | 'steady';
 export type AgentOnboardingState = Record<
@@ -127,6 +129,7 @@ export const stateKeys = {
   notificationRegistry: 'notification-registry',
   receiverSyncRuntime: 'receiver-sync-runtime',
   runtimeHealth: 'runtime-health',
+  sidepanelState: 'sidepanel-state',
   sessionWrappingSecret: 'session-wrapping-secret',
 };
 
@@ -472,6 +475,25 @@ export async function reportReceiverSyncRuntime(patch: Partial<ReceiverSyncRunti
     activeBindingKeys: patch.activeBindingKeys ?? current.activeBindingKeys,
   } satisfies ReceiverSyncRuntimeStatus;
   await setLocalSetting(stateKeys.receiverSyncRuntime, next);
+  return next;
+}
+
+export async function getSidepanelStateRegistry() {
+  return getLocalSetting<SidepanelStateRegistry>(stateKeys.sidepanelState, {});
+}
+
+export async function isSidepanelOpen(windowId: number) {
+  const registry = await getSidepanelStateRegistry();
+  return registry[String(windowId)] === true;
+}
+
+export async function setSidepanelWindowState(windowId: number, open: boolean) {
+  const registry = await getSidepanelStateRegistry();
+  const next = {
+    ...registry,
+    [String(windowId)]: open,
+  } satisfies SidepanelStateRegistry;
+  await setLocalSetting(stateKeys.sidepanelState, next);
   return next;
 }
 

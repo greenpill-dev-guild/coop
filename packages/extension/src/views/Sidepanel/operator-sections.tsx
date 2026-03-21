@@ -214,19 +214,21 @@ export function SkillManifestSection(props: SkillManifestSectionProps) {
 
 export type KnowledgeSkillsSectionProps = {
   knowledgeSkills: AgentDashboardKnowledgeSkill[];
+  activeCoopId?: string;
   activeCoopName?: string;
-  onImportKnowledgeSkill(url: string): void | Promise<void>;
-  onRefreshKnowledgeSkill(skillId: string): void | Promise<void>;
+  onImportKnowledgeSkill(url: string): boolean | Promise<boolean>;
+  onRefreshKnowledgeSkill(skillId: string): boolean | Promise<boolean>;
   onSetCoopKnowledgeSkillEnabled(skillId: string, enabled: boolean): void | Promise<void>;
   onSaveKnowledgeSkillTriggerPatterns(
     skillId: string,
     triggerPatterns: string[],
-  ): void | Promise<void>;
+  ): boolean | Promise<boolean>;
 };
 
 export function KnowledgeSkillsSection(props: KnowledgeSkillsSectionProps) {
   const [importUrl, setImportUrl] = useState('');
   const [draftPatterns, setDraftPatterns] = useState<Record<string, string>>({});
+  const coopDraftKey = props.activeCoopId ?? 'global';
   const coopLabel = props.activeCoopName ?? 'this coop';
 
   return (
@@ -251,8 +253,10 @@ export function KnowledgeSkillsSection(props: KnowledgeSkillsSectionProps) {
             className="secondary-button"
             disabled={!importUrl.trim()}
             onClick={async () => {
-              await props.onImportKnowledgeSkill(importUrl.trim());
-              setImportUrl('');
+              const imported = await props.onImportKnowledgeSkill(importUrl.trim());
+              if (imported) {
+                setImportUrl('');
+              }
             }}
             type="button"
           >
@@ -260,8 +264,8 @@ export function KnowledgeSkillsSection(props: KnowledgeSkillsSectionProps) {
           </button>
         </div>
         {props.knowledgeSkills.map((entry) => {
-          const patternValue =
-            draftPatterns[entry.skill.id] ?? entry.skill.triggerPatterns.join(', ');
+          const draftKey = `${coopDraftKey}:${entry.skill.id}`;
+          const patternValue = draftPatterns[draftKey] ?? entry.effectiveTriggerPatterns.join(', ');
 
           return (
             <article className="operator-log-entry" key={entry.skill.id}>
@@ -295,7 +299,7 @@ export function KnowledgeSkillsSection(props: KnowledgeSkillsSectionProps) {
                 onChange={(event) =>
                   setDraftPatterns((current) => ({
                     ...current,
-                    [entry.skill.id]: event.target.value,
+                    [draftKey]: event.target.value,
                   }))
                 }
                 rows={3}
@@ -304,31 +308,49 @@ export function KnowledgeSkillsSection(props: KnowledgeSkillsSectionProps) {
               <div className="action-row">
                 <button
                   className="secondary-button"
-                  onClick={() => void props.onRefreshKnowledgeSkill(entry.skill.id)}
+                  onClick={async () => {
+                    const refreshed = await props.onRefreshKnowledgeSkill(entry.skill.id);
+                    if (refreshed) {
+                      setDraftPatterns((current) => {
+                        const next = { ...current };
+                        delete next[draftKey];
+                        return next;
+                      });
+                    }
+                  }}
                   type="button"
                 >
                   Refresh skill
                 </button>
                 <button
                   className="secondary-button"
-                  onClick={() =>
-                    void props.onSaveKnowledgeSkillTriggerPatterns(
+                  onClick={async () => {
+                    const saved = await props.onSaveKnowledgeSkillTriggerPatterns(
                       entry.skill.id,
                       patternValue
                         .split(/[\n,]/)
                         .map((pattern) => pattern.trim())
                         .filter(Boolean),
-                    )
-                  }
+                    );
+                    if (saved) {
+                      setDraftPatterns((current) => {
+                        const next = { ...current };
+                        delete next[draftKey];
+                        return next;
+                      });
+                    }
+                  }}
                   type="button"
                 >
                   Save patterns
                 </button>
               </div>
               <div className="helper-text">
-                {entry.override
-                  ? `Coop override is ${entry.override.enabled ? 'enabled' : 'disabled'}.`
-                  : 'Using the global default for this skill.'}
+                {entry.override?.triggerPatterns
+                  ? `Coop override is ${entry.override.enabled ? 'enabled' : 'disabled'} with local trigger patterns.`
+                  : entry.override
+                    ? `Coop override is ${entry.override.enabled ? 'enabled' : 'disabled'}.`
+                    : 'Using the global default for this skill.'}
               </div>
               {entry.skill.fetchedAt ? (
                 <div className="helper-text">

@@ -54,7 +54,9 @@ const configuredOnchainMode = resolveConfiguredOnchainMode(
   import.meta.env.VITE_PIMLICO_API_KEY,
 );
 const configuredSessionMode = resolveConfiguredSessionMode(import.meta.env.VITE_COOP_SESSION_MODE);
-const configuredProviderMode = resolveConfiguredProviderMode(import.meta.env.VITE_COOP_PROVIDER_MODE);
+const configuredProviderMode = resolveConfiguredProviderMode(
+  import.meta.env.VITE_COOP_PROVIDER_MODE,
+);
 const configuredPrivacyMode = resolveConfiguredPrivacyMode(import.meta.env.VITE_COOP_PRIVACY_MODE);
 const configuredSignalingUrls =
   parseConfiguredSignalingUrls(import.meta.env.VITE_COOP_SIGNALING_URLS) ?? defaultSignalingUrls;

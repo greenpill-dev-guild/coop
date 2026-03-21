@@ -9,7 +9,19 @@ import {
   getReceiverPairingStatus,
 } from '@coop/shared';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DevTunnelBadge } from './components/DevTunnelBadge';
 import { Skeleton } from './components/Skeleton';
+import {
+  DEV_STATE_PATH,
+  type DevEnvironmentState,
+  getDevAccessTokenFromUrl,
+  getStoredDevAccessToken,
+  hasValidDevAccess,
+  isDevAccessRequired,
+  isLocalHostname,
+  rememberDevAccessToken,
+  stripDevAccessToken,
+} from './dev-environment';
 import { useCapture } from './hooks/useCapture';
 import { usePairingFlow } from './hooks/usePairingFlow';
 import { useReceiverSettings } from './hooks/useReceiverSettings';
@@ -192,6 +204,68 @@ function RootBootstrapSplash() {
   );
 }
 
+function DevTunnelPreparingScreen() {
+  return (
+    <div className="boot-shell">
+      <div className="boot-card">
+        <img className="boot-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
+        <p className="eyebrow">Dev Tunnel</p>
+        <h1>Preparing phone access.</h1>
+        <p className="quiet-note">
+          Coop is waiting for the local dev tunnel and access token before exposing the receiver on
+          this public URL.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DevAccessGate({
+  accessCode,
+  error,
+  onAccessCodeChange,
+  onSubmit,
+}: {
+  accessCode: string;
+  error: string;
+  onAccessCodeChange: (next: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="boot-shell">
+      <div className="boot-card">
+        <img className="boot-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
+        <p className="eyebrow">Dev Tunnel</p>
+        <h1>Enter the Coop passcode.</h1>
+        <p className="quiet-note">
+          This temporary tunnel is for local development, so access is limited to the QR or code
+          shown on the desktop landing page.
+        </p>
+        <label className="receiver-field">
+          <span className="receiver-field__label">Passcode</span>
+          <input
+            autoComplete="one-time-code"
+            inputMode="text"
+            maxLength={12}
+            value={accessCode}
+            onChange={(event) => onAccessCodeChange(event.target.value.toUpperCase())}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onSubmit();
+              }
+            }}
+          />
+        </label>
+        {error ? <p className="receiver-error">{error}</p> : null}
+        <button className="button-primary" type="button" onClick={onSubmit}>
+          Open receiver
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RootApp({
   initialPairingInput,
   initialBoardSnapshot,
@@ -211,6 +285,15 @@ export function RootApp({
   );
   const [pairing, setPairing] = useState<ReceiverPairingRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [devEnvironment, setDevEnvironment] = useState<DevEnvironmentState | null>(null);
+  const [devEnvironmentStatus, setDevEnvironmentStatus] = useState<
+    'disabled' | 'loading' | 'ready'
+  >(() => (import.meta.env.DEV ? 'loading' : 'disabled'));
+  const [devAccessToken, setDevAccessToken] = useState<string | null>(() =>
+    getStoredDevAccessToken(),
+  );
+  const [devAccessCode, setDevAccessCode] = useState('');
+  const [devAccessError, setDevAccessError] = useState('');
 
   const initialPairingHandoffRef = useRef<string | null>(initialPairingInput ?? null);
   const initialShareHandoffRef = useRef<ReceiverShareHandoff | null>(initialShareInput ?? null);
@@ -369,6 +452,27 @@ export function RootApp({
   const pairedNestLabel = pairing
     ? `${pairing.coopDisplayName} · ${pairing.memberDisplayName}`
     : null;
+  const currentUrl = new URL(window.location.href);
+  const isPublicDevOrigin = import.meta.env.DEV && !isLocalHostname(currentUrl.hostname);
+  const requiresDevAccess = isDevAccessRequired(devEnvironment, currentUrl);
+  const hasDevAccess = hasValidDevAccess(devEnvironment, currentUrl, devAccessToken);
+
+  const submitDevAccessCode = useCallback(() => {
+    if (!devEnvironment?.accessToken) {
+      setDevAccessError('The dev tunnel is still preparing. Try again in a moment.');
+      return;
+    }
+
+    if (devAccessCode.trim().toUpperCase() !== devEnvironment.accessToken) {
+      setDevAccessError('That passcode does not match the current dev tunnel.');
+      return;
+    }
+
+    rememberDevAccessToken(devEnvironment.accessToken);
+    setDevAccessToken(devEnvironment.accessToken);
+    setDevAccessCode('');
+    setDevAccessError('');
+  }, [devAccessCode, devEnvironment]);
 
   // --- Keep cross-hook refs in sync ---
   useEffect(() => {
@@ -401,6 +505,46 @@ export function RootApp({
   }, [route]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadDevEnvironment = async () => {
+      try {
+        const response = await fetch(DEV_STATE_PATH, {
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          throw new Error(`Dev state request failed (${response.status}).`);
+        }
+
+        const next = (await response.json()) as DevEnvironmentState;
+        if (!cancelled) {
+          setDevEnvironment(next);
+          setDevEnvironmentStatus('ready');
+        }
+      } catch {
+        if (!cancelled) {
+          setDevEnvironment(null);
+          setDevEnvironmentStatus('loading');
+        }
+      }
+    };
+
+    void loadDevEnvironment();
+    const interval = window.setInterval(() => {
+      void loadDevEnvironment();
+    }, 5_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     void refreshLocalState();
 
     const onPopState = () => {
@@ -409,6 +553,31 @@ export function RootApp({
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, [refreshLocalState]);
+
+  useEffect(() => {
+    if (!devEnvironment) {
+      return;
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const tokenFromUrl = getDevAccessTokenFromUrl(currentUrl);
+    if (tokenFromUrl !== devEnvironment.accessToken) {
+      return;
+    }
+
+    rememberDevAccessToken(tokenFromUrl);
+    setDevAccessToken(tokenFromUrl);
+    setDevAccessCode('');
+    setDevAccessError('');
+
+    const strippedUrl = stripDevAccessToken(currentUrl);
+    if (
+      strippedUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`
+    ) {
+      window.history.replaceState({}, '', strippedUrl);
+      setRoute(resolveRoute(window.location.pathname));
+    }
+  }, [devEnvironment]);
 
   // Toggle html class for receiver scroll containment
   useEffect(() => {
@@ -548,12 +717,30 @@ export function RootApp({
     void badgeNavigator.clearAppBadge?.().catch(() => undefined);
   }, [browserUxCapabilities.canSetBadge, captures, receiverNotificationsEnabled]);
 
+  if (isPublicDevOrigin && devEnvironmentStatus !== 'ready') {
+    return <DevTunnelPreparingScreen />;
+  }
+
+  if (requiresDevAccess && !hasDevAccess) {
+    return (
+      <DevAccessGate
+        accessCode={devAccessCode}
+        error={devAccessError}
+        onAccessCodeChange={(next) => {
+          setDevAccessCode(next);
+          setDevAccessError('');
+        }}
+        onSubmit={submitDevAccessCode}
+      />
+    );
+  }
+
   if (route.kind === 'root') {
     return <RootBootstrapSplash />;
   }
 
   if (route.kind === 'landing') {
-    return <LandingPage appHref="/" />;
+    return <LandingPage appHref="/" devEnvironment={devEnvironment} />;
   }
 
   if (route.kind === 'board') {

@@ -57,6 +57,11 @@ import { getActiveReviewContextForSession } from './background/operator';
 
 // ---- Dashboard ----
 import { getDashboard, refreshBadge } from './background/dashboard';
+import {
+  getPopupSidepanelState,
+  registerSidepanelLifecycleListeners,
+  togglePopupSidepanel,
+} from './background/sidepanel';
 
 import {
   handleApproveAction,
@@ -90,7 +95,7 @@ import {
   handleRunAgentCycle,
   handleSetAgentSkillAutoRun,
   handleSetCoopKnowledgeSkillEnabled,
-  handleSetKnowledgeSkillTriggerPatterns,
+  handleSetCoopKnowledgeSkillTriggerPatterns,
   runProactiveAgentCycle,
   syncAgentObservations,
 } from './background/handlers/agent';
@@ -143,6 +148,8 @@ import {
   handleUpdateMeetingSettings,
   handleUpdateReviewDraft,
 } from './background/handlers/review';
+
+registerSidepanelLifecycleListeners();
 import {
   handleGetSessionCapabilities,
   handleGetSessionCapabilityLog,
@@ -315,6 +322,18 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
           ok: true,
           data: await getDashboard(),
         } satisfies RuntimeActionResponse<DashboardResponse>);
+        return;
+      case 'get-sidepanel-state':
+        sendResponse({
+          ok: true,
+          data: await getPopupSidepanelState(message.payload.windowId),
+        } satisfies RuntimeActionResponse);
+        return;
+      case 'toggle-sidepanel':
+        sendResponse({
+          ok: true,
+          data: await togglePopupSidepanel(message.payload.windowId),
+        } satisfies RuntimeActionResponse);
         return;
       case 'get-receiver-sync-config':
         await ensureReceiverSyncOffscreenDocument();
@@ -549,8 +568,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
       case 'set-coop-knowledge-skill-enabled':
         sendResponse(await handleSetCoopKnowledgeSkillEnabled(message));
         return;
-      case 'set-knowledge-skill-trigger-patterns':
-        sendResponse(await handleSetKnowledgeSkillTriggerPatterns(message));
+      case 'set-coop-knowledge-skill-trigger-patterns':
+        sendResponse(await handleSetCoopKnowledgeSkillTriggerPatterns(message));
         return;
       case 'get-action-policies':
         sendResponse(await handleGetActionPolicies());

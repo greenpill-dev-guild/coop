@@ -17,6 +17,30 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentDashboardKnowledgeSkill } from '../../../runtime/messages';
 import { OperatorConsole } from '../OperatorConsole';
 
+function makeKnowledgeSkillEntry(
+  overrides: Partial<AgentDashboardKnowledgeSkill> = {},
+): AgentDashboardKnowledgeSkill {
+  return {
+    skill: {
+      id: 'knowledge-1',
+      url: 'https://example.com/skills/watershed/SKILL.md',
+      name: 'watershed-playbook',
+      description: 'Watershed partnership signals and funder context.',
+      domain: 'watershed',
+      content: '# Watershed playbook',
+      contentHash: 'hash-1',
+      fetchedAt: '2026-03-20T00:00:00.000Z',
+      enabled: true,
+      triggerPatterns: ['watershed', 'river'],
+      ...(overrides.skill ?? {}),
+    },
+    effectiveEnabled: overrides.effectiveEnabled ?? true,
+    effectiveTriggerPatterns: overrides.effectiveTriggerPatterns ?? ['watershed', 'river'],
+    freshness: overrides.freshness ?? 'fresh',
+    override: overrides.override,
+  };
+}
+
 const baseProps = {
   actionLog: [
     {
@@ -77,6 +101,7 @@ const baseProps = {
   skillManifests: [] as SkillManifest[],
   autoRunSkillIds: [] as string[],
   knowledgeSkills: [] as AgentDashboardKnowledgeSkill[],
+  activeCoopId: 'coop-1',
   activeCoopName: 'Coop Town',
   onRunAgentCycle: vi.fn(),
   onApprovePlan: vi.fn(),
@@ -202,24 +227,7 @@ describe('operator console', () => {
     render(
       <OperatorConsole
         {...baseProps}
-        knowledgeSkills={[
-          {
-            skill: {
-              id: 'knowledge-1',
-              url: 'https://example.com/skills/watershed/SKILL.md',
-              name: 'watershed-playbook',
-              description: 'Watershed partnership signals and funder context.',
-              domain: 'watershed',
-              content: '# Watershed playbook',
-              contentHash: 'hash-1',
-              fetchedAt: '2026-03-20T00:00:00.000Z',
-              enabled: true,
-              triggerPatterns: ['watershed', 'river'],
-            },
-            effectiveEnabled: true,
-            freshness: 'fresh',
-          },
-        ]}
+        knowledgeSkills={[makeKnowledgeSkillEntry()]}
         onRefreshKnowledgeSkill={onRefreshKnowledgeSkill}
         onSaveKnowledgeSkillTriggerPatterns={onSaveKnowledgeSkillTriggerPatterns}
         onSetCoopKnowledgeSkillEnabled={onSetCoopKnowledgeSkillEnabled}
@@ -243,6 +251,125 @@ describe('operator console', () => {
 
     await user.click(screen.getByRole('button', { name: /refresh skill/i }));
     expect(onRefreshKnowledgeSkill).toHaveBeenCalledWith('knowledge-1');
+  });
+
+  it('keeps the import URL after a failed knowledge-skill import', async () => {
+    const user = userEvent.setup();
+    const onImportKnowledgeSkill = vi.fn().mockResolvedValue(false);
+
+    render(
+      <OperatorConsole
+        {...baseProps}
+        knowledgeSkills={[makeKnowledgeSkillEntry()]}
+        onImportKnowledgeSkill={onImportKnowledgeSkill}
+      />,
+    );
+
+    const input = screen.getByLabelText(/knowledge skill url/i);
+    await user.type(input, 'https://example.com/skills/failure/SKILL.md');
+    await user.click(screen.getByRole('button', { name: /import skill/i }));
+
+    expect(onImportKnowledgeSkill).toHaveBeenCalledWith(
+      'https://example.com/skills/failure/SKILL.md',
+    );
+    expect(input).toHaveValue('https://example.com/skills/failure/SKILL.md');
+  });
+
+  it('clears local trigger-pattern drafts after a successful save', async () => {
+    const user = userEvent.setup();
+    const onSaveKnowledgeSkillTriggerPatterns = vi.fn().mockResolvedValue(true);
+    const { rerender } = render(
+      <OperatorConsole
+        {...baseProps}
+        knowledgeSkills={[makeKnowledgeSkillEntry()]}
+        onSaveKnowledgeSkillTriggerPatterns={onSaveKnowledgeSkillTriggerPatterns}
+      />,
+    );
+
+    const patterns = screen.getByLabelText(/trigger patterns/i);
+    await user.clear(patterns);
+    await user.type(patterns, 'river, salmon, salmon');
+    await user.click(screen.getByRole('button', { name: /save patterns/i }));
+
+    rerender(
+      <OperatorConsole
+        {...baseProps}
+        knowledgeSkills={[
+          makeKnowledgeSkillEntry({
+            effectiveTriggerPatterns: ['river', 'salmon'],
+          }),
+        ]}
+        onSaveKnowledgeSkillTriggerPatterns={onSaveKnowledgeSkillTriggerPatterns}
+      />,
+    );
+
+    expect(patterns).toHaveValue('river, salmon');
+  });
+
+  it('clears local trigger-pattern drafts after a successful refresh', async () => {
+    const user = userEvent.setup();
+    const onRefreshKnowledgeSkill = vi.fn().mockResolvedValue(true);
+    const { rerender } = render(
+      <OperatorConsole
+        {...baseProps}
+        knowledgeSkills={[makeKnowledgeSkillEntry()]}
+        onRefreshKnowledgeSkill={onRefreshKnowledgeSkill}
+      />,
+    );
+
+    const patterns = screen.getByLabelText(/trigger patterns/i);
+    await user.clear(patterns);
+    await user.type(patterns, 'river, stale');
+    await user.click(screen.getByRole('button', { name: /refresh skill/i }));
+
+    rerender(
+      <OperatorConsole
+        {...baseProps}
+        knowledgeSkills={[
+          makeKnowledgeSkillEntry({
+            effectiveTriggerPatterns: ['delta'],
+          }),
+        ]}
+        onRefreshKnowledgeSkill={onRefreshKnowledgeSkill}
+      />,
+    );
+
+    expect(patterns).toHaveValue('delta');
+  });
+
+  it('isolates local trigger-pattern drafts between coops', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <OperatorConsole
+        {...baseProps}
+        activeCoopId="coop-1"
+        activeCoopName="Coop One"
+        knowledgeSkills={[
+          makeKnowledgeSkillEntry({
+            effectiveTriggerPatterns: ['river'],
+          }),
+        ]}
+      />,
+    );
+
+    const patterns = screen.getByLabelText(/trigger patterns/i);
+    await user.clear(patterns);
+    await user.type(patterns, 'river, salmon');
+
+    rerender(
+      <OperatorConsole
+        {...baseProps}
+        activeCoopId="coop-2"
+        activeCoopName="Coop Two"
+        knowledgeSkills={[
+          makeKnowledgeSkillEntry({
+            effectiveTriggerPatterns: ['delta'],
+          }),
+        ]}
+      />,
+    );
+
+    expect(patterns).toHaveValue('delta');
   });
 
   describe('policy settings section', () => {

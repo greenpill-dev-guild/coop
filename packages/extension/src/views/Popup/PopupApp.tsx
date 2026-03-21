@@ -1,13 +1,14 @@
 import type { ReviewDraft, SoundPreferences, UiPreferences } from '@coop/shared';
 import { useEffect, useMemo, useState } from 'react';
-import { sendRuntimeMessage } from '../../runtime/messages';
+import { type PopupSidepanelState, sendRuntimeMessage } from '../../runtime/messages';
 import { useCaptureActions } from '../shared/useCaptureActions';
 import { useCoopActions } from '../shared/useCoopActions';
 import { useQuickDraftActions } from '../shared/useQuickDraftActions';
-import { PopupCoopSwitcherSheet } from './PopupCoopSwitcherSheet';
+import { PopupCoopsScreen } from './PopupCoopsScreen';
 import { PopupCreateCoopScreen } from './PopupCreateCoopScreen';
 import { PopupDraftDetailScreen } from './PopupDraftDetailScreen';
 import { PopupDraftListScreen } from './PopupDraftListScreen';
+import { PopupFooterNav } from './PopupFooterNav';
 import { PopupFeedScreen } from './PopupFeedScreen';
 import { PopupHeader } from './PopupHeader';
 import { PopupHomeScreen } from './PopupHomeScreen';
@@ -18,7 +19,7 @@ import { PopupShell } from './PopupShell';
 import { usePopupDashboard } from './hooks/usePopupDashboard';
 import { usePopupNavigation } from './hooks/usePopupNavigation';
 import { usePopupTheme } from './hooks/usePopupTheme';
-import type { PopupActivityItem } from './popup-types';
+import type { PopupFooterTab, PopupHomeQueueItem } from './popup-types';
 
 function formatRelativeTime(timestamp?: string) {
   if (!timestamp) {
@@ -45,26 +46,36 @@ function formatRelativeTime(timestamp?: string) {
   return `${days}d ago`;
 }
 
-function toActivityItems(input: {
-  drafts: ReviewDraft[];
-  artifacts: Array<{ id: string; title: string; summary: string }>;
-}): PopupActivityItem[] {
-  if (input.drafts.length > 0) {
-    return input.drafts.slice(0, 3).map((draft) => ({
-      id: draft.id,
-      title: draft.title,
-      meta: draft.sources[0]?.domain ?? 'coop.local',
-      status: draft.workflowStage === 'ready' ? 'Ready' : 'Draft',
-      kind: 'draft',
-    }));
+function formatCoopLabel(targetCoopIds: string[], coopLabels: Map<string, string>) {
+  const labels = targetCoopIds
+    .map((coopId) => coopLabels.get(coopId))
+    .filter((value): value is string => Boolean(value));
+
+  if (labels.length === 0) {
+    return 'This coop';
   }
 
-  return input.artifacts.slice(0, 3).map((artifact) => ({
-    id: artifact.id,
-    title: artifact.title,
-    meta: artifact.summary,
-    status: 'Shared',
-    kind: 'artifact',
+  if (labels.length === 1) {
+    return labels[0];
+  }
+
+  return `${labels[0]} +${labels.length - 1}`;
+}
+
+function toHomeQueueItems(input: {
+  drafts: ReviewDraft[];
+  coops: Array<{ id: string; name: string }>;
+}): PopupHomeQueueItem[] {
+  const coopLabels = new Map(input.coops.map((coop) => [coop.id, coop.name]));
+
+  return input.drafts.slice(0, 3).map((draft) => ({
+    id: draft.id,
+    title: draft.title,
+    summary: draft.summary,
+    previewImageUrl: draft.previewImageUrl,
+    category: draft.category,
+    coopLabel: formatCoopLabel(draft.suggestedTargetCoopIds, coopLabels),
+    workflowStage: draft.workflowStage,
   }));
 }
 
@@ -85,6 +96,10 @@ export function PopupApp() {
   const [joinSubmitting, setJoinSubmitting] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftEdits, setDraftEdits] = useState<Record<string, ReviewDraft>>({});
+  const [workspaceState, setWorkspaceState] = useState<PopupSidepanelState>({
+    open: false,
+    canClose: false,
+  });
 
   useEffect(() => {
     if (dashboardError) {
@@ -138,24 +153,61 @@ export function PopupApp() {
     }
   }, [activeCoop, navigation, selectedDraftBase]);
 
-  const recentItems = useMemo(
+  const homeQueueItems = useMemo(
     () =>
-      toActivityItems({
+      toHomeQueueItems({
         drafts: visibleDrafts,
-        artifacts: recentArtifacts.map((artifact) => ({
-          id: artifact.id,
-          title: artifact.title,
-          summary: artifact.summary,
-        })),
+        coops: dashboard?.coops.map((coop) => ({ id: coop.profile.id, name: coop.profile.name })) ?? [],
       }),
-    [recentArtifacts, visibleDrafts],
+    [dashboard?.coops, visibleDrafts],
   );
+  const otherCoopsAttentionCount = useMemo(
+    () =>
+      dashboard?.coopBadges
+        .filter((badge) => badge.coopId !== dashboard.activeCoopId)
+        .reduce((total, badge) => total + badge.pendingAttentionCount, 0) ?? 0,
+    [dashboard?.activeCoopId, dashboard?.coopBadges],
+  );
+
+  async function resolveCurrentWindowId() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return tab?.windowId ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function refreshWorkspaceState() {
+    const windowId = await resolveCurrentWindowId();
+    if (!activeCoop || windowId == null) {
+      setWorkspaceState({ open: false, canClose: false });
+      return null;
+    }
+
+    const response = await sendRuntimeMessage<PopupSidepanelState>({
+      type: 'get-sidepanel-state',
+      payload: { windowId },
+    });
+    if (response.ok && response.data) {
+      setWorkspaceState(response.data);
+    }
+    return windowId;
+  }
+
+  useEffect(() => {
+    void refreshWorkspaceState();
+  }, [activeCoop]);
 
   async function openWorkspace() {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.windowId) {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
+      const windowId = await resolveCurrentWindowId();
+      if (windowId != null) {
+        await chrome.sidePanel.open({ windowId });
+        setWorkspaceState((current) => ({
+          ...current,
+          open: true,
+        }));
         return;
       }
     } catch {
@@ -163,6 +215,25 @@ export function PopupApp() {
     }
 
     await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html') });
+  }
+
+  async function toggleWorkspace() {
+    const windowId = await refreshWorkspaceState();
+    if (windowId == null) {
+      await openWorkspace();
+      return;
+    }
+
+    const response = await sendRuntimeMessage<PopupSidepanelState>({
+      type: 'toggle-sidepanel',
+      payload: { windowId },
+    });
+    if (!response.ok || !response.data) {
+      setMessage(response.error ?? 'Could not toggle the sidepanel.');
+      return;
+    }
+
+    setWorkspaceState(response.data);
   }
 
   async function updateUiPreferences(patch: Partial<UiPreferences>) {
@@ -333,10 +404,17 @@ export function PopupApp() {
       return;
     }
     navigation.goHome();
+    await refreshWorkspaceState();
   }
 
   const headerTitle = activeCoop?.profile.name ?? 'Coop';
   const headerSubtitle = undefined;
+  const activeFooterTab: PopupFooterTab =
+    currentScreen === 'feed'
+      ? 'feed'
+      : currentScreen === 'coops' || currentScreen === 'create' || currentScreen === 'join'
+        ? 'coops'
+        : 'home';
 
   let content: JSX.Element;
 
@@ -413,9 +491,9 @@ export function PopupApp() {
         onOpenWorkspace={() => void openWorkspace()}
       />
     );
-  } else if (currentScreen === 'switcher' && dashboard) {
+  } else if (currentScreen === 'coops' && dashboard) {
     content = (
-      <PopupCoopSwitcherSheet
+      <PopupCoopsScreen
         coops={dashboard.coops.map((coop) => {
           const badge = dashboard.coopBadges.find((item) => item.coopId === coop.profile.id);
           return {
@@ -438,8 +516,10 @@ export function PopupApp() {
       <PopupHomeScreen
         draftCount={visibleDrafts.length}
         lastCaptureLabel={formatRelativeTime(dashboard?.summary.lastCaptureAt)}
-        syncLabel={dashboard?.summary.syncState ?? 'Loading'}
-        recentItems={recentItems}
+        syncLabel={dashboard?.summary.syncLabel ?? 'Loading'}
+        syncDetail={dashboard?.summary.syncDetail ?? 'Checking sync status.'}
+        syncTone={dashboard?.summary.syncTone ?? 'ok'}
+        reviewQueue={homeQueueItems}
         onPrimaryAction={() =>
           visibleDrafts.length > 0
             ? navigation.navigate('drafts')
@@ -447,45 +527,62 @@ export function PopupApp() {
         }
         primaryActionLabel={visibleDrafts.length > 0 ? 'Review drafts' : 'Round up now'}
         onCaptureTab={() => void captureActions.runActiveTabCapture()}
-        onOpenFeed={() => navigation.navigate('feed')}
         onOpenDrafts={() => navigation.navigate('drafts')}
+        onOpenDraft={navigation.openDraft}
       />
     );
   }
 
+  const header = (
+    <PopupHeader
+      title={headerTitle}
+      subtitle={headerSubtitle}
+      themePreference={theme.themePreference}
+      onSetTheme={theme.setThemePreference}
+      onBack={
+        ['create', 'join', 'drafts', 'draft-detail', 'settings'].includes(currentScreen)
+          ? () =>
+              navigation.navigate(
+                currentScreen === 'draft-detail'
+                  ? 'drafts'
+                  : currentScreen === 'create' || currentScreen === 'join'
+                    ? activeCoop
+                      ? 'coops'
+                      : 'home'
+                    : 'home',
+              )
+          : undefined
+      }
+      onOpenDrafts={
+        currentScreen === 'home' && activeCoop ? () => navigation.navigate('drafts') : undefined
+      }
+      onOpenSettings={
+        currentScreen === 'home' && activeCoop ? () => navigation.navigate('settings') : undefined
+      }
+      onToggleWorkspace={
+        currentScreen === 'home' && activeCoop ? () => void toggleWorkspace() : undefined
+      }
+      workspaceCanClose={workspaceState.canClose}
+      workspaceOpen={workspaceState.open}
+    />
+  );
+  const footer = activeCoop ? (
+    <PopupFooterNav
+      activeTab={activeFooterTab}
+      coopsBadgeCount={otherCoopsAttentionCount}
+      onNavigate={(tab) => {
+        if (tab === 'home') {
+          navigation.goHome();
+          return;
+        }
+        navigation.navigateFooter(tab);
+      }}
+    />
+  ) : null;
+
   return (
-    <PopupShell message={message} theme={theme.resolvedTheme}>
-      <PopupHeader
-        title={headerTitle}
-        subtitle={headerSubtitle}
-        themePreference={theme.themePreference}
-        onSetTheme={theme.setThemePreference}
-        onBack={
-          ['create', 'join', 'drafts', 'draft-detail', 'feed', 'settings', 'switcher'].includes(
-            currentScreen,
-          )
-            ? () =>
-                navigation.navigate(
-                  currentScreen === 'draft-detail' ? 'drafts' : activeCoop ? 'home' : 'home',
-                )
-            : undefined
-        }
-        onSwitch={
-          dashboard && dashboard.coops.length > 1
-            ? () => navigation.navigate('switcher')
-            : undefined
-        }
-        onOpenDrafts={
-          currentScreen === 'home' && activeCoop ? () => navigation.navigate('drafts') : undefined
-        }
-        onOpenSettings={
-          currentScreen === 'home' && activeCoop ? () => navigation.navigate('settings') : undefined
-        }
-        onOpenWorkspace={
-          currentScreen === 'home' && activeCoop ? () => void openWorkspace() : undefined
-        }
-      />
-      <div className="popup-scroll-pane">{content}</div>
+    <PopupShell footer={footer} header={header} message={message} theme={theme.resolvedTheme}>
+      {content}
     </PopupShell>
   );
 }

@@ -80,7 +80,7 @@ export function PopupSettingsScreen(props: {
 
       <div className="popup-inline-actions">
         <button className="popup-text-button" onClick={onOpenWorkspace} type="button">
-          Open advanced workspace
+          Open sidepanel for advanced controls
         </button>
       </div>
     </section>

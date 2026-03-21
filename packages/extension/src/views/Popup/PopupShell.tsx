@@ -3,9 +3,13 @@ import type { PopupResolvedTheme } from './popup-types';
 
 export function PopupShell({
   children,
+  footer,
+  header,
   message,
   theme,
 }: PropsWithChildren<{
+  footer?: JSX.Element | null;
+  header?: JSX.Element | null;
   message?: string;
   theme: PopupResolvedTheme;
 }>) {
@@ -24,7 +28,9 @@ export function PopupShell({
             {message}
           </output>
         ) : null}
-        {children}
+        {header}
+        <div className="popup-scroll-pane">{children}</div>
+        {footer}
       </div>
     </div>
   );

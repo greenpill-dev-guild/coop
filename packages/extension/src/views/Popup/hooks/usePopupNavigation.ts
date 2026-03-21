@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type {
   PopupCreateFormState,
+  PopupFooterTab,
   PopupJoinFormState,
   PopupNavigationState,
   PopupScreen,
@@ -29,15 +30,50 @@ const initialNavigationState: PopupNavigationState = {
   joinForm: initialJoinForm,
 };
 
+function normalizeScreen(screen: string | undefined): PopupScreen {
+  if (screen === 'switcher') {
+    return 'coops';
+  }
+
+  switch (screen) {
+    case 'create':
+    case 'join':
+    case 'drafts':
+    case 'draft-detail':
+    case 'feed':
+    case 'settings':
+    case 'coops':
+      return screen;
+    default:
+      return 'home';
+  }
+}
+
 export function usePopupNavigation() {
   const { state, loading, setState } = usePersistedPopupState<PopupNavigationState>(
     popupNavigationStorageKey,
     initialNavigationState,
   );
+  const normalizedState = useMemo(
+    () => ({
+      ...state,
+      screen: normalizeScreen((state as PopupNavigationState & { screen?: string }).screen),
+      selectedDraftId: state.selectedDraftId ?? null,
+      createForm: {
+        ...initialCreateForm,
+        ...state.createForm,
+      },
+      joinForm: {
+        ...initialJoinForm,
+        ...state.joinForm,
+      },
+    }),
+    [state],
+  );
 
   return useMemo(
     () => ({
-      state,
+      state: normalizedState,
       loading,
       navigate(screen: PopupScreen) {
         setState((current) => ({
@@ -90,7 +126,14 @@ export function usePopupNavigation() {
           joinForm: initialJoinForm,
         }));
       },
+      navigateFooter(tab: PopupFooterTab) {
+        setState((current) => ({
+          ...current,
+          screen: tab,
+          selectedDraftId: null,
+        }));
+      },
     }),
-    [loading, setState, state],
+    [loading, normalizedState, setState],
   );
 }

@@ -1,4 +1,5 @@
 import { PopupThemeToggle } from './PopupThemePicker';
+import { PopupTooltip } from './PopupTooltip';
 import type { PopupThemePreference } from './popup-types';
 
 function DraftsIcon() {
@@ -49,26 +50,34 @@ export function PopupHeader(props: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
-  onSwitch?: () => void;
-  switchLabel?: string;
   themePreference: PopupThemePreference;
   onSetTheme: (theme: PopupThemePreference) => void;
   onOpenDrafts?: () => void;
   onOpenSettings?: () => void;
-  onOpenWorkspace?: () => void;
+  onToggleWorkspace?: () => void;
+  workspaceOpen?: boolean;
+  workspaceCanClose?: boolean;
 }) {
   const {
     title,
     subtitle,
     onBack,
-    onSwitch,
-    switchLabel = 'Switch',
     themePreference,
     onSetTheme,
     onOpenDrafts,
     onOpenSettings,
-    onOpenWorkspace,
+    onToggleWorkspace,
+    workspaceOpen = false,
+    workspaceCanClose = false,
   } = props;
+  const workspaceActionLabel =
+    workspaceOpen && workspaceCanClose ? 'Close sidepanel' : 'Open sidepanel';
+  const workspaceTooltip =
+    workspaceOpen && workspaceCanClose
+      ? 'Close the Coop sidepanel in this window.'
+      : workspaceOpen
+        ? 'The Coop sidepanel is already open in this window.'
+        : 'Open the Coop sidepanel in this window.';
 
   return (
     <header className="popup-header">
@@ -95,41 +104,52 @@ export function PopupHeader(props: {
         </div>
         <div className="popup-header__meta">
           {onOpenDrafts ? (
-            <button
-              aria-label="Drafts"
-              className="popup-icon-button"
-              onClick={onOpenDrafts}
-              type="button"
-            >
-              <DraftsIcon />
-            </button>
+            <PopupTooltip align="end" content="Open the review queue.">
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label="Open review queue"
+                  className="popup-icon-button"
+                  onClick={onOpenDrafts}
+                  type="button"
+                >
+                  <DraftsIcon />
+                </button>
+              )}
+            </PopupTooltip>
           ) : null}
           {onOpenSettings ? (
-            <button
-              aria-label="Settings"
-              className="popup-icon-button"
-              onClick={onOpenSettings}
-              type="button"
-            >
-              <SettingsIcon />
-            </button>
+            <PopupTooltip align="end" content="Open popup settings.">
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label="Open settings"
+                  className="popup-icon-button"
+                  onClick={onOpenSettings}
+                  type="button"
+                >
+                  <SettingsIcon />
+                </button>
+              )}
+            </PopupTooltip>
           ) : null}
-          {onOpenWorkspace ? (
-            <button
-              aria-label="Open workspace"
-              className="popup-icon-button"
-              onClick={onOpenWorkspace}
-              type="button"
-            >
-              <WorkspaceIcon />
-            </button>
+          {onToggleWorkspace ? (
+            <PopupTooltip align="end" content={workspaceTooltip}>
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label={workspaceActionLabel}
+                  aria-pressed={workspaceOpen || undefined}
+                  className={`popup-icon-button${workspaceOpen ? ' is-active' : ''}`}
+                  onClick={onToggleWorkspace}
+                  type="button"
+                >
+                  <WorkspaceIcon />
+                </button>
+              )}
+            </PopupTooltip>
           ) : null}
           <PopupThemeToggle onSetTheme={onSetTheme} themePreference={themePreference} />
-          {onSwitch ? (
-            <button className="popup-text-button" onClick={onSwitch} type="button">
-              {switchLabel}
-            </button>
-          ) : null}
         </div>
       </div>
     </header>

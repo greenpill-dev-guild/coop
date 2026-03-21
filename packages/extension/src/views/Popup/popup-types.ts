@@ -1,3 +1,5 @@
+import type { ArtifactCategory, ReviewDraftWorkflowStage } from '@coop/shared';
+
 export type PopupScreen =
   | 'home'
   | 'create'
@@ -6,7 +8,7 @@ export type PopupScreen =
   | 'draft-detail'
   | 'feed'
   | 'settings'
-  | 'switcher';
+  | 'coops';
 
 export type PopupThemePreference = 'light' | 'dark' | 'system';
 
@@ -39,3 +41,15 @@ export interface PopupActivityItem {
   status: string;
   kind: 'draft' | 'artifact';
 }
+
+export interface PopupHomeQueueItem {
+  id: string;
+  title: string;
+  summary: string;
+  previewImageUrl?: string;
+  category: ArtifactCategory;
+  coopLabel: string;
+  workflowStage: ReviewDraftWorkflowStage;
+}
+
+export type PopupFooterTab = 'home' | 'feed' | 'coops';

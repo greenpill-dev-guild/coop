@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PopupApp } from '../PopupApp';
@@ -22,7 +22,10 @@ function makeDraft(overrides: Record<string, unknown> = {}) {
     whyItMatters: 'Important context.',
     suggestedNextStep: 'Review and share.',
     category: 'opportunity',
+    confidence: 0.62,
+    rationale: 'Captured from a relevant tab.',
     tags: [],
+    previewImageUrl: 'https://example.com/preview.png',
     sources: [
       {
         label: 'Example',
@@ -77,8 +80,11 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
         coopId: 'coop-1',
         coopName: 'Starter Coop',
         pendingDrafts: 0,
+        routedTabs: 0,
+        insightDrafts: 0,
         artifactCount: 1,
         pendingActions: 0,
+        pendingAttentionCount: 0,
       },
     ],
     drafts: [],
@@ -89,6 +95,9 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
       pendingDrafts: 0,
       coopCount: 1,
       syncState: 'Peer-ready local-first sync',
+      syncLabel: 'Healthy',
+      syncDetail: 'Peer-ready local-first sync.',
+      syncTone: 'ok',
       lastCaptureAt: new Date('2026-03-17T11:50:00.000Z').toISOString(),
       captureMode: 'manual',
       localEnhancement: 'Heuristics-first fallback',
@@ -261,6 +270,12 @@ describe('PopupApp', () => {
           data: makeDashboard(),
         };
       }
+      if (message.type === 'get-sidepanel-state') {
+        return {
+          ok: true,
+          data: { open: false, canClose: true },
+        };
+      }
       if (message.type === 'manual-capture') {
         return {
           ok: true,
@@ -274,6 +289,8 @@ describe('PopupApp', () => {
     render(<PopupApp />);
 
     const roundUp = await screen.findByRole('button', { name: 'Round up now' });
+    expect(screen.queryByRole('button', { name: 'Open feed' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Feed' })).toBeInTheDocument();
     await user.click(roundUp);
 
     await waitFor(() => {
@@ -290,25 +307,10 @@ describe('PopupApp', () => {
           data: makeDashboard(),
         };
       }
-      return { ok: true };
-    });
-
-    const user = userEvent.setup();
-    render(<PopupApp />);
-
-    await user.click(await screen.findByRole('button', { name: /Theme toggle/i }));
-
-    await waitFor(() => {
-      expect(document.body.dataset.theme).toBe('dark');
-    });
-  });
-
-  it('opens the workspace explicitly from the popup', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
+      if (message.type === 'get-sidepanel-state') {
         return {
           ok: true,
-          data: makeDashboard(),
+          data: { open: false, canClose: true },
         };
       }
       return { ok: true };
@@ -317,14 +319,78 @@ describe('PopupApp', () => {
     const user = userEvent.setup();
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Open workspace' }));
+    await user.click(await screen.findByRole('button', { name: /Theme: System/i }));
 
     await waitFor(() => {
-      expect(globalThis.chrome.sidePanel.open).toHaveBeenCalledWith({ windowId: 7 });
+      expect(document.body.dataset.theme).toBe('dark');
     });
   });
 
-  it('uses review as the primary action when drafts exist', async () => {
+  it('toggles the sidepanel explicitly from the popup header', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return {
+          ok: true,
+          data: makeDashboard(),
+        };
+      }
+      if (message.type === 'get-sidepanel-state') {
+        return {
+          ok: true,
+          data: { open: false, canClose: true },
+        };
+      }
+      if (message.type === 'toggle-sidepanel') {
+        return {
+          ok: true,
+          data: { open: true, canClose: true },
+        };
+      }
+      return { ok: true };
+    });
+
+    const user = userEvent.setup();
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Open sidepanel' }));
+
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        type: 'toggle-sidepanel',
+        payload: { windowId: 7 },
+      });
+    });
+    expect(await screen.findByRole('button', { name: 'Close sidepanel' })).toBeInTheDocument();
+  });
+
+  it('shows the coops hub in the footer even with one coop', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return {
+          ok: true,
+          data: makeDashboard(),
+        };
+      }
+      if (message.type === 'get-sidepanel-state') {
+        return {
+          ok: true,
+          data: { open: false, canClose: true },
+        };
+      }
+      return { ok: true };
+    });
+
+    const user = userEvent.setup();
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Coops' }));
+
+    expect(await screen.findByRole('heading', { name: 'Coops' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create another coop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join another coop' })).toBeInTheDocument();
+  });
+
+  it('renders the home review queue and opens draft detail from it', async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
       if (message.type === 'get-dashboard') {
         return {
@@ -338,16 +404,67 @@ describe('PopupApp', () => {
           }),
         };
       }
+      if (message.type === 'get-sidepanel-state') {
+        return {
+          ok: true,
+          data: { open: false, canClose: true },
+        };
+      }
       return { ok: true };
     });
 
     const user = userEvent.setup();
     render(<PopupApp />);
 
-    const reviewButtons = await screen.findAllByRole('button', { name: 'Review drafts' });
-    await user.click(reviewButtons[0]);
-
     expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.getByText('A draft that needs review.')).toBeInTheDocument();
+    expect(screen.getByText('Opportunity')).toBeInTheDocument();
+    expect(screen.getAllByText('Starter Coop')).toHaveLength(2);
+
+    await user.click(screen.getByText('River restoration lead'));
+
+    expect(await screen.findByRole('heading', { name: 'Review draft' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open sidepanel for synthesis' })).toBeInTheDocument();
+  });
+
+  it('shows compact sync status with tooltip detail on focus', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return {
+          ok: true,
+          data: makeDashboard({
+            summary: {
+              ...makeDashboard().summary,
+              syncState:
+                'No signaling server connection. Shared sync is currently limited to this browser profile.',
+              syncLabel: 'Local only',
+              syncDetail:
+                'No signaling server connection. Shared sync is currently limited to this browser profile.',
+              syncTone: 'warning',
+            },
+          }),
+        };
+      }
+      if (message.type === 'get-sidepanel-state') {
+        return {
+          ok: true,
+          data: { open: false, canClose: true },
+        };
+      }
+      return { ok: true };
+    });
+
+    render(<PopupApp />);
+
+    const syncCard = (await screen.findByText('Sync')).parentElement as HTMLElement;
+    expect(screen.getByText('Local only')).toBeInTheDocument();
+
+    fireEvent.focus(syncCard);
+
+    expect(
+      await screen.findByText(
+        'No signaling server connection. Shared sync is currently limited to this browser profile.',
+      ),
+    ).toBeInTheDocument();
   });
 });

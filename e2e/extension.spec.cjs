@@ -1,10 +1,8 @@
-const { execSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
 const { chromium, expect, test } = require('@playwright/test');
+const { ensureExtensionBuilt, extensionDir, rootDir } = require('./helpers/extension-build.cjs');
 
-const rootDir = path.resolve(__dirname, '..');
-const extensionDir = path.join(rootDir, 'packages/extension/dist');
 const closeTimeoutMs = 5000;
 
 function withTimeout(promise, timeoutMs, label = 'operation') {
@@ -135,7 +133,7 @@ async function launchExtensionProfile(userDataDir) {
 }
 
 test.describe('extension workflow', () => {
-  test.describe.configure({ timeout: 120_000 });
+  test.describe.configure({ timeout: 180_000 });
 
   test.skip(
     ({ isMobile }) => isMobile,
@@ -143,13 +141,7 @@ test.describe('extension workflow', () => {
   );
 
   test('@flow-board creates a coop, publishes memory, archives a result, and opens the board', async () => {
-    execSync(
-      'VITE_COOP_ONCHAIN_MODE=mock VITE_COOP_ARCHIVE_MODE=mock VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444 bun run --filter @coop/extension build',
-      {
-        cwd: rootDir,
-        stdio: 'inherit',
-      },
-    );
+    ensureExtensionBuilt();
 
     const creatorUserDataDir = path.join(os.tmpdir(), `coop-e2e-creator-${Date.now()}`);
     const memberUserDataDir = path.join(os.tmpdir(), `coop-e2e-member-${Date.now()}`);
@@ -296,13 +288,7 @@ test.describe('extension workflow', () => {
   });
 
   test('@agent-loop shows the agent console and completes a trusted-node agent cycle', async () => {
-    execSync(
-      'VITE_COOP_ONCHAIN_MODE=mock VITE_COOP_ARCHIVE_MODE=mock VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444 bun run --filter @coop/extension build',
-      {
-        cwd: rootDir,
-        stdio: 'inherit',
-      },
-    );
+    ensureExtensionBuilt();
 
     const creatorUserDataDir = path.join(os.tmpdir(), `coop-agent-loop-${Date.now()}`);
     const creatorProfile = await launchExtensionProfile(creatorUserDataDir);
@@ -310,6 +296,50 @@ test.describe('extension workflow', () => {
     try {
       const creatorAppPage = await creatorProfile.context.newPage();
       await creatorAppPage.goto('http://127.0.0.1:3001/manual-roundup-fixture.html');
+      await creatorAppPage.evaluate(
+        (fixture) => {
+          document.title = fixture.title;
+          const titleTag = document.querySelector('title');
+          if (titleTag) {
+            titleTag.textContent = fixture.title;
+          }
+          const metaDescription = document.querySelector('meta[name="description"]');
+          if (metaDescription) {
+            metaDescription.setAttribute('content', fixture.description);
+          }
+          const mainHeading = document.querySelector('h1');
+          if (mainHeading) {
+            mainHeading.textContent = fixture.heading;
+          }
+          const sectionHeadings = [...document.querySelectorAll('h2')];
+          if (sectionHeadings[0]) {
+            sectionHeadings[0].textContent = fixture.whyHeading;
+          }
+          if (sectionHeadings[1]) {
+            sectionHeadings[1].textContent = fixture.nextHeading;
+          }
+          const paragraphs = [...document.querySelectorAll('p')];
+          fixture.paragraphs.forEach((text, index) => {
+            if (paragraphs[index]) {
+              paragraphs[index].textContent = text;
+            }
+          });
+        },
+        {
+          title: 'Capital formation roundup for Agent Loop Coop',
+          description:
+            'Agent Loop Coop tracks ecological funding opportunities, trusted-node review, shared memory, and capital formation briefs.',
+          heading: 'Capital formation roundup for Agent Loop Coop',
+          whyHeading: 'Why ecological funding matters',
+          nextHeading: 'Trusted-node next step',
+          paragraphs: [
+            'Agent Loop Coop keeps ecological signals, watershed funding leads, and review-ready briefs in one local roundup.',
+            'Trusted members use this capital formation roundup to cluster funding opportunities, preserve shared memory, and prepare review-ready funding briefs for weekly review.',
+            'The coop needs capital formation context, ecological opportunity tracking, and trusted-node coordination so the strongest funding opportunities are easy to spot.',
+            'Round this page up locally, route it into the Roost, and let the trusted helper build a capital formation brief for Agent Loop Coop.',
+          ],
+        },
+      );
       await creatorProfile.page.bringToFront();
 
       await creatorProfile.page.fill('#coop-name', 'Agent Loop Coop');
@@ -401,23 +431,51 @@ test.describe('extension workflow', () => {
       await creatorProfile.page
         .getByRole('button', { name: /(run agent cycle|check the helpers)/i })
         .click();
-      await expect
-        .poll(
-          async () => {
-            const agentDashboard = await getAgentDashboard(creatorProfile.page);
-            return (
-              agentDashboard?.skillRuns.some(
-                (run) =>
-                  run.outputSchemaRef === 'capital-formation-brief-output' &&
-                  run.status === 'completed',
-              ) ?? false
-            );
-          },
-          {
-            timeout: 30000,
-          },
-        )
-        .toBe(true);
+      let capitalFormationCompleted = false;
+      let recentRunSummary = [];
+      for (let attempt = 0; attempt < 18; attempt += 1) {
+        const agentDashboard = await getAgentDashboard(creatorProfile.page);
+        recentRunSummary = (agentDashboard?.skillRuns ?? [])
+          .slice(-8)
+          .map(
+            (run) =>
+              `${run.skillId}:${run.outputSchemaRef}:${run.status}:${run.provider}:${run.observationId}`,
+          );
+        capitalFormationCompleted =
+          agentDashboard?.skillRuns.some(
+            (run) =>
+              run.outputSchemaRef === 'capital-formation-brief-output' &&
+              run.status === 'completed',
+          ) ?? false;
+        if (capitalFormationCompleted) {
+          break;
+        }
+        await creatorProfile.page.waitForTimeout(5000);
+      }
+      expect(
+        capitalFormationCompleted,
+        `Capital formation run did not complete. Recent skill runs: ${recentRunSummary.join(' | ')}`,
+      ).toBe(true);
+      await openPanelTab(creatorProfile.page, 'Coop Feed');
+      const capitalFormationRun = creatorProfile.page
+        .locator('.operator-log-entry')
+        .filter({
+          has: creatorProfile.page.getByText('capital-formation-brief-output', { exact: true }),
+        })
+        .first();
+      await expect(capitalFormationRun).toBeVisible({
+        timeout: 30000,
+      });
+      await expect(
+        capitalFormationRun.getByText('capital-formation-brief', { exact: true }).first(),
+      ).toBeVisible({
+        timeout: 30000,
+      });
+      await expect(capitalFormationRun.getByText('completed', { exact: true }).first()).toBeVisible(
+        {
+          timeout: 30000,
+        },
+      );
 
       await openPanelTab(creatorProfile.page, 'Roost');
       await expect

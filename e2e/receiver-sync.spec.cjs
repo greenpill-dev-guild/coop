@@ -1,10 +1,8 @@
-const { execSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
 const { chromium, expect, test } = require('@playwright/test');
+const { ensureExtensionBuilt, extensionDir, rootDir } = require('./helpers/extension-build.cjs');
 
-const rootDir = path.resolve(__dirname, '..');
-const extensionDir = path.join(rootDir, 'packages/extension/dist');
 const closeTimeoutMs = 5000;
 
 function withTimeout(promise, timeoutMs, label = 'operation') {
@@ -144,12 +142,50 @@ async function waitForCoop(page, coopName, timeoutMs = 30000) {
 
 async function setActiveCoop(page, coopName) {
   const { coop } = await waitForCoop(page, coopName);
-  const response = await page.evaluate(
-    async (coopId) => chrome.runtime.sendMessage({ type: 'set-active-coop', payload: { coopId } }),
-    coop.profile.id,
-  );
-  if (!response?.ok) {
-    throw new Error(response?.error ?? `Could not activate coop ${coopName}.`);
+  await openPanelTab(page, 'Nest');
+  const coopSelect = page.locator('#active-coop-select');
+  if (await coopSelect.count()) {
+    await coopSelect.selectOption({ label: coopName });
+    await expect
+      .poll(async () => {
+        const dashboard = await getDashboard(page);
+        return dashboard?.activeCoopId === coop.profile.id;
+      })
+      .toBe(true);
+    await expect(coopSelect).toContainText(coopName, { timeout: 30000 });
+    return;
+  }
+
+  const trigger = page.locator('.coop-switcher__trigger').first();
+  const triggerLabel = page.locator('.coop-switcher__trigger-label').first();
+  if (await trigger.count()) {
+    const currentLabel = ((await triggerLabel.textContent()) ?? '').trim();
+    if (currentLabel !== coopName) {
+      await trigger.click();
+      const option = page.locator('.coop-switcher__option').filter({ hasText: coopName }).first();
+      await expect(option).toBeVisible({ timeout: 30000 });
+      await option.click();
+    }
+    await expect
+      .poll(async () => {
+        const dashboard = await getDashboard(page);
+        return dashboard?.activeCoopId === coop.profile.id;
+      })
+      .toBe(true);
+    await expect(triggerLabel).toContainText(coopName, { timeout: 30000 });
+    return;
+  }
+
+  const staticLabel = page.locator('.coop-switcher__label').first();
+  if (await staticLabel.count()) {
+    await expect
+      .poll(async () => {
+        const dashboard = await getDashboard(page);
+        return dashboard?.activeCoopId === coop.profile.id;
+      })
+      .toBe(true);
+    await expect(staticLabel).toContainText(coopName, { timeout: 30000 });
+    return;
   }
 
   await expect
@@ -158,26 +194,6 @@ async function setActiveCoop(page, coopName) {
       return dashboard?.activeCoopId === coop.profile.id;
     })
     .toBe(true);
-
-  await openPanelTab(page, 'Nest');
-  const coopSelect = page.locator('#active-coop-select');
-  if (await coopSelect.count()) {
-    await expect(coopSelect).toContainText(coopName, { timeout: 30000 });
-    return;
-  }
-
-  const triggerLabel = page.locator('.coop-switcher__trigger-label').first();
-  if (await triggerLabel.count()) {
-    await expect(triggerLabel).toContainText(coopName, { timeout: 30000 });
-    return;
-  }
-
-  const staticLabel = page.locator('.coop-switcher__label').first();
-  if (await staticLabel.count()) {
-    await expect(staticLabel).toContainText(coopName, { timeout: 30000 });
-    return;
-  }
-
   await expect(page.getByText(coopName, { exact: true }).first()).toBeVisible({
     timeout: 30000,
   });
@@ -220,13 +236,7 @@ test.describe('receiver pairing and sync', () => {
   );
 
   test('pairs the receiver app, syncs into private intake with the bridge disabled, and publishes to multiple coops', async () => {
-    execSync(
-      'VITE_COOP_ONCHAIN_MODE=mock VITE_COOP_ARCHIVE_MODE=mock VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444 bun run --filter @coop/extension build',
-      {
-        cwd: rootDir,
-        stdio: 'inherit',
-      },
-    );
+    ensureExtensionBuilt();
 
     const creatorUserDataDir = path.join(os.tmpdir(), `coop-e2e-receiver-${Date.now()}`);
     const creatorProfile = await launchExtensionProfile(creatorUserDataDir);
@@ -385,9 +395,11 @@ test.describe('receiver pairing and sync', () => {
         timeout: 15000,
       });
 
-      await reviewPage
+      const intakeDraftCard = reviewPage
         .locator('.draft-card')
         .filter({ hasText: 'field-note.txt' })
+        .first();
+      await intakeDraftCard
         .getByRole('button', { name: /(convert to candidate|move to hatching)/i })
         .click();
       await expect(
@@ -403,32 +415,38 @@ test.describe('receiver pairing and sync', () => {
         timeout: 15000,
       });
 
-      await reviewPage
-        .locator('.draft-card input[id^="title-"]')
-        .first()
-        .fill('Community field note');
-      await reviewPage
-        .locator('.draft-card textarea[id^="summary-"]')
+      const draftTitleInput = intakeDraftCard.locator('input[id^="title-"]').first();
+      const draftTitleInputId = await draftTitleInput.getAttribute('id');
+      if (!draftTitleInputId) {
+        throw new Error('Converted receiver draft did not expose a title input id.');
+      }
+      const receiverDraftCard = reviewPage
+        .locator('.draft-card')
+        .filter({ has: reviewPage.locator(`#${draftTitleInputId}`) })
+        .first();
+      await draftTitleInput.fill('Community field note');
+      await receiverDraftCard
+        .locator('textarea[id^="summary-"]')
         .first()
         .fill('Reviewed privately first, then routed into the coops that need the field context.');
-      await reviewPage
-        .locator('.draft-card select[id^="category-"]')
-        .first()
-        .selectOption('resource');
-      await reviewPage.locator('.draft-card input[id^="tags-"]').first().fill('field note, review');
-      await reviewPage
-        .locator('.draft-card textarea[id^="why-"]')
+      await receiverDraftCard.locator('select[id^="category-"]').first().selectOption('resource');
+      await receiverDraftCard.locator('input[id^="tags-"]').first().fill('field note, review');
+      await receiverDraftCard
+        .locator('textarea[id^="why-"]')
         .first()
         .fill('This note captures a field observation worth sharing after lightweight review.');
-      await reviewPage
-        .locator('.draft-card textarea[id^="next-step-"]')
+      await receiverDraftCard
+        .locator('textarea[id^="next-step-"]')
         .first()
         .fill('Publish this note into both coops and use it in the next weekly ritual.');
-      await reviewPage
+      await receiverDraftCard
         .getByRole('button', { name: /add forest signals/i })
         .first()
         .click();
-      await reviewPage.getByRole('button', { name: /(mark ready|ready to share)/i }).click();
+      await receiverDraftCard
+        .getByRole('button', { name: /(mark ready|ready to share)/i })
+        .first()
+        .click();
       await expect(
         reviewPage.getByText(
           /(draft moved into the ready-to-publish lane|draft is ready to share)/i,
@@ -437,7 +455,7 @@ test.describe('receiver pairing and sync', () => {
         timeout: 15000,
       });
 
-      await reviewPage
+      await receiverDraftCard
         .getByRole('button', { name: /(push into|share with) coop/i })
         .first()
         .click();

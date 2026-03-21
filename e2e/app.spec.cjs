@@ -253,19 +253,12 @@ function buildBoardSnapshotFixture() {
 test('landing page renders the locked v1 narrative', async ({ page }) => {
   await page.goto('/');
 
-  await expect(
-    page.getByRole('heading', { name: /turn knowledge into opportunity/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: /fragmented knowledge becomes missed opportunity/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: /the v1 loop is short on purpose/i }),
-  ).toBeVisible();
-  await expect(page.getByRole('heading', { name: /passive capture stays local/i })).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: /see the coop in action before you install anything/i }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /no more chickens loose/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^how coop works$/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^curate your coop$/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^why we build$/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /local, secure & private/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open receiver', exact: true })).toBeVisible();
 });
 
 test('landing page stays legible on mobile', async ({ page, isMobile }) => {
@@ -273,13 +266,11 @@ test('landing page stays legible on mobile', async ({ page, isMobile }) => {
 
   await page.goto('/');
 
+  await expect(page.getByRole('heading', { name: /no more chickens loose/i })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: /turn knowledge into opportunity/i }),
+    page.locator('main').getByRole('link', { name: 'Open receiver', exact: true }),
   ).toBeVisible();
-  await expect(
-    page.locator('main').getByRole('link', { name: 'Start quick hatch', exact: true }).first(),
-  ).toBeVisible();
-  await expect(page.getByRole('button', { name: /copy helper prompt/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /card 1 knowledge/i })).toBeVisible();
 });
 
 test('receiver route exposes the egg capture shell and Roost link', async ({ page }) => {

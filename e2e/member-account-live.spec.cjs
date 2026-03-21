@@ -1,11 +1,9 @@
-const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { chromium, expect, test } = require('@playwright/test');
+const { ensureExtensionBuilt, extensionDir, rootDir } = require('./helpers/extension-build.cjs');
 
-const rootDir = path.resolve(__dirname, '..');
-const extensionDir = path.join(rootDir, 'packages/extension/dist');
 const closeTimeoutMs = 5000;
 const runLive = process.env.COOP_RUN_MEMBER_ACCOUNT_LIVE === '1';
 const greenGoodsRepoDir = process.env.COOP_GREEN_GOODS_REPO_DIR
@@ -359,11 +357,7 @@ test.describe('member account live workflow', () => {
   test('lazy-deploys the member account on first Green Goods member attestation', async () => {
     const liveAction = await resolveActiveWorkAction(1);
 
-    execSync('bun run --filter @coop/extension build', {
-      cwd: rootDir,
-      stdio: 'inherit',
-      env: buildLiveEnv(),
-    });
+    ensureExtensionBuilt(buildLiveEnv());
 
     const userDataDir = path.join(os.tmpdir(), `coop-member-live-${Date.now()}`);
     const profile = await launchExtensionProfile(userDataDir);

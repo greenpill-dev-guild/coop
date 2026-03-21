@@ -24,6 +24,22 @@ function installMatchMediaMock(matches = false) {
   return matchMedia;
 }
 
+function openCard(title: string) {
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`card \\d+ ${title}`, 'i') }));
+}
+
+function completeCard(title: string, notes?: string) {
+  openCard(title);
+
+  if (notes) {
+    fireEvent.change(screen.getByRole('textbox', { name: /^notes$/i }), {
+      target: { value: notes },
+    });
+  }
+
+  fireEvent.click(screen.getByRole('button', { name: /mark complete/i }));
+}
+
 describe('landing page', () => {
   beforeEach(() => {
     installMatchMediaMock(false);
@@ -50,19 +66,69 @@ describe('landing page', () => {
   it('renders the simplified landing structure and footer links', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /no more loose chickens/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /no more chickens loose/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^curate your coop$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^why we build$/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /curate your coop/i })).toHaveLength(2);
+    expect(screen.getAllByRole('link', { name: /curate your coop/i })).toHaveLength(1);
     expect(screen.getByText(/local, secure & private/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /github/i })).toBeInTheDocument();
+  });
+
+  it('renders the dev tunnel badge when tunnel state is provided', async () => {
+    render(
+      <App
+        devEnvironment={{
+          version: 1,
+          updatedAt: '2026-03-20T12:00:00.000Z',
+          accessToken: 'COOP1234',
+          app: {
+            localUrl: 'http://127.0.0.1:3001',
+            publicUrl: 'https://coop-dev.trycloudflare.com',
+            qrUrl: 'https://coop-dev.trycloudflare.com/?coop-dev-token=COOP1234',
+            status: 'ready',
+          },
+          api: {
+            localUrl: 'http://127.0.0.1:4444',
+            websocketUrl: 'wss://signal-dev.trycloudflare.com',
+            publicUrl: 'https://signal-dev.trycloudflare.com',
+            status: 'ready',
+          },
+          docs: {
+            localUrl: 'http://127.0.0.1:3003',
+            status: 'ready',
+          },
+          extension: {
+            distPath: '/tmp/extension',
+            mode: 'watch',
+            receiverAppUrl: 'https://coop-dev.trycloudflare.com',
+            signalingUrls: ['wss://signal-dev.trycloudflare.com'],
+            status: 'ready',
+          },
+          tunnel: {
+            enabled: true,
+            provider: 'cloudflare',
+            status: 'ready',
+          },
+        }}
+      />,
+    );
+
+    expect(await screen.findByText(/scan to open the pwa on your phone/i)).toBeVisible();
+    expect(screen.getByText('COOP1234')).toBeVisible();
+    expect(screen.getByText('https://coop-dev.trycloudflare.com')).toBeVisible();
   });
 
   it('fills flashcards and copies a setup packet', async () => {
     vi.useFakeTimers();
 
     render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
+    completeCard('Knowledge', 'We keep links in chats.');
+    completeCard('Capital');
+    completeCard('Coordination');
+    completeCard('Impact');
 
     fireEvent.change(screen.getByLabelText(/coop name/i), {
       target: { value: 'Pocket Flock' },
@@ -71,30 +137,8 @@ describe('landing page', () => {
       target: { value: 'Turn scattered notes into momentum.' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /open knowledge flashcard/i }));
-
-    fireEvent.change(screen.getByLabelText(/transcript notes for knowledge/i), {
-      target: { value: 'We keep links in chats.' },
-    });
-    fireEvent.change(screen.getByLabelText(/how does your family handle knowledge today/i), {
-      target: { value: 'Everyone keeps tabs in separate browsers.' },
-    });
-    fireEvent.change(
-      screen.getByLabelText(/where does knowledge get stuck or scattered for your family/i),
-      {
-        target: { value: 'Good context disappears after calls.' },
-      },
-    );
-    fireEvent.change(
-      screen.getByLabelText(/what opportunity should coop unlock for your family/i),
-      {
-        target: { value: 'One reusable place for the best notes.' },
-      },
-    );
-
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /copy setup packet/i }));
+      fireEvent.click(screen.getByRole('button', { name: /copy packet/i }));
       await Promise.resolve();
     });
 
@@ -119,41 +163,31 @@ describe('landing page', () => {
   it('restores ritual progress from localStorage after a remount', () => {
     const firstRender = render(<App />);
 
-    fireEvent.change(screen.getByLabelText(/coop name/i), {
-      target: { value: 'Pocket Flock' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /open capital flashcard/i }));
-    fireEvent.change(screen.getByLabelText(/transcript notes for capital/i), {
+    openCard('Capital');
+    fireEvent.change(screen.getByRole('textbox', { name: /^notes$/i }), {
       target: { value: 'Grant leads from calls.' },
-    });
-    fireEvent.change(screen.getByLabelText(/meeting notes or transcript paste-in/i), {
-      target: { value: 'Shared follow-up notes.' },
     });
 
     firstRender.unmount();
 
     render(<App />);
 
-    expect(screen.getByLabelText(/coop name/i)).toHaveValue('Pocket Flock');
-    expect(screen.getByLabelText(/transcript notes for capital/i)).toHaveValue(
+    expect(screen.getByRole('textbox', { name: /^notes$/i })).toHaveValue(
       'Grant leads from calls.',
-    );
-    expect(screen.getByLabelText(/meeting notes or transcript paste-in/i)).toHaveValue(
-      'Shared follow-up notes.',
     );
   });
 
   it('moves focus into an opened flashcard and returns it when the card closes', () => {
     render(<App />);
 
-    const trigger = screen.getByRole('button', { name: /open knowledge flashcard/i });
+    const trigger = screen.getByRole('button', { name: /card \d+ knowledge/i });
     fireEvent.click(trigger);
 
-    const transcriptField = screen.getByLabelText(/transcript notes for knowledge/i);
+    const transcriptField = screen.getByRole('textbox', { name: /^notes$/i });
     expect(transcriptField).toHaveFocus();
 
-    fireEvent.click(screen.getByRole('button', { name: /close card/i }));
-    expect(screen.getByRole('button', { name: /open knowledge flashcard/i })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: /flip back/i }));
+    expect(screen.getByRole('button', { name: /card \d+ knowledge/i })).toHaveFocus();
   });
 
   it('fills the open flashcard transcript when browser speech recognition is available', () => {
@@ -195,8 +229,8 @@ describe('landing page', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open knowledge flashcard/i }));
-    fireEvent.click(screen.getByRole('button', { name: /record knowledge notes/i }));
+    openCard('Knowledge');
+    fireEvent.click(screen.getByRole('button', { name: /^record$/i }));
 
     act(() => {
       activeRecognition?.onresult?.({
@@ -230,7 +264,7 @@ describe('landing page', () => {
       activeRecognition?.onend?.();
     });
 
-    expect(screen.getByLabelText(/transcript notes for knowledge/i)).toHaveValue(
+    expect(screen.getByRole('textbox', { name: /^notes$/i })).toHaveValue(
       'We keep grant links in chat. We also keep follow-ups in calls.',
     );
     expect(screen.getByText(/transcript is ready to edit/i)).toBeInTheDocument();

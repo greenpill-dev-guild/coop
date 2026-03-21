@@ -59,12 +59,20 @@ export interface RuntimeSummary {
   pendingAttentionCount: number;
   coopCount: number;
   syncState: string;
+  syncLabel: string;
+  syncDetail: string;
+  syncTone: 'ok' | 'warning' | 'error';
   lastCaptureAt?: string;
   captureMode: CaptureMode;
   agentCadenceMinutes: UiPreferences['agentCadenceMinutes'];
   localEnhancement: string;
   localInferenceOptIn: boolean;
   activeCoopId?: string;
+}
+
+export interface PopupSidepanelState {
+  open: boolean;
+  canClose: boolean;
 }
 
 export interface CoopBadgeSummary {
@@ -157,6 +165,7 @@ export interface AgentDashboardKnowledgeSkill {
   skill: KnowledgeSkill;
   override?: CoopKnowledgeSkillOverride;
   effectiveEnabled: boolean;
+  effectiveTriggerPatterns: string[];
   freshness: 'fresh' | 'stale' | 'never-fetched';
 }
 
@@ -164,6 +173,8 @@ export type RuntimeRequest =
   | { type: 'get-auth-session' }
   | { type: 'set-auth-session'; payload: AuthSession | null }
   | { type: 'get-dashboard' }
+  | { type: 'get-sidepanel-state'; payload: { windowId: number } }
+  | { type: 'toggle-sidepanel'; payload: { windowId: number } }
   | { type: 'get-receiver-sync-config' }
   | { type: 'get-receiver-sync-runtime' }
   | { type: 'manual-capture' }
@@ -370,8 +381,8 @@ export type RuntimeRequest =
       payload: { coopId: string; knowledgeSkillId: string; enabled: boolean };
     }
   | {
-      type: 'set-knowledge-skill-trigger-patterns';
-      payload: { skillId: string; triggerPatterns: string[] };
+      type: 'set-coop-knowledge-skill-trigger-patterns';
+      payload: { coopId: string; knowledgeSkillId: string; triggerPatterns: string[] };
     }
   | { type: 'get-action-policies' }
   | {

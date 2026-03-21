@@ -13,6 +13,21 @@ import { parseSkillMarkdown } from './skill-markdown';
 
 const db = createCoopDb('coop-extension');
 
+export function normalizeKnowledgeSkillTriggerPatterns(triggerPatterns: string[]) {
+  return triggerPatterns
+    .map((pattern) => pattern.trim())
+    .filter(
+      (pattern, index, patterns) => pattern.length > 0 && patterns.indexOf(pattern) === index,
+    );
+}
+
+export function resolveKnowledgeSkillTriggerPatterns(
+  skill: KnowledgeSkill,
+  override?: CoopKnowledgeSkillOverride,
+) {
+  return override?.triggerPatterns ?? skill.triggerPatterns;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Parse SKILL.md format (YAML frontmatter + markdown body)
 // ---------------------------------------------------------------------------
@@ -166,19 +181,22 @@ export async function selectKnowledgeSkills(
     overrides = await listCoopKnowledgeSkillOverrides(store, coopId);
   }
 
-  const overrideMap = new Map(overrides.map((o) => [o.knowledgeSkillId, o.enabled]));
+  const overrideMap = new Map(overrides.map((override) => [override.knowledgeSkillId, override]));
 
   // Resolve effective enabled state and score each skill
   const searchText = `${observation.title} ${observation.summary}`.toLowerCase();
 
   const scored = allSkills
     .filter((skill) => {
-      // Override takes precedence over global default
-      const overrideEnabled = overrideMap.get(skill.id);
-      return overrideEnabled !== undefined ? overrideEnabled : skill.enabled;
+      const override = overrideMap.get(skill.id);
+      return override?.enabled ?? skill.enabled;
     })
     .map((skill) => {
-      const score = scoreSkillRelevance(skill, searchText);
+      const score = scoreSkillRelevance(
+        skill,
+        searchText,
+        resolveKnowledgeSkillTriggerPatterns(skill, overrideMap.get(skill.id)),
+      );
       return { skill, score };
     })
     .filter((entry) => entry.score > 0)
@@ -192,10 +210,14 @@ export async function selectKnowledgeSkills(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function scoreSkillRelevance(skill: KnowledgeSkill, searchText: string): number {
+function scoreSkillRelevance(
+  skill: KnowledgeSkill,
+  searchText: string,
+  triggerPatterns: string[],
+): number {
   let score = 0;
 
-  for (const pattern of skill.triggerPatterns) {
+  for (const pattern of triggerPatterns) {
     const lowerPattern = pattern.toLowerCase();
     if (searchText.includes(lowerPattern)) {
       score += 1;
