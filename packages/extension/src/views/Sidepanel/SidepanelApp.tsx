@@ -13,32 +13,18 @@ import { playCoopSound } from '../../runtime/audio';
 import { InferenceBridge, type InferenceBridgeState } from '../../runtime/inference-bridge';
 import { type AgentDashboardResponse, sendRuntimeMessage } from '../../runtime/messages';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { CoopSwitcher } from './CoopSwitcher';
-import { TabStrip } from './TabStrip';
+import { CoopFilterPill } from './CoopSwitcher';
+import { SidepanelFooterNav } from './TabStrip';
 import { describeLocalHelperState, formatAgentCadence } from './helpers';
 import { useCoopForm } from './hooks/useCoopForm';
 import { useDashboard } from './hooks/useDashboard';
 import { useDraftEditor } from './hooks/useDraftEditor';
 import { useSyncBindings } from './hooks/useSyncBindings';
 import { useTabCapture } from './hooks/useTabCapture';
-import {
-  CoopFeedTab,
-  FlockMeetingTab,
-  LooseChickensTab,
-  NestTab,
-  NestToolsTab,
-  RoostTab,
-} from './tabs';
+import { ChickensTab, ContributeTab, FeedTab, ManageTab } from './tabs';
 
-const tabs = [
-  'Loose Chickens',
-  'Roost',
-  'Nest',
-  'Coop Feed',
-  'Flock Meeting',
-  'Nest Tools',
-] as const;
-type PanelTab = (typeof tabs)[number];
+const sidepanelTabs = ['chickens', 'feed', 'contribute', 'manage'] as const;
+type SidepanelTab = (typeof sidepanelTabs)[number];
 
 type SaveFilePickerHandle = {
   createWritable: () => Promise<{
@@ -65,7 +51,7 @@ async function downloadText(filename: string, value: string) {
 }
 
 export function SidepanelApp() {
-  const [panelTab, setPanelTab] = useState<PanelTab>('Nest');
+  const [panelTab, setPanelTab] = useState<SidepanelTab>('chickens');
 
   // --- Core hooks ---
   const {
@@ -85,7 +71,6 @@ export function SidepanelApp() {
     activeReceiverProtocolLink,
     receiverIntake,
     visibleDrafts,
-    meetingMode,
     archiveStory,
     archiveReceipts,
     refreshableArchiveReceipts,
@@ -104,11 +89,6 @@ export function SidepanelApp() {
 
   // --- State not covered by hooks (kept local) ---
   const [inviteResult, setInviteResult] = useState<InviteCode | null>(null);
-  const [meetingSettings, setMeetingSettings] = useState({
-    weeklyReviewCadence: '',
-    facilitatorExpectation: '',
-    defaultCapturePosture: '',
-  });
   const [inferenceState, setInferenceState] = useState<InferenceBridgeState | null>(null);
   const [stealthMetaAddress, setStealthMetaAddress] = useState<string | null>(null);
   const inferenceBridgeRef = useRef<InferenceBridge | null>(null);
@@ -116,14 +96,14 @@ export function SidepanelApp() {
   // --- Composed hooks ---
   const tabCapture = useTabCapture({
     setMessage,
-    setPanelTab: (tab: string) => setPanelTab(tab as PanelTab),
+    setPanelTab: (tab: string) => setPanelTab(tab as SidepanelTab),
     loadDashboard,
   });
 
   const draftEditor = useDraftEditor({
     activeCoop,
     setMessage,
-    setPanelTab: (tab: string) => setPanelTab(tab as PanelTab),
+    setPanelTab: (tab: string) => setPanelTab(tab as SidepanelTab),
     loadDashboard,
     soundPreferences,
     inferenceBridgeRef,
@@ -131,7 +111,7 @@ export function SidepanelApp() {
 
   const coopForm = useCoopForm({
     setMessage,
-    setPanelTab: (tab: string) => setPanelTab(tab as PanelTab),
+    setPanelTab: (tab: string) => setPanelTab(tab as SidepanelTab),
     loadDashboard,
     soundPreferences,
     configuredSignalingUrls,
@@ -159,19 +139,6 @@ export function SidepanelApp() {
     const optIn = dashboard?.summary.localInferenceOptIn ?? false;
     inferenceBridgeRef.current?.setOptIn(optIn);
   }, [dashboard?.summary.localInferenceOptIn]);
-
-  // --- Meeting settings sync ---
-  useEffect(() => {
-    const ritual = activeCoop?.rituals[0];
-    if (!ritual) {
-      return;
-    }
-    setMeetingSettings({
-      weeklyReviewCadence: ritual.weeklyReviewCadence,
-      facilitatorExpectation: ritual.facilitatorExpectation,
-      defaultCapturePosture: ritual.defaultCapturePosture,
-    });
-  }, [activeCoop?.rituals]);
 
   // --- Fetch stealth meta-address when active coop changes (privacy mode only) ---
   useEffect(() => {
@@ -397,6 +364,7 @@ export function SidepanelApp() {
 
     const extension = filename.split('.').pop()?.toLowerCase() === 'json' ? 'json' : 'txt';
     const mimeType = extension === 'json' ? 'application/json' : 'text/plain;charset=utf-8';
+
     const savePickerWindow = globalThis as typeof globalThis & {
       showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<SaveFilePickerHandle>;
     };
@@ -897,28 +865,6 @@ export function SidepanelApp() {
     await loadDashboard();
   }
 
-  async function saveMeetingSettingsAction() {
-    if (!activeCoop) {
-      return;
-    }
-
-    const response = await sendRuntimeMessage({
-      type: 'update-meeting-settings',
-      payload: {
-        coopId: activeCoop.profile.id,
-        weeklyReviewCadence: meetingSettings.weeklyReviewCadence,
-        facilitatorExpectation: meetingSettings.facilitatorExpectation,
-        defaultCapturePosture: meetingSettings.defaultCapturePosture,
-      },
-    });
-    if (!response.ok) {
-      setMessage(response.error ?? 'Could not save meeting settings.');
-      return;
-    }
-    setMessage('Flock meeting rhythm updated.');
-    await loadDashboard();
-  }
-
   async function testSound() {
     await playCoopSound('sound-test', soundPreferences);
     setMessage('Coop sound played.');
@@ -959,100 +905,77 @@ export function SidepanelApp() {
 
   return (
     <div className="coop-shell sidepanel-shell">
-      <header className="panel-header">
-        <div className="panel-brand">
+      <header className="sidepanel-header">
+        <div className="sidepanel-header__brand">
           <img src="/branding/coop-wordmark-flat.png" alt="Coop" />
-          {dashboard ? (
-            <div
-              className={
-                dashboard.summary.iconState === 'error-offline'
-                  ? 'state-pill is-error'
-                  : 'state-pill'
-              }
-            >
-              {dashboard.summary.iconLabel}
-            </div>
-          ) : (
-            <div
-              className="skeleton skeleton-text"
-              style={{ width: '5rem', height: '1.4em' }}
-              aria-hidden="true"
-            />
-          )}
         </div>
-        <div className="summary-strip">
-          <div className="summary-card">
-            <span>Active nest</span>
-            <strong>{activeCoop?.profile.name ?? 'None yet'}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Roost</span>
-            <strong>{dashboard?.summary.pendingDrafts ?? 0} drafts</strong>
-          </div>
-          <div className="summary-card">
-            <span>Flock sync</span>
-            <strong>{dashboard?.summary.syncState ?? 'Loading'}</strong>
-          </div>
-        </div>
-        <CoopSwitcher
-          coops={(dashboard?.coops ?? []).map((coop) => ({
-            id: coop.profile.id,
-            name: coop.profile.name,
-          }))}
+        <CoopFilterPill
+          coops={(dashboard?.coops ?? []).map((c) => ({ id: c.profile.id, name: c.profile.name }))}
           activeCoopId={dashboard?.activeCoopId ?? activeCoop?.profile.id}
-          coopBadges={dashboard?.coopBadges ?? []}
-          onSwitch={selectActiveCoop}
+          onFilter={(coopId) => (coopId ? selectActiveCoop(coopId) : undefined)}
         />
-        <div className="state-text">
-          Local-first unless you share · Agent cadence:{' '}
-          {formatAgentCadence(dashboard?.summary.agentCadenceMinutes ?? 60)} · Local helper:{' '}
-          {inferenceState
-            ? describeLocalHelperState(inferenceState.capability)
-            : (dashboard?.summary.localEnhancement ?? 'Quick rules first')}
-        </div>
-        {boardUrl ? (
-          <div className="action-row">
-            <a className="secondary-button" href={boardUrl} rel="noreferrer" target="_blank">
-              Open coop board
-            </a>
-          </div>
-        ) : null}
       </header>
 
-      <TabStrip tabs={tabs} activeTab={panelTab} onTabChange={setPanelTab} />
-
-      <main
-        className="content-shell"
-        id={`tabpanel-${panelTab}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${panelTab}`}
-      >
+      <main className="sidepanel-content">
         {message ? <div className="panel-card helper-text">{message}</div> : null}
 
-        {panelTab === 'Loose Chickens' && (
+        {panelTab === 'chickens' && (
           <ErrorBoundary>
-            <LooseChickensTab dashboard={dashboard} tabCapture={tabCapture} />
-          </ErrorBoundary>
-        )}
-
-        {panelTab === 'Roost' && (
-          <ErrorBoundary>
-            <RoostTab
+            <ChickensTab
               dashboard={dashboard}
               visibleDrafts={visibleDrafts}
               draftEditor={draftEditor}
               inferenceState={inferenceState}
               runtimeConfig={runtimeConfig}
+              tabCapture={tabCapture}
             />
           </ErrorBoundary>
         )}
 
-        {panelTab === 'Nest' && (
+        {panelTab === 'feed' && (
           <ErrorBoundary>
-            <NestTab
+            <FeedTab
+              dashboard={dashboard}
+              activeCoop={activeCoop}
+              archiveStory={archiveStory}
+              archiveReceipts={archiveReceipts}
+              refreshableArchiveReceipts={refreshableArchiveReceipts}
+              runtimeConfig={runtimeConfig}
+              boardUrl={boardUrl}
+              archiveSnapshot={archiveSnapshot}
+              exportLatestReceipt={exportLatestReceipt}
+              refreshArchiveStatus={refreshArchiveStatus}
+              archiveArtifact={archiveArtifact}
+              toggleArtifactArchiveWorthiness={toggleArtifactArchiveWorthiness}
+              onAnchorOnChain={handleAnchorOnChain}
+              onFvmRegister={handleFvmRegister}
+            />
+          </ErrorBoundary>
+        )}
+
+        {panelTab === 'contribute' && (
+          <ErrorBoundary>
+            <ContributeTab
+              activeCoop={activeCoop}
+              activeMember={activeMember}
+              createReceiverPairing={createReceiverPairing}
+              copyText={copyText}
+            />
+          </ErrorBoundary>
+        )}
+
+        {panelTab === 'manage' && (
+          <ErrorBoundary>
+            <ManageTab
+              dashboard={dashboard}
               activeCoop={activeCoop}
               activeMember={activeMember}
               runtimeConfig={runtimeConfig}
+              authSession={authSession}
+              soundPreferences={soundPreferences}
+              inferenceState={inferenceState}
+              browserUxCapabilities={browserUxCapabilities}
+              configuredReceiverAppUrl={configuredReceiverAppUrl}
               stealthMetaAddress={stealthMetaAddress}
               coopForm={coopForm}
               inviteResult={inviteResult}
@@ -1066,33 +989,26 @@ export function SidepanelApp() {
               copyText={copyText}
               receiverIntake={receiverIntake}
               draftEditor={draftEditor}
+              tabCapture={tabCapture}
               greenGoodsActionQueue={dashboard?.operator.policyActionQueue ?? []}
               onProvisionMemberOnchainAccount={handleProvisionMemberOnchainAccount}
               onSubmitGreenGoodsWorkSubmission={handleSubmitGreenGoodsWorkSubmission}
               onSubmitGreenGoodsImpactReport={handleSubmitGreenGoodsImpactReport}
-            />
-          </ErrorBoundary>
-        )}
-
-        {panelTab === 'Coop Feed' && (
-          <ErrorBoundary>
-            <CoopFeedTab
-              dashboard={dashboard}
-              activeCoop={activeCoop}
+              agentDashboard={agentDashboard}
+              actionPolicies={actionPolicies}
               archiveStory={archiveStory}
               archiveReceipts={archiveReceipts}
               refreshableArchiveReceipts={refreshableArchiveReceipts}
-              runtimeConfig={runtimeConfig}
-              hasTrustedNodeAccess={hasTrustedNodeAccess}
-              agentDashboard={agentDashboard}
-              actionPolicies={actionPolicies}
               boardUrl={boardUrl}
               archiveSnapshot={archiveSnapshot}
-              exportLatestReceipt={exportLatestReceipt}
-              refreshArchiveStatus={refreshArchiveStatus}
               archiveArtifact={archiveArtifact}
               toggleArtifactArchiveWorthiness={toggleArtifactArchiveWorthiness}
               toggleAnchorMode={toggleAnchorMode}
+              refreshArchiveStatus={refreshArchiveStatus}
+              exportSnapshot={exportSnapshot}
+              exportLatestArtifact={exportLatestArtifact}
+              exportLatestReceipt={exportLatestReceipt}
+              archiveLatestArtifact={archiveLatestArtifact}
               handleRunAgentCycle={handleRunAgentCycle}
               handleApproveAgentPlan={handleApproveAgentPlan}
               handleRejectAgentPlan={handleRejectAgentPlan}
@@ -1115,56 +1031,27 @@ export function SidepanelApp() {
               handleQueueGreenGoodsMemberSync={handleQueueGreenGoodsMemberSync}
               onAnchorOnChain={handleAnchorOnChain}
               onFvmRegister={handleFvmRegister}
-              loadDashboard={loadDashboard}
-              setMessage={setMessage}
-            />
-          </ErrorBoundary>
-        )}
-
-        {panelTab === 'Flock Meeting' && (
-          <ErrorBoundary>
-            <FlockMeetingTab
-              activeCoop={activeCoop}
-              meetingMode={meetingMode}
-              meetingSettings={meetingSettings}
-              setMeetingSettings={setMeetingSettings}
-              saveMeetingSettingsAction={saveMeetingSettingsAction}
-              draftEditor={draftEditor}
-              inferenceState={inferenceState}
-              runtimeConfig={runtimeConfig}
-              coops={dashboard?.coops ?? []}
-            />
-          </ErrorBoundary>
-        )}
-
-        {panelTab === 'Nest Tools' && (
-          <ErrorBoundary>
-            <NestToolsTab
-              dashboard={dashboard}
-              activeCoop={activeCoop}
-              runtimeConfig={runtimeConfig}
-              authSession={authSession}
-              soundPreferences={soundPreferences}
-              inferenceState={inferenceState}
-              browserUxCapabilities={browserUxCapabilities}
-              configuredReceiverAppUrl={configuredReceiverAppUrl}
-              tabCapture={tabCapture}
               updateSound={updateSound}
               testSound={testSound}
               toggleLocalInferenceOptIn={toggleLocalInferenceOptIn}
               clearSensitiveLocalData={clearSensitiveLocalDataAction}
               updateUiPreferences={updateUiPreferences}
-              archiveLatestArtifact={archiveLatestArtifact}
-              archiveSnapshot={archiveSnapshot}
-              exportSnapshot={exportSnapshot}
-              exportLatestArtifact={exportLatestArtifact}
-              exportLatestReceipt={exportLatestReceipt}
               loadDashboard={loadDashboard}
               setMessage={setMessage}
             />
           </ErrorBoundary>
         )}
       </main>
+
+      <SidepanelFooterNav
+        activeTab={panelTab}
+        onNavigate={setPanelTab}
+        showManageTab={hasTrustedNodeAccess}
+        badges={{
+          chickens: (dashboard?.summary.pendingDrafts ?? 0) + (dashboard?.candidates?.length ?? 0),
+          feed: activeCoop?.artifacts.length ?? 0,
+        }}
+      />
     </div>
   );
 }

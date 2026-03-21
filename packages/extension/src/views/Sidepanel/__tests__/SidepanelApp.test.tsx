@@ -43,24 +43,31 @@ vi.mock('../ErrorBoundary', () => ({
 }));
 
 vi.mock('../CoopSwitcher', () => ({
-  CoopSwitcher: ({ onSwitch }: { onSwitch: (coopId: string) => void | Promise<void> }) => (
-    <button onClick={() => void onSwitch('coop-2')} type="button">
+  CoopFilterPill: ({ onFilter }: { onFilter: (coopId: string | null) => void }) => (
+    <button onClick={() => void onFilter('coop-2')} type="button">
       Switch to Coop Two
     </button>
   ),
 }));
 
 vi.mock('../TabStrip', () => ({
-  TabStrip: () => <div data-testid="tab-strip" />,
+  SidepanelFooterNav: ({
+    showManageTab,
+  }: {
+    showManageTab: boolean;
+    activeTab: string;
+    onNavigate: (tab: string) => void;
+    badges?: Record<string, number>;
+  }) => (
+    <div data-testid="sidepanel-footer-nav" data-show-manage={showManageTab ? 'true' : 'false'} />
+  ),
 }));
 
 vi.mock('../tabs', () => ({
-  LooseChickensTab: () => <div>Loose Chickens</div>,
-  RoostTab: () => <div>Roost</div>,
-  NestTab: () => <div>Nest</div>,
-  CoopFeedTab: () => <div>Coop Feed</div>,
-  FlockMeetingTab: () => <div>Flock Meeting</div>,
-  NestToolsTab: () => <div>Nest Tools</div>,
+  ChickensTab: () => <div>Chickens</div>,
+  FeedTab: () => <div>Feed</div>,
+  ContributeTab: () => <div>Contribute</div>,
+  ManageTab: () => <div>Manage</div>,
 }));
 
 vi.mock('../hooks/useCoopForm', () => ({
@@ -153,7 +160,6 @@ vi.mock('../hooks/useDashboard', () => ({
     activeReceiverProtocolLink: null,
     receiverIntake: [],
     visibleDrafts: [],
-    meetingMode: 'solo',
     archiveStory: null,
     archiveReceipts: [],
     refreshableArchiveReceipts: [],
@@ -182,7 +188,7 @@ describe('SidepanelApp', () => {
     updateUiPreferencesMock.mockResolvedValue(null);
   });
 
-  it('reloads both dashboards after switching coops', async () => {
+  it('reloads both dashboards after switching coops via filter pill', async () => {
     const user = userEvent.setup();
 
     render(<SidepanelApp />);
@@ -199,5 +205,25 @@ describe('SidepanelApp', () => {
       expect(loadDashboardMock).toHaveBeenCalledTimes(1);
       expect(loadAgentDashboardMock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('does not show manage tab when hasTrustedNodeAccess is false', () => {
+    render(<SidepanelApp />);
+
+    const footerNav = screen.getByTestId('sidepanel-footer-nav');
+    expect(footerNav).toHaveAttribute('data-show-manage', 'false');
+  });
+
+  it('renders the compact header with brand and filter pill', () => {
+    render(<SidepanelApp />);
+
+    expect(screen.getByAltText('Coop')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to Coop Two' })).toBeInTheDocument();
+  });
+
+  it('defaults to the chickens tab', () => {
+    render(<SidepanelApp />);
+
+    expect(screen.getByText('Chickens')).toBeInTheDocument();
   });
 });

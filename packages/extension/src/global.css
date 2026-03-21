@@ -55,7 +55,8 @@ img {
 }
 
 .sidepanel-shell {
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
 }
 
 .panel-header,
@@ -679,4 +680,181 @@ button:disabled {
   font-size: 0.72rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ---- Sidepanel compact header ---- */
+
+.sidepanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--coop-line);
+  background: rgba(255, 252, 249, 0.88);
+  backdrop-filter: blur(10px);
+  z-index: 1;
+}
+
+.sidepanel-header__brand img {
+  width: 96px;
+}
+
+/* ---- Sidepanel scrollable content ---- */
+
+.sidepanel-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+/* ---- Sidepanel footer nav ---- */
+
+.sidepanel-footer-nav {
+  display: grid;
+  gap: 6px;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--coop-line);
+  background: rgba(255, 252, 249, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.sidepanel-footer-nav__button {
+  min-height: 46px;
+  border: 1px solid var(--coop-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--coop-brown-soft);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.sidepanel-footer-nav__button.is-active {
+  color: var(--coop-brown);
+  border-color: rgba(90, 125, 16, 0.32);
+  background: rgba(90, 125, 16, 0.1);
+}
+
+.sidepanel-footer-nav__icon-wrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.sidepanel-footer-nav__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.sidepanel-footer-nav__badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  padding: 0 4px;
+  background: var(--coop-orange);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.sidepanel-footer-nav__button span:last-child {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* ---- Coop filter pill ---- */
+
+.coop-filter-pill {
+  position: relative;
+}
+
+.coop-filter-pill__trigger {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--coop-brown);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coop-filter-pill__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 160px;
+  background: rgba(255, 252, 249, 0.98);
+  border: 1px solid var(--coop-line);
+  border-radius: 12px;
+  padding: 0.25rem;
+  box-shadow: var(--coop-shadow);
+  z-index: 10;
+}
+
+.coop-filter-pill__option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--coop-brown);
+  text-align: left;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.coop-filter-pill__option:hover {
+  background: rgba(90, 125, 16, 0.08);
+}
+
+.coop-filter-pill__option.is-active {
+  background: rgba(90, 125, 16, 0.12);
+  font-weight: 600;
+}
+
+/* ---- Chickens tab filter ---- */
+
+.chickens-filter-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chickens-filter-row button {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--coop-brown-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chickens-filter-row button.is-active {
+  background: var(--coop-brown);
+  color: white;
+  border-color: transparent;
+}
+
+/* ---- Stub card ---- */
+
+.stub-card {
+  opacity: 0.7;
+}
+
+.stub-card .badge {
+  background: rgba(253, 138, 1, 0.15);
+  color: var(--coop-orange);
 }
