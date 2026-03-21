@@ -1,25 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, loadEnv } from 'vite';
-
-function resolveReceiverBridgeMatches(rawReceiverAppUrl?: string) {
-  const defaults = ['http://127.0.0.1/*', 'http://localhost/*'];
-  if (!rawReceiverAppUrl) {
-    return defaults;
-  }
-
-  try {
-    const url = new URL(rawReceiverAppUrl);
-    if (url.protocol === 'http:' || url.protocol === 'https:') {
-      return [...new Set([...defaults, `${url.origin}/*`])];
-    }
-  } catch {
-    return defaults;
-  }
-
-  return defaults;
-}
+import { resolveReceiverBridgeMatches } from './src/build/receiver-matches';
 
 function receiverManifestPlugin(rawReceiverAppUrl?: string) {
   let outDir = '';
@@ -40,10 +24,12 @@ function receiverManifestPlugin(rawReceiverAppUrl?: string) {
       }
 
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+        host_permissions?: string[];
         content_scripts?: Array<Record<string, unknown>>;
       };
       const matches = resolveReceiverBridgeMatches(rawReceiverAppUrl);
 
+      manifest.host_permissions = matches;
       manifest.content_scripts = (manifest.content_scripts ?? []).map((entry) => {
         const scripts = Array.isArray(entry.js) ? entry.js : [];
         if (!scripts.includes('receiver-bridge.js')) {
@@ -111,6 +97,34 @@ export async function getOxExports() {
   };
 }
 
+/**
+ * Replaces protobufjs's browser-incompatible optional require shim with a
+ * no-op. The original helper uses eval("require"), which is an unnecessary
+ * Chrome Web Store risk in the extension bundle.
+ */
+function swSafeProtobufInquirePlugin() {
+  return {
+    name: 'sw-safe-protobuf-inquire',
+    transform(code: string, id: string) {
+      if (!id.includes('@protobufjs/inquire') || !id.endsWith('index.js')) {
+        return;
+      }
+
+      return {
+        code: `
+export default inquire;
+export { inquire };
+
+function inquire() {
+  return null;
+}
+`,
+        map: null,
+      };
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const envDir = path.resolve(__dirname, '../..');
   const env = loadEnv(mode, envDir, '');
@@ -121,6 +135,17 @@ export default defineConfig(({ mode }) => {
       receiverManifestPlugin(env.VITE_COOP_RECEIVER_APP_URL),
       swSafePreloadPlugin(),
       swSafePermissionlessOxPlugin(),
+      swSafeProtobufInquirePlugin(),
+      ...(process.env.ANALYZE === 'true'
+        ? [
+            visualizer({
+              filename: path.resolve(__dirname, '../../stats-extension.html'),
+              template: 'treemap',
+              gzipSize: true,
+              open: false,
+            }),
+          ]
+        : []),
     ],
     envDir,
     publicDir: 'public',
@@ -164,7 +189,12 @@ export default defineConfig(({ mode }) => {
             return 'assets/[name].js';
           },
           chunkFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: 'assets/[name]-[hash][extname]',
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.name === 'ort-wasm-simd-threaded.jsep.wasm') {
+              return 'assets/ort-wasm-simd-threaded.jsep.wasm';
+            }
+            return 'assets/[name]-[hash][extname]';
+          },
           manualChunks(id) {
             if (id.includes('@huggingface/transformers')) {
               return 'transformers';

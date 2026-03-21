@@ -37,11 +37,11 @@ jobs:
 
       - run: bun run test
 
-      - name: Build all packages
+      - name: Validate Chrome Web Store readiness
         env:
           VITE_COOP_RECEIVER_APP_URL: https://coop.town
           VITE_PIMLICO_API_KEY: ${{ secrets.VITE_PIMLICO_API_KEY }}
-        run: bun run build
+        run: bun run validate:store-readiness
 
       - name: Zip extension
         run: |
