@@ -9,7 +9,7 @@
   "outputSchemaRef": "erc8004-registration-output",
   "allowedTools": ["read-coop-context"],
   "allowedActionClasses": ["erc8004-register-agent"],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context", "safe-deployed"],
   "approvalMode": "auto-run-eligible",
   "timeoutMs": 45000,
   "depends": [],

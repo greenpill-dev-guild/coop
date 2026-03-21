@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type SkillExecutionContext,
   filterAgentDashboardState,
+  getMissingRequiredCapabilities,
   isTrustedNodeRole,
   selectSkillIdsForObservation,
   shouldSkipSkill,
@@ -238,6 +239,47 @@ describe('shouldSkipSkill', () => {
 
   it('returns false for unknown condition keys', () => {
     expect(shouldSkipSkill('unknown-condition', fullCtx)).toBe(false);
+  });
+});
+
+describe('getMissingRequiredCapabilities', () => {
+  it('returns missing capabilities for absent required context', () => {
+    expect(
+      getMissingRequiredCapabilities(['coop-context', 'draft-context', 'capture-context'], {
+        candidates: [],
+        scores: [],
+      }),
+    ).toEqual(['coop-context', 'draft-context', 'capture-context']);
+  });
+
+  it('recognizes nested coop capabilities and unknown capabilities', () => {
+    expect(
+      getMissingRequiredCapabilities(
+        [
+          'green-goods-enabled',
+          'green-goods-garden-linked',
+          'safe-deployed',
+          'agent-identity',
+          'unknown-capability',
+        ],
+        {
+          candidates: [{ id: 'candidate-1' }],
+          scores: [{ id: 'score-1' }],
+          coop: {
+            greenGoods: {
+              enabled: true,
+              gardenAddress: '0xgarden',
+            },
+            onchainState: {
+              safeCapability: 'executed',
+            },
+            agentIdentity: {
+              agentId: 42,
+            },
+          },
+        },
+      ),
+    ).toEqual(['unknown-capability']);
   });
 });
 

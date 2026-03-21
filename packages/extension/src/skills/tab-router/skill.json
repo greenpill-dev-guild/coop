@@ -12,6 +12,7 @@
   "requiredCapabilities": [],
   "approvalMode": "advisory",
   "timeoutMs": 30000,
+  "maxTokens": 480,
   "depends": [],
   "provides": ["routings", "drafts"]
 }

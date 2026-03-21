@@ -1,3 +1,8 @@
+---
+name: green-goods-garden-sync
+description: Sync a linked Green Goods garden so its profile, domains, and signal pools match the coop state.
+---
+
 # Green Goods Garden Sync
 
 Use this skill when a coop already has a linked Green Goods garden and the garden needs a bounded sync pass.

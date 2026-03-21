@@ -9,15 +9,19 @@ import type {
   Artifact,
   AuthSession,
   CaptureMode,
+  CoopKnowledgeSkillOverride,
   CoopSharedState,
   CoopSpaceType,
   DelegatedActionClass,
   ExecutionPermit,
   ExtensionIconState,
   GreenGoodsAssessmentRequest,
+  GreenGoodsDomain,
   GreenGoodsWorkApprovalRequest,
+  GreenGoodsWorkSubmissionOutput,
   IntegrationMode,
   InviteType,
+  KnowledgeSkill,
   LocalInferenceCapability,
   LocalPasskeyIdentity,
   Member,
@@ -146,6 +150,14 @@ export interface AgentDashboardResponse {
   manifests: SkillManifest[];
   autoRunSkillIds: string[];
   memories: AgentMemory[];
+  knowledgeSkills: AgentDashboardKnowledgeSkill[];
+}
+
+export interface AgentDashboardKnowledgeSkill {
+  skill: KnowledgeSkill;
+  override?: CoopKnowledgeSkillOverride;
+  effectiveEnabled: boolean;
+  freshness: 'fresh' | 'stale' | 'never-fetched';
 }
 
 export type RuntimeRequest =
@@ -216,6 +228,40 @@ export type RuntimeRequest =
         displayName: string;
         seedContribution: string;
         member?: Member;
+      };
+    }
+  | {
+      type: 'provision-member-onchain-account';
+      payload: {
+        coopId: string;
+        memberId: string;
+      };
+    }
+  | {
+      type: 'submit-green-goods-impact-report';
+      payload: {
+        coopId: string;
+        memberId: string;
+        report: {
+          title: string;
+          description: string;
+          domain: GreenGoodsDomain;
+          reportCid: string;
+          metricsSummary: string;
+          reportingPeriodStart: number;
+          reportingPeriodEnd: number;
+        };
+      };
+    }
+  | {
+      type: 'submit-green-goods-work-submission';
+      payload: {
+        coopId: string;
+        memberId: string;
+        submission: Pick<
+          GreenGoodsWorkSubmissionOutput,
+          'actionUid' | 'title' | 'feedback' | 'metadataCid' | 'mediaCids'
+        >;
       };
     }
   | {
@@ -304,6 +350,12 @@ export type RuntimeRequest =
         coopId: string;
       };
     }
+  | {
+      type: 'queue-green-goods-member-sync';
+      payload: {
+        coopId: string;
+      };
+    }
   | { type: 'get-agent-dashboard' }
   | { type: 'run-agent-cycle' }
   | { type: 'approve-agent-plan'; payload: { planId: string } }
@@ -311,6 +363,16 @@ export type RuntimeRequest =
   | { type: 'retry-skill-run'; payload: { skillRunId: string } }
   | { type: 'list-skill-manifests' }
   | { type: 'set-agent-skill-auto-run'; payload: { skillId: string; enabled: boolean } }
+  | { type: 'import-knowledge-skill'; payload: { url: string } }
+  | { type: 'refresh-knowledge-skill'; payload: { skillId: string } }
+  | {
+      type: 'set-coop-knowledge-skill-enabled';
+      payload: { coopId: string; knowledgeSkillId: string; enabled: boolean };
+    }
+  | {
+      type: 'set-knowledge-skill-trigger-patterns';
+      payload: { skillId: string; triggerPatterns: string[] };
+    }
   | { type: 'get-action-policies' }
   | {
       type: 'set-action-policy';

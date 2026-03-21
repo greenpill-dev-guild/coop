@@ -9,9 +9,10 @@
   "outputSchemaRef": "publish-readiness-check-output",
   "allowedTools": ["read-observation-context", "patch-review-draft", "propose-action"],
   "allowedActionClasses": ["publish-ready-draft"],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["draft-context"],
   "approvalMode": "proposal",
   "timeoutMs": 30000,
+  "maxTokens": 420,
   "depends": [],
   "skipWhen": "no-draft",
   "provides": ["readiness"]

@@ -2,6 +2,8 @@ import type {
   AgentProvider,
   CapitalFormationBriefOutput,
   EcosystemEntityExtractorOutput,
+  Erc8004FeedbackOutput,
+  Erc8004RegistrationOutput,
   GrantFitScorerOutput,
   GreenGoodsAssessmentOutput,
   GreenGoodsGapAdminSyncOutput,
@@ -312,12 +314,27 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
         removeAdmins: [],
         rationale: 'Heuristic GAP admin sync detected no changes.',
       } satisfies GreenGoodsGapAdminSyncOutput;
+    case 'erc8004-registration-output':
+      return {
+        agentURI: 'data:application/json;base64,e30=',
+        metadata: [],
+        rationale: 'Heuristic ERC-8004 registration payload.',
+      } satisfies Erc8004RegistrationOutput;
+    case 'erc8004-feedback-output':
+      return {
+        targetAgentId: 1,
+        value: 1,
+        tag1: 'coop',
+        tag2: 'feedback',
+        rationale: 'Heuristic ERC-8004 feedback payload.',
+      } satisfies Erc8004FeedbackOutput;
   }
 }
 
 async function runTransformers<T>(input: {
   prompt: string;
   schemaRef: SkillOutputSchemaRef;
+  maxTokens?: number;
   retryContext?: string;
 }) {
   const start = Date.now();
@@ -326,7 +343,7 @@ async function runTransformers<T>(input: {
     ? `${input.prompt}\n\n${input.retryContext}`
     : input.prompt;
   const result = await pipeline([{ role: 'user', content: promptWithRetry }], {
-    max_new_tokens: 512,
+    max_new_tokens: input.maxTokens ?? 512,
     temperature: 0.2,
     do_sample: false,
     return_full_text: false,
@@ -352,6 +369,7 @@ async function runWebLlm<T>(input: {
   system: string;
   prompt: string;
   schemaRef: SkillOutputSchemaRef;
+  maxTokens?: number;
   retryContext?: string;
 }) {
   const promptWithRetry = input.retryContext
@@ -361,7 +379,7 @@ async function runWebLlm<T>(input: {
     system: input.system,
     prompt: promptWithRetry,
     temperature: 0.2,
-    maxTokens: 700,
+    maxTokens: input.maxTokens ?? 700,
   });
   return {
     provider: result.provider,
@@ -391,6 +409,7 @@ export async function completeSkillOutput<T>(input: {
   system: string;
   prompt: string;
   heuristicContext: string;
+  maxTokens?: number;
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const fallback = () => ({
     provider: 'heuristic' as const,
@@ -415,6 +434,7 @@ export async function completeSkillOutput<T>(input: {
           system: input.system,
           prompt: input.prompt,
           schemaRef: input.schemaRef,
+          maxTokens: input.maxTokens,
         });
       } catch (firstError) {
         // Retry once with error context
@@ -423,6 +443,7 @@ export async function completeSkillOutput<T>(input: {
             system: input.system,
             prompt: input.prompt,
             schemaRef: input.schemaRef,
+            maxTokens: input.maxTokens,
             retryContext: formatRetryContext(firstError),
           });
         } catch {
@@ -436,12 +457,14 @@ export async function completeSkillOutput<T>(input: {
         return await runTransformers<T>({
           prompt: `${input.system}\n\n${input.prompt}`,
           schemaRef: input.schemaRef,
+          maxTokens: input.maxTokens,
         });
       } catch (firstError) {
         try {
           return await runTransformers<T>({
             prompt: `${input.system}\n\n${input.prompt}`,
             schemaRef: input.schemaRef,
+            maxTokens: input.maxTokens,
             retryContext: formatRetryContext(firstError),
           });
         } catch {
@@ -459,6 +482,7 @@ export async function completeSkillOutput<T>(input: {
       return await runTransformers<T>({
         prompt: `${input.system}\n\n${input.prompt}`,
         schemaRef: input.schemaRef,
+        maxTokens: input.maxTokens,
       });
     } catch {
       return fallback();
@@ -469,5 +493,6 @@ export async function completeSkillOutput<T>(input: {
 }
 
 export function teardownAgentModels() {
+  transformersPipelinePromise = null;
   webLlmBridge.teardown();
 }

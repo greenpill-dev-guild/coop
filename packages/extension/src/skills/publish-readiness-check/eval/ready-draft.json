@@ -1,0 +1,20 @@
+{
+  "id": "ready-draft",
+  "description": "Publish readiness checks should preserve draft identity and a bounded recommendation.",
+  "output": {
+    "draftId": "draft-river-1",
+    "ready": true,
+    "suggestions": [
+      "The title and summary are clear enough for publish.",
+      "Keep the current watershed and funding tags."
+    ],
+    "proposedPatch": {
+      "tags": ["watershed", "funding", "restoration"]
+    }
+  },
+  "assertions": [
+    { "type": "field-present", "path": "draftId" },
+    { "type": "field-equals", "path": "ready", "expected": true },
+    { "type": "array-min-length", "path": "suggestions", "threshold": 1 }
+  ]
+}

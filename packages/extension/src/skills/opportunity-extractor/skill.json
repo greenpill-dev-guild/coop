@@ -12,6 +12,7 @@
   "requiredCapabilities": [],
   "approvalMode": "advisory",
   "timeoutMs": 30000,
+  "maxTokens": 520,
   "depends": [],
   "provides": ["candidates"]
 }

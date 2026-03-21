@@ -1,3 +1,8 @@
+---
+name: green-goods-work-approval
+description: Prepare a deterministic Green Goods work approval attestation from a structured approval request.
+---
+
 # Green Goods Work Approval
 
 Use this skill when a trusted operator has queued a structured Green Goods work approval request.

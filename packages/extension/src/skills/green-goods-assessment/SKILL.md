@@ -1,3 +1,8 @@
+---
+name: green-goods-assessment
+description: Prepare a deterministic Green Goods assessment attestation from a structured assessment request.
+---
+
 # Green Goods Assessment
 
 Use this skill when a trusted operator has queued a structured Green Goods assessment request.

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { webLlmComplete, transformersPipeline } = vi.hoisted(() => ({
   webLlmComplete: vi.fn(),
@@ -21,7 +21,12 @@ vi.mock('@huggingface/transformers', () => ({
   pipeline: vi.fn(async () => transformersPipeline),
 }));
 
-import { completeSkillOutput, extractJsonBlock, repairJson } from '../agent-models';
+import {
+  completeSkillOutput,
+  extractJsonBlock,
+  repairJson,
+  teardownAgentModels,
+} from '../agent-models';
 
 describe('repairJson', () => {
   it('strips control characters except newline, tab, and carriage return', () => {
@@ -132,6 +137,10 @@ describe('agent model provider fallback', () => {
     transformersPipeline.mockReset();
   });
 
+  afterEach(() => {
+    teardownAgentModels();
+  });
+
   it('uses WebLLM when available', async () => {
     webLlmComplete.mockResolvedValue({
       provider: 'webllm',
@@ -153,10 +162,16 @@ describe('agent model provider fallback', () => {
       system: 'Return JSON only.',
       prompt: 'Summarize recent activity.',
       heuristicContext: 'Recent activity.',
+      maxTokens: 432,
     });
 
     expect(result.provider).toBe('webllm');
     expect(result.output.title).toBe('Review digest');
+    expect(webLlmComplete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxTokens: 432,
+      }),
+    );
   });
 
   it('falls back from WebLLM to transformers', async () => {
@@ -317,5 +332,38 @@ describe('agent model provider fallback', () => {
 
     expect(result.provider).toBe('heuristic');
     expect(result.output).toEqual({ routings: [] });
+  });
+
+  it('passes manifest maxTokens through to transformers', async () => {
+    transformersPipeline.mockResolvedValue([
+      {
+        generated_text: JSON.stringify({
+          title: 'Capital brief',
+          summary: 'A concise funding brief.',
+          whyItMatters: 'It matches coop purpose.',
+          suggestedNextStep: 'Review with the funding circle.',
+          tags: ['funding'],
+          targetCoopIds: ['coop-1'],
+          supportingCandidateIds: ['candidate-1'],
+        }),
+      },
+    ]);
+
+    const result = await completeSkillOutput({
+      preferredProvider: 'transformers',
+      schemaRef: 'capital-formation-brief-output',
+      system: 'Return JSON only.',
+      prompt: 'Write a funding brief.',
+      heuristicContext: 'Potential funding opportunity.',
+      maxTokens: 321,
+    });
+
+    expect(result.provider).toBe('transformers');
+    expect(transformersPipeline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        max_new_tokens: 321,
+      }),
+    );
   });
 });

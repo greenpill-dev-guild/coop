@@ -1,0 +1,20 @@
+{
+  "id": "weekly-digest",
+  "description": "Review digests should provide a usable synthesis with at least one highlight.",
+  "output": {
+    "title": "Weekly review digest",
+    "summary": "This week surfaced a strong river restoration grant lead and a new archive-ready stewardship update.",
+    "whyItMatters": "The coop can move one funding lead forward while capturing a durable record of recent progress.",
+    "suggestedNextStep": "Review the highlights together and assign who will advance the funding lead.",
+    "highlights": [
+      "River restoration climate resilience grant opened for applications.",
+      "Stewardship notes are ready to archive after the field visit."
+    ],
+    "tags": ["review", "digest", "funding"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "array-min-length", "path": "highlights", "threshold": 1 },
+    { "type": "array-min-length", "path": "tags", "threshold": 2 }
+  ]
+}

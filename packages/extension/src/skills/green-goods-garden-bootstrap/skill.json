@@ -9,7 +9,7 @@
   "outputSchemaRef": "green-goods-garden-bootstrap-output",
   "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
   "allowedActionClasses": ["green-goods-create-garden"],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context", "green-goods-enabled"],
   "approvalMode": "auto-run-eligible",
   "timeoutMs": 15000,
   "depends": [],

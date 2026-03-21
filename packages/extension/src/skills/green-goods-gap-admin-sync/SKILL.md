@@ -1,3 +1,8 @@
+---
+name: green-goods-gap-admin-sync
+description: Align Karma GAP project admins with the current trusted coop operators for a linked garden.
+---
+
 # Green Goods GAP Admin Sync
 
 Use this skill when a linked Green Goods garden needs its Karma GAP project admins reconciled with

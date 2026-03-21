@@ -1,3 +1,8 @@
+---
+name: erc8004-register
+description: Register coop as ERC-8004 agent identity — build manifest, upload to IPFS, register onchain via Safe.
+---
+
 # ERC-8004 Register
 
 Use this skill when a coop needs to register or re-register its agent identity under the ERC-8004

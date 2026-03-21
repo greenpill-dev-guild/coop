@@ -14,9 +14,10 @@
     "create-review-draft"
   ],
   "allowedActionClasses": [],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context"],
   "approvalMode": "advisory",
   "timeoutMs": 45000,
+  "maxTokens": 700,
   "depends": [],
   "provides": ["drafts"]
 }

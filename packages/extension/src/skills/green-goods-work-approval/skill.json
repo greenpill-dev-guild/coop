@@ -9,7 +9,7 @@
   "outputSchemaRef": "green-goods-work-approval-output",
   "allowedTools": ["read-observation-context", "read-coop-context", "propose-action"],
   "allowedActionClasses": ["green-goods-submit-work-approval"],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context", "green-goods-garden-linked"],
   "approvalMode": "proposal",
   "timeoutMs": 15000,
   "depends": [],

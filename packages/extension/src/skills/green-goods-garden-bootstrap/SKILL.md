@@ -1,3 +1,8 @@
+---
+name: green-goods-garden-bootstrap
+description: Bootstrap a Green Goods garden for a coop Safe using the coop's name, purpose, and Green Goods defaults.
+---
+
 # Green Goods Garden Bootstrap
 
 Use this skill when a coop has enabled Green Goods during launch and no garden has been linked yet.

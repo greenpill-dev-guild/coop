@@ -1,0 +1,24 @@
+{
+  "id": "funding-signal",
+  "description": "Opportunity extraction should emit at least one well-formed funding candidate.",
+  "output": {
+    "candidates": [
+      {
+        "id": "candidate-river-restoration",
+        "title": "River restoration climate resilience grant",
+        "summary": "A watershed resilience fund is opening applications for river restoration and community stewardship work.",
+        "rationale": "The source contains explicit ecological funding language, a clear applicant motion, and an actionable next step for the coop.",
+        "regionTags": ["pacific-northwest"],
+        "ecologyTags": ["watershed", "restoration"],
+        "fundingSignals": ["grant", "resilience"],
+        "priority": 0.84,
+        "recommendedNextStep": "Review fit with the coop's restoration work and decide whether to brief it for funding."
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "candidates", "threshold": 1 },
+    { "type": "field-present", "path": "candidates.0.title" },
+    { "type": "field-present", "path": "candidates.0.recommendedNextStep" }
+  ]
+}

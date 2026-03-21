@@ -33,13 +33,8 @@ import type {
   ThemeClustererOutput,
 } from '@coop/shared';
 import {
+  buildAgentManifest,
   buildGreenGoodsCreateAssessmentPayload,
-  buildGreenGoodsCreateGardenPayload,
-  buildGreenGoodsCreateGardenPoolsPayload,
-  buildGreenGoodsSetGardenDomainsPayload,
-  buildGreenGoodsSubmitWorkApprovalPayload,
-  buildGreenGoodsSyncGapAdminsPayload,
-  buildGreenGoodsSyncGardenProfilePayload,
   completeAgentPlan,
   completeSkillRun,
   createActionProposal,
@@ -47,16 +42,14 @@ import {
   createAgentObservation,
   createAgentPlan,
   createAgentPlanStep,
-  createCapitalFormationDraft,
   createCoopDb,
   createGreenGoodsAssessmentOutput,
   createGreenGoodsBootstrapOutput,
   createGreenGoodsGapAdminSyncOutput,
   createGreenGoodsSyncOutput,
   createGreenGoodsWorkApprovalOutput,
-  createMemoryInsightDraft,
-  createReviewDigestDraft,
   createSkillRun,
+  encodeAgentManifestURI,
   failAgentPlan,
   failSkillRun,
   findAgentObservationByFingerprint,
@@ -96,7 +89,12 @@ import {
   type AgentCycleRequest,
   type AgentCycleState,
 } from './agent-config';
-import { isTrustedNodeRole, selectSkillIdsForObservation, shouldSkipSkill } from './agent-harness';
+import {
+  getMissingRequiredCapabilities,
+  isTrustedNodeRole,
+  selectSkillIdsForObservation,
+  shouldSkipSkill,
+} from './agent-harness';
 import { selectKnowledgeSkills } from './agent-knowledge';
 import {
   logActionDispatch,
@@ -109,8 +107,14 @@ import {
   logSkillStart,
 } from './agent-logger';
 import { completeSkillOutput } from './agent-models';
-import { getRegisteredSkill, listRegisteredSkills } from './agent-registry';
-import { notifyDashboardUpdated, type RuntimeActionResponse } from './messages';
+import {
+  type SkillOutputHandlerExecutionContext,
+  applySkillOutput,
+  resolveGreenGoodsGapAdminAddresses,
+  resolveGreenGoodsOperatorAddresses,
+} from './agent-output-handlers';
+import { type RegisteredSkill, getRegisteredSkill, listRegisteredSkills } from './agent-registry';
+import { type RuntimeActionResponse, notifyDashboardUpdated } from './messages';
 
 type CoopDexie = ReturnType<typeof createCoopDb>;
 
@@ -379,7 +383,7 @@ function getObservationDismissReason(input: {
 }
 
 async function buildSkillPrompt(input: {
-  manifest: SkillManifest;
+  skill: RegisteredSkill;
   observation: AgentObservation;
   coop?: CoopSharedState;
   draft?: ReviewDraft | null;
@@ -494,8 +498,16 @@ async function buildSkillPrompt(input: {
   const system = [
     'You are an extension-local Coop agent.',
     'Return valid JSON only.',
-    `Follow this skill guidance:\n${input.manifest.description}`,
-    `Expected output schema ref: ${input.manifest.outputSchemaRef}`,
+    `Current skill: ${input.skill.instructionMeta.name}`,
+    `Manifest summary: ${input.skill.manifest.description}`,
+    `Skill guidance:\n${input.skill.instructions}`,
+    input.skill.manifest.allowedTools.length > 0
+      ? `Allowed runtime tools: ${input.skill.manifest.allowedTools.join(', ')}`
+      : undefined,
+    input.skill.manifest.allowedActionClasses.length > 0
+      ? `Allowed action classes: ${input.skill.manifest.allowedActionClasses.join(', ')}`
+      : undefined,
+    `Expected output schema ref: ${input.skill.manifest.outputSchemaRef}`,
   ].join('\n\n');
 
   // Inject relevant knowledge skills into prompt context
@@ -648,7 +660,7 @@ function inferThemes(input: {
 }
 
 async function completeSkill<T>(input: {
-  manifest: SkillManifest;
+  skill: RegisteredSkill;
   observation: AgentObservation;
   coop?: CoopSharedState;
   draft?: ReviewDraft | null;
@@ -662,7 +674,7 @@ async function completeSkill<T>(input: {
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
-  const { manifest } = input;
+  const { manifest } = input.skill;
   const prepared = await buildSkillPrompt(input);
   const preferredProvider = inferPreferredProvider(manifest);
   const result = await completeSkillOutput<T>({
@@ -671,6 +683,7 @@ async function completeSkill<T>(input: {
     system: prepared.system,
     prompt: prepared.prompt,
     heuristicContext: prepared.heuristicContext,
+    maxTokens: manifest.maxTokens,
   });
 
   if (
@@ -803,6 +816,60 @@ async function completeSkill<T>(input: {
     };
   }
 
+  if (manifest.outputSchemaRef === 'erc8004-registration-output' && input.coop) {
+    const agentManifest = buildAgentManifest({
+      coop: input.coop,
+      skills: listRegisteredSkills().map((entry) => entry.manifest.id),
+      agentId: input.coop.agentIdentity?.agentId,
+    });
+    return {
+      provider: 'heuristic',
+      model: result.model,
+      durationMs: result.durationMs,
+      output: {
+        agentURI: encodeAgentManifestURI(agentManifest),
+        metadata: [
+          { key: 'coopId', value: input.coop.profile.id },
+          { key: 'coopName', value: input.coop.profile.name },
+          { key: 'safeAddress', value: input.coop.onchainState.safeAddress },
+        ],
+        rationale:
+          'Register the coop as an ERC-8004 agent so Coop can publish a deterministic onchain identity and receive reputation feedback.',
+      } as T,
+    };
+  }
+
+  if (manifest.outputSchemaRef === 'erc8004-feedback-output') {
+    const payload = input.observation.payload as {
+      reason?: string;
+      rootCid?: string;
+      targetAgentId?: number;
+    };
+    const targetAgentId =
+      typeof payload.targetAgentId === 'number' && payload.targetAgentId > 0
+        ? payload.targetAgentId
+        : input.coop?.agentIdentity?.agentId;
+    if (targetAgentId) {
+      const reason = payload.reason ?? 'coop-feedback';
+      const rootedReason =
+        payload.rootCid && reason === 'archive-anchor'
+          ? `Archive anchor for ${payload.rootCid} succeeded and warrants a positive self-attestation.`
+          : 'A successful coop action warrants positive ERC-8004 feedback.';
+      return {
+        provider: 'heuristic',
+        model: result.model,
+        durationMs: result.durationMs,
+        output: {
+          targetAgentId,
+          value: 1,
+          tag1: reason === 'archive-anchor' ? 'archive' : 'coop',
+          tag2: reason === 'archive-anchor' ? 'self-attestation' : 'feedback',
+          rationale: rootedReason,
+        } as T,
+      };
+    }
+  }
+
   return result;
 }
 
@@ -828,20 +895,6 @@ async function resolveActionMemberId(coopId: string) {
   const [coops, authSession] = await Promise.all([getCoops(), getAuthSession(db)]);
   const coop = coops.find((candidate) => candidate.profile.id === coopId);
   return coop ? findAuthenticatedCoopMember(coop, authSession)?.id : undefined;
-}
-
-function resolveGreenGoodsOperatorAddresses(coop: CoopSharedState) {
-  return coop.members
-    .filter((member) => member.role === 'creator' || member.role === 'trusted')
-    .map((member) => member.address);
-}
-
-function resolveGreenGoodsGardenerAddresses(coop: CoopSharedState) {
-  return coop.members.map((member) => member.address);
-}
-
-function resolveGreenGoodsGapAdminAddresses(coop: CoopSharedState) {
-  return coop.greenGoods?.gapAdminAddresses ?? [];
 }
 
 async function dispatchActionProposal(input: {
@@ -1419,13 +1472,28 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
       continue;
     }
 
+    const missingRequiredCapabilities = getMissingRequiredCapabilities(
+      registered.manifest.requiredCapabilities,
+      {
+        candidates: context.candidates,
+        scores: context.scores,
+        draft: context.draft,
+        coop: context.coop,
+        capture: context.capture,
+        receipt: context.receipt,
+      },
+    );
+
     // Evaluate skip condition before running skill
     if (
+      missingRequiredCapabilities.length > 0 ||
       shouldSkipSkill(registered.manifest.skipWhen, {
         candidates: context.candidates,
         scores: context.scores,
         draft: context.draft,
         coop: context.coop,
+        capture: context.capture,
+        receipt: context.receipt,
       })
     ) {
       const skippedStep = createAgentPlanStep({
@@ -1487,7 +1555,7 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
 
     try {
       const completed = await completeSkill({
-        manifest: registered.manifest,
+        skill: registered,
         observation,
         coop: context.coop,
         draft: context.draft,
@@ -1502,357 +1570,31 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
         memories: context.memories,
       });
 
-      let output = completed.output;
+      const handled = await applySkillOutput({
+        output: completed.output,
+        manifest: registered.manifest,
+        skillId,
+        provider: completed.provider,
+        durationMs: completed.durationMs,
+        observation,
+        plan: workingPlan,
+        run,
+        context,
+        extracts: context.extracts,
+        autoRunEnabled: autoRunSkillIds.has(skillId),
+        getCoops,
+        saveReviewDraft: async (draft) => saveReviewDraft(db, draft),
+        savePlan: async (plan) => saveAgentPlan(db, plan),
+        persistTabRouterOutput,
+        maybePatchDraft,
+        dispatchActionProposal,
+      });
 
-      if (registered.manifest.outputSchemaRef === 'opportunity-extractor-output') {
-        context.candidates = (output as OpportunityExtractorOutput).candidates.map((candidate) => ({
-          ...candidate,
-          sourceDraftId: candidate.sourceDraftId ?? context.draft?.id,
-          sourceExtractId: candidate.sourceExtractId ?? observation.extractId,
-        }));
-        output = { candidates: context.candidates } as typeof output;
-      }
-
-      if (registered.manifest.outputSchemaRef === 'grant-fit-scorer-output') {
-        context.scores = (output as GrantFitScorerOutput).scores;
-      }
-
-      if (registered.manifest.outputSchemaRef === 'tab-router-output') {
-        const persisted = await persistTabRouterOutput({
-          observation,
-          coops: context.coop ? [context.coop] : await getCoops(),
-          extracts: context.extracts,
-          output: output as TabRouterOutput,
-          provider: completed.provider,
-        });
-        context.createdDraftIds.push(...persisted.createdDraftIds);
-        result.createdDraftIds.push(...persisted.createdDraftIds);
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'capital-formation-brief-output' &&
-        context.coop
-      ) {
-        const draft = createCapitalFormationDraft({
-          observationId: observation.id,
-          planId: workingPlan.id,
-          skillRunId: run.id,
-          skillId,
-          coopId: context.coop.profile.id,
-          output: output as CapitalFormationBriefOutput,
-        });
-        await saveReviewDraft(db, draft);
-        context.createdDraftIds.push(draft.id);
-        result.createdDraftIds.push(draft.id);
-      }
-
-      if (registered.manifest.outputSchemaRef === 'memory-insight-output' && context.coop) {
-        for (const insight of (output as MemoryInsightOutput).insights) {
-          const draft = createMemoryInsightDraft({
-            observationId: observation.id,
-            planId: workingPlan.id,
-            skillRunId: run.id,
-            skillId,
-            coopId: context.coop.profile.id,
-            output: insight,
-          });
-          await saveReviewDraft(db, draft);
-          context.createdDraftIds.push(draft.id);
-          result.createdDraftIds.push(draft.id);
-        }
-      }
-
-      if (registered.manifest.outputSchemaRef === 'review-digest-output' && context.coop) {
-        const draft = createReviewDigestDraft({
-          observationId: observation.id,
-          planId: workingPlan.id,
-          skillRunId: run.id,
-          skillId,
-          coopId: context.coop.profile.id,
-          output: output as ReviewDigestOutput,
-        });
-        await saveReviewDraft(db, draft);
-        context.createdDraftIds.push(draft.id);
-        result.createdDraftIds.push(draft.id);
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'publish-readiness-check-output' &&
-        context.coop &&
-        context.draft
-      ) {
-        const readiness = output as PublishReadinessCheckOutput;
-        context.draft = await maybePatchDraft(context.draft, readiness);
-
-        if (readiness.ready && context.draft) {
-          const proposal = createActionProposal({
-            actionClass: 'publish-ready-draft',
-            coopId: context.coop.profile.id,
-            payload: {
-              draftId: readiness.draftId || context.draft.id,
-              targetCoopIds: context.draft.suggestedTargetCoopIds,
-            },
-            reason: 'Publish readiness check marked the draft as ready.',
-            approvalMode: registered.manifest.approvalMode,
-            generatedBySkillId: skillId,
-          });
-          workingPlan = updateAgentPlan(workingPlan, {
-            actionProposals: [...workingPlan.actionProposals, proposal],
-            requiresApproval: true,
-          });
-          await saveAgentPlan(db, workingPlan);
-
-          if (
-            autoRunSkillIds.has(skillId) &&
-            registered.manifest.approvalMode === 'auto-run-eligible'
-          ) {
-            const dispatched = await dispatchActionProposal({
-              plan: workingPlan,
-              proposal,
-              autoExecute: true,
-            });
-            if (dispatched.ok && dispatched.executed) {
-              result.autoExecutedActionCount += 1;
-            } else if (!dispatched.ok) {
-              result.errors.push(dispatched.error ?? 'Could not auto-run publish-ready-draft.');
-            }
-          }
-        }
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'green-goods-garden-bootstrap-output' &&
-        context.coop?.greenGoods &&
-        !context.coop.greenGoods.gardenAddress
-      ) {
-        const bootstrap = output as GreenGoodsGardenBootstrapOutput;
-        const proposal = createActionProposal({
-          actionClass: 'green-goods-create-garden',
-          coopId: context.coop.profile.id,
-          payload: buildGreenGoodsCreateGardenPayload({
-            coopId: context.coop.profile.id,
-            name: bootstrap.name,
-            slug: bootstrap.slug,
-            description: bootstrap.description,
-            location: bootstrap.location,
-            bannerImage: bootstrap.bannerImage,
-            metadata: bootstrap.metadata,
-            openJoining: bootstrap.openJoining,
-            maxGardeners: bootstrap.maxGardeners,
-            weightScheme: bootstrap.weightScheme,
-            domains: bootstrap.domains,
-            operatorAddresses: resolveGreenGoodsOperatorAddresses(context.coop),
-            gardenerAddresses: resolveGreenGoodsGardenerAddresses(context.coop),
-          }),
-          reason: bootstrap.rationale,
-          approvalMode: registered.manifest.approvalMode,
-          generatedBySkillId: skillId,
-        });
-        workingPlan = updateAgentPlan(workingPlan, {
-          actionProposals: [...workingPlan.actionProposals, proposal],
-          requiresApproval: true,
-        });
-        await saveAgentPlan(db, workingPlan);
-
-        if (
-          autoRunSkillIds.has(skillId) &&
-          registered.manifest.approvalMode === 'auto-run-eligible'
-        ) {
-          const dispatched = await dispatchActionProposal({
-            plan: workingPlan,
-            proposal,
-            autoExecute: true,
-          });
-          if (dispatched.ok && dispatched.executed) {
-            result.autoExecutedActionCount += 1;
-          } else if (!dispatched.ok) {
-            result.errors.push(dispatched.error ?? 'Could not auto-run Green Goods garden create.');
-          }
-        }
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'green-goods-garden-sync-output' &&
-        context.coop?.greenGoods?.gardenAddress &&
-        context.coop
-      ) {
-        const sync = output as GreenGoodsGardenSyncOutput;
-        const proposals = [
-          createActionProposal({
-            actionClass: 'green-goods-sync-garden-profile',
-            coopId: context.coop.profile.id,
-            payload: buildGreenGoodsSyncGardenProfilePayload({
-              coopId: context.coop.profile.id,
-              gardenAddress: context.coop.greenGoods.gardenAddress,
-              name: sync.name,
-              description: sync.description,
-              location: sync.location,
-              bannerImage: sync.bannerImage,
-              metadata: sync.metadata,
-              openJoining: sync.openJoining,
-              maxGardeners: sync.maxGardeners,
-            }),
-            reason: sync.rationale,
-            approvalMode: registered.manifest.approvalMode,
-            generatedBySkillId: skillId,
-          }),
-          createActionProposal({
-            actionClass: 'green-goods-set-garden-domains',
-            coopId: context.coop.profile.id,
-            payload: buildGreenGoodsSetGardenDomainsPayload({
-              coopId: context.coop.profile.id,
-              gardenAddress: context.coop.greenGoods.gardenAddress,
-              domains: sync.domains,
-            }),
-            reason: 'Keep Green Goods garden domains aligned with the coop scope.',
-            approvalMode: registered.manifest.approvalMode,
-            generatedBySkillId: skillId,
-          }),
-          ...(sync.ensurePools
-            ? [
-                createActionProposal({
-                  actionClass: 'green-goods-create-garden-pools',
-                  coopId: context.coop.profile.id,
-                  payload: buildGreenGoodsCreateGardenPoolsPayload({
-                    coopId: context.coop.profile.id,
-                    gardenAddress: context.coop.greenGoods.gardenAddress,
-                  }),
-                  reason: 'Ensure Green Goods signal pools exist for this garden.',
-                  approvalMode: registered.manifest.approvalMode,
-                  generatedBySkillId: skillId,
-                }),
-              ]
-            : []),
-        ];
-        workingPlan = updateAgentPlan(workingPlan, {
-          actionProposals: [...workingPlan.actionProposals, ...proposals],
-          requiresApproval: true,
-        });
-        await saveAgentPlan(db, workingPlan);
-
-        if (
-          autoRunSkillIds.has(skillId) &&
-          registered.manifest.approvalMode === 'auto-run-eligible'
-        ) {
-          for (const proposal of proposals) {
-            const dispatched = await dispatchActionProposal({
-              plan: workingPlan,
-              proposal,
-              autoExecute: true,
-            });
-            if (dispatched.ok && dispatched.executed) {
-              result.autoExecutedActionCount += 1;
-            } else if (!dispatched.ok) {
-              result.errors.push(dispatched.error ?? `Could not auto-run ${proposal.actionClass}.`);
-            }
-          }
-        }
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'green-goods-work-approval-output' &&
-        context.coop?.greenGoods?.gardenAddress
-      ) {
-        const approval = output as GreenGoodsWorkApprovalOutput;
-        const proposal = createActionProposal({
-          actionClass: 'green-goods-submit-work-approval',
-          coopId: context.coop.profile.id,
-          payload: buildGreenGoodsSubmitWorkApprovalPayload({
-            coopId: context.coop.profile.id,
-            gardenAddress: context.coop.greenGoods.gardenAddress,
-            actionUid: approval.actionUid,
-            workUid: approval.workUid,
-            approved: approval.approved,
-            feedback: approval.feedback,
-            confidence: approval.confidence,
-            verificationMethod: approval.verificationMethod,
-            reviewNotesCid: approval.reviewNotesCid,
-          }),
-          reason: approval.rationale,
-          approvalMode: registered.manifest.approvalMode,
-          generatedBySkillId: skillId,
-        });
-        workingPlan = updateAgentPlan(workingPlan, {
-          actionProposals: [...workingPlan.actionProposals, proposal],
-          requiresApproval: true,
-        });
-        await saveAgentPlan(db, workingPlan);
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'green-goods-assessment-output' &&
-        context.coop?.greenGoods?.gardenAddress
-      ) {
-        const assessment = output as GreenGoodsAssessmentOutput;
-        const proposal = createActionProposal({
-          actionClass: 'green-goods-create-assessment',
-          coopId: context.coop.profile.id,
-          payload: buildGreenGoodsCreateAssessmentPayload({
-            coopId: context.coop.profile.id,
-            gardenAddress: context.coop.greenGoods.gardenAddress,
-            title: assessment.title,
-            description: assessment.description,
-            assessmentConfigCid: assessment.assessmentConfigCid,
-            domain: assessment.domain,
-            startDate: assessment.startDate,
-            endDate: assessment.endDate,
-            location: assessment.location,
-          }),
-          reason: assessment.rationale,
-          approvalMode: registered.manifest.approvalMode,
-          generatedBySkillId: skillId,
-        });
-        workingPlan = updateAgentPlan(workingPlan, {
-          actionProposals: [...workingPlan.actionProposals, proposal],
-          requiresApproval: true,
-        });
-        await saveAgentPlan(db, workingPlan);
-      }
-
-      if (
-        registered.manifest.outputSchemaRef === 'green-goods-gap-admin-sync-output' &&
-        context.coop?.greenGoods?.gardenAddress
-      ) {
-        const gapSync = output as GreenGoodsGapAdminSyncOutput;
-        if (gapSync.addAdmins.length > 0 || gapSync.removeAdmins.length > 0) {
-          const proposal = createActionProposal({
-            actionClass: 'green-goods-sync-gap-admins',
-            coopId: context.coop.profile.id,
-            payload: buildGreenGoodsSyncGapAdminsPayload({
-              coopId: context.coop.profile.id,
-              gardenAddress: context.coop.greenGoods.gardenAddress,
-              addAdmins: gapSync.addAdmins,
-              removeAdmins: gapSync.removeAdmins,
-            }),
-            reason: gapSync.rationale,
-            approvalMode: registered.manifest.approvalMode,
-            generatedBySkillId: skillId,
-          });
-          workingPlan = updateAgentPlan(workingPlan, {
-            actionProposals: [...workingPlan.actionProposals, proposal],
-            requiresApproval: true,
-          });
-          await saveAgentPlan(db, workingPlan);
-
-          if (
-            autoRunSkillIds.has(skillId) &&
-            registered.manifest.approvalMode === 'auto-run-eligible'
-          ) {
-            const dispatched = await dispatchActionProposal({
-              plan: workingPlan,
-              proposal,
-              autoExecute: true,
-            });
-            if (dispatched.ok && dispatched.executed) {
-              result.autoExecutedActionCount += 1;
-            } else if (!dispatched.ok) {
-              result.errors.push(
-                dispatched.error ?? 'Could not auto-run Green Goods GAP admin sync.',
-              );
-            }
-          }
-        }
-      }
+      const output = handled.output;
+      workingPlan = handled.plan;
+      result.createdDraftIds.push(...handled.createdDraftIds);
+      result.autoExecutedActionCount += handled.autoExecutedActionCount;
+      result.errors.push(...handled.errors);
 
       run = completeSkillRun(run, output);
       await saveSkillRun(db, run);
@@ -2063,13 +1805,12 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     });
     const remainingPending = await listAgentObservationsByStatus(db, ['pending']);
     if (
-      remainingPending.some(
-        (observation) =>
-          isObservationRunnableForAuthorizedCoops({
-            observation,
-            authorizedCoopIds,
-            coops: authorizedCoops,
-          }),
+      remainingPending.some((observation) =>
+        isObservationRunnableForAuthorizedCoops({
+          observation,
+          authorizedCoopIds,
+          coops: authorizedCoops,
+        }),
       )
     ) {
       queueMicrotask(() => {

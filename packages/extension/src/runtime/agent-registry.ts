@@ -1,9 +1,14 @@
 import type { SkillManifest } from '@coop/shared';
 import { validateSkillManifest } from '@coop/shared';
+import { parseSkillMarkdown } from './skill-markdown';
 
 export type RegisteredSkill = {
   manifest: SkillManifest;
   instructions: string;
+  instructionMeta: {
+    name: string;
+    description: string;
+  };
 };
 
 const manifestModules = import.meta.glob('../skills/*/skill.json', {
@@ -36,8 +41,8 @@ function buildRegistry() {
       continue;
     }
 
-    const instructions = instructionMap.get(skillId);
-    if (!instructions) {
+    const rawInstructions = instructionMap.get(skillId);
+    if (!rawInstructions) {
       throw new Error(`Skill "${skillId}" is missing SKILL.md instructions.`);
     }
 
@@ -49,9 +54,23 @@ function buildRegistry() {
       throw new Error(`Skill "${skillId}" must use the agent-observation input schema.`);
     }
 
+    const parsedInstructions = parseSkillMarkdown(rawInstructions);
+    if (!parsedInstructions.frontmatter.name || !parsedInstructions.frontmatter.description) {
+      throw new Error(
+        `Skill "${skillId}" must declare name and description in SKILL.md frontmatter.`,
+      );
+    }
+    if (!parsedInstructions.body.trim()) {
+      throw new Error(`Skill "${skillId}" has empty SKILL.md instructions.`);
+    }
+
     skills.set(skillId, {
       manifest,
-      instructions,
+      instructions: parsedInstructions.body,
+      instructionMeta: {
+        name: parsedInstructions.frontmatter.name,
+        description: parsedInstructions.frontmatter.description,
+      },
     });
   }
 

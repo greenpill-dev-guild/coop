@@ -1,0 +1,24 @@
+{
+  "id": "high-fit-score",
+  "description": "Grant fit scoring should preserve a numeric score and supporting reasons.",
+  "output": {
+    "scores": [
+      {
+        "candidateId": "candidate-river-restoration",
+        "candidateTitle": "River restoration climate resilience grant",
+        "score": 0.91,
+        "reasons": [
+          "Matches coop purpose language.",
+          "Matches archived coop themes.",
+          "Shows clear funding or capital-formation signals."
+        ],
+        "recommendedTargetCoopId": "coop-river"
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "scores", "threshold": 1 },
+    { "type": "field-present", "path": "scores.0.candidateId" },
+    { "type": "field-present", "path": "scores.0.reasons.0" }
+  ]
+}

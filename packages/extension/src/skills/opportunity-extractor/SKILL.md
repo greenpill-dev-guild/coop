@@ -1,3 +1,8 @@
+---
+name: opportunity-extractor
+description: Extract ecological, community, and capital-formation opportunity candidates from local knowledge.
+---
+
 # Opportunity Extractor
 
 Turn local drafts and captures into structured opportunity candidates for ecological, bioregional,

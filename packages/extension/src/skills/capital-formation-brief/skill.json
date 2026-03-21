@@ -9,9 +9,10 @@
   "outputSchemaRef": "capital-formation-brief-output",
   "allowedTools": ["read-observation-context", "read-coop-context", "create-review-draft"],
   "allowedActionClasses": [],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context", "grant-fit-scores"],
   "approvalMode": "advisory",
   "timeoutMs": 45000,
+  "maxTokens": 700,
   "depends": ["grant-fit-scorer"],
   "skipWhen": "no-scores",
   "provides": ["drafts"]

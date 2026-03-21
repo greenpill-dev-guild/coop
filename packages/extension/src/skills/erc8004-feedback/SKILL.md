@@ -1,3 +1,8 @@
+---
+name: erc8004-feedback
+description: Submit reputation feedback to ERC-8004 after archive anchor or peer sync success.
+---
+
 # ERC-8004 Feedback
 
 Use this skill when the agent has completed a verifiable operation and should submit reputation

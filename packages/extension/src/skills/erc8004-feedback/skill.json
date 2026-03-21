@@ -9,7 +9,7 @@
   "outputSchemaRef": "erc8004-feedback-output",
   "allowedTools": ["read-coop-context"],
   "allowedActionClasses": ["erc8004-give-feedback"],
-  "requiredCapabilities": [],
+  "requiredCapabilities": ["coop-context", "agent-identity"],
   "approvalMode": "auto-run-eligible",
   "timeoutMs": 30000,
   "depends": [],

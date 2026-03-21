@@ -1,0 +1,18 @@
+{
+  "id": "review-brief",
+  "description": "Capital formation briefs should have the core review fields filled in.",
+  "output": {
+    "title": "Capital formation opening for river restoration stewardship",
+    "summary": "This opportunity could fund the coop's watershed restoration work through a resilience-focused grant round.",
+    "whyItMatters": "It aligns with the coop's purpose, recent archive themes, and the current funding window.",
+    "suggestedNextStep": "Validate eligibility and prepare a short review draft for the next funding check-in.",
+    "tags": ["funding", "watershed", "resilience"],
+    "targetCoopIds": ["coop-river"],
+    "supportingCandidateIds": ["candidate-river-restoration"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "field-present", "path": "whyItMatters" },
+    { "type": "array-min-length", "path": "tags", "threshold": 2 }
+  ]
+}
