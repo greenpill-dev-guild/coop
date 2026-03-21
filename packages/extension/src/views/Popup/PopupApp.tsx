@@ -941,6 +941,7 @@ export function PopupApp() {
         noteText={noteExpanded ? noteDraftText : homeNote.state.text}
         onCaptureTab={() => void captureActions.runActiveTabCapture()}
         onChangeNote={setNoteDraftText}
+        onScreenshot={() => void captureActions.captureVisibleScreenshot()}
         onCollapseNotes={handleCollapseNotes}
         onExpandNotes={handleExpandNotes}
         onOpenAudio={() => void openReceiverCapture()}
@@ -958,6 +959,8 @@ export function PopupApp() {
   const showWorkspaceAction =
     hasCoops && ['home', 'drafts', 'feed', 'draft-detail'].includes(currentScreen);
 
+  const showCreateJoinInHeader = hasCoops && ['home', 'drafts', 'feed'].includes(currentScreen);
+
   const header = (
     <PopupHeader
       brandActionLabel="Play coop sound"
@@ -966,6 +969,8 @@ export function PopupApp() {
       onBrandAction={() =>
         void playRandomChickenSound(dashboard?.soundPreferences ?? defaultSoundPreferences)
       }
+      onCreateCoop={showCreateJoinInHeader ? openCreateFlow : undefined}
+      onJoinCoop={showCreateJoinInHeader ? openJoinFlow : undefined}
       onOpenProfile={showProfileAction ? () => setProfileOpen((current) => !current) : undefined}
       onSetTheme={theme.setThemePreference}
       onToggleWorkspace={
@@ -990,12 +995,23 @@ export function PopupApp() {
     profileOpen && dashboard ? (
       <PopupProfilePanel
         accountLabel={accountSummary(dashboard.authSession?.primaryAddress)}
-        coopNames={coopOptions.map((coop) => coop.name)}
+        coops={coopOptions.map((coop) => ({
+          name: coop.name,
+          inviteCode: undefined,
+        }))}
+        localInferenceEnabled={dashboard.uiPreferences.localInferenceOptIn ?? false}
         onClose={() => setProfileOpen(false)}
+        onCopyInviteCode={(_coopName, code) => {
+          void navigator.clipboard.writeText(code);
+          setMessage('Invite code copied.');
+        }}
         onCreate={openCreateFlow}
         onJoin={openJoinFlow}
         onSetAgentCadence={(minutes) => void updateUiPreferences({ agentCadenceMinutes: minutes })}
         onSetTheme={theme.setThemePreference}
+        onToggleLocalInference={(enabled) =>
+          void updateUiPreferences({ localInferenceOptIn: enabled })
+        }
         onToggleNotifications={(enabled) =>
           void updateUiPreferences({ notificationsEnabled: enabled })
         }
@@ -1019,6 +1035,7 @@ export function PopupApp() {
     <PopupFooterNav
       activeTab={activeFooterTab}
       draftsBadgeCount={visibleDrafts.length}
+      feedBadgeCount={recentArtifacts.length}
       onNavigate={(tab) => {
         setProfileOpen(false);
         setSelectedArtifactId(null);

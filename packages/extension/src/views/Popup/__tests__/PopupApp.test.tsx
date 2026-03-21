@@ -373,7 +373,7 @@ describe('PopupApp', () => {
     expect(screen.getByRole('button', { name: 'Capture tab' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chickens' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Feed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Feed/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Coops' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Quick note/i }));
@@ -652,7 +652,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Feed' }));
+    await user.click(await screen.findByRole('button', { name: /Feed/ }));
 
     expect(await screen.findByRole('heading', { name: 'Feed' })).toBeInTheDocument();
     expect(screen.getByText('Shared watershed note')).toBeInTheDocument();
@@ -724,5 +724,93 @@ describe('PopupApp', () => {
     expect(screen.getByText('Failed to reach the local dashboard.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toHaveFocus();
     expect(document.querySelector('.popup-surface')).toHaveAttribute('inert');
+  });
+
+  it('shows the screenshot button on the home screen and wires capture action', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    const screenshotButton = await screen.findByRole('button', { name: 'Screenshot' });
+    expect(screenshotButton).toBeInTheDocument();
+
+    await user.click(screenshotButton);
+
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        type: 'capture-visible-screenshot',
+      });
+    });
+  });
+
+  it('shows the + button in the header and opens a create/join popover', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    const plusButton = await screen.findByRole('button', { name: 'Create or join' });
+    expect(plusButton).toBeInTheDocument();
+
+    await user.click(plusButton);
+
+    expect(await screen.findByRole('button', { name: 'Create coop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join with code' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create coop' }));
+
+    expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
+  });
+
+  it('shows invite codes per coop in the profile panel with copy support', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Open profile' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByText('Starter Coop')).toBeInTheDocument();
+    expect(screen.getByText('No invite code yet')).toBeInTheDocument();
+  });
+
+  it('shows the local inference toggle in the profile panel', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Open profile' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByText('Local inference')).toBeInTheDocument();
+
+    const localInferenceGroup = screen.getByRole('group', { name: 'Local inference' });
+    expect(localInferenceGroup).toBeInTheDocument();
+  });
+
+  it('shows a feed badge count on the footer nav', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          {
+            ...makeDashboard().coops[0],
+            artifacts: [
+              makeArtifact(),
+              makeArtifact({ id: 'artifact-2', title: 'Second artifact' }),
+            ],
+          },
+        ],
+      }),
+    );
+
+    render(<PopupApp />);
+
+    await screen.findByRole('heading', { name: 'Home' });
+
+    const feedButton = screen.getByRole('button', { name: /Feed/ });
+    expect(feedButton.querySelector('.popup-footer-nav__badge')).toBeInTheDocument();
   });
 });

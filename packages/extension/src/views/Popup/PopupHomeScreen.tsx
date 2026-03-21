@@ -28,6 +28,7 @@ export function PopupHomeScreen(props: {
   onPasteNote: () => void;
   onRoundUp: () => void;
   onCaptureTab: () => void;
+  onScreenshot: () => void;
   onOpenAudio: () => void;
   onOpenFiles: () => void;
   onOpenSocial: () => void;
@@ -43,6 +44,7 @@ export function PopupHomeScreen(props: {
     onPasteNote,
     onRoundUp,
     onCaptureTab,
+    onScreenshot,
     onOpenAudio,
     onOpenFiles,
     onOpenSocial,
@@ -95,6 +97,9 @@ export function PopupHomeScreen(props: {
         </button>
         <button className="popup-secondary-action" onClick={onCaptureTab} type="button">
           Capture tab
+        </button>
+        <button className="popup-secondary-action" onClick={onScreenshot} type="button">
+          Screenshot
         </button>
       </div>
 

@@ -1,5 +1,5 @@
 import type { SoundPreferences, UiPreferences } from '@coop/shared';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { usePopupOverlayFocusTrap } from './hooks/usePopupOverlayFocusTrap';
 import { PopupChoiceGroup } from './PopupChoiceGroup';
 import type { PopupThemePreference } from './popup-types';
@@ -21,7 +21,7 @@ export function PopupProfilePanel(props: {
   soundPreferences: SoundPreferences;
   uiPreferences: UiPreferences;
   themePreference: PopupThemePreference;
-  coopNames: string[];
+  coops: Array<{ name: string; inviteCode?: string }>;
   accountLabel: string;
   onClose: () => void;
   onCreate: () => void;
@@ -30,12 +30,15 @@ export function PopupProfilePanel(props: {
   onToggleNotifications: (enabled: boolean) => void | Promise<void>;
   onSetAgentCadence: (minutes: UiPreferences['agentCadenceMinutes']) => void | Promise<void>;
   onSetTheme: (theme: PopupThemePreference) => void;
+  onCopyInviteCode: (coopName: string, code: string) => void;
+  localInferenceEnabled: boolean;
+  onToggleLocalInference: (enabled: boolean) => void | Promise<void>;
 }) {
   const {
     soundPreferences,
     uiPreferences,
     themePreference,
-    coopNames,
+    coops,
     accountLabel,
     onClose,
     onCreate,
@@ -44,7 +47,11 @@ export function PopupProfilePanel(props: {
     onToggleNotifications,
     onSetAgentCadence,
     onSetTheme,
+    onCopyInviteCode,
+    localInferenceEnabled,
+    onToggleLocalInference,
   } = props;
+  const [copiedCoopName, setCopiedCoopName] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -84,14 +91,29 @@ export function PopupProfilePanel(props: {
         <section className="popup-profile-panel__section">
           <div className="popup-section-heading">
             <strong>Your coops</strong>
-            <span className="popup-footnote">{coopNames.length}</span>
+            <span className="popup-footnote">{coops.length}</span>
           </div>
-          {coopNames.length > 0 ? (
-            <div className="popup-review-queue__pills">
-              {coopNames.map((coopName) => (
-                <span className="popup-mini-pill popup-mini-pill--muted" key={coopName}>
-                  {coopName}
-                </span>
+          {coops.length > 0 ? (
+            <div className="popup-profile-panel__coop-list">
+              {coops.map((coop) => (
+                <div className="popup-profile-panel__coop-item" key={coop.name}>
+                  <span className="popup-mini-pill popup-mini-pill--muted">{coop.name}</span>
+                  {coop.inviteCode ? (
+                    <button
+                      className="popup-text-button popup-text-button--small"
+                      onClick={() => {
+                        onCopyInviteCode(coop.name, coop.inviteCode!);
+                        setCopiedCoopName(coop.name);
+                        setTimeout(() => setCopiedCoopName(null), 2000);
+                      }}
+                      type="button"
+                    >
+                      {copiedCoopName === coop.name ? 'Copied!' : 'Copy invite'}
+                    </button>
+                  ) : (
+                    <span className="popup-footnote">No invite code yet</span>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -167,6 +189,19 @@ export function PopupProfilePanel(props: {
               { id: 60, label: '60m' },
             ]}
             value={uiPreferences.agentCadenceMinutes}
+          />
+        </section>
+
+        <section className="popup-profile-panel__section">
+          <strong>Local inference</strong>
+          <PopupChoiceGroup
+            ariaLabel="Local inference"
+            onChange={(value) => void onToggleLocalInference(value === 'on')}
+            options={[
+              { id: 'on', label: 'On' },
+              { id: 'off', label: 'Off' },
+            ]}
+            value={localInferenceEnabled ? 'on' : 'off'}
           />
         </section>
       </div>

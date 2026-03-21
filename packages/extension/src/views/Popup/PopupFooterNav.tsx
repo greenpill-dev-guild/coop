@@ -59,15 +59,18 @@ const footerNavItems: Array<{
 export function PopupFooterNav(props: {
   activeTab: PopupFooterTab;
   draftsBadgeCount?: number;
+  feedBadgeCount?: number;
   onNavigate: (tab: PopupFooterTab) => void;
 }) {
-  const { activeTab, draftsBadgeCount = 0, onNavigate } = props;
+  const { activeTab, draftsBadgeCount = 0, feedBadgeCount = 0, onNavigate } = props;
 
   return (
     <nav aria-label="Popup navigation" className="popup-footer-nav">
       {footerNavItems.map((item) => {
         const isActive = item.id === activeTab;
-        const showBadge = item.id === 'drafts' && draftsBadgeCount > 0;
+        const badgeCount =
+          item.id === 'drafts' ? draftsBadgeCount : item.id === 'feed' ? feedBadgeCount : 0;
+        const showBadge = badgeCount > 0;
 
         return (
           <button
@@ -81,7 +84,7 @@ export function PopupFooterNav(props: {
               {item.icon}
               {showBadge ? (
                 <span className="popup-footer-nav__badge">
-                  {draftsBadgeCount > 9 ? '9+' : draftsBadgeCount}
+                  {badgeCount > 9 ? '9+' : badgeCount}
                 </span>
               ) : null}
             </span>

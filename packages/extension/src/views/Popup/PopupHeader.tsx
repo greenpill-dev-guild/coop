@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { PopupThemeToggle } from './PopupThemePicker';
 import { PopupTooltip } from './PopupTooltip';
 import type { PopupThemePreference } from './popup-types';
@@ -39,6 +40,8 @@ export function PopupHeader(props: {
   onToggleWorkspace?: () => void;
   workspaceOpen?: boolean;
   workspaceCanClose?: boolean;
+  onCreateCoop?: () => void;
+  onJoinCoop?: () => void;
 }) {
   const {
     title,
@@ -54,7 +57,28 @@ export function PopupHeader(props: {
     onToggleWorkspace,
     workspaceOpen = false,
     workspaceCanClose = false,
+    onCreateCoop,
+    onJoinCoop,
   } = props;
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!popoverOpen) {
+      return;
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setPopoverOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [popoverOpen]);
+
+  const showPlusButton = onCreateCoop || onJoinCoop;
   const workspaceActionLabel =
     workspaceOpen && workspaceCanClose ? 'Close sidepanel' : 'Open sidepanel';
   const workspaceTooltip =
@@ -98,6 +122,53 @@ export function PopupHeader(props: {
           </div>
         </div>
         <div className="popup-header__meta">
+          {showPlusButton ? (
+            <div ref={popoverRef} style={{ position: 'relative' }}>
+              <PopupTooltip align="end" content="Create or join">
+                {({ targetProps }) => (
+                  <button
+                    {...targetProps}
+                    aria-label="Create or join"
+                    className="popup-icon-button"
+                    onClick={() => setPopoverOpen((current) => !current)}
+                    type="button"
+                  >
+                    <span aria-hidden="true" style={{ fontSize: '1.2rem', lineHeight: 1 }}>
+                      +
+                    </span>
+                  </button>
+                )}
+              </PopupTooltip>
+              {popoverOpen ? (
+                <div className="popup-create-popover">
+                  {onCreateCoop ? (
+                    <button
+                      className="popup-create-popover__item"
+                      onClick={() => {
+                        setPopoverOpen(false);
+                        onCreateCoop();
+                      }}
+                      type="button"
+                    >
+                      Create coop
+                    </button>
+                  ) : null}
+                  {onJoinCoop ? (
+                    <button
+                      className="popup-create-popover__item"
+                      onClick={() => {
+                        setPopoverOpen(false);
+                        onJoinCoop();
+                      }}
+                      type="button"
+                    >
+                      Join with code
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {onOpenProfile ? (
             <PopupTooltip align="end" content="Open profile">
               {({ targetProps }) => (
