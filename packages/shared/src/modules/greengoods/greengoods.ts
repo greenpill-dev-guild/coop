@@ -372,9 +372,9 @@ function deriveGreenGoodsDomainsFromText(input: {
   return unique(domains.size > 0 ? [...domains] : ['agro']);
 }
 
-function normalizeOptionalGardenText(value?: string) {
+function normalizeOptionalGardenText(value?: string): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed || '';
 }
 
 export function getGreenGoodsDeployment(chainKey: CoopChainKey): GreenGoodsDeployment {

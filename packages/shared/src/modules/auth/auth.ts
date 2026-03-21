@@ -1,4 +1,8 @@
-import { createWebAuthnCredential, toWebAuthnAccount } from 'viem/account-abstraction';
+import {
+  type ToWebAuthnAccountParameters,
+  createWebAuthnCredential,
+  toWebAuthnAccount,
+} from 'viem/account-abstraction';
 import {
   type AuthSession,
   type LocalPasskeyIdentity,
@@ -9,28 +13,26 @@ import {
 import { assertHexString, nowIso, toDeterministicAddress } from '../../utils';
 import { createDeviceBoundWarning, createMember } from '../coop/flows';
 
-let webAuthnCredentialGetFnOverride:
-  | ((options?: CredentialRequestOptions) => Promise<Credential | null>)
-  | null = null;
+type WebAuthnGetFn = ToWebAuthnAccountParameters['getFn'];
 
-export function setWebAuthnCredentialGetFnOverride(
-  getFn: ((options?: CredentialRequestOptions) => Promise<Credential | null>) | null,
-) {
+let webAuthnCredentialGetFnOverride: WebAuthnGetFn | null = null;
+
+export function setWebAuthnCredentialGetFnOverride(getFn: WebAuthnGetFn | null) {
   webAuthnCredentialGetFnOverride = getFn;
 }
 
-export function createWebAuthnCredentialGetFn() {
+export function createWebAuthnCredentialGetFn(): WebAuthnGetFn {
   if (webAuthnCredentialGetFnOverride) {
     return webAuthnCredentialGetFnOverride;
   }
 
-  return async (options?: CredentialRequestOptions) => {
+  return async (options) => {
     const credentialContainer = globalThis.navigator?.credentials;
     if (!credentialContainer || typeof credentialContainer.get !== 'function') {
       throw new Error('WebAuthn credential retrieval is unavailable in this runtime.');
     }
 
-    return credentialContainer.get.call(credentialContainer, options);
+    return credentialContainer.get.call(credentialContainer, options as CredentialRequestOptions);
   };
 }
 
