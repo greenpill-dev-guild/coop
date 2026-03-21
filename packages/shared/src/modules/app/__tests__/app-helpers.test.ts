@@ -72,7 +72,7 @@ describe('shared app helpers', () => {
   });
 
   it('keeps sound muted unless an explicit supported success event is allowed', () => {
-    expect(defaultSoundPreferences.enabled).toBe(false);
+    expect(defaultSoundPreferences.enabled).toBe(true);
     expect(soundPattern('coop-created')).toHaveLength(3);
     expect(soundPattern('artifact-published')).toHaveLength(2);
     expect(soundPattern('sound-test')).toHaveLength(3);

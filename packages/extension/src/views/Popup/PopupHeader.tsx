@@ -2,37 +2,16 @@ import { PopupThemeToggle } from './PopupThemePicker';
 import { PopupTooltip } from './PopupTooltip';
 import type { PopupThemePreference } from './popup-types';
 
-function DraftsIcon() {
+function ProfileIcon() {
   return (
     <svg aria-hidden="true" className="popup-theme-option__icon" fill="none" viewBox="0 0 20 20">
+      <circle cx="10" cy="7.1" r="3" stroke="currentColor" strokeWidth="1.4" />
       <path
-        d="M6 3.5h5l3.5 3.5V16.5H6z"
+        d="M4.8 16c.7-2.4 2.4-3.7 5.2-3.7s4.5 1.3 5.2 3.7"
         stroke="currentColor"
-        strokeLinejoin="round"
+        strokeLinecap="round"
         strokeWidth="1.4"
       />
-      <path
-        d="M8.5 10h3M8.5 12.5h2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.3"
-      />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg aria-hidden="true" className="popup-theme-option__icon" fill="none" viewBox="0 0 20 20">
-      <path
-        d="M3 7h14M3 10h14M3 13h14"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.3"
-      />
-      <circle cx="7" cy="7" r="1.6" fill="currentColor" />
-      <circle cx="13" cy="10" r="1.6" fill="currentColor" />
-      <circle cx="9" cy="13" r="1.6" fill="currentColor" />
     </svg>
   );
 }
@@ -50,10 +29,13 @@ export function PopupHeader(props: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  onBrandAction?: () => void;
+  brandActionLabel?: string;
+  brandTooltip?: string;
   themePreference: PopupThemePreference;
   onSetTheme: (theme: PopupThemePreference) => void;
-  onOpenDrafts?: () => void;
-  onOpenSettings?: () => void;
+  onOpenProfile?: () => void;
+  profileOpen?: boolean;
   onToggleWorkspace?: () => void;
   workspaceOpen?: boolean;
   workspaceCanClose?: boolean;
@@ -62,10 +44,13 @@ export function PopupHeader(props: {
     title,
     subtitle,
     onBack,
+    onBrandAction,
+    brandActionLabel = 'Play coop sound',
+    brandTooltip = 'Play coop sound',
     themePreference,
     onSetTheme,
-    onOpenDrafts,
-    onOpenSettings,
+    onOpenProfile,
+    profileOpen = false,
     onToggleWorkspace,
     workspaceOpen = false,
     workspaceCanClose = false,
@@ -93,9 +78,19 @@ export function PopupHeader(props: {
               <span aria-hidden="true">&larr;</span>
             </button>
           ) : (
-            <div aria-hidden="true" className="popup-mark">
-              <img alt="" className="popup-mark__image" src="/icons/icon-32.png" />
-            </div>
+            <PopupTooltip content={brandTooltip}>
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label={brandActionLabel}
+                  className={`popup-mark${onBrandAction ? ' popup-mark--button' : ''}`}
+                  onClick={onBrandAction}
+                  type="button"
+                >
+                  <img alt="" className="popup-mark__image" src="/icons/icon-32.png" />
+                </button>
+              )}
+            </PopupTooltip>
           )}
           <div className="popup-header__copy">
             <strong>{title}</strong>
@@ -103,32 +98,18 @@ export function PopupHeader(props: {
           </div>
         </div>
         <div className="popup-header__meta">
-          {onOpenDrafts ? (
-            <PopupTooltip align="end" content="Open the review queue.">
+          {onOpenProfile ? (
+            <PopupTooltip align="end" content="Open profile">
               {({ targetProps }) => (
                 <button
                   {...targetProps}
-                  aria-label="Open review queue"
-                  className="popup-icon-button"
-                  onClick={onOpenDrafts}
+                  aria-expanded={profileOpen || undefined}
+                  aria-label="Open profile"
+                  className={`popup-icon-button${profileOpen ? ' is-active' : ''}`}
+                  onClick={onOpenProfile}
                   type="button"
                 >
-                  <DraftsIcon />
-                </button>
-              )}
-            </PopupTooltip>
-          ) : null}
-          {onOpenSettings ? (
-            <PopupTooltip align="end" content="Open popup settings.">
-              {({ targetProps }) => (
-                <button
-                  {...targetProps}
-                  aria-label="Open settings"
-                  className="popup-icon-button"
-                  onClick={onOpenSettings}
-                  type="button"
-                >
-                  <SettingsIcon />
+                  <ProfileIcon />
                 </button>
               )}
             </PopupTooltip>

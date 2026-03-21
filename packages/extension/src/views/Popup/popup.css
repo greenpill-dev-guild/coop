@@ -134,6 +134,7 @@ button:focus-visible,
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-inline: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -190,7 +191,7 @@ button:focus-visible,
 }
 
 .popup-header__copy strong {
-  font-size: 1.04rem;
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
@@ -235,6 +236,15 @@ button:focus-visible,
   flex-shrink: 0;
 }
 
+.popup-mark {
+  padding: 0;
+}
+
+.popup-mark--button {
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
 .popup-icon-button {
   transition: background-color 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow
     180ms ease;
@@ -265,6 +275,18 @@ button:focus-visible,
   font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.popup-status-pill strong {
+  font-size: 0.72rem;
+}
+
+.popup-status-pill--tone-warning {
+  background: color-mix(in srgb, var(--coop-orange) 12%, var(--popup-pill-bg));
+}
+
+.popup-status-pill--tone-error {
+  background: color-mix(in srgb, #c54a3c 12%, var(--popup-pill-bg));
 }
 
 .popup-header__meta .popup-text-button {
@@ -333,6 +355,10 @@ button:focus-visible,
   grid-template-rows: auto auto minmax(0, 1fr);
 }
 
+.popup-screen--home-aggregate {
+  gap: 10px;
+}
+
 .popup-screen--onboarding {
   gap: 14px;
   align-content: start;
@@ -391,6 +417,34 @@ button:focus-visible,
   gap: 10px;
 }
 
+.popup-choice-group {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.popup-choice-group__button {
+  border: 1px solid var(--popup-border);
+  border-radius: 999px;
+  background: var(--popup-secondary-bg);
+  color: var(--popup-text-soft);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease,
+    transform 180ms ease;
+}
+
+.popup-choice-group__button.is-active {
+  border-color: var(--popup-active-border);
+  background: var(--popup-active-bg);
+  color: var(--popup-text);
+}
+
 .popup-home-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -437,6 +491,7 @@ button:focus-visible,
   background: var(--popup-field-bg);
   color: var(--popup-text);
   padding: 12px 14px;
+  min-width: 0;
 }
 
 .popup-field input::placeholder,
@@ -488,6 +543,7 @@ button:focus-visible,
 .popup-primary-action:hover:not(:disabled),
 .popup-secondary-action:hover:not(:disabled),
 .popup-switcher-row:hover:not(:disabled),
+.popup-mark--button:hover:not(:disabled),
 .popup-icon-button:hover:not(:disabled),
 .popup-text-button:hover:not(:disabled) {
   transform: translateY(-1px);
@@ -520,6 +576,76 @@ button:focus-visible,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: 1fr;
   gap: 8px;
+}
+
+.popup-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.popup-status-pill--button {
+  border: none;
+  cursor: help;
+}
+
+.popup-note-card {
+  border: 1px solid var(--popup-border);
+  border-radius: 18px;
+  background: var(--popup-panel-bg);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.popup-note-preview {
+  width: 100%;
+  border: 1px dashed color-mix(in srgb, var(--popup-active-border) 60%, var(--popup-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--popup-field-bg) 92%, transparent);
+  color: var(--popup-text);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.popup-note-preview__label {
+  color: var(--popup-text-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.popup-note-preview strong {
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.popup-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.popup-handoff-card {
+  border: 1px solid var(--popup-border);
+  border-radius: 16px;
+  background: var(--popup-panel-bg);
+  color: var(--popup-text);
+  padding: 12px 10px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.popup-handoff-card strong {
+  font-size: 0.88rem;
+}
+
+.popup-handoff-card span {
+  color: var(--popup-text-soft);
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .popup-stat-grid > .popup-tooltip {
@@ -835,15 +961,15 @@ button:focus-visible,
 }
 
 .popup-footer-nav__button {
-  min-height: 50px;
+  min-height: 46px;
   border: 1px solid var(--popup-border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--popup-panel-bg) 92%, transparent);
   color: var(--popup-text-soft);
   display: grid;
   justify-items: center;
-  gap: 3px;
-  padding: 7px 6px;
+  gap: 2px;
+  padding: 6px 6px;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform
     180ms ease;
 }
@@ -893,6 +1019,7 @@ button:focus-visible,
   z-index: 30;
 }
 
+.popup-profile-backdrop,
 .popup-dialog-backdrop {
   position: absolute;
   inset: 0;
@@ -900,6 +1027,11 @@ button:focus-visible,
   display: grid;
   place-items: center;
   padding: 24px;
+}
+
+.popup-profile-backdrop {
+  place-items: start end;
+  padding: 58px 16px 16px;
 }
 
 .popup-dialog {
@@ -912,6 +1044,10 @@ button:focus-visible,
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   box-shadow: 0 18px 40px rgba(10, 7, 5, 0.28);
+}
+
+.popup-dialog--notice {
+  max-height: none;
 }
 
 .popup-dialog__header {
@@ -993,9 +1129,53 @@ button:focus-visible,
   padding-top: 2px;
 }
 
+.popup-dialog__actions--spread {
+  justify-content: space-between;
+}
+
 .popup-dialog__actions .popup-primary-action {
   width: auto;
   min-width: 104px;
+}
+
+.popup-profile-panel {
+  width: min(308px, 100%);
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  border-radius: 18px;
+  border: 1px solid var(--popup-border);
+  background: color-mix(in srgb, var(--popup-panel-bg) 98%, transparent);
+  box-shadow: 0 18px 40px rgba(10, 7, 5, 0.28);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.popup-profile-panel__header,
+.popup-profile-panel__section {
+  display: grid;
+  gap: 8px;
+}
+
+.popup-profile-panel__header {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+
+.popup-profile-panel__header p {
+  margin: 4px 0 0;
+  color: var(--popup-text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.popup-profile-panel__section {
+  border-top: 1px solid var(--popup-border);
+  padding-top: 12px;
+}
+
+.popup-profile-panel__section strong {
+  font-size: 0.86rem;
 }
 
 .popup-footnote {

@@ -1714,7 +1714,7 @@ export const coopBootstrapSnapshotSchema = z.object({
 });
 
 export const soundPreferencesSchema = z.object({
-  enabled: z.boolean().default(false),
+  enabled: z.boolean().default(true),
   reducedMotion: z.boolean().default(false),
   reducedSound: z.boolean().default(false),
 });

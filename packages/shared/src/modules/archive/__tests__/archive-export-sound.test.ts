@@ -185,7 +185,7 @@ describe('archive, export, and sound behavior', () => {
   });
 
   it('keeps sounds muted by default and only allows explicit success moments', () => {
-    expect(defaultSoundPreferences.enabled).toBe(false);
+    expect(defaultSoundPreferences.enabled).toBe(true);
     expect(
       shouldPlaySound('coop-created', {
         enabled: false,

@@ -1,11 +1,17 @@
-import type { Artifact, ReviewDraft, SoundPreferences, UiPreferences } from '@coop/shared';
+import {
+  defaultSoundPreferences,
+  type Artifact,
+  type ReviewDraft,
+  type UiPreferences,
+} from '@coop/shared';
 import { useEffect, useMemo, useState } from 'react';
+import { playRandomChickenSound } from '../../runtime/audio';
 import { type PopupSidepanelState, sendRuntimeMessage } from '../../runtime/messages';
 import { useCaptureActions } from '../shared/useCaptureActions';
 import { useCoopActions } from '../shared/useCoopActions';
 import { useQuickDraftActions } from '../shared/useQuickDraftActions';
 import { PopupArtifactDialog } from './PopupArtifactDialog';
-import { PopupCoopsScreen } from './PopupCoopsScreen';
+import { PopupBlockingNotice } from './PopupBlockingNotice';
 import { PopupCreateCoopScreen } from './PopupCreateCoopScreen';
 import { PopupDraftDetailScreen } from './PopupDraftDetailScreen';
 import { PopupDraftListScreen } from './PopupDraftListScreen';
@@ -15,20 +21,26 @@ import { PopupHeader } from './PopupHeader';
 import { PopupHomeScreen } from './PopupHomeScreen';
 import { PopupJoinCoopScreen } from './PopupJoinCoopScreen';
 import { PopupNoCoopScreen } from './PopupNoCoopScreen';
-import { PopupSettingsScreen } from './PopupSettingsScreen';
+import { PopupProfilePanel } from './PopupProfilePanel';
 import { PopupShell } from './PopupShell';
 import { usePopupDashboard } from './hooks/usePopupDashboard';
 import { usePopupNavigation } from './hooks/usePopupNavigation';
+import { usePersistedPopupState } from './hooks/usePersistedPopupState';
 import { usePopupTheme } from './hooks/usePopupTheme';
 import type {
   PopupFeedArtifactItem,
   PopupFooterTab,
-  PopupHomeQueueItem,
+  PopupHomeNoteState,
   PopupScreen,
+  PopupDraftListItem,
 } from './popup-types';
 
 type PopupSidepanelApi = typeof chrome.sidePanel & {
   close?: (options: { windowId?: number; tabId?: number }) => Promise<void>;
+};
+
+const initialHomeNoteState: PopupHomeNoteState = {
+  text: '',
 };
 
 function formatRelativeTime(timestamp?: string) {
@@ -56,13 +68,23 @@ function formatRelativeTime(timestamp?: string) {
   return `${days}d ago`;
 }
 
+function normalizeCoopIds(targetCoopIds: string[], coopLabels: Map<string, string>) {
+  return Array.from(new Set(targetCoopIds.filter((coopId) => coopLabels.has(coopId))));
+}
+
 function formatCoopLabel(targetCoopIds: string[], coopLabels: Map<string, string>) {
-  const labels = targetCoopIds
+  const normalized = normalizeCoopIds(targetCoopIds, coopLabels);
+
+  if (normalized.length === 0) {
+    return 'Unassigned';
+  }
+
+  const labels = normalized
     .map((coopId) => coopLabels.get(coopId))
     .filter((value): value is string => Boolean(value));
 
   if (labels.length === 0) {
-    return 'This coop';
+    return 'Unassigned';
   }
 
   if (labels.length === 1) {
@@ -72,31 +94,41 @@ function formatCoopLabel(targetCoopIds: string[], coopLabels: Map<string, string
   return `${labels[0]} +${labels.length - 1}`;
 }
 
-function toHomeQueueItems(input: {
+function toDraftItems(input: {
   drafts: ReviewDraft[];
   coops: Array<{ id: string; name: string }>;
-}): PopupHomeQueueItem[] {
+}): PopupDraftListItem[] {
   const coopLabels = new Map(input.coops.map((coop) => [coop.id, coop.name]));
 
-  return input.drafts.slice(0, 3).map((draft) => ({
-    id: draft.id,
-    title: draft.title,
-    summary: draft.summary,
-    previewImageUrl: draft.previewImageUrl,
-    category: draft.category,
-    coopLabel: formatCoopLabel(draft.suggestedTargetCoopIds, coopLabels),
-    workflowStage: draft.workflowStage,
-  }));
+  return input.drafts.map((draft) => {
+    const coopIds = normalizeCoopIds(draft.suggestedTargetCoopIds, coopLabels);
+
+    return {
+      ...draft,
+      coopIds,
+      coopLabel: formatCoopLabel(draft.suggestedTargetCoopIds, coopLabels),
+    };
+  });
 }
 
 function toFeedItems(input: {
   artifacts: Artifact[];
-  coopLabel: string;
+  coops: Array<{ id: string; name: string }>;
 }): PopupFeedArtifactItem[] {
-  return input.artifacts.map((artifact) => ({
-    ...artifact,
-    coopLabel: input.coopLabel,
-  }));
+  const coopLabels = new Map(input.coops.map((coop) => [coop.id, coop.name]));
+
+  return input.artifacts.map((artifact) => {
+    const coopIds = normalizeCoopIds(
+      artifact.targetCoopId ? [artifact.targetCoopId] : [],
+      coopLabels,
+    );
+
+    return {
+      ...artifact,
+      coopIds,
+      coopLabel: formatCoopLabel(coopIds, coopLabels),
+    };
+  });
 }
 
 function isCompatibilitySidepanelError(error?: string) {
@@ -178,15 +210,54 @@ function popupSyncStatus(input: {
   };
 }
 
+function buildFilterOptions(coops: Array<{ id: string; name: string }>) {
+  return [{ id: 'all', label: 'All coops' }, ...coops.map((coop) => ({ id: coop.id, label: coop.name }))];
+}
+
+function matchesCoopFilter(coopIds: string[], filterId: string) {
+  return filterId === 'all' || coopIds.includes(filterId);
+}
+
+function headerTitleForScreen(screen: PopupScreen | 'no-coop') {
+  switch (screen) {
+    case 'create':
+      return 'Create coop';
+    case 'join':
+      return 'Join coop';
+    case 'drafts':
+      return 'Chickens';
+    case 'draft-detail':
+      return 'Review chicken';
+    case 'feed':
+      return 'Feed';
+    case 'no-coop':
+      return 'Coop';
+    default:
+      return 'Home';
+  }
+}
+
+function accountSummary(primaryAddress?: string) {
+  if (!primaryAddress) {
+    return 'Passkey profile is created when you create or join a coop.';
+  }
+
+  return `Passkey ready · ${primaryAddress.slice(0, 6)}…${primaryAddress.slice(-4)}`;
+}
+
 export function PopupApp() {
   const navigation = usePopupNavigation();
   const theme = usePopupTheme();
+  const homeNote = usePersistedPopupState<PopupHomeNoteState>(
+    'coop:popup-home-note',
+    initialHomeNoteState,
+  );
   const {
     dashboard,
+    coops,
     loading,
     dashboardError,
     loadDashboard,
-    activeCoop,
     visibleDrafts,
     recentArtifacts,
   } = usePopupDashboard();
@@ -196,20 +267,28 @@ export function PopupApp() {
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftEdits, setDraftEdits] = useState<Record<string, ReviewDraft>>({});
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
-  const [settingsReturnScreen, setSettingsReturnScreen] = useState<PopupScreen>('home');
   const [workspaceState, setWorkspaceState] = useState<PopupSidepanelState>({
     open: false,
     canClose: false,
   });
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [draftFilterId, setDraftFilterId] = useState('all');
+  const [feedFilterId, setFeedFilterId] = useState('all');
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const [noteDraftText, setNoteDraftText] = useState('');
+  const [subscreenReturnTab, setSubscreenReturnTab] = useState<PopupFooterTab>('home');
 
   useEffect(() => {
-    if (dashboardError) {
+    if (dashboardError && dashboard) {
       setMessage(dashboardError);
     }
-  }, [dashboardError]);
+  }, [dashboard, dashboardError]);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message) {
+      return;
+    }
+
     const timer = setTimeout(() => setMessage(''), 4000);
     return () => clearTimeout(timer);
   }, [message]);
@@ -224,70 +303,115 @@ export function PopupApp() {
   const coopActions = useCoopActions({
     setMessage,
     loadDashboard,
-    soundPreferences: dashboard?.soundPreferences ?? ({ enabled: false } as SoundPreferences),
+    soundPreferences: dashboard?.soundPreferences ?? defaultSoundPreferences,
     configuredSignalingUrls: dashboard?.runtimeConfig.signalingUrls ?? [],
   });
 
   const quickDraftActions = useQuickDraftActions({
     setMessage,
     loadDashboard,
-    soundPreferences: dashboard?.soundPreferences ?? ({ enabled: false } as SoundPreferences),
+    soundPreferences: dashboard?.soundPreferences ?? defaultSoundPreferences,
   });
 
+  const hasCoops = coops.length > 0;
   const currentScreen =
-    !activeCoop && !['create', 'join', 'settings'].includes(navigation.state.screen)
+    !hasCoops && !['create', 'join'].includes(navigation.state.screen)
       ? 'no-coop'
       : navigation.state.screen;
 
+  const coopOptions = useMemo(
+    () => coops.map((coop) => ({ id: coop.profile.id, name: coop.profile.name })),
+    [coops],
+  );
+  const coopLabels = useMemo(
+    () => new Map(coopOptions.map((coop) => [coop.id, coop.name])),
+    [coopOptions],
+  );
+  const draftItems = useMemo(
+    () =>
+      toDraftItems({
+        drafts: visibleDrafts,
+        coops: coopOptions,
+      }),
+    [coopOptions, visibleDrafts],
+  );
+  const filteredDraftItems = useMemo(
+    () => draftItems.filter((draft) => matchesCoopFilter(draft.coopIds, draftFilterId)),
+    [draftFilterId, draftItems],
+  );
+  const feedArtifacts = useMemo(
+    () =>
+      toFeedItems({
+        artifacts: recentArtifacts,
+        coops: coopOptions,
+      }),
+    [coopOptions, recentArtifacts],
+  );
+  const filteredFeedArtifacts = useMemo(
+    () => feedArtifacts.filter((artifact) => matchesCoopFilter(artifact.coopIds, feedFilterId)),
+    [feedArtifacts, feedFilterId],
+  );
+  const selectedArtifact = useMemo(
+    () => feedArtifacts.find((artifact) => artifact.id === selectedArtifactId) ?? null,
+    [feedArtifacts, selectedArtifactId],
+  );
   const selectedDraftBase = useMemo(
     () => visibleDrafts.find((draft) => draft.id === navigation.state.selectedDraftId) ?? null,
     [navigation.state.selectedDraftId, visibleDrafts],
   );
-
   const selectedDraft = selectedDraftBase
     ? (draftEdits[selectedDraftBase.id] ?? selectedDraftBase)
     : null;
+  const workspaceTargetCoopId = useMemo(() => {
+    if (selectedArtifact) {
+      if (feedFilterId !== 'all' && selectedArtifact.coopIds.includes(feedFilterId)) {
+        return feedFilterId;
+      }
+      return selectedArtifact.coopIds[0];
+    }
+
+    if (currentScreen === 'draft-detail' && selectedDraft) {
+      const draftCoopIds = normalizeCoopIds(selectedDraft.suggestedTargetCoopIds, coopLabels);
+      if (draftFilterId !== 'all' && draftCoopIds.includes(draftFilterId)) {
+        return draftFilterId;
+      }
+      return draftCoopIds[0];
+    }
+
+    if (currentScreen === 'feed' && feedFilterId !== 'all') {
+      return feedFilterId;
+    }
+
+    if ((currentScreen === 'drafts' || currentScreen === 'draft-detail') && draftFilterId !== 'all') {
+      return draftFilterId;
+    }
+
+    return dashboard?.activeCoopId ?? coopOptions[0]?.id;
+  }, [
+    coopLabels,
+    coopOptions,
+    currentScreen,
+    dashboard?.activeCoopId,
+    draftFilterId,
+    feedFilterId,
+    selectedArtifact,
+    selectedDraft,
+  ]);
 
   useEffect(() => {
     if (navigation.state.screen === 'draft-detail' && !selectedDraftBase) {
-      navigation.navigate(activeCoop ? 'drafts' : 'home');
+      navigation.navigate(hasCoops ? 'drafts' : 'home');
     }
-  }, [activeCoop, navigation, selectedDraftBase]);
+  }, [hasCoops, navigation, selectedDraftBase]);
 
   useEffect(() => {
     if (currentScreen !== 'feed' && selectedArtifactId) {
       setSelectedArtifactId(null);
     }
+    if (!['home', 'drafts', 'feed'].includes(currentScreen)) {
+      setProfileOpen(false);
+    }
   }, [currentScreen, selectedArtifactId]);
-
-  const homeQueueItems = useMemo(
-    () =>
-      toHomeQueueItems({
-        drafts: visibleDrafts,
-        coops:
-          dashboard?.coops.map((coop) => ({ id: coop.profile.id, name: coop.profile.name })) ?? [],
-      }),
-    [dashboard?.coops, visibleDrafts],
-  );
-  const feedArtifacts = useMemo(() => {
-    const activeCoopLabel = activeCoop?.profile.name ?? 'This coop';
-    return toFeedItems({
-      artifacts: recentArtifacts,
-      coopLabel: activeCoopLabel,
-    });
-  }, [activeCoop?.profile.name, recentArtifacts]);
-  const selectedArtifact = useMemo(
-    () => feedArtifacts.find((artifact) => artifact.id === selectedArtifactId) ?? null,
-    [feedArtifacts, selectedArtifactId],
-  );
-  const otherCoopsAttentionCount = useMemo(
-    () =>
-      dashboard?.coopBadges
-        .filter((badge) => badge.coopId !== dashboard.activeCoopId)
-        .reduce((total, badge) => total + badge.pendingAttentionCount, 0) ?? 0,
-    [dashboard?.activeCoopId, dashboard?.coopBadges],
-  );
-  const homePrimaryActionLabel = visibleDrafts.length > 0 ? 'Review' : 'Round up';
 
   async function resolveCurrentWindowId() {
     try {
@@ -302,6 +426,24 @@ export function PopupApp() {
     return chrome.sidePanel as PopupSidepanelApi;
   }
 
+  async function ensureWorkspaceCoopContext(targetCoopId?: string) {
+    if (!targetCoopId || targetCoopId === dashboard?.activeCoopId) {
+      return true;
+    }
+
+    const response = await sendRuntimeMessage({
+      type: 'set-active-coop',
+      payload: { coopId: targetCoopId },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not open the selected coop in full view.');
+      return false;
+    }
+
+    await loadDashboard();
+    return true;
+  }
+
   function updateWorkspaceFallbackState(open: boolean) {
     setWorkspaceState({
       open,
@@ -311,7 +453,7 @@ export function PopupApp() {
 
   async function refreshWorkspaceState() {
     const windowId = await resolveCurrentWindowId();
-    if (!activeCoop || windowId == null) {
+    if (!hasCoops || windowId == null) {
       setWorkspaceState({ open: false, canClose: false });
       return null;
     }
@@ -345,9 +487,14 @@ export function PopupApp() {
 
   useEffect(() => {
     void refreshWorkspaceState();
-  }, [activeCoop]);
+  }, [hasCoops]);
 
-  async function openWorkspace(windowIdOverride?: number) {
+  async function openWorkspace(input?: { windowIdOverride?: number; targetCoopId?: string }) {
+    const { windowIdOverride, targetCoopId } = input ?? {};
+    if (!(await ensureWorkspaceCoopContext(targetCoopId))) {
+      return;
+    }
+
     try {
       const windowId = windowIdOverride ?? (await resolveCurrentWindowId());
       if (windowId != null) {
@@ -362,7 +509,7 @@ export function PopupApp() {
     await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html') });
   }
 
-  async function toggleWorkspaceFallback(windowId: number) {
+  async function toggleWorkspaceFallback(windowId: number, targetCoopId?: string) {
     const sidepanelApi = getSidepanelApi();
     if (workspaceState.open && typeof sidepanelApi.close === 'function') {
       await sidepanelApi.close({ windowId });
@@ -370,13 +517,18 @@ export function PopupApp() {
       return;
     }
 
-    await openWorkspace(windowId);
+    await openWorkspace({ windowIdOverride: windowId, targetCoopId });
   }
 
-  async function toggleWorkspace() {
+  async function toggleWorkspace(targetCoopId?: string) {
     const windowId = await resolveCurrentWindowId();
+    const openingWorkspace = !workspaceState.open || !workspaceState.canClose;
+    if (openingWorkspace && !(await ensureWorkspaceCoopContext(targetCoopId))) {
+      return;
+    }
+
     if (windowId == null) {
-      await openWorkspace();
+      await openWorkspace({ targetCoopId });
       return;
     }
 
@@ -390,18 +542,28 @@ export function PopupApp() {
         return;
       }
       if (isCompatibilitySidepanelError(response.error)) {
-        await toggleWorkspaceFallback(windowId);
+        await toggleWorkspaceFallback(windowId, openingWorkspace ? targetCoopId : undefined);
         return;
       }
       setMessage(response.error ?? 'Could not toggle the sidepanel.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       if (isCompatibilitySidepanelError(detail)) {
-        await toggleWorkspaceFallback(windowId);
+        await toggleWorkspaceFallback(windowId, openingWorkspace ? targetCoopId : undefined);
         return;
       }
       setMessage(detail || 'Could not toggle the sidepanel.');
     }
+  }
+
+  async function openReceiverCapture() {
+    const receiverUrl = dashboard?.runtimeConfig.receiverAppUrl;
+    if (!receiverUrl) {
+      await openWorkspace({ targetCoopId: workspaceTargetCoopId });
+      return;
+    }
+
+    await chrome.tabs.create({ url: new URL('/receiver', receiverUrl).toString() });
   }
 
   async function updateUiPreferences(patch: Partial<UiPreferences>) {
@@ -417,11 +579,11 @@ export function PopupApp() {
       },
     });
     if (!response.ok) {
-      setMessage(response.error ?? 'Could not update settings.');
+      setMessage(response.error ?? 'Could not update preferences.');
       return;
     }
     await loadDashboard();
-    setMessage('Settings updated.');
+    setMessage('Preferences updated.');
   }
 
   async function updateSound(enabled: boolean) {
@@ -441,7 +603,7 @@ export function PopupApp() {
       return;
     }
     await loadDashboard();
-    setMessage('Sound settings updated.');
+    setMessage(enabled ? 'Sound is on.' : 'Sound is off.');
   }
 
   async function handleCreateSubmit() {
@@ -452,7 +614,7 @@ export function PopupApp() {
       return;
     }
     navigation.resetCreateForm();
-    navigation.goHome();
+    navigation.navigate(subscreenReturnTab);
   }
 
   async function handleJoinSubmit() {
@@ -463,7 +625,7 @@ export function PopupApp() {
       return;
     }
     navigation.resetJoinForm();
-    navigation.goHome();
+    navigation.navigate(subscreenReturnTab);
   }
 
   function resolveDraftValue(draft: ReviewDraft) {
@@ -566,20 +728,52 @@ export function PopupApp() {
     });
   }
 
-  async function handleSwitchCoop(coopId: string) {
-    const switched = await coopActions.switchCoop(coopId);
-    if (!switched) {
-      return;
+  async function handlePasteNote() {
+    try {
+      const pasted = await navigator.clipboard.readText();
+      if (!pasted.trim()) {
+        return;
+      }
+
+      setNoteDraftText((current) =>
+        current.trim() ? `${current.trim()}\n${pasted.trim()}` : pasted.trim(),
+      );
+      setNoteExpanded(true);
+    } catch {
+      setMessage('Could not paste into the note.');
     }
-    navigation.goHome();
-    await refreshWorkspaceState();
   }
 
-  function openSettingsScreen() {
-    setSettingsReturnScreen(
-      currentScreen === 'feed' || currentScreen === 'coops' ? currentScreen : 'home',
-    );
-    navigation.navigate('settings');
+  function handleSaveNote() {
+    homeNote.setState((current) => ({
+      ...current,
+      text: noteDraftText,
+      updatedAt: new Date().toISOString(),
+    }));
+    setNoteExpanded(false);
+    setMessage(noteDraftText.trim() ? 'Note saved locally.' : 'Note cleared.');
+  }
+
+  function handleExpandNotes() {
+    setNoteDraftText(homeNote.state.text);
+    setNoteExpanded(true);
+  }
+
+  function handleCollapseNotes() {
+    setNoteDraftText(homeNote.state.text);
+    setNoteExpanded(false);
+  }
+
+  function openCreateFlow() {
+    setProfileOpen(false);
+    setSubscreenReturnTab(activeFooterTab);
+    navigation.navigate('create');
+  }
+
+  function openJoinFlow() {
+    setProfileOpen(false);
+    setSubscreenReturnTab(activeFooterTab);
+    navigation.navigate('join');
   }
 
   function navigateBack() {
@@ -588,44 +782,80 @@ export function PopupApp() {
       return;
     }
 
-    if (currentScreen === 'settings') {
-      navigation.navigate(settingsReturnScreen);
-      return;
-    }
-
     if (currentScreen === 'create' || currentScreen === 'join') {
-      navigation.navigate(activeCoop ? 'coops' : 'home');
+      navigation.navigate(subscreenReturnTab);
       return;
     }
 
-    navigation.navigate('home');
+    navigation.goHome();
   }
 
-  const headerTitle = activeCoop?.profile.name ?? 'Coop';
-  const headerSubtitle = undefined;
-  const syncStatus = useMemo(() => {
-    return popupSyncStatus({
-      syncLabel: dashboard?.summary?.syncLabel,
-      syncState: dashboard?.summary?.syncState,
-      syncDetail: dashboard?.summary?.syncDetail,
-      syncTone: dashboard?.summary?.syncTone,
-      dashboardError,
-    });
-  }, [dashboard?.summary, dashboardError]);
-  const settingsOriginTab: PopupFooterTab =
-    settingsReturnScreen === 'feed' ? 'feed' : settingsReturnScreen === 'coops' ? 'coops' : 'home';
+  const syncStatus = useMemo(
+    () =>
+      popupSyncStatus({
+        syncLabel: dashboard?.summary?.syncLabel,
+        syncState: dashboard?.summary?.syncState,
+        syncDetail: dashboard?.summary?.syncDetail,
+        syncTone: dashboard?.summary?.syncTone,
+        dashboardError,
+      }),
+    [dashboard?.summary, dashboardError],
+  );
+  const homeStatusItems = useMemo(() => {
+    const items = [
+      {
+        id: 'sync',
+        label: 'Sync',
+        value: syncStatus.label,
+        tone: syncStatus.tone,
+        detail: syncStatus.detail,
+      },
+      {
+        id: 'drafts',
+        label: 'Chickens',
+        value: String(visibleDrafts.length),
+      },
+      {
+        id: 'roundup',
+        label: 'Last roundup',
+        value: formatRelativeTime(dashboard?.summary?.lastCaptureAt),
+      },
+    ];
+
+    if ((dashboard?.receiverPairings.length ?? 0) > 0 || (dashboard?.receiverIntake.length ?? 0) > 0) {
+      items.push({
+        id: 'receiver',
+        label: 'Receiver',
+        value:
+          (dashboard?.receiverPairings.length ?? 0) > 0
+            ? 'Ready'
+            : `${dashboard?.receiverIntake.length ?? 0} waiting`,
+      });
+    }
+
+    return items;
+  }, [
+    dashboard?.receiverIntake.length,
+    dashboard?.receiverPairings.length,
+    dashboard?.summary?.lastCaptureAt,
+    syncStatus.detail,
+    syncStatus.label,
+    syncStatus.tone,
+    visibleDrafts.length,
+  ]);
   const activeFooterTab: PopupFooterTab =
     currentScreen === 'feed'
       ? 'feed'
-      : currentScreen === 'settings'
-        ? settingsOriginTab
-        : currentScreen === 'coops' || currentScreen === 'create' || currentScreen === 'join'
-          ? 'coops'
+      : currentScreen === 'drafts' || currentScreen === 'draft-detail'
+        ? 'drafts'
+        : currentScreen === 'create' || currentScreen === 'join'
+          ? subscreenReturnTab
           : 'home';
+  const filterOptions = useMemo(() => buildFilterOptions(coopOptions), [coopOptions]);
 
   let content: JSX.Element;
 
-  if (loading || navigation.loading) {
+  if (loading || navigation.loading || homeNote.loading) {
     content = (
       <section className="popup-screen">
         <p className="popup-empty-state">Loading popup...</p>
@@ -642,26 +872,32 @@ export function PopupApp() {
     content = (
       <PopupCreateCoopScreen
         form={navigation.state.createForm}
-        submitting={createSubmitting}
         onChange={navigation.setCreateForm}
         onSubmit={handleCreateSubmit}
+        submitting={createSubmitting}
       />
     );
   } else if (currentScreen === 'join') {
     content = (
       <PopupJoinCoopScreen
         form={navigation.state.joinForm}
-        submitting={joinSubmitting}
         onChange={navigation.setJoinForm}
         onSubmit={handleJoinSubmit}
+        submitting={joinSubmitting}
       />
     );
   } else if (currentScreen === 'drafts') {
     content = (
       <PopupDraftListScreen
-        drafts={visibleDrafts.map((draft) => resolveDraftValue(draft))}
-        onOpenDraft={navigation.openDraft}
+        activeFilterId={draftFilterId}
+        drafts={filteredDraftItems.map((draft) => ({
+          ...draft,
+          ...resolveDraftValue(draft),
+        }))}
+        filterOptions={filterOptions}
+        onChangeFilter={setDraftFilterId}
         onMarkReady={handleMarkDraftReady}
+        onOpenDraft={navigation.openDraft}
         onShare={handleShareDraft}
       />
     );
@@ -669,117 +905,111 @@ export function PopupApp() {
     content = (
       <PopupDraftDetailScreen
         draft={selectedDraft}
-        saving={draftSaving}
         onChange={updateSelectedDraft}
         onSave={handleSaveSelectedDraft}
-        onToggleReady={handleToggleSelectedDraftReady}
         onShare={handleShareSelectedDraft}
+        onToggleReady={handleToggleSelectedDraftReady}
+        saving={draftSaving}
       />
     );
   } else if (currentScreen === 'feed') {
     content = (
       <PopupFeedScreen
-        artifacts={feedArtifacts}
-        onOpenArtifact={(artifactId) => setSelectedArtifactId(artifactId)}
-      />
-    );
-  } else if (currentScreen === 'settings' && dashboard) {
-    content = (
-      <PopupSettingsScreen
-        soundPreferences={dashboard.soundPreferences}
-        uiPreferences={dashboard.uiPreferences}
-        onToggleSound={updateSound}
-        onToggleNotifications={(enabled) =>
-          void updateUiPreferences({ notificationsEnabled: enabled })
-        }
-        onSetAgentCadence={(minutes) => void updateUiPreferences({ agentCadenceMinutes: minutes })}
-        onToggleLocalHelper={(enabled) =>
-          void updateUiPreferences({ localInferenceOptIn: enabled })
-        }
-      />
-    );
-  } else if (currentScreen === 'coops' && dashboard) {
-    content = (
-      <PopupCoopsScreen
-        coops={dashboard.coops.map((coop) => {
-          const badge = dashboard.coopBadges.find((item) => item.coopId === coop.profile.id);
-          return {
-            id: coop.profile.id,
-            name: coop.profile.name,
-            badgeText:
-              badge && badge.pendingAttentionCount > 0
-                ? `${badge.pendingAttentionCount} waiting`
-                : undefined,
-          };
-        })}
-        activeCoopId={dashboard.activeCoopId}
-        onSwitch={handleSwitchCoop}
-        onCreate={() => navigation.navigate('create')}
-        onJoin={() => navigation.navigate('join')}
+        activeFilterId={feedFilterId}
+        artifacts={filteredFeedArtifacts}
+        filterOptions={filterOptions}
+        onChangeFilter={setFeedFilterId}
+        onOpenArtifact={(artifactId) => {
+          setProfileOpen(false);
+          setSelectedArtifactId(artifactId);
+        }}
       />
     );
   } else {
     content = (
       <PopupHomeScreen
-        draftCount={visibleDrafts.length}
-        lastCaptureLabel={formatRelativeTime(dashboard?.summary?.lastCaptureAt)}
-        syncLabel={syncStatus.label}
-        syncDetail={syncStatus.detail}
-        syncTone={syncStatus.tone}
-        reviewQueue={homeQueueItems}
-        onPrimaryAction={() =>
-          visibleDrafts.length > 0
-            ? navigation.navigate('drafts')
-            : void captureActions.runManualCapture()
-        }
-        primaryActionLabel={homePrimaryActionLabel}
+        noteExpanded={noteExpanded}
+        noteText={noteExpanded ? noteDraftText : homeNote.state.text}
         onCaptureTab={() => void captureActions.runActiveTabCapture()}
-        onOpenDrafts={() => navigation.navigate('drafts')}
-        onOpenDraft={navigation.openDraft}
+        onChangeNote={setNoteDraftText}
+        onCollapseNotes={handleCollapseNotes}
+        onExpandNotes={handleExpandNotes}
+        onOpenAudio={() => void openReceiverCapture()}
+        onOpenFiles={() => void openReceiverCapture()}
+        onOpenSocial={() => void openWorkspace({ targetCoopId: workspaceTargetCoopId })}
+        onPasteNote={() => void handlePasteNote()}
+        onRoundUp={() => void captureActions.runManualCapture()}
+        onSaveNote={handleSaveNote}
+        statusItems={homeStatusItems}
       />
     );
   }
 
-  const showDraftsAction = currentScreen === 'home' && Boolean(activeCoop);
-  const showSettingsAction =
-    ['home', 'feed', 'coops'].includes(currentScreen) && Boolean(activeCoop);
+  const showProfileAction =
+    hasCoops && ['home', 'drafts', 'feed'].includes(currentScreen);
   const showWorkspaceAction =
-    ['home', 'feed', 'coops', 'drafts', 'draft-detail', 'settings'].includes(currentScreen) &&
-    Boolean(activeCoop);
+    hasCoops && ['home', 'drafts', 'feed', 'draft-detail'].includes(currentScreen);
 
   const header = (
     <PopupHeader
-      title={headerTitle}
-      subtitle={headerSubtitle}
-      themePreference={theme.themePreference}
+      brandActionLabel="Play coop sound"
+      brandTooltip="Play coop sound"
+      onBack={['create', 'join', 'draft-detail'].includes(currentScreen) ? navigateBack : undefined}
+      onBrandAction={() => void playRandomChickenSound(dashboard?.soundPreferences ?? defaultSoundPreferences)}
+      onOpenProfile={showProfileAction ? () => setProfileOpen((current) => !current) : undefined}
       onSetTheme={theme.setThemePreference}
-      onBack={
-        ['create', 'join', 'drafts', 'draft-detail', 'settings'].includes(currentScreen)
-          ? navigateBack
-          : undefined
+      onToggleWorkspace={
+        showWorkspaceAction ? () => void toggleWorkspace(workspaceTargetCoopId) : undefined
       }
-      onOpenDrafts={showDraftsAction ? () => navigation.navigate('drafts') : undefined}
-      onOpenSettings={showSettingsAction ? openSettingsScreen : undefined}
-      onToggleWorkspace={showWorkspaceAction ? () => void toggleWorkspace() : undefined}
+      profileOpen={profileOpen}
+      themePreference={theme.themePreference}
+      title={headerTitleForScreen(currentScreen)}
       workspaceCanClose={workspaceState.canClose}
       workspaceOpen={workspaceState.open}
     />
   );
-  const overlay = selectedArtifact ? (
+  const blockingOverlay =
+    !loading && !dashboard && dashboardError ? (
+      <PopupBlockingNotice
+        message={dashboardError}
+        onRetry={() => void loadDashboard()}
+        title="Couldn’t load Coop."
+      />
+    ) : null;
+  const profileOverlay =
+    profileOpen && dashboard ? (
+      <PopupProfilePanel
+        accountLabel={accountSummary(dashboard.authSession?.primaryAddress)}
+        coopNames={coopOptions.map((coop) => coop.name)}
+        onClose={() => setProfileOpen(false)}
+        onCreate={openCreateFlow}
+        onJoin={openJoinFlow}
+        onSetAgentCadence={(minutes) => void updateUiPreferences({ agentCadenceMinutes: minutes })}
+        onSetTheme={theme.setThemePreference}
+        onToggleNotifications={(enabled) => void updateUiPreferences({ notificationsEnabled: enabled })}
+        onToggleSound={updateSound}
+        soundPreferences={dashboard.soundPreferences}
+        themePreference={theme.themePreference}
+        uiPreferences={dashboard.uiPreferences}
+      />
+    ) : null;
+  const artifactOverlay = selectedArtifact ? (
     <PopupArtifactDialog
       artifact={selectedArtifact}
       onClose={() => setSelectedArtifactId(null)}
       onOpenInSidepanel={async () => {
-        await openWorkspace();
+        await openWorkspace({ targetCoopId: selectedArtifact.coopIds[0] });
         setSelectedArtifactId(null);
       }}
     />
   ) : null;
-  const footer = activeCoop ? (
+  const footer = hasCoops ? (
     <PopupFooterNav
       activeTab={activeFooterTab}
-      coopsBadgeCount={otherCoopsAttentionCount}
+      draftsBadgeCount={visibleDrafts.length}
       onNavigate={(tab) => {
+        setProfileOpen(false);
+        setSelectedArtifactId(null);
         if (tab === 'home') {
           navigation.goHome();
           return;
@@ -794,7 +1024,7 @@ export function PopupApp() {
       footer={footer}
       header={header}
       message={message}
-      overlay={overlay}
+      overlay={artifactOverlay ?? profileOverlay ?? blockingOverlay}
       theme={theme.resolvedTheme}
     >
       {content}

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { usePopupOverlayFocusTrap } from './hooks/usePopupOverlayFocusTrap';
 import type { PopupFeedArtifactItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
@@ -32,91 +33,11 @@ export function PopupArtifactDialog(props: {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const sourceLinks = artifact.sources.filter((source) => Boolean(source.url));
 
-  useEffect(() => {
-    const previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const surface = document.querySelector<HTMLElement>('.popup-surface');
-    const hadAriaHidden = surface?.getAttribute('aria-hidden');
-    const hadInert = surface?.hasAttribute('inert') ?? false;
-
-    if (surface) {
-      surface.setAttribute('aria-hidden', 'true');
-      surface.setAttribute('inert', '');
-    }
-
-    closeButtonRef.current?.focus();
-
-    function getFocusableElements() {
-      if (!dialogRef.current) {
-        return [] as HTMLElement[];
-      }
-
-      return Array.from(
-        dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      );
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        onClose();
-        return;
-      }
-
-      if (event.key !== 'Tab') {
-        return;
-      }
-
-      const focusableElements = getFocusableElements();
-      if (focusableElements.length === 0) {
-        event.preventDefault();
-        dialogRef.current?.focus();
-        return;
-      }
-
-      const first = focusableElements[0];
-      const last = focusableElements[focusableElements.length - 1];
-      const activeElement =
-        document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-      if (!activeElement || !dialogRef.current?.contains(activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first)?.focus();
-        return;
-      }
-
-      if (event.shiftKey && activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-        return;
-      }
-
-      if (!event.shiftKey && activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (surface) {
-        if (hadAriaHidden === null) {
-          surface.removeAttribute('aria-hidden');
-        } else {
-          surface.setAttribute('aria-hidden', hadAriaHidden);
-        }
-
-        if (!hadInert) {
-          surface.removeAttribute('inert');
-        }
-      }
-
-      previousFocus?.focus();
-    };
-  }, [onClose]);
+  usePopupOverlayFocusTrap({
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    onClose,
+  });
 
   return (
     <div className="popup-dialog-backdrop" onClick={onClose} role="presentation">

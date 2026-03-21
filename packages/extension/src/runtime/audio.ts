@@ -15,6 +15,13 @@ const soundFiles: Record<SoundEvent, { src: string; volume: number }> = {
   'sound-test': { src: '/audio/coop-squeaky-test.wav', volume: 0.68 },
 };
 
+const chickenSoundEvents: SoundEvent[] = [
+  'coop-created',
+  'artifact-published',
+  'review-digest-ready',
+  'action-awaiting-review',
+];
+
 async function playSoundFile(event: SoundEvent) {
   const AudioCtor = globalThis.Audio as (new (src?: string) => HTMLAudioElement) | undefined;
   const sound = soundFiles[event];
@@ -42,6 +49,10 @@ export async function playCoopSound(event: SoundEvent, preferences: SoundPrefere
     return;
   }
 
+  if (typeof AudioContext !== 'function') {
+    return;
+  }
+
   const context = audioContext ?? new AudioContext();
   audioContext = context;
 
@@ -62,4 +73,14 @@ export async function playCoopSound(event: SoundEvent, preferences: SoundPrefere
     oscillator.stop(offset + step.durationMs / 1000);
     offset += step.durationMs / 1000;
   }
+}
+
+export async function playRandomChickenSound(preferences: SoundPreferences) {
+  const index = Math.floor(Math.random() * chickenSoundEvents.length);
+  const event = chickenSoundEvents[index] ?? chickenSoundEvents[0];
+  if (!event) {
+    return;
+  }
+
+  await playCoopSound(event, preferences);
 }

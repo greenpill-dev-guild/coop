@@ -3,6 +3,9 @@ import { type DashboardResponse, sendRuntimeMessage } from '../../../runtime/mes
 import {
   selectActiveCoop,
   selectActiveMember,
+  selectAggregateArtifacts,
+  selectAggregateReadyDrafts,
+  selectAggregateVisibleDrafts,
   selectReadyDrafts,
   selectRecentArtifacts,
   selectVisibleDrafts,
@@ -33,10 +36,14 @@ export function usePopupDashboard() {
     loading,
     dashboardError: message,
     loadDashboard,
+    coops: dashboard?.coops ?? [],
     activeCoop: useMemo(() => selectActiveCoop(dashboard), [dashboard]),
     activeMember: useMemo(() => selectActiveMember(dashboard), [dashboard]),
-    visibleDrafts: useMemo(() => selectVisibleDrafts(dashboard), [dashboard]),
-    readyDrafts: useMemo(() => selectReadyDrafts(dashboard), [dashboard]),
-    recentArtifacts: useMemo(() => selectRecentArtifacts(dashboard), [dashboard]),
+    visibleDrafts: useMemo(() => selectAggregateVisibleDrafts(dashboard), [dashboard]),
+    readyDrafts: useMemo(() => selectAggregateReadyDrafts(dashboard), [dashboard]),
+    recentArtifacts: useMemo(() => selectAggregateArtifacts(dashboard), [dashboard]),
+    activeCoopDrafts: useMemo(() => selectVisibleDrafts(dashboard), [dashboard]),
+    activeCoopReadyDrafts: useMemo(() => selectReadyDrafts(dashboard), [dashboard]),
+    activeCoopArtifacts: useMemo(() => selectRecentArtifacts(dashboard), [dashboard]),
   };
 }

@@ -6,9 +6,7 @@ export type PopupScreen =
   | 'join'
   | 'drafts'
   | 'draft-detail'
-  | 'feed'
-  | 'settings'
-  | 'coops';
+  | 'feed';
 
 export type PopupThemePreference = 'light' | 'dark' | 'system';
 
@@ -42,18 +40,30 @@ export interface PopupActivityItem {
   kind: 'draft' | 'artifact';
 }
 
-export interface PopupHomeQueueItem {
+export interface PopupDraftListItem {
   id: string;
   title: string;
   summary: string;
   previewImageUrl?: string;
   category: ArtifactCategory;
   coopLabel: string;
+  coopIds: string[];
   workflowStage: ReviewDraftWorkflowStage;
 }
 
 export interface PopupFeedArtifactItem extends Artifact {
   coopLabel: string;
+  coopIds: string[];
 }
 
-export type PopupFooterTab = 'home' | 'feed' | 'coops';
+export interface PopupChoiceOption<T extends string | number> {
+  id: T;
+  label: string;
+}
+
+export interface PopupHomeNoteState {
+  text: string;
+  updatedAt?: string;
+}
+
+export type PopupFooterTab = 'home' | 'drafts' | 'feed';

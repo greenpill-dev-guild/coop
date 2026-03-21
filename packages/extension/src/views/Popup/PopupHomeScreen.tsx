@@ -1,136 +1,153 @@
-import { useState } from 'react';
 import { PopupTooltip } from './PopupTooltip';
-import type { PopupHomeQueueItem } from './popup-types';
 
-function formatCategoryLabel(value: string) {
-  return value
-    .split('-')
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
+interface PopupHomeStatusItem {
+  id: string;
+  label: string;
+  value: string;
+  tone?: 'ok' | 'warning' | 'error';
+  detail?: string;
 }
 
-function QueueThumbnail(props: { item: PopupHomeQueueItem }) {
-  const { item } = props;
-  const [imageMissing, setImageMissing] = useState(!item.previewImageUrl);
-
-  if (item.previewImageUrl && !imageMissing) {
-    return (
-      <img
-        alt=""
-        className="popup-review-queue__thumb-image"
-        onError={() => setImageMissing(true)}
-        src={item.previewImageUrl}
-      />
-    );
+function firstLinePreview(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Paste or jot a quick note for later.';
   }
 
-  return (
-    <span aria-hidden="true" className="popup-review-queue__thumb-fallback">
-      {item.title.charAt(0).toUpperCase()}
-    </span>
-  );
+  return trimmed.split('\n')[0] ?? trimmed;
 }
 
 export function PopupHomeScreen(props: {
-  draftCount: number;
-  lastCaptureLabel: string;
-  syncLabel: string;
-  syncDetail: string;
-  syncTone: 'ok' | 'warning' | 'error';
-  reviewQueue: PopupHomeQueueItem[];
-  onPrimaryAction: () => void;
-  primaryActionLabel: string;
+  statusItems: PopupHomeStatusItem[];
+  noteText: string;
+  noteExpanded: boolean;
+  onExpandNotes: () => void;
+  onCollapseNotes: () => void;
+  onChangeNote: (value: string) => void;
+  onSaveNote: () => void;
+  onPasteNote: () => void;
+  onRoundUp: () => void;
   onCaptureTab: () => void;
-  onOpenDrafts: () => void;
-  onOpenDraft: (draftId: string) => void;
+  onOpenAudio: () => void;
+  onOpenFiles: () => void;
+  onOpenSocial: () => void;
 }) {
   const {
-    draftCount,
-    lastCaptureLabel,
-    syncLabel,
-    syncDetail,
-    syncTone,
-    reviewQueue,
-    onPrimaryAction,
-    primaryActionLabel,
+    statusItems,
+    noteText,
+    noteExpanded,
+    onExpandNotes,
+    onCollapseNotes,
+    onChangeNote,
+    onSaveNote,
+    onPasteNote,
+    onRoundUp,
     onCaptureTab,
-    onOpenDrafts,
-    onOpenDraft,
+    onOpenAudio,
+    onOpenFiles,
+    onOpenSocial,
   } = props;
 
   return (
-    <section className="popup-screen popup-screen--home">
-      <div className="popup-stat-grid" aria-label="Quick status">
-        <div className="popup-stat">
-          <span>Drafts</span>
-          <strong>{draftCount}</strong>
-        </div>
-        <div className="popup-stat">
-          <span>Last roundup</span>
-          <strong>{lastCaptureLabel}</strong>
-        </div>
-        <PopupTooltip content={syncDetail}>
-          {({ targetProps }) => (
-            <div
-              {...targetProps}
-              className={`popup-stat popup-stat--interactive popup-stat--tone-${syncTone}`}
-              tabIndex={0}
-            >
-              <span>Sync</span>
-              <strong>{syncLabel}</strong>
-            </div>
-          )}
-        </PopupTooltip>
+    <section className="popup-screen popup-screen--home-aggregate">
+      <div className="popup-copy-block popup-copy-block--compact">
+        <h1>Home</h1>
+        <p>Capture quickly, keep a note, and hand off heavier work when you need it.</p>
       </div>
 
-      <div className="popup-home-actions">
-        <button className="popup-primary-action" onClick={onPrimaryAction} type="button">
-          {primaryActionLabel}
+      <div aria-label="Home status" className="popup-status-strip">
+        {statusItems.map((item) => {
+          const chip = (
+            <span
+              className={`popup-status-pill popup-status-pill--tone-${item.tone ?? 'ok'}`}
+              key={item.id}
+            >
+              <strong>{item.label}</strong>
+              <span>{item.value}</span>
+            </span>
+          );
+
+          if (!item.detail) {
+            return chip;
+          }
+
+          return (
+            <PopupTooltip content={item.detail} key={item.id}>
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label={`${item.label}: ${item.value}`}
+                  className="popup-status-pill popup-status-pill--button"
+                  type="button"
+                >
+                  <strong>{item.label}</strong>
+                  <span>{item.value}</span>
+                </button>
+              )}
+            </PopupTooltip>
+          );
+        })}
+      </div>
+
+      <div className="popup-stack">
+        <button className="popup-primary-action" onClick={onRoundUp} type="button">
+          Round up
         </button>
         <button className="popup-secondary-action" onClick={onCaptureTab} type="button">
           Capture tab
         </button>
       </div>
 
-      <section className="popup-list-section">
+      <section className="popup-note-card">
         <div className="popup-section-heading">
-          <strong>Review queue</strong>
-          <button className="popup-text-button" onClick={onOpenDrafts} type="button">
-            See all
-          </button>
+          <strong>Notes</strong>
+          {noteExpanded ? (
+            <button className="popup-text-button" onClick={onCollapseNotes} type="button">
+              Collapse
+            </button>
+          ) : null}
         </div>
-        {reviewQueue.length > 0 ? (
-          <ul className="popup-list-reset popup-review-queue">
-            {reviewQueue.map((item) => (
-              <li key={item.id}>
-                <button
-                  className="popup-review-queue__card"
-                  onClick={() => onOpenDraft(item.id)}
-                  type="button"
-                >
-                  <span className="popup-review-queue__thumb">
-                    <QueueThumbnail item={item} />
-                  </span>
-                  <span className="popup-review-queue__body">
-                    <strong>{item.title}</strong>
-                    <span className="popup-review-queue__summary">{item.summary}</span>
-                    <span className="popup-review-queue__pills">
-                      <span className="popup-mini-pill">{formatCategoryLabel(item.category)}</span>
-                      <span className="popup-mini-pill popup-mini-pill--muted">
-                        {item.coopLabel}
-                      </span>
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+
+        {noteExpanded ? (
+          <div className="popup-form">
+            <label className="popup-field">
+              <span>Your note</span>
+              <textarea
+                onChange={(event) => onChangeNote(event.target.value)}
+                placeholder="Paste a thought, a quote, or the first line of something worth keeping."
+                value={noteText}
+              />
+            </label>
+            <div className="popup-inline-actions">
+              <button className="popup-text-button" onClick={onPasteNote} type="button">
+                Paste
+              </button>
+              <button className="popup-primary-action popup-primary-action--small" onClick={onSaveNote} type="button">
+                Save note
+              </button>
+            </div>
+          </div>
         ) : (
-          <p className="popup-empty-state">
-            Nothing is waiting for review right now. You can still open the queue or round up a new
-            tab.
-          </p>
+          <button className="popup-note-preview" onClick={onExpandNotes} type="button">
+            <span className="popup-note-preview__label">Quick note</span>
+            <strong>{firstLinePreview(noteText)}</strong>
+          </button>
         )}
+      </section>
+
+      <section className="popup-handoff-grid" aria-label="Capture handoffs">
+        <button className="popup-handoff-card" onClick={onOpenAudio} type="button">
+          <strong>Audio</strong>
+          <span>Voice note</span>
+        </button>
+        <button className="popup-handoff-card" onClick={onOpenFiles} type="button">
+          <strong>Files</strong>
+          <span>Import via receiver</span>
+        </button>
+        <button className="popup-handoff-card" onClick={onOpenSocial} type="button">
+          <strong>Social</strong>
+          <span>Open full view</span>
+        </button>
       </section>
     </section>
   );

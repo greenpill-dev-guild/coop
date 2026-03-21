@@ -31,18 +31,12 @@ const initialNavigationState: PopupNavigationState = {
 };
 
 function normalizeScreen(screen: string | undefined): PopupScreen {
-  if (screen === 'switcher') {
-    return 'coops';
-  }
-
   switch (screen) {
     case 'create':
     case 'join':
     case 'drafts':
     case 'draft-detail':
     case 'feed':
-    case 'settings':
-    case 'coops':
       return screen;
     default:
       return 'home';

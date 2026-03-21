@@ -27,17 +27,16 @@ function FeedIcon() {
   );
 }
 
-function CoopsIcon() {
+function ChickensIcon() {
   return (
     <svg aria-hidden="true" className="popup-footer-nav__icon" fill="none" viewBox="0 0 20 20">
-      <circle cx="6" cy="7" fill="currentColor" r="1.5" />
-      <circle cx="14" cy="7" fill="currentColor" r="1.5" />
       <path
-        d="M3.8 15c.7-2.1 2-3.2 4.2-3.2s3.5 1.1 4.2 3.2M9.8 15c.5-1.8 1.7-2.8 3.6-2.8s3.2 1 3.8 2.8"
+        d="M6 3.5h5l3.5 3.5V16.5H6z"
         stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.3"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
       />
+      <path d="M8.5 10h3M8.5 12.5h2" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -48,22 +47,22 @@ const footerNavItems: Array<{
   label: string;
 }> = [
   { id: 'home', label: 'Home', icon: <HomeIcon /> },
+  { id: 'drafts', label: 'Chickens', icon: <ChickensIcon /> },
   { id: 'feed', label: 'Feed', icon: <FeedIcon /> },
-  { id: 'coops', label: 'Coops', icon: <CoopsIcon /> },
 ];
 
 export function PopupFooterNav(props: {
   activeTab: PopupFooterTab;
-  coopsBadgeCount?: number;
+  draftsBadgeCount?: number;
   onNavigate: (tab: PopupFooterTab) => void;
 }) {
-  const { activeTab, coopsBadgeCount = 0, onNavigate } = props;
+  const { activeTab, draftsBadgeCount = 0, onNavigate } = props;
 
   return (
     <nav aria-label="Popup navigation" className="popup-footer-nav">
       {footerNavItems.map((item) => {
         const isActive = item.id === activeTab;
-        const showBadge = item.id === 'coops' && coopsBadgeCount > 0;
+        const showBadge = item.id === 'drafts' && draftsBadgeCount > 0;
 
         return (
           <button
@@ -77,7 +76,7 @@ export function PopupFooterNav(props: {
               {item.icon}
               {showBadge ? (
                 <span className="popup-footer-nav__badge">
-                  {coopsBadgeCount > 9 ? '9+' : coopsBadgeCount}
+                  {draftsBadgeCount > 9 ? '9+' : draftsBadgeCount}
                 </span>
               ) : null}
             </span>

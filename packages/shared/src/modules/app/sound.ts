@@ -64,7 +64,7 @@ export function soundPattern(event: SoundEvent): ToneStep[] {
 }
 
 export const defaultSoundPreferences: SoundPreferences = {
-  enabled: false,
+  enabled: true,
   reducedMotion: false,
   reducedSound: false,
 };

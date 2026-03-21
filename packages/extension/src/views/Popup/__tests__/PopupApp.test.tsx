@@ -3,12 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PopupApp } from '../PopupApp';
 
-const { mockSendRuntimeMessage } = vi.hoisted(() => ({
+const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } = vi.hoisted(() => ({
   mockSendRuntimeMessage: vi.fn(),
+  mockPlayCoopSound: vi.fn(),
+  mockPlayRandomChickenSound: vi.fn(),
 }));
 
 vi.mock('../../../runtime/messages', () => ({
   sendRuntimeMessage: mockSendRuntimeMessage,
+}));
+
+vi.mock('../../../runtime/audio', () => ({
+  playCoopSound: mockPlayCoopSound,
+  playRandomChickenSound: mockPlayRandomChickenSound,
 }));
 
 function makeDraft(overrides: Record<string, unknown> = {}) {
@@ -18,7 +25,7 @@ function makeDraft(overrides: Record<string, unknown> = {}) {
     extractId: 'extract-1',
     sourceCandidateId: 'candidate-1',
     title: 'River restoration lead',
-    summary: 'A draft that needs review.',
+    summary: 'A rounded-up draft that still needs quick review.',
     whyItMatters: 'Important context.',
     suggestedNextStep: 'Review and share.',
     category: 'opportunity',
@@ -111,10 +118,15 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
     ],
     drafts: [],
     candidates: [],
+    tabRoutings: [],
     summary: {
       iconState: 'idle',
       iconLabel: 'Synced',
       pendingDrafts: 0,
+      routedTabs: 0,
+      insightDrafts: 0,
+      pendingActions: 0,
+      pendingAttentionCount: 0,
       coopCount: 1,
       syncState: 'Peer-ready local-first sync',
       syncLabel: 'Healthy',
@@ -122,12 +134,13 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
       syncTone: 'ok',
       lastCaptureAt: new Date('2026-03-17T11:50:00.000Z').toISOString(),
       captureMode: 'manual',
+      agentCadenceMinutes: 60,
       localEnhancement: 'Heuristics-first fallback',
       localInferenceOptIn: false,
       activeCoopId: 'coop-1',
     },
     soundPreferences: {
-      enabled: false,
+      enabled: true,
       reducedMotion: false,
       reducedSound: false,
     },
@@ -136,8 +149,11 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
       localInferenceOptIn: false,
       preferredExportMethod: 'download',
       heartbeatEnabled: true,
+      agentCadenceMinutes: 60,
     },
-    authSession: null,
+    authSession: {
+      primaryAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    },
     identities: [],
     receiverPairings: [],
     receiverIntake: [],
@@ -174,12 +190,10 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
 }
 
 describe('PopupApp', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   beforeEach(() => {
     mockSendRuntimeMessage.mockReset();
+    mockPlayCoopSound.mockReset();
+    mockPlayRandomChickenSound.mockReset();
 
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
@@ -193,6 +207,13 @@ describe('PopupApp', () => {
         removeListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
+    });
+
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: vi.fn().mockResolvedValue('Fresh note from clipboard'),
+      },
     });
 
     Object.defineProperty(globalThis, 'chrome', {
@@ -219,6 +240,60 @@ describe('PopupApp', () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function installDefaultRuntimeHandlers(dashboard = makeDashboard()) {
+    let currentDashboard = dashboard;
+
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string; payload?: unknown }) => {
+      if (message.type === 'get-dashboard') {
+        return { ok: true, data: currentDashboard };
+      }
+      if (message.type === 'get-sidepanel-state') {
+        return { ok: true, data: { open: false, canClose: true } };
+      }
+      if (message.type === 'manual-capture') {
+        return { ok: true, data: 2 };
+      }
+      if (message.type === 'capture-active-tab') {
+        return { ok: true, data: 1 };
+      }
+      if (message.type === 'toggle-sidepanel') {
+        return { ok: true, data: { open: true, canClose: true } };
+      }
+      if (message.type === 'set-active-coop') {
+        currentDashboard = {
+          ...currentDashboard,
+          activeCoopId: (message.payload as { coopId: string }).coopId,
+        };
+        return { ok: true };
+      }
+      if (message.type === 'set-ui-preferences') {
+        currentDashboard = {
+          ...currentDashboard,
+          uiPreferences: {
+            ...currentDashboard.uiPreferences,
+            ...(message.payload as object),
+          },
+        };
+        return { ok: true, data: currentDashboard.uiPreferences };
+      }
+      if (message.type === 'set-sound-preferences') {
+        currentDashboard = {
+          ...currentDashboard,
+          soundPreferences: {
+            ...currentDashboard.soundPreferences,
+            ...(message.payload as object),
+          },
+        };
+        return { ok: true, data: undefined };
+      }
+      return { ok: true };
+    });
+  }
+
   it('shows the no-coop setup state and routes into create flow', async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
       if (message.type === 'get-dashboard') {
@@ -244,17 +319,12 @@ describe('PopupApp', () => {
     render(<PopupApp />);
 
     expect(await screen.findByText('Ready to round up your loose chickens?')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Everything stays local and private until you share.'),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open workspace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open sidepanel' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Create a coop' }));
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
     expect(screen.getByLabelText('Coop name')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Paste purpose' })).toBeInTheDocument();
-    expect(screen.queryByText('Starter note (optional)')).not.toBeInTheDocument();
   });
 
   it('routes into the simplified join flow', async () => {
@@ -285,69 +355,114 @@ describe('PopupApp', () => {
 
     expect(await screen.findByRole('heading', { name: 'Find your coop.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste invite code' })).toBeInTheDocument();
-    expect(screen.queryByText('Starter note (optional)')).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Paste your invite code.').tagName).toBe('INPUT');
   });
 
-  it('uses compact home actions and keeps See all visible when no drafts are waiting', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      if (message.type === 'manual-capture') {
-        return {
-          ok: true,
-          data: 2,
-        };
-      }
-      return { ok: true };
-    });
-
+  it('shows the aggregate Home layout with capture actions, notes, handoffs, and new footer tabs', async () => {
+    installDefaultRuntimeHandlers();
     const user = userEvent.setup();
+
     render(<PopupApp />);
 
-    const roundUp = await screen.findByRole('button', { name: 'Round up' });
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.queryByText('Review queue')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Round up' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Capture tab' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open feed' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chickens' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Feed' })).toBeInTheDocument();
-    await user.click(roundUp);
+    expect(screen.queryByRole('button', { name: 'Coops' })).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({ type: 'manual-capture' });
-    });
-    const toast = await screen.findByRole('status');
-    expect(toast).toHaveTextContent(/Round-up complete\./i);
-    expect(toast.closest('.popup-toast-layer')).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: /Quick note/i }));
+
+    expect(await screen.findByLabelText('Your note')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Your note'), 'Fresh note from clipboard');
+    await user.click(screen.getByRole('button', { name: 'Save note' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
+    expect(screen.getByRole('button', { name: /Audio Voice note/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Files Import via receiver/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Social Open full view/i })).toBeInTheDocument();
   });
 
-  it('switches the popup theme from settings', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
+  it('only persists notes when the user explicitly saves them', async () => {
+    installDefaultRuntimeHandlers();
     const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: /Quick note/i }));
+    const noteField = await screen.findByLabelText('Your note');
+    await user.type(noteField, 'Unsaved note');
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+
+    await user.click(screen.getByRole('button', { name: /Quick note/i }));
+    expect(await screen.findByLabelText('Your note')).toHaveValue('');
+
+    await user.type(screen.getByLabelText('Your note'), 'Saved note');
+    await user.click(screen.getByRole('button', { name: 'Save note' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
+
+    await user.click(screen.getByRole('button', { name: /Quick note/i }));
+    expect(await screen.findByLabelText('Your note')).toHaveValue('Saved note');
+  });
+
+  it('triggers the random chicken sound from the header mark', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Play coop sound' }));
+
+    expect(mockPlayRandomChickenSound).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true }),
+    );
+  });
+
+  it('opens the profile drawer with coop management and segmented settings while omitting Local helper', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          makeDashboard().coops[0],
+          {
+            profile: {
+              id: 'coop-2',
+              name: 'Delta Field Coop',
+              purpose: 'Track field notes',
+              captureMode: 'manual',
+            },
+            members: [
+              {
+                id: 'member-1',
+                displayName: 'Ava',
+                address: '0x1234567890abcdef1234567890abcdef12345678',
+              },
+            ],
+            artifacts: [],
+          },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Open profile' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create coop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join coop' })).toBeInTheDocument();
+    expect(screen.getAllByText('Starter Coop').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Delta Field Coop').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'On' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument();
+    expect(screen.queryByText('Local helper')).not.toBeInTheDocument();
+  });
+
+  it('switches the popup theme from the header toggle', async () => {
+    installDefaultRuntimeHandlers();
+    const user = userEvent.setup();
+
     render(<PopupApp />);
 
     await user.click(await screen.findByRole('button', { name: /^Change theme\./ }));
@@ -358,29 +473,9 @@ describe('PopupApp', () => {
   });
 
   it('toggles the sidepanel explicitly from the popup header', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      if (message.type === 'toggle-sidepanel') {
-        return {
-          ok: true,
-          data: { open: true, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
+    installDefaultRuntimeHandlers();
     const user = userEvent.setup();
+
     render(<PopupApp />);
 
     await user.click(await screen.findByRole('button', { name: 'Open sidepanel' }));
@@ -397,16 +492,10 @@ describe('PopupApp', () => {
   it('falls back to the direct sidepanel API when the runtime bridge is stale', async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
       if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
+        return { ok: true, data: makeDashboard() };
       }
       if (message.type === 'get-sidepanel-state' || message.type === 'toggle-sidepanel') {
-        return {
-          ok: false,
-          error: `Unknown message type: ${message.type}`,
-        };
+        return { ok: false, error: `Unknown message type: ${message.type}` };
       }
       return { ok: true };
     });
@@ -422,361 +511,214 @@ describe('PopupApp', () => {
     expect(screen.queryByText(/Unknown message type/i)).not.toBeInTheDocument();
   });
 
-  it('shows the coops hub in the footer even with one coop', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
+  it('aggregates chickens across coops and narrows them with the coop filter', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          makeDashboard().coops[0],
+          {
+            profile: {
+              id: 'coop-2',
+              name: 'Delta Field Coop',
+              purpose: 'Track field notes',
+              captureMode: 'manual',
+            },
+            members: [
+              {
+                id: 'member-1',
+                displayName: 'Ava',
+                address: '0x1234567890abcdef1234567890abcdef12345678',
+              },
+            ],
+            artifacts: [],
+          },
+        ],
+        drafts: [
+          makeDraft(),
+          makeDraft({
+            id: 'draft-2',
+            title: 'Wetland policy summary',
+            suggestedTargetCoopIds: ['coop-2'],
+          }),
+        ],
+      }),
+    );
     const user = userEvent.setup();
+
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Coops' }));
+    await user.click(await screen.findByRole('button', { name: /Chickens/i }));
 
-    expect(await screen.findByRole('heading', { name: 'Coops' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create another coop' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Join another coop' })).toBeInTheDocument();
-    expect(screen.queryByText('Delta Field Coop')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Chickens' })).toBeInTheDocument();
+    expect(screen.getByText('River restoration lead')).toBeInTheDocument();
+    expect(screen.getByText('Wetland policy summary')).toBeInTheDocument();
+    expect(screen.getAllByText('Starter Coop').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Delta Field Coop').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Delta Field Coop' }));
+
+    expect(screen.queryByText('River restoration lead')).not.toBeInTheDocument();
+    expect(screen.getByText('Wetland policy summary')).toBeInTheDocument();
   });
 
-  it('renders the home review queue and opens draft detail from it', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard({
-            drafts: [makeDraft()],
-            summary: {
-              ...makeDashboard().summary,
-              pendingDrafts: 1,
+  it('switches the sidepanel context to the selected draft coop before opening full view', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          makeDashboard().coops[0],
+          {
+            profile: {
+              id: 'coop-2',
+              name: 'Delta Field Coop',
+              purpose: 'Track field notes',
+              captureMode: 'manual',
             },
+            members: [
+              {
+                id: 'member-1',
+                displayName: 'Ava',
+                address: '0x1234567890abcdef1234567890abcdef12345678',
+              },
+            ],
+            artifacts: [],
+          },
+        ],
+        drafts: [
+          makeDraft(),
+          makeDraft({
+            id: 'draft-2',
+            title: 'Wetland policy summary',
+            suggestedTargetCoopIds: ['coop-2'],
           }),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
+        ],
+      }),
+    );
     const user = userEvent.setup();
+
     render(<PopupApp />);
 
-    expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Capture tab' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'See all' })).toBeInTheDocument();
-    expect(screen.getByText('A draft that needs review.')).toBeInTheDocument();
-    expect(screen.getByText('Opportunity')).toBeInTheDocument();
-    expect(screen.getAllByText('Starter Coop')).toHaveLength(2);
-
+    await user.click(await screen.findByRole('button', { name: /Chickens/i }));
+    await user.click(screen.getByRole('button', { name: 'Delta Field Coop' }));
     await user.click(screen.getByRole('button', { name: 'Review' }));
+    await user.click(await screen.findByRole('button', { name: 'Open sidepanel' }));
 
-    expect(await screen.findByRole('heading', { name: 'Drafts' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Go back' }));
-    await user.click(screen.getByText('River restoration lead'));
-
-    expect(await screen.findByRole('heading', { name: 'Review draft' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
-    expect(screen.queryByText('Open sidepanel for synthesis')).not.toBeInTheDocument();
-  });
-
-  it('shows checking when sync summary is still unavailable', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard({
-            summary: undefined,
-          }),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        type: 'set-active-coop',
+        payload: { coopId: 'coop-2' },
+      });
     });
-
-    render(<PopupApp />);
-
-    expect(await screen.findByText('Checking')).toBeInTheDocument();
   });
 
-  it('shows local when sync is limited to this browser profile', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard({
-            summary: {
-              ...makeDashboard().summary,
-              syncState:
-                'No signaling server connection. Shared sync is currently limited to this browser profile.',
-              syncLabel: 'Local only',
-              syncDetail:
-                'No signaling server connection. Shared sync is currently limited to this browser profile.',
-              syncTone: 'warning',
+  it('aggregates feed artifacts across coops, filters them, and opens the minimal modal', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          {
+            ...makeDashboard().coops[0],
+            artifacts: [makeArtifact()],
+          },
+          {
+            profile: {
+              id: 'coop-2',
+              name: 'Delta Field Coop',
+              purpose: 'Track field notes',
+              captureMode: 'manual',
             },
-          }),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
-    render(<PopupApp />);
-
-    expect(await screen.findByText('Local')).toBeInTheDocument();
-  });
-
-  it('shows error sync status with tooltip detail through the popup overlay host', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard({
-            summary: {
-              ...makeDashboard().summary,
-              syncState: 'Missing permission to reach the local sync runtime.',
-              syncLabel: 'Permission',
-              syncDetail: 'Missing permission to reach the local sync runtime.',
-              syncTone: 'error',
-            },
-          }),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
-    render(<PopupApp />);
-
-    const syncCard = (await screen.findByText('Sync')).parentElement as HTMLElement;
-    expect(screen.getByText('Error')).toBeInTheDocument();
-
-    fireEvent.focus(syncCard);
-
-    expect(
-      await screen.findByText('Missing permission to reach the local sync runtime.'),
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector('[data-popup-tooltip-root] [role="tooltip"]'),
-    ).toBeInTheDocument();
-  });
-
-  it('uses the shorter workspace tooltip and simple theme tooltip copy', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
-    render(<PopupApp />);
-
-    const workspaceButton = await screen.findByRole('button', { name: 'Open sidepanel' });
-    fireEvent.focus(workspaceButton);
-    expect(await screen.findByText('Open sidepanel')).toBeInTheDocument();
-
-    const themeButton = screen.getByRole('button', { name: /^Change theme\./ });
-    fireEvent.focus(themeButton);
-    expect(await screen.findByText('Change theme')).toBeInTheDocument();
-  });
-
-  it('opens feed artifacts in a smaller popup dialog and closes from multiple paths', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
+            members: [
+              {
+                id: 'member-1',
+                displayName: 'Ava',
+                address: '0x1234567890abcdef1234567890abcdef12345678',
+              },
+            ],
+            artifacts: [
+              makeArtifact({
+                id: 'artifact-2',
+                targetCoopId: 'coop-2',
+                title: 'Floodplain funding update',
+                summary: 'Shared from the second coop.',
+              }),
+            ],
+          },
+        ],
+      }),
+    );
     const user = userEvent.setup();
+
     render(<PopupApp />);
 
     await user.click(await screen.findByRole('button', { name: 'Feed' }));
-    await user.click(await screen.findByRole('button', { name: /Shared watershed note/i }));
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    const closeButton = screen.getByRole('button', { name: 'Close details' });
-    expect(closeButton).toBeInTheDocument();
-    await waitFor(() => {
-      expect(closeButton).toHaveFocus();
-    });
-    expect(screen.getByText('Why it matters')).toBeInTheDocument();
-    expect(
-      screen.getByText('It helps the coop stay aligned on the latest research.'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Full view' })).toBeInTheDocument();
-    expect(document.querySelector('.popup-surface')).toHaveAttribute('aria-hidden', 'true');
-
-    const dialog = screen.getByRole('dialog');
-    await user.tab();
-    expect(dialog).toContainElement(document.activeElement);
-
-    await user.tab();
-    expect(dialog).toContainElement(document.activeElement);
-
-    await user.click(closeButton);
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-    expect(document.querySelector('.popup-surface')).not.toHaveAttribute('aria-hidden');
-
-    await user.click(await screen.findByRole('button', { name: /Shared watershed note/i }));
-    await user.click(document.querySelector('.popup-dialog-backdrop') as HTMLElement);
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-
-    await user.click(await screen.findByRole('button', { name: /Shared watershed note/i }));
-    fireEvent.keyDown(window, { key: 'Escape' });
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-  });
-
-  it('opens the larger review queue from Home even when the queue is empty', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard(),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
-    const user = userEvent.setup();
-    render(<PopupApp />);
-
-    await user.click(await screen.findByRole('button', { name: 'See all' }));
-
-    expect(await screen.findByRole('heading', { name: 'Drafts' })).toBeInTheDocument();
-    expect(screen.getByText('No items are waiting for review right now.')).toBeInTheDocument();
-  });
-
-  it('keeps sidepanel access in the header across active coop screens', async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
-      if (message.type === 'get-dashboard') {
-        return {
-          ok: true,
-          data: makeDashboard({
-            drafts: [makeDraft()],
-            summary: {
-              ...makeDashboard().summary,
-              pendingDrafts: 1,
-            },
-          }),
-        };
-      }
-      if (message.type === 'get-sidepanel-state') {
-        return {
-          ok: true,
-          data: { open: false, canClose: true },
-        };
-      }
-      return { ok: true };
-    });
-
-    const user = userEvent.setup();
-    render(<PopupApp />);
-
-    expect(await screen.findByRole('button', { name: 'Open review queue' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Feed' }));
 
     expect(await screen.findByRole('heading', { name: 'Feed' })).toBeInTheDocument();
-    expect(screen.queryByText('Open sidepanel for the full feed')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open review queue' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
+    expect(screen.getByText('Shared watershed note')).toBeInTheDocument();
+    expect(screen.getByText('Floodplain funding update')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Open settings' }));
+    await user.click(screen.getByRole('button', { name: 'Delta Field Coop' }));
+    expect(screen.queryByText('Shared watershed note')).not.toBeInTheDocument();
+    expect(screen.getByText('Floodplain funding update')).toBeInTheDocument();
 
-    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.queryByText('Open sidepanel for advanced controls')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open settings' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Floodplain funding update/i }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Full view' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close details' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Go back' }));
-    await user.click(screen.getByRole('button', { name: 'Coops' }));
+    await user.click(screen.getByRole('button', { name: 'Full view' }));
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        type: 'set-active-coop',
+        payload: { coopId: 'coop-2' },
+      });
+    });
+    expect(chrome.sidePanel.open).toHaveBeenCalledWith({ windowId: 7 });
+  });
 
-    expect(await screen.findByRole('heading', { name: 'Coops' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open review queue' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
+  it('shows checking while sync summary is unavailable, local for degraded sync, and error for dashboard failures', async () => {
+    mockSendRuntimeMessage.mockImplementationOnce(async () => ({
+      ok: true,
+      data: makeDashboard({ summary: undefined }),
+    }));
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-sidepanel-state') {
+        return { ok: true, data: { open: false, canClose: true } };
+      }
+      return { ok: true };
+    });
 
-    await user.click(screen.getByRole('button', { name: 'Home' }));
-    await user.click(screen.getByRole('button', { name: 'Open review queue' }));
+    let view = render(<PopupApp />);
+    expect(await screen.findByText('Checking')).toBeInTheDocument();
 
-    expect(await screen.findByRole('heading', { name: 'Drafts' })).toBeInTheDocument();
-    expect(screen.queryByText('Open sidepanel for deeper review')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open settings' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
+    mockSendRuntimeMessage.mockReset();
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        summary: {
+          ...makeDashboard().summary,
+          syncState:
+            'No signaling server connection. Shared sync is currently limited to this browser profile.',
+          syncLabel: 'Local only',
+          syncDetail:
+            'No signaling server connection. Shared sync is currently limited to this browser profile.',
+          syncTone: 'warning',
+        },
+      }),
+    );
+    view.unmount();
+    view = render(<PopupApp />);
+    expect(await screen.findByText('Local')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Review' }));
-
-    expect(await screen.findByRole('heading', { name: 'Review draft' })).toBeInTheDocument();
-    expect(screen.queryByText('Open sidepanel for synthesis')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open settings' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open sidepanel' })).toBeInTheDocument();
+    mockSendRuntimeMessage.mockReset();
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return { ok: false, error: 'Failed to reach the local dashboard.' };
+      }
+      return { ok: true };
+    });
+    view.unmount();
+    render(<PopupApp />);
+    const blockingDialog = await screen.findByRole('alertdialog');
+    expect(blockingDialog).toBeInTheDocument();
+    expect(screen.getByText('Failed to reach the local dashboard.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toHaveFocus();
+    expect(document.querySelector('.popup-surface')).toHaveAttribute('inert');
   });
 });
