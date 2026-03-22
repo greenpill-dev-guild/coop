@@ -577,7 +577,7 @@ describe('settings persistence', () => {
     });
 
     expect(await getSoundPreferences(db)).toEqual({
-      enabled: false,
+      enabled: true,
       reducedMotion: false,
       reducedSound: false,
     });

@@ -27,7 +27,7 @@ describe('QR scanner overlay a11y', () => {
       value: createObjectUrl,
     });
 
-    // HTMLVideoElement.play() returns undefined in jsdom; stub it as a resolved Promise
+    // HTMLVideoElement.play() returns undefined in happy-dom; stub it as a resolved Promise
     vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(undefined);
 
     // Mock BarcodeDetector

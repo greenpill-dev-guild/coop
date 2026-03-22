@@ -7,7 +7,6 @@ import {
   getRememberedAudiencePath,
   rememberAudiencePath,
 } from '@site/src/lib/docsAudience';
-import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import styles from './styles.module.css';
 
@@ -36,9 +35,7 @@ export default function AudienceTabs() {
       {AUDIENCES.map((audience) => (
         <Link
           key={audience}
-          className={clsx(styles.tab, {
-            [styles.tabActive]: audience === activeAudience,
-          })}
+          className={`${styles.tab}${audience === activeAudience ? ` ${styles.tabActive}` : ''}`}
           to={targets[audience]}
         >
           {LABELS[audience]}

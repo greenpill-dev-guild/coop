@@ -221,7 +221,10 @@ describe('board app routes', () => {
     window.history.pushState({}, '', `/board/${snapshot.coopId}`);
 
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
 
     await act(async () => {
       render(<RootApp initialBoardSnapshot={snapshot} />);

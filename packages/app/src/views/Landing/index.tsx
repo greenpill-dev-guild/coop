@@ -777,7 +777,7 @@ export function App({
 
   useEffect(() => {
     const isTestEnvironment =
-      typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent);
+      typeof navigator !== 'undefined' && /jsdom|happy-dom/i.test(navigator.userAgent);
 
     if (
       typeof window === 'undefined' ||

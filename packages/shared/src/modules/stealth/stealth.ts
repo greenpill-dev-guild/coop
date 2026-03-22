@@ -1,5 +1,10 @@
-import { Point, etc, getPublicKey, getSharedSecret, utils } from '@noble/secp256k1';
-import { bytesToHex, keccak256, publicKeyToAddress as viemPublicKeyToAddress } from 'viem/utils';
+import { Secp256k1 } from 'ox';
+import {
+  bytesToHex,
+  hexToBytes,
+  keccak256,
+  publicKeyToAddress as viemPublicKeyToAddress,
+} from 'viem/utils';
 import {
   type StealthAddress,
   type StealthAnnouncement,
@@ -19,24 +24,30 @@ import {
  *   stealth_address = G * (spending_key + hash(shared_secret))
  */
 
+// ── Curve primitives (via ox → @noble/curves/secp256k1) ─────────────
+
+const secp = Secp256k1.noble;
+const Point = secp.ProjectivePoint;
+
+function mod(a: bigint, b: bigint): bigint {
+  const result = a % b;
+  return result >= 0n ? result : result + b;
+}
+
 // ── Internal helpers ────────────────────────────────────────────────
 
 type HexString = `0x${string}`;
 
-function stripHexPrefix(hex: string): string {
-  return hex.startsWith('0x') ? hex.slice(2) : hex;
-}
-
 function randomPrivateKey(): Uint8Array {
-  return utils.randomSecretKey();
+  return secp.utils.randomPrivateKey();
 }
 
 function compressedPublicKeyFromPrivate(privateKey: Uint8Array): Uint8Array {
-  return getPublicKey(privateKey, true);
+  return secp.getPublicKey(privateKey, true);
 }
 
 function computeSharedSecret(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
-  return getSharedSecret(privateKey, publicKey);
+  return secp.getSharedSecret(privateKey, publicKey);
 }
 
 function hashSharedSecret(sharedSecret: Uint8Array): HexString {
@@ -59,9 +70,9 @@ function computeStealthPublicKey(
   // hash(shared_secret) * G -- use scalar multiplication directly to avoid byte-length issues
   const hashedSecretScalar = hexToScalar(hashedSharedSecret);
   const hashedSecretPoint = Point.BASE.multiply(hashedSecretScalar);
-  const spendingPoint = Point.fromBytes(spendingPublicKey);
+  const spendingPoint = Point.fromHex(spendingPublicKey);
   // Stealth public key = spending_public_key + hash(shared_secret) * G
-  return spendingPoint.add(hashedSecretPoint).toBytes(false); // uncompressed for address derivation
+  return spendingPoint.add(hashedSecretPoint).toRawBytes(false); // uncompressed for address derivation
 }
 
 function publicKeyToAddress(uncompressedPublicKey: Uint8Array): HexString {
@@ -77,8 +88,8 @@ function parseMetaAddressKeys(metaAddress: string): {
   const spendingHex = cleanHex.slice(0, 66);
   const viewingHex = cleanHex.length >= 132 ? cleanHex.slice(66, 132) : spendingHex;
   return {
-    spendingPublicKey: Point.fromHex(spendingHex).toBytes(true),
-    viewingPublicKey: Point.fromHex(viewingHex).toBytes(true),
+    spendingPublicKey: Point.fromHex(spendingHex).toRawBytes(true),
+    viewingPublicKey: Point.fromHex(viewingHex).toRawBytes(true),
   };
 }
 
@@ -154,9 +165,9 @@ export function checkStealthAddress(params: {
   spendingPublicKey: string;
   viewingPrivateKey: string;
 }): boolean {
-  const viewingPrivateKeyBytes = etc.hexToBytes(stripHexPrefix(params.viewingPrivateKey));
-  const ephemeralPublicKeyBytes = etc.hexToBytes(stripHexPrefix(params.ephemeralPublicKey));
-  const spendingPublicKeyBytes = etc.hexToBytes(stripHexPrefix(params.spendingPublicKey));
+  const viewingPrivateKeyBytes = hexToBytes(params.viewingPrivateKey as HexString);
+  const ephemeralPublicKeyBytes = hexToBytes(params.ephemeralPublicKey as HexString);
+  const spendingPublicKeyBytes = hexToBytes(params.spendingPublicKey as HexString);
 
   // Compute shared secret: ECDH(viewing_private, ephemeral_public)
   const sharedSecret = computeSharedSecret(viewingPrivateKeyBytes, ephemeralPublicKeyBytes);
@@ -204,8 +215,8 @@ export function computeStealthPrivateKey(params: {
   viewingPrivateKey: string;
   ephemeralPublicKey: string;
 }): string {
-  const viewingPrivateKeyBytes = etc.hexToBytes(stripHexPrefix(params.viewingPrivateKey));
-  const ephemeralPublicKeyBytes = etc.hexToBytes(stripHexPrefix(params.ephemeralPublicKey));
+  const viewingPrivateKeyBytes = hexToBytes(params.viewingPrivateKey as HexString);
+  const ephemeralPublicKeyBytes = hexToBytes(params.ephemeralPublicKey as HexString);
 
   // Compute shared secret: ECDH(viewing_private, ephemeral_public)
   const sharedSecret = computeSharedSecret(viewingPrivateKeyBytes, ephemeralPublicKeyBytes);
@@ -214,11 +225,8 @@ export function computeStealthPrivateKey(params: {
   // stealth_private = spending_private + hash(shared_secret) mod n
   const spendingPrivateKeyBigInt = BigInt(params.spendingPrivateKey);
   const hashedSecretBigInt = BigInt(hashedSharedSecret);
-  const curveOrder = Point.CURVE().n;
-  const stealthPrivateKeyBigInt = etc.mod(
-    spendingPrivateKeyBigInt + hashedSecretBigInt,
-    curveOrder,
-  );
+  const curveOrder = secp.CURVE.n;
+  const stealthPrivateKeyBigInt = mod(spendingPrivateKeyBigInt + hashedSecretBigInt, curveOrder);
 
   return `0x${stealthPrivateKeyBigInt.toString(16).padStart(64, '0')}`;
 }

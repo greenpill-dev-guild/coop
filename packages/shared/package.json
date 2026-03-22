@@ -23,7 +23,6 @@
     "@bandada/api-sdk": "^2.8.0",
     "@coop/api": "workspace:*",
     "@kohaku-eth/provider": "^0.0.1-alpha.2",
-    "@noble/secp256k1": "^3.0.0",
     "@rhinestone/module-sdk": "^0.4.0",
     "@semaphore-protocol/core": "^4.14.2",
     "@storacha/client": "2.1.1",

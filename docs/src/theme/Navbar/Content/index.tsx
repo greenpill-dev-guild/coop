@@ -5,7 +5,6 @@ import AudienceTabs from '@site/src/components/AudienceTabs';
 import NavbarLogo from '@theme/Navbar/Logo';
 import NavbarMobileSidebarToggle from '@theme/Navbar/MobileSidebar/Toggle';
 import NavbarItem from '@theme/NavbarItem';
-import clsx from 'clsx';
 import styles from './styles.module.css';
 
 function useNavbarItems(): NavbarItemConfig[] {
@@ -40,9 +39,9 @@ export default function NavbarContent() {
   const [leftItems, rightItems] = splitNavbarItems(items);
 
   return (
-    <div className={clsx('navbar__inner', styles.navbarInner)}>
+    <div className={`navbar__inner ${styles.navbarInner}`}>
       <div
-        className={clsx(ThemeClassNames.layout.navbar.containerLeft, 'navbar__items', styles.left)}
+        className={`${ThemeClassNames.layout.navbar.containerLeft} navbar__items ${styles.left}`}
       >
         {!mobileSidebar.disabled && <NavbarMobileSidebarToggle />}
         <NavbarLogo />
@@ -54,11 +53,7 @@ export default function NavbarContent() {
       </div>
 
       <div
-        className={clsx(
-          ThemeClassNames.layout.navbar.containerRight,
-          'navbar__items navbar__items--right',
-          styles.right,
-        )}
+        className={`${ThemeClassNames.layout.navbar.containerRight} navbar__items navbar__items--right ${styles.right}`}
       >
         <NavbarItems items={rightItems} />
       </div>
