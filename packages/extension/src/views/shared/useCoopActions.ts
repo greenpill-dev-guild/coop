@@ -90,12 +90,12 @@ export function useCoopActions(deps: {
           creatorDisplayName: createForm.creatorDisplayName,
           captureMode: createForm.captureMode,
           seedContribution: createForm.seedContribution,
-          setupInsights: toSetupInsights(createForm),
+          setupInsights: toSetupInsights(createForm, createForm.spaceType),
           signalingUrls: configuredSignalingUrls,
           creator,
           onchainState,
           greenGoods: {
-            enabled: false,
+            enabled: true,
           },
         },
       });

@@ -15,10 +15,10 @@ export function PopupNoCoopScreen(props: {
       </div>
       <div className="popup-stack">
         <button className="popup-primary-action" onClick={onCreate} type="button">
-          Create a coop
+          Create a Coop
         </button>
         <button className="popup-secondary-action" onClick={onJoin} type="button">
-          Join with code
+          Join with Code
         </button>
       </div>
     </section>

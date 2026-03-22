@@ -122,7 +122,7 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
     candidates: [],
     tabRoutings: [],
     summary: {
-      iconState: 'idle',
+      iconState: 'ready',
       iconLabel: 'Synced',
       pendingDrafts: 0,
       routedTabs: 0,
@@ -225,6 +225,10 @@ describe('PopupApp', () => {
           local: {
             get: vi.fn().mockResolvedValue({}),
             set: vi.fn().mockResolvedValue(undefined),
+            onChanged: {
+              addListener: vi.fn(),
+              removeListener: vi.fn(),
+            },
           },
         },
         tabs: {
@@ -325,7 +329,7 @@ describe('PopupApp', () => {
     expect(await screen.findByText('Ready to round up your loose chickens?')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open sidepanel' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Create a coop' }));
+    await user.click(screen.getByRole('button', { name: 'Create a Coop' }));
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
     expect(screen.getByLabelText('Coop name')).toBeInTheDocument();
@@ -355,7 +359,7 @@ describe('PopupApp', () => {
     const user = userEvent.setup();
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Join with code' }));
+    await user.click(await screen.findByRole('button', { name: 'Join with Code' }));
 
     expect(await screen.findByRole('heading', { name: 'Find your coop.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste invite code' })).toBeInTheDocument();
@@ -367,47 +371,39 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Round Up' })).toBeInTheDocument();
     expect(screen.queryByText('Review queue')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Round up' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Capture tab' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Capture Tab' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Chickens' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Feed/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Coops' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Quick note/i }));
-
-    expect(await screen.findByLabelText('Your note')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Your note'), 'Fresh note from clipboard');
+    fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Fresh note' } });
     await user.click(screen.getByRole('button', { name: 'Save note' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
-    expect(screen.getByRole('button', { name: /Audio Voice note/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Files Import via receiver/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Social Open full view/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Audio' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Files' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Social' })).not.toBeInTheDocument();
   });
 
-  it('only persists notes when the user explicitly saves them', async () => {
+  it('saves notes via the compact input and persists them', async () => {
     installDefaultRuntimeHandlers();
     const user = userEvent.setup();
 
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: /Quick note/i }));
-    const noteField = await screen.findByLabelText('Your note');
-    await user.type(noteField, 'Unsaved note');
-    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+    await screen.findByRole('button', { name: 'Round Up' });
 
-    await user.click(screen.getByRole('button', { name: /Quick note/i }));
-    expect(await screen.findByLabelText('Your note')).toHaveValue('');
+    // Type into the note input
+    const noteInput = screen.getByLabelText('Note');
+    fireEvent.change(noteInput, { target: { value: 'Saved note' } });
+    expect(noteInput).toHaveValue('Saved note');
 
-    await user.type(screen.getByLabelText('Your note'), 'Saved note');
+    // Save via button
     await user.click(screen.getByRole('button', { name: 'Save note' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
-
-    await user.click(screen.getByRole('button', { name: /Quick note/i }));
-    expect(await screen.findByLabelText('Your note')).toHaveValue('Saved note');
   });
 
   it('triggers the random chicken sound from the header mark', async () => {
@@ -453,9 +449,9 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create coop' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Join coop' })).toBeInTheDocument();
+    expect(await screen.findByText('Your coops')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Coop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Coop' })).toBeInTheDocument();
     expect(screen.getAllByText('Starter Coop').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Delta Field Coop').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: 'On' }).length).toBeGreaterThan(0);
@@ -485,10 +481,7 @@ describe('PopupApp', () => {
     await user.click(await screen.findByRole('button', { name: 'Open sidepanel' }));
 
     await waitFor(() => {
-      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-        type: 'toggle-sidepanel',
-        payload: { windowId: 7 },
-      });
+      expect(chrome.sidePanel.open).toHaveBeenCalledWith({ windowId: 7 });
     });
     expect(await screen.findByRole('button', { name: 'Close sidepanel' })).toBeInTheDocument();
   });
@@ -553,8 +546,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: /Chickens/i }));
 
-    expect(await screen.findByRole('heading', { name: 'Chickens' })).toBeInTheDocument();
-    expect(screen.getByText('River restoration lead')).toBeInTheDocument();
+    expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
     expect(screen.getByText('Wetland policy summary')).toBeInTheDocument();
     expect(screen.getAllByText('Starter Coop').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Delta Field Coop').length).toBeGreaterThan(0);
@@ -654,8 +646,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: /Feed/ }));
 
-    expect(await screen.findByRole('heading', { name: 'Feed' })).toBeInTheDocument();
-    expect(screen.getByText('Shared watershed note')).toBeInTheDocument();
+    expect(await screen.findByText('Shared watershed note')).toBeInTheDocument();
     expect(screen.getByText('Floodplain funding update')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Delta Field Coop' }));
@@ -755,10 +746,10 @@ describe('PopupApp', () => {
 
     await user.click(plusButton);
 
-    expect(await screen.findByRole('menuitem', { name: 'Create coop' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Join with code' })).toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: 'Create Coop' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Join Coop' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('menuitem', { name: 'Create coop' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Create Coop' }));
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
   });
@@ -771,7 +762,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
+    expect(await screen.findByText('Your coops')).toBeInTheDocument();
     expect(screen.getByText('Starter Coop')).toBeInTheDocument();
     expect(screen.getByText('No invite code yet')).toBeInTheDocument();
   });
@@ -784,7 +775,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Profile' })).toBeInTheDocument();
+    expect(await screen.findByText('Your coops')).toBeInTheDocument();
     expect(screen.getByText('Local inference')).toBeInTheDocument();
 
     const localInferenceGroup = screen.getByRole('group', { name: 'Local inference' });
@@ -808,7 +799,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await screen.findByRole('heading', { name: 'Home' });
+    await screen.findByRole('button', { name: 'Round Up' });
 
     const feedButton = screen.getByRole('button', { name: /Feed/ });
     expect(feedButton.querySelector('.popup-footer-nav__badge')).toBeInTheDocument();

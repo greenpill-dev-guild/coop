@@ -163,7 +163,7 @@ export function PopupHeader(props: {
                       }}
                       type="button"
                     >
-                      Create coop
+                      Create Coop
                     </button>
                   ) : null}
                   {onJoinCoop ? (
@@ -176,7 +176,7 @@ export function PopupHeader(props: {
                       }}
                       type="button"
                     >
-                      Join with code
+                      Join Coop
                     </button>
                   ) : null}
                 </div>

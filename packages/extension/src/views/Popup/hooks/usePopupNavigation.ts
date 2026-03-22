@@ -37,6 +37,7 @@ function normalizeScreen(screen: string | undefined): PopupScreen {
     case 'drafts':
     case 'draft-detail':
     case 'feed':
+    case 'profile':
       return screen;
     default:
       return 'home';

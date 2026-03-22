@@ -70,7 +70,7 @@ export function PopupJoinCoopScreen(props: {
 
         <div className="popup-stack">
           <button className="popup-primary-action" disabled={disabled} type="submit">
-            {submitting ? 'Joining...' : 'Join coop'}
+            {submitting ? 'Joining...' : 'Join Coop'}
           </button>
         </div>
       </form>

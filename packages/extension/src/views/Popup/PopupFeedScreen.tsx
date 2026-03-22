@@ -14,16 +14,19 @@ export function PopupFeedScreen(props: {
   activeFilterId: string;
   onChangeFilter: (filterId: string) => void;
   onOpenArtifact: (artifactId: string) => void;
+  onDismissArtifact: (artifactId: string) => void;
 }) {
-  const { artifacts, filterOptions, activeFilterId, onChangeFilter, onOpenArtifact } = props;
+  const {
+    artifacts,
+    filterOptions,
+    activeFilterId,
+    onChangeFilter,
+    onOpenArtifact,
+    onDismissArtifact,
+  } = props;
 
   return (
     <section className="popup-screen popup-screen--fill">
-      <div className="popup-copy-block popup-copy-block--compact">
-        <h1>Feed</h1>
-        <p>Shared updates from all your coops.</p>
-      </div>
-
       <PopupChoiceGroup
         ariaLabel="Filter feed by coop"
         onChange={onChangeFilter}
@@ -53,6 +56,14 @@ export function PopupFeedScreen(props: {
                       </span>
                     </span>
                   </div>
+                </button>
+                <button
+                  className="popup-feed-dismiss"
+                  onClick={() => onDismissArtifact(artifact.id)}
+                  type="button"
+                  aria-label="Dismiss"
+                >
+                  &times;
                 </button>
               </li>
             ))}

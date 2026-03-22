@@ -1,5 +1,6 @@
 import type { ReviewDraft } from '@coop/shared';
 import { PopupChoiceGroup } from './PopupChoiceGroup';
+import { PopupOnboardingHero } from './PopupOnboardingHero';
 import type { PopupChoiceOption, PopupDraftListItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
@@ -17,6 +18,7 @@ export function PopupDraftListScreen(props: {
   onOpenDraft: (draftId: string) => void;
   onMarkReady: (draft: ReviewDraft) => void | Promise<void>;
   onShare: (draft: ReviewDraft) => void | Promise<void>;
+  onRoundUp: () => void;
 }) {
   const {
     drafts,
@@ -26,15 +28,11 @@ export function PopupDraftListScreen(props: {
     onOpenDraft,
     onMarkReady,
     onShare,
+    onRoundUp,
   } = props;
 
   return (
     <section className="popup-screen popup-screen--fill">
-      <div className="popup-copy-block popup-copy-block--compact">
-        <h1>Chickens</h1>
-        <p>Rounded-up ideas across all your coops, ready for quick review.</p>
-      </div>
-
       <PopupChoiceGroup
         ariaLabel="Filter chickens by coop"
         onChange={onChangeFilter}
@@ -79,7 +77,7 @@ export function PopupDraftListScreen(props: {
                       onClick={() => void onMarkReady(draft as ReviewDraft)}
                       type="button"
                     >
-                      Mark ready
+                      Mark Ready
                     </button>
                   )}
                 </div>
@@ -87,10 +85,13 @@ export function PopupDraftListScreen(props: {
             ))}
           </ul>
         ) : (
-          <p className="popup-empty-state">
-            No chickens match this filter right now. Round up a tab or open the receiver to hatch a
-            new one.
-          </p>
+          <div className="popup-empty-state popup-empty-state--illustrated">
+            <PopupOnboardingHero variant="empty" />
+            <p>No chickens here yet. Round up some tabs to get started.</p>
+            <button className="popup-primary-action" onClick={onRoundUp} type="button">
+              Round Up
+            </button>
+          </div>
         )}
       </div>
     </section>

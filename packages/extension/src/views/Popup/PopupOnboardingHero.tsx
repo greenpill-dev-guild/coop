@@ -1,5 +1,5 @@
 export function PopupOnboardingHero(props: {
-  variant: 'welcome' | 'create' | 'join';
+  variant: 'welcome' | 'create' | 'join' | 'empty';
 }) {
   const { variant } = props;
 

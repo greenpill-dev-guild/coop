@@ -69,7 +69,7 @@ export function PopupDraftDetailScreen(props: {
               onClick={() => void onToggleReady()}
               type="button"
             >
-              {draft.workflowStage === 'ready' ? 'Send back to draft' : 'Mark ready'}
+              {draft.workflowStage === 'ready' ? 'Send Back to Draft' : 'Mark Ready'}
             </button>
             {draft.workflowStage === 'ready' ? (
               <button

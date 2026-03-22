@@ -1,6 +1,13 @@
 import type { Artifact, ArtifactCategory, ReviewDraftWorkflowStage } from '@coop/shared';
 
-export type PopupScreen = 'home' | 'create' | 'join' | 'drafts' | 'draft-detail' | 'feed';
+export type PopupScreen =
+  | 'home'
+  | 'create'
+  | 'join'
+  | 'drafts'
+  | 'draft-detail'
+  | 'feed'
+  | 'profile';
 
 export type PopupThemePreference = 'light' | 'dark' | 'system';
 
