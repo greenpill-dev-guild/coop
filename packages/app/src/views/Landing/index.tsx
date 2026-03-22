@@ -1,4 +1,10 @@
-import { type SetupInsightsInput, emptySetupInsightsInput, toSetupInsights } from '@coop/shared';
+import {
+  type CoopSpaceType,
+  type SetupInsightsInput,
+  emptySetupInsightsInput,
+  getRitualLenses,
+  toSetupInsights,
+} from '@coop/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import type { DevEnvironmentState } from '../../dev-environment';
@@ -56,18 +62,11 @@ type JourneyChicken = {
   variant?: ChickenVariant;
 };
 
-type RitualCard = {
+type RitualCardMapping = {
   id: TranscriptKey;
-  eyebrow: string;
-  title: string;
-  detail: string;
-  transcriptPrompt: string;
   currentKey: SetupFieldKey;
   painKey: SetupFieldKey;
   improveKey: SetupFieldKey;
-  currentPlaceholder: string;
-  painPlaceholder: string;
-  improvePlaceholder: string;
 };
 
 type LensProgress = {
@@ -94,7 +93,6 @@ type LandingPacketOptions = {
 type AudienceOption = {
   id: AudienceId;
   label: string;
-  descriptor: string;
 };
 
 type StoryCard = {
@@ -118,10 +116,39 @@ const journeyChickens: JourneyChicken[] = [
 ];
 
 const audienceOptions: AudienceOption[] = [
-  { id: 'persona', label: 'Personal', descriptor: 'you' },
-  { id: 'family', label: 'Family', descriptor: 'your family' },
-  { id: 'friends', label: 'Friends', descriptor: 'your friends' },
-  { id: 'community', label: 'Community', descriptor: 'your community' },
+  { id: 'persona', label: 'Personal' },
+  { id: 'family', label: 'Family' },
+  { id: 'friends', label: 'Friends' },
+  { id: 'community', label: 'Community' },
+];
+
+const audienceToSpaceType: Record<AudienceId, CoopSpaceType> = {
+  persona: 'personal',
+  family: 'family',
+  friends: 'friends',
+  community: 'community',
+};
+
+const ritualCardMappings: RitualCardMapping[] = [
+  {
+    id: 'knowledge',
+    currentKey: 'knowledgeCurrent',
+    painKey: 'knowledgePain',
+    improveKey: 'knowledgeImprove',
+  },
+  {
+    id: 'capital',
+    currentKey: 'capitalCurrent',
+    painKey: 'capitalPain',
+    improveKey: 'capitalImprove',
+  },
+  {
+    id: 'governance',
+    currentKey: 'governanceCurrent',
+    painKey: 'governancePain',
+    improveKey: 'governanceImprove',
+  },
+  { id: 'impact', currentKey: 'impactCurrent', painKey: 'impactPain', improveKey: 'impactImprove' },
 ];
 
 const howItWorksCards: StoryCard[] = [
@@ -244,64 +271,6 @@ const arrivalFlightPaths: Record<
     { x: '1vw', y: '-7vh', rotate: 0, scale: 0.3, opacity: 0 },
   ],
 };
-
-const ritualCards: RitualCard[] = [
-  {
-    id: 'knowledge',
-    eyebrow: 'Card 1',
-    title: 'Knowledge',
-    detail: 'Catch the links, notes, and research that usually run loose after the call.',
-    transcriptPrompt: 'What knowledge is your group gathering right now?',
-    currentKey: 'knowledgeCurrent',
-    painKey: 'knowledgePain',
-    improveKey: 'knowledgeImprove',
-    currentPlaceholder: 'Useful links and notes are spread across browsers, devices, and people.',
-    painPlaceholder: 'Good research gets lost before anyone can reuse it.',
-    improvePlaceholder: 'Keep the strongest context easy to revisit and act on.',
-  },
-  {
-    id: 'capital',
-    eyebrow: 'Card 2',
-    title: 'Capital',
-    detail: 'Name how funding, support, and practical opportunities show up before they disappear.',
-    transcriptPrompt: 'Where is funding or support showing up for your group?',
-    currentKey: 'capitalCurrent',
-    painKey: 'capitalPain',
-    improveKey: 'capitalImprove',
-    currentPlaceholder:
-      'Funding context lives across inboxes, tabs, and whoever happened to save the link.',
-    painPlaceholder: 'Promising leads disappear before the flock can review them together.',
-    improvePlaceholder: 'Keep opportunities visible in one shared review loop.',
-  },
-  {
-    id: 'governance',
-    eyebrow: 'Card 3',
-    title: 'Coordination',
-    detail:
-      'Make decisions, commitments, and follow-through visible while the meeting is still warm.',
-    transcriptPrompt: 'What decisions or commitments need follow-through?',
-    currentKey: 'governanceCurrent',
-    painKey: 'governancePain',
-    improveKey: 'governanceImprove',
-    currentPlaceholder: 'Decisions mostly live in meetings, memory, and whoever took notes.',
-    painPlaceholder: 'Follow-up slips when nobody can see what was noticed or promised.',
-    improvePlaceholder: 'Give the group one clear loop for commitments and next steps.',
-  },
-  {
-    id: 'impact',
-    eyebrow: 'Card 4',
-    title: 'Impact',
-    detail:
-      'Keep proof, progress, and field signals close to the work instead of buried after the fact.',
-    transcriptPrompt: 'What progress or outcomes should be captured?',
-    currentKey: 'impactCurrent',
-    painKey: 'impactPain',
-    improveKey: 'impactImprove',
-    currentPlaceholder: 'Progress updates show up in calls, chats, and stray notes after the fact.',
-    painPlaceholder: 'Useful proof gets buried before anyone can connect it to the right moment.',
-    improvePlaceholder: 'Keep evidence close enough to guide the next move.',
-  },
-];
 
 export const emptyLandingTranscripts: TranscriptMap = {
   capital: '',
@@ -429,19 +398,15 @@ function resolveSpeechError(error?: string) {
   }
 }
 
-function findCard(cardId: TranscriptKey) {
-  return ritualCards.find((card) => card.id === cardId) ?? ritualCards[0];
-}
-
 function getLensProgress(
-  card: RitualCard,
+  mapping: RitualCardMapping,
   setupInput: SetupInsightsInput,
   transcripts: TranscriptMap,
 ): LensProgress {
-  const transcript = cleanText(transcripts[card.id]);
-  const current = cleanText(setupInput[card.currentKey]);
-  const pain = cleanText(setupInput[card.painKey]);
-  const improve = cleanText(setupInput[card.improveKey]);
+  const transcript = cleanText(transcripts[mapping.id]);
+  const current = cleanText(setupInput[mapping.currentKey]);
+  const pain = cleanText(setupInput[mapping.painKey]);
+  const improve = cleanText(setupInput[mapping.improveKey]);
   const filledCount = [transcript, current, pain, improve].filter(Boolean).length;
   const captureReady = Boolean(transcript || current || pain || improve);
   const distillReady = [current, pain, improve].filter(Boolean).length >= 2;
@@ -467,31 +432,6 @@ function statusLabel(status: LensStatus) {
   }
 }
 
-function getAudienceOption(audience: AudienceId) {
-  return audienceOptions.find((option) => option.id === audience) ?? audienceOptions[3];
-}
-
-function buildCurrentQuestion(card: RitualCard, audience: AudienceId) {
-  const descriptor = getAudienceOption(audience).descriptor;
-  return descriptor === 'you'
-    ? `How do you handle ${card.title.toLowerCase()} today?`
-    : `How does ${descriptor} handle ${card.title.toLowerCase()} today?`;
-}
-
-function buildPainQuestion(card: RitualCard, audience: AudienceId) {
-  const descriptor = getAudienceOption(audience).descriptor;
-  return descriptor === 'you'
-    ? `Where does ${card.title.toLowerCase()} get stuck or scattered for you?`
-    : `Where does ${card.title.toLowerCase()} get stuck or scattered for ${descriptor}?`;
-}
-
-function buildImproveQuestion(audience: AudienceId) {
-  const descriptor = getAudienceOption(audience).descriptor;
-  return descriptor === 'you'
-    ? 'What opportunity should Coop unlock for you?'
-    : `What opportunity should Coop unlock for ${descriptor}?`;
-}
-
 function initialsForName(name: string) {
   return name
     .split(/\s+/)
@@ -514,7 +454,8 @@ export function buildLandingSetupPacket(
   transcripts: TranscriptMap,
   options: LandingPacketOptions = {},
 ) {
-  const setupInsights = toSetupInsights(setupInput);
+  const spaceType = options.audience ? audienceToSpaceType[options.audience] : 'community';
+  const setupInsights = toSetupInsights(setupInput, spaceType);
 
   return {
     coopName: cleanText(setupInput.coopName) || 'This coop',
@@ -679,16 +620,18 @@ export function App({
 
   const speechRecognition =
     typeof window === 'undefined' ? null : resolveSpeechRecognitionConstructor(window);
+  const spaceType = audienceToSpaceType[audience];
+  const ritualLenses = getRitualLenses(spaceType);
   const setupPacket = buildLandingSetupPacket(setupInput, transcripts, { audience, sharedNotes });
   const setupPacketText = JSON.stringify(setupPacket, null, 2);
 
   const lensProgress = useMemo(
-    () => ritualCards.map((card) => getLensProgress(card, setupInput, transcripts)),
+    () => ritualCardMappings.map((mapping) => getLensProgress(mapping, setupInput, transcripts)),
     [setupInput, transcripts],
   );
   const completedLensCount = lensProgress.filter((progress) => progress.status === 'ready').length;
   const activeDraftCount = lensProgress.filter((progress) => progress.captureReady).length;
-  const allLensesReady = completedLensCount === ritualCards.length;
+  const allLensesReady = completedLensCount === ritualCardMappings.length;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
@@ -1181,7 +1124,8 @@ export function App({
       return;
     }
 
-    setTranscriptStatus(`Saving the ${findCard(recordingLens).title.toLowerCase()} notes...`);
+    const lensTitle = ritualLenses.find((l) => l.id === recordingLens)?.title ?? recordingLens;
+    setTranscriptStatus(`Saving the ${lensTitle.toLowerCase()} notes...`);
     recognitionRef.current.stop();
   }
 
@@ -1208,7 +1152,8 @@ export function App({
 
     recognition.onstart = () => {
       setRecordingLens(cardId);
-      setTranscriptStatus(`${findCard(cardId).title} is listening on this device.`);
+      const lensTitle = ritualLenses.find((l) => l.id === cardId)?.title ?? cardId;
+      setTranscriptStatus(`${lensTitle} is listening on this device.`);
     };
 
     recognition.onresult = (event) => {
@@ -1255,7 +1200,8 @@ export function App({
         return;
       }
 
-      setTranscriptStatus(`${findCard(cardId).title} transcript is ready to edit.`);
+      const endTitle = ritualLenses.find((l) => l.id === cardId)?.title ?? cardId;
+      setTranscriptStatus(`${endTitle} transcript is ready to edit.`);
     };
 
     recognitionRef.current = recognition;
@@ -1490,36 +1436,37 @@ export function App({
             </div>
 
             <div className="flashcard-grid">
-              {ritualCards.map((card, index) => {
+              {ritualLenses.map((lens, index) => {
+                const mapping = ritualCardMappings[index];
                 const progress = lensProgress[index];
-                const isFlipped = openCardId === card.id;
+                const isFlipped = openCardId === lens.id;
                 const isDone = progress.status === 'ready';
 
                 return (
                   <article
                     className={[
                       'flashcard',
-                      `flashcard-${card.id}`,
+                      `flashcard-${lens.id}`,
                       isFlipped ? 'is-flipped' : '',
                       isDone ? 'is-done' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    key={card.id}
+                    key={lens.id}
                   >
                     <div className="flashcard-inner">
                       <button
                         aria-expanded={isFlipped}
-                        aria-controls={`flashcard-panel-${card.id}`}
+                        aria-controls={`flashcard-panel-${lens.id}`}
                         className="flashcard-front"
-                        onClick={() => toggleCard(card.id)}
-                        ref={setFlashcardTriggerRef(card.id)}
+                        onClick={() => toggleCard(lens.id)}
+                        ref={setFlashcardTriggerRef(lens.id)}
                         type="button"
                         tabIndex={isFlipped ? -1 : 0}
                       >
                         <div className="flashcard-front-top">
-                          <h3>{card.title}</h3>
-                          <p>{card.detail}</p>
+                          <h3>{lens.title}</h3>
+                          <p>{lens.detail}</p>
                         </div>
                         <div className="flashcard-front-bottom">
                           <span className="flashcard-flip-hint">Flip</span>
@@ -1532,53 +1479,53 @@ export function App({
                       </button>
 
                       <section
-                        aria-label={card.title}
+                        aria-label={lens.title}
                         aria-hidden={!isFlipped}
                         className="flashcard-back"
-                        id={`flashcard-panel-${card.id}`}
+                        id={`flashcard-panel-${lens.id}`}
                         inert={!isFlipped ? true : undefined}
                       >
                         <button
                           className="flashcard-close-btn"
-                          onClick={() => toggleCard(card.id)}
-                          ref={setFlashcardCloseRef(card.id)}
+                          onClick={() => toggleCard(lens.id)}
+                          ref={setFlashcardCloseRef(lens.id)}
                           type="button"
                           aria-label="Flip back"
                         >
                           {'\u00D7'}
                         </button>
 
-                        <h3 className="flashcard-question">{card.transcriptPrompt}</h3>
+                        <h3 className="flashcard-question">{lens.transcriptPrompt}</h3>
 
                         <div className="ritual-transcript-header">
                           <button
                             className={
-                              recordingLens === card.id
+                              recordingLens === lens.id
                                 ? 'button button-primary button-small ritual-record-button is-recording'
                                 : 'button button-secondary button-small ritual-record-button'
                             }
                             onClick={() =>
-                              recordingLens === card.id ? stopRecording() : startRecording(card.id)
+                              recordingLens === lens.id ? stopRecording() : startRecording(lens.id)
                             }
                             type="button"
                           >
-                            {recordingLens === card.id ? 'Stop recording' : 'Record'}
+                            {recordingLens === lens.id ? 'Stop recording' : 'Record'}
                           </button>
                         </div>
 
-                        {recordingLens === card.id || transcripts[card.id] ? (
+                        {recordingLens === lens.id || transcripts[lens.id] ? (
                           <output aria-live="polite" className="ritual-transcript-status">
                             {transcriptStatus}
                           </output>
                         ) : null}
 
                         <label className="ritual-field">
-                          <span>{card.title} notes</span>
+                          <span>{lens.title} notes</span>
                           <textarea
-                            onChange={(event) => updateTranscript(card.id, event.target.value)}
+                            onChange={(event) => updateTranscript(lens.id, event.target.value)}
                             placeholder="Paste notes or let live transcript fill this in."
-                            ref={setFlashcardNotesRef(card.id)}
-                            value={transcripts[card.id]}
+                            ref={setFlashcardNotesRef(lens.id)}
+                            value={transcripts[lens.id]}
                           />
                         </label>
 
@@ -1589,16 +1536,19 @@ export function App({
                           onClick={() => {
                             if (!isDone) {
                               updateField(
-                                card.currentKey,
-                                setupInput[card.currentKey] || 'Captured',
+                                mapping.currentKey,
+                                setupInput[mapping.currentKey] || 'Captured',
                               );
-                              updateField(card.painKey, setupInput[card.painKey] || 'Captured');
                               updateField(
-                                card.improveKey,
-                                setupInput[card.improveKey] || 'Captured',
+                                mapping.painKey,
+                                setupInput[mapping.painKey] || 'Captured',
+                              );
+                              updateField(
+                                mapping.improveKey,
+                                setupInput[mapping.improveKey] || 'Captured',
                               );
                             }
-                            toggleCard(card.id);
+                            toggleCard(lens.id);
                           }}
                           type="button"
                         >

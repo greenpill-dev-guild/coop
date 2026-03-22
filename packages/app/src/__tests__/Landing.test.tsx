@@ -123,11 +123,12 @@ describe('landing page', () => {
 
     render(<App />);
 
+    // Switch to Family — lens titles become: Household Memory, Shared Resources, Logistics, Milestones
     fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
-    completeCard('Knowledge', 'We keep links in chats.');
-    completeCard('Capital');
-    completeCard('Coordination');
-    completeCard('Impact');
+    completeCard('Household Memory', 'We keep links in chats.');
+    completeCard('Shared Resources');
+    completeCard('Logistics');
+    completeCard('Milestones');
 
     fireEvent.change(screen.getByLabelText(/coop name/i), {
       target: { value: 'Pocket Flock' },
@@ -160,10 +161,11 @@ describe('landing page', () => {
   });
 
   it('restores ritual progress from localStorage after a remount', () => {
+    // Default audience is community — capital lens title is "Funding & Resources"
     const firstRender = render(<App />);
 
-    openCard('Capital');
-    fireEvent.change(screen.getByRole('textbox', { name: /capital notes/i }), {
+    openCard('Funding & Resources');
+    fireEvent.change(screen.getByRole('textbox', { name: /funding & resources notes/i }), {
       target: { value: 'Grant leads from calls.' },
     });
 
@@ -171,22 +173,23 @@ describe('landing page', () => {
 
     render(<App />);
 
-    expect(screen.getByRole('textbox', { name: /capital notes/i })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: /funding & resources notes/i })).toHaveValue(
       'Grant leads from calls.',
     );
   });
 
   it('moves focus into an opened flashcard and returns it when the card closes', () => {
+    // Default audience is community — knowledge lens title is "Collective Intelligence"
     render(<App />);
 
-    const trigger = screen.getByRole('button', { name: /knowledge/i });
+    const trigger = screen.getByRole('button', { name: /collective intelligence/i });
     fireEvent.click(trigger);
 
-    const transcriptField = screen.getByRole('textbox', { name: /knowledge notes/i });
+    const transcriptField = screen.getByRole('textbox', { name: /collective intelligence notes/i });
     expect(transcriptField).toHaveFocus();
 
     fireEvent.click(screen.getByRole('button', { name: /flip back/i }));
-    expect(screen.getByRole('button', { name: /knowledge/i })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /collective intelligence/i })).toHaveFocus();
   });
 
   it('fills the open flashcard transcript when browser speech recognition is available', () => {
@@ -228,7 +231,8 @@ describe('landing page', () => {
 
     render(<App />);
 
-    openCard('Knowledge');
+    // Default audience is community — knowledge lens title is "Collective Intelligence"
+    openCard('Collective Intelligence');
     fireEvent.click(screen.getByRole('button', { name: /^record$/i }));
 
     act(() => {
@@ -263,7 +267,7 @@ describe('landing page', () => {
       activeRecognition?.onend?.();
     });
 
-    expect(screen.getByRole('textbox', { name: /knowledge notes/i })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: /collective intelligence notes/i })).toHaveValue(
       'We keep grant links in chat. We also keep follow-ups in calls.',
     );
     expect(screen.getByText(/transcript is ready to edit/i)).toBeInTheDocument();
