@@ -88,6 +88,7 @@ function createTestDraft(coopId: string): ReviewDraft {
     rationale: 'Relevant to the coop mission.',
     status: 'draft',
     workflowStage: 'ready',
+    attachments: [],
     provenance: {
       type: 'tab',
       interpretationId: 'interp-1',
@@ -145,6 +146,7 @@ describe('buildReviewBoard', () => {
         createdAt: '2026-03-13T12:00:00.000Z',
         reviewStatus: 'published',
         archiveStatus: 'not-archived',
+        attachments: [],
         archiveReceiptIds: [],
       },
       {
@@ -162,6 +164,7 @@ describe('buildReviewBoard', () => {
         createdAt: '2026-03-13T12:01:00.000Z',
         reviewStatus: 'published',
         archiveStatus: 'not-archived',
+        attachments: [],
         archiveReceiptIds: [],
       },
     ];
@@ -211,6 +214,7 @@ describe('updateMemoryProfileFromArtifacts', () => {
         createdAt: '2026-03-13T12:00:00.000Z',
         reviewStatus: 'published',
         archiveStatus: 'not-archived',
+        attachments: [],
         archiveReceiptIds: [],
       },
     ];
@@ -250,6 +254,7 @@ describe('updateMemoryProfileFromArtifacts', () => {
         createdAt: '2026-03-13T12:00:00.000Z',
         reviewStatus: 'published',
         archiveStatus: 'not-archived',
+        attachments: [],
         archiveReceiptIds: [],
       },
     ];

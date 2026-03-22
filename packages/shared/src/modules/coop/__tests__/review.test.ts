@@ -162,6 +162,132 @@ describe('receiver review workflow', () => {
     expect(grouped.readyDrafts.map((draft) => draft.id)).toEqual(['draft-receiver-capture-3']);
   });
 
+  describe('transcript-enriched draft seeds', () => {
+    const transcriptText =
+      'The soil samples from the north plot show improved microbial activity. We should compare these results with last season. The compost application seems to be working well.';
+
+    it('uses transcript sentences for summary when transcriptText is provided for audio captures', () => {
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        preferredCoopLabel: 'River Coop',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText,
+      });
+
+      expect(draft.summary).not.toContain('Summary placeholder');
+      expect(draft.summary).toContain('soil samples');
+      expect(draft.summary).toContain('microbial activity');
+    });
+
+    it('bumps confidence above metadata-only baseline for audio captures with transcript', () => {
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText,
+      });
+
+      // inferFromTranscript produces confidence >= 0.42 (above the 0.34 metadata-only baseline)
+      expect(draft.confidence).toBeGreaterThanOrEqual(0.42);
+      expect(draft.confidence).toBeLessThanOrEqual(0.82);
+    });
+
+    it('sets seedMethod to transcript-enriched when transcript is provided for audio', () => {
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText,
+      });
+
+      expect(draft.provenance).toMatchObject({
+        type: 'receiver',
+        captureId: 'capture-1',
+        receiverKind: 'audio',
+        seedMethod: 'transcript-enriched',
+      });
+    });
+
+    it('updates rationale to mention transcript enrichment', () => {
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText,
+      });
+
+      expect(draft.rationale).toContain('transcript');
+      expect(draft.rationale).not.toContain('metadata only');
+    });
+
+    it('ignores transcriptText for non-audio captures', () => {
+      const photoCapture: ReceiverCapture = {
+        ...baseCapture,
+        id: 'capture-photo',
+        kind: 'photo',
+        mimeType: 'image/jpeg',
+      };
+
+      const draft = createReceiverDraftSeed({
+        capture: photoCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText,
+      });
+
+      expect(draft.summary).toContain('Summary placeholder');
+      expect(draft.confidence).toBe(0.42);
+      expect(draft.provenance).toMatchObject({
+        seedMethod: 'metadata-only',
+      });
+    });
+
+    it('truncates transcript to at most 3 sentences', () => {
+      const longTranscript =
+        'First sentence here. Second sentence here. Third sentence here. Fourth sentence should be cut. Fifth as well.';
+
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText: longTranscript,
+      });
+
+      expect(draft.summary).toContain('First sentence here.');
+      expect(draft.summary).toContain('Third sentence here.');
+      expect(draft.summary).not.toContain('Fourth sentence');
+    });
+
+    it('falls back to slice for transcript text without sentence boundaries', () => {
+      const noSentences = 'a continuous stream of words without any sentence-ending punctuation';
+
+      const draft = createReceiverDraftSeed({
+        capture: baseCapture,
+        availableCoopIds: ['coop-1'],
+        preferredCoopId: 'coop-1',
+        workflowStage: 'candidate',
+        createdAt: '2026-03-12T18:02:00.000Z',
+        transcriptText: noSentences,
+      });
+
+      expect(draft.summary.length).toBeLessThanOrEqual(200);
+      expect(draft.summary).toContain('continuous stream');
+    });
+  });
+
   it('keeps receiver drafts private to the source member while preserving tab drafts', () => {
     const receiverDraft = createReceiverDraftSeed({
       capture: baseCapture,

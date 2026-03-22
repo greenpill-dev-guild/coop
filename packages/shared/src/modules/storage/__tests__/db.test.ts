@@ -171,6 +171,7 @@ function buildReviewDraft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
     rationale: 'High confidence draft.',
     status: 'draft',
     workflowStage: 'ready',
+    attachments: [],
     provenance: {
       type: 'tab',
       interpretationId: 'interp-1',
@@ -515,6 +516,9 @@ describe('settings persistence', () => {
       preferredExportMethod: 'file-picker',
       heartbeatEnabled: true,
       agentCadenceMinutes: 60,
+      excludedCategories: ['email', 'banking', 'health'],
+      customExcludedDomains: [],
+      captureOnClose: false,
     });
 
     expect(await getUiPreferences(db)).toEqual({
@@ -523,6 +527,9 @@ describe('settings persistence', () => {
       preferredExportMethod: 'file-picker',
       heartbeatEnabled: true,
       agentCadenceMinutes: 60,
+      excludedCategories: ['email', 'banking', 'health'],
+      customExcludedDomains: [],
+      captureOnClose: false,
     });
   });
 
@@ -544,6 +551,9 @@ describe('settings persistence', () => {
       preferredExportMethod: 'download',
       heartbeatEnabled: true,
       agentCadenceMinutes: 60,
+      excludedCategories: ['email', 'banking', 'health'],
+      customExcludedDomains: [],
+      captureOnClose: false,
     });
   });
 

@@ -3,9 +3,11 @@ import {
   type ReceiverCapture,
   type TabCandidate,
   buildReadablePageExtract,
+  compressImage,
   createId,
   createReceiverCapture,
   getAuthSession,
+  isDomainExcluded,
   listPageExtracts,
   nowIso,
   savePageExtract,
@@ -21,10 +23,19 @@ import {
 import {
   contextMenuIds,
   db,
+  ensureDbReady,
   extensionCaptureDeviceId,
+  getCapturePeriodMinutes,
   getCoops,
+  getLocalSetting,
+  markUrlCaptured,
   notifyExtensionEvent,
+  removeFromTabCache,
   setRuntimeHealth,
+  stateKeys,
+  tabUrlCache,
+  uiPreferences,
+  wasRecentlyCaptured,
 } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getActiveReviewContextForSession } from '../operator';
@@ -72,10 +83,28 @@ export async function runCaptureForTabs(
   const coops = await getCoops();
   const candidates: TabCandidate[] = [];
   const newExtractIds: string[] = [];
+  const capturedDomains = new Set<string>();
+  let skippedCount = 0;
   let lastCaptureError: string | undefined;
+
+  const captureMode = await getLocalSetting<string>(stateKeys.captureMode, 'manual');
+  const periodMinutes = getCapturePeriodMinutes(captureMode);
+  const dedupCooldownMs = (periodMinutes ?? 5) * 60_000;
 
   for (const tab of tabs) {
     if (!isSupportedUrl(tab.url)) {
+      continue;
+    }
+
+    const domain = new URL(tab.url).hostname.replace(/^www\./, '');
+
+    if (isDomainExcluded(domain, uiPreferences)) {
+      skippedCount++;
+      continue;
+    }
+
+    if (wasRecentlyCaptured(tab.url, dedupCooldownMs)) {
+      skippedCount++;
       continue;
     }
 
@@ -86,6 +115,8 @@ export async function runCaptureForTabs(
       }
       const { candidate, snapshot } = collected;
       candidates.push(candidate);
+      capturedDomains.add(candidate.domain);
+      markUrlCaptured(tab.url);
       await saveTabCandidate(db, candidate);
 
       const extract = buildReadablePageExtract({
@@ -117,17 +148,34 @@ export async function runCaptureForTabs(
     }
   }
 
+  const captureRunId = createId('capture');
   await db.captureRuns.put({
-    id: createId('capture'),
+    id: captureRunId,
     state: lastCaptureError ? 'failed' : 'completed',
     capturedAt: nowIso(),
     candidateCount: candidates.length,
+    capturedDomains: [...capturedDomains],
+    skippedCount,
   });
   await setRuntimeHealth({
     syncError: Boolean(lastCaptureError),
     lastCaptureError,
   });
   await refreshBadge();
+
+  if (candidates.length > 0 || skippedCount > 0) {
+    const domainCount = capturedDomains.size;
+    const tabLabel = candidates.length !== 1 ? 'tabs' : 'tab';
+    const domainLabel = domainCount !== 1 ? 'domains' : 'domain';
+    const excludedNote = skippedCount > 0 ? ` ${skippedCount} excluded.` : '';
+    await notifyExtensionEvent({
+      eventKind: 'capture-roundup',
+      entityId: captureRunId,
+      state: 'completed',
+      title: 'Round-up complete',
+      message: `Captured ${candidates.length} ${tabLabel} from ${domainCount} ${domainLabel}.${excludedNote}`,
+    });
+  }
 
   return candidates.length;
 }
@@ -185,7 +233,19 @@ export async function captureVisibleScreenshot(): Promise<ReceiverCapture> {
     format: 'png',
   });
   const response = await fetch(dataUrl);
-  const blob = await response.blob();
+  const rawBlob = await response.blob();
+
+  // Compress PNG → WebP before storage; fall back to raw PNG on failure
+  let blob: Blob;
+  let fileExt: string;
+  try {
+    ({ blob } = await compressImage({ blob: rawBlob }));
+    fileExt = 'webp';
+  } catch {
+    blob = rawBlob;
+    fileExt = 'png';
+  }
+
   const timestamp = nowIso();
   const coops = await getCoops();
   const authSession = await getAuthSession(db);
@@ -197,7 +257,7 @@ export async function captureVisibleScreenshot(): Promise<ReceiverCapture> {
       deviceId: extensionCaptureDeviceId,
       kind: 'photo',
       blob,
-      fileName: `coop-screenshot-${timestamp.replace(/[:.]/gu, '-')}.png`,
+      fileName: `coop-screenshot-${timestamp.replace(/[:.]/gu, '-')}.${fileExt}`,
       title: `Page screenshot · ${tab.title || new URL(tab.url).hostname}`,
       note: `Captured from ${tab.url} via Extension Browser.`,
       sourceUrl: tab.url,
@@ -222,6 +282,69 @@ export async function captureVisibleScreenshot(): Promise<ReceiverCapture> {
       : 'Saved a private local screenshot to Coop.',
   });
   return capture;
+}
+
+export async function handleTabRemoved(tabId: number) {
+  const cached = tabUrlCache.get(tabId);
+  removeFromTabCache(tabId);
+
+  try {
+    await ensureDbReady();
+
+    if (!uiPreferences.captureOnClose) {
+      return;
+    }
+    if (!cached?.url || !isSupportedUrl(cached.url)) {
+      return;
+    }
+
+    const domain = new URL(cached.url).hostname.replace(/^www\./, '');
+    if (isDomainExcluded(domain, uiPreferences)) {
+      return;
+    }
+    if (wasRecentlyCaptured(cached.url, 5 * 60_000)) {
+      return;
+    }
+
+    const candidate: TabCandidate = {
+      id: createId('candidate'),
+      tabId,
+      windowId: cached.windowId,
+      url: cached.url,
+      canonicalUrl: cached.url,
+      title: cached.title || cached.url,
+      domain,
+      favicon: cached.favIconUrl,
+      excerpt: undefined,
+      tabGroupHint: undefined,
+      capturedAt: nowIso(),
+    };
+
+    await saveTabCandidate(db, candidate);
+    markUrlCaptured(cached.url);
+
+    const extract = buildReadablePageExtract({
+      candidate,
+      metaDescription: undefined,
+      headings: [],
+      paragraphs: [],
+      previewImageUrl: undefined,
+    });
+    await savePageExtract(db, extract);
+
+    const coops = await getCoops();
+    if (coops.length > 0) {
+      await emitRoundupBatchObservation({
+        extractIds: [extract.id],
+        eligibleCoopIds: coops.map((coop) => coop.profile.id),
+      });
+    }
+  } catch (error) {
+    console.error(
+      '[coop] tab-close capture failed:',
+      error instanceof Error ? error.message : error,
+    );
+  }
 }
 
 export async function registerContextMenus() {

@@ -1,10 +1,12 @@
 import type {
+  ArtifactAttachment,
   ArtifactCategory,
   ReceiverCapture,
   ReviewDraft,
   ReviewDraftWorkflowStage,
 } from '../../contracts/schema';
 import { compactWhitespace, nowIso, slugify, truncateWords, unique } from '../../utils';
+import { inferFromTranscript } from './pipeline';
 
 export interface MeetingModeSections {
   privateIntake: ReceiverCapture[];
@@ -154,6 +156,12 @@ function buildReceiverDraftSummary(capture: ReceiverCapture) {
   }
 }
 
+function truncateToSentences(text: string, maxSentences: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [];
+  if (sentences.length === 0) return text.slice(0, 200);
+  return sentences.slice(0, maxSentences).join('').trim();
+}
+
 function buildReceiverDraftWhyItMatters(capture: ReceiverCapture, targetLabel: string) {
   const memberLabel = capture.memberDisplayName ?? 'A paired member';
   return `${memberLabel} captured this privately for ${targetLabel}. Clarify why it matters before pushing it into shared memory.`;
@@ -184,6 +192,8 @@ export function createReceiverDraftSeed(input: {
   preferredCoopLabel?: string;
   workflowStage: ReviewDraftWorkflowStage;
   createdAt?: string;
+  attachments?: ArtifactAttachment[];
+  transcriptText?: string;
 }) {
   const createdAt = input.createdAt ?? nowIso();
   const targetCoopIds = resolveDraftTargetCoopIdsForUi(
@@ -196,6 +206,13 @@ export function createReceiverDraftSeed(input: {
     input.capture.coopDisplayName ??
     (targetCoopIds.length > 1 ? 'the selected coops' : 'this coop');
   const title = compactWhitespace(input.capture.title) || 'Receiver note';
+  const transcriptText =
+    input.transcriptText && input.capture.kind === 'audio' ? input.transcriptText : undefined;
+
+  // Use transcript-based inference for category, confidence, and tags when available
+  const transcriptInference = transcriptText
+    ? inferFromTranscript({ transcriptText, title })
+    : null;
 
   return {
     id: createReceiverDraftId(input.capture.id),
@@ -203,7 +220,9 @@ export function createReceiverDraftSeed(input: {
     extractId: `receiver-extract-${input.capture.id}`,
     sourceCandidateId: `receiver-source-${input.capture.id}`,
     title,
-    summary: truncateWords(buildReceiverDraftSummary(input.capture), 22),
+    summary: transcriptText
+      ? truncateToSentences(transcriptText, 3)
+      : truncateWords(buildReceiverDraftSummary(input.capture), 22),
     sources: [
       {
         label: input.capture.fileName ?? title,
@@ -219,25 +238,32 @@ export function createReceiverDraftSeed(input: {
           : 'receiver.local',
       },
     ],
-    tags: buildReceiverDraftTags(input.capture),
-    category: inferReceiverDraftCategory(input.capture),
+    tags: transcriptInference
+      ? unique([...buildReceiverDraftTags(input.capture), ...transcriptInference.tags])
+      : buildReceiverDraftTags(input.capture),
+    category: transcriptInference
+      ? transcriptInference.category
+      : inferReceiverDraftCategory(input.capture),
     whyItMatters: buildReceiverDraftWhyItMatters(input.capture, targetLabel),
     suggestedNextStep: buildReceiverDraftNextStep(input.capture, targetLabel),
     suggestedTargetCoopIds: targetCoopIds,
-    confidence:
-      input.capture.kind === 'audio'
+    confidence: transcriptInference
+      ? transcriptInference.confidence
+      : input.capture.kind === 'audio'
         ? 0.34
         : input.capture.kind === 'photo'
           ? 0.42
           : input.capture.kind === 'link'
             ? 0.38
             : 0.4,
-    rationale:
-      'Receiver draft seeded from local metadata only. No transcription or model inference was used.',
+    rationale: transcriptText
+      ? 'Receiver draft enriched from transcript text. Summary extracted from first sentences of transcription.'
+      : 'Receiver draft seeded from local metadata only. No transcription or model inference was used.',
     previewImageUrl: undefined,
     status: 'draft' as const,
     workflowStage: input.workflowStage,
     archiveWorthiness: input.capture.archiveWorthiness,
+    attachments: input.attachments ?? [],
     provenance: {
       type: 'receiver' as const,
       captureId: input.capture.id,
@@ -245,7 +271,7 @@ export function createReceiverDraftSeed(input: {
       coopId: input.capture.coopId,
       memberId: input.capture.memberId,
       receiverKind: input.capture.kind,
-      seedMethod: 'metadata-only' as const,
+      seedMethod: transcriptText ? ('transcript-enriched' as const) : ('metadata-only' as const),
     },
     createdAt,
   } satisfies ReviewDraft;

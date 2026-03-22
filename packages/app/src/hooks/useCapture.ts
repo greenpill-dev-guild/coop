@@ -3,14 +3,20 @@ import {
   type ReceiverCapture,
   type ReceiverPairingRecord,
   type SoundPreferences,
+  compressImage,
+  createId,
   createReceiverCapture,
   createReceiverLinkCapture,
   getActiveReceiverPairing,
   getReceiverCaptureBlob,
   getReceiverPairingStatus,
+  isWhisperSupported,
   listReceiverCaptures,
+  nowIso,
   playCoopSound,
+  saveCoopBlob,
   saveReceiverCapture,
+  transcribeAudio,
   triggerHaptic,
 } from '@coop/shared';
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -22,6 +28,11 @@ type NavigatorWithUx = Navigator & {
   share?: (data: ShareData) => Promise<void>;
   canShare?: (data: ShareData) => boolean;
 };
+
+function replaceExtension(fileName: string, ext: string) {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex > 0 ? `${fileName.slice(0, dotIndex)}.${ext}` : `${fileName}.${ext}`;
+}
 
 function createPreviewUrl(blob: Blob) {
   return typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : undefined;
@@ -62,7 +73,7 @@ export type CaptureState = {
     kind: ReceiverCapture['kind'];
     fileName?: string;
     title?: string;
-  }) => Promise<void>;
+  }) => Promise<{ captureId: string; coopId?: string } | undefined>;
   stashSharedLink: (input: ReceiverShareHandoff) => Promise<void>;
   startRecording: () => Promise<void>;
   finishRecording: (mode: 'save' | 'cancel') => void;
@@ -155,7 +166,7 @@ export function useCapture(
 
         await saveReceiverCapture(db, capture, input.blob);
         if (!isMountedRef.current) {
-          return;
+          return { captureId: capture.id, coopId: capture.coopId };
         }
         setHatchedCaptureId(capture.id);
         void playCoopSound('artifact-published', soundPreferencesRef.current).catch(() => {});
@@ -177,10 +188,12 @@ export function useCapture(
         if (usablePairing) {
           await reconcilePairingRef.current();
         }
+        return { captureId: capture.id, coopId: capture.coopId };
       } catch (error) {
         if (isMountedRef.current) {
           setMessage(error instanceof Error ? error.message : 'Could not save this nest item.');
         }
+        return undefined;
       }
     },
     [
@@ -289,12 +302,53 @@ export function useCapture(
         }
 
         if (recorderCommitRef.current === 'save' && blob.size > 0) {
-          await stashCapture({
+          const stashResult = await stashCapture({
             blob,
             kind: 'audio',
             fileName: `${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`,
             title: 'Voice note',
           });
+
+          // Attempt transcription in background (non-blocking, fire-and-forget)
+          if (stashResult) {
+            void isWhisperSupported()
+              .then(async (supported) => {
+                if (!supported) return;
+                try {
+                  const result = await transcribeAudio({ audioBlob: blob });
+                  if (!result.text.trim()) return;
+
+                  const captureId = stashResult.captureId;
+                  const coopId = stashResult.coopId;
+                  if (!coopId) return;
+
+                  const transcriptBytes = new TextEncoder().encode(JSON.stringify(result));
+                  const blobId = createId('blob');
+                  const now = nowIso();
+
+                  await saveCoopBlob(
+                    db,
+                    {
+                      blobId,
+                      sourceEntityId: captureId,
+                      coopId,
+                      mimeType: 'application/json',
+                      byteSize: transcriptBytes.length,
+                      kind: 'audio-transcript',
+                      origin: 'self',
+                      createdAt: now,
+                      accessedAt: now,
+                    },
+                    transcriptBytes,
+                  );
+                } catch (err) {
+                  console.warn('[useCapture] Background transcription failed:', err);
+                }
+              })
+              .catch((err) => {
+                console.warn('[useCapture] Background transcription failed:', err);
+              });
+          }
         } else if (isMountedRef.current) {
           setMessage('Recording canceled before it hatched.');
         }
@@ -313,7 +367,7 @@ export function useCapture(
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not start recording.');
     }
-  }, [isMountedRef, setMessage, stashCapture]);
+  }, [db, isMountedRef, setMessage, stashCapture]);
 
   const finishRecording = useCallback((mode: 'save' | 'cancel') => {
     if (!recorderRef.current || recorderRef.current.state === 'inactive') {
@@ -331,6 +385,18 @@ export function useCapture(
       if (!file) {
         return;
       }
+
+      if (kind === 'photo') {
+        try {
+          const { blob: compressedBlob } = await compressImage({ blob: file });
+          const fileName = replaceExtension(file.name, 'webp');
+          await stashCapture({ blob: compressedBlob, kind, fileName });
+          return;
+        } catch {
+          // Compression failed — fall through to save the raw file
+        }
+      }
+
       await stashCapture({ blob: file, kind, fileName: file.name });
     },
     [stashCapture],

@@ -3,7 +3,15 @@ import { z } from 'zod';
 export const authModeSchema = z.enum(['passkey', 'wallet', 'embedded']);
 export const memberRoleSchema = z.enum(['creator', 'trusted', 'member']);
 export const inviteTypeSchema = z.enum(['trusted', 'member']);
-export const captureModeSchema = z.enum(['manual', '30-min', '60-min']);
+export const captureModeSchema = z.enum([
+  'manual',
+  '5-min',
+  '10-min',
+  '15-min',
+  '30-min',
+  '60-min',
+]);
+export const captureExclusionCategorySchema = z.enum(['email', 'banking', 'health', 'social-dm']);
 export const coopSpaceTypeSchema = z.enum([
   'community',
   'project',
@@ -14,10 +22,11 @@ export const coopSpaceTypeSchema = z.enum([
 export const integrationModeSchema = z.enum(['live', 'mock']);
 export const sessionModeSchema = z.enum(['off', 'mock', 'live']);
 export const extensionIconStateSchema = z.enum([
-  'idle',
-  'watching',
-  'review-needed',
-  'error-offline',
+  'setup',
+  'ready',
+  'working',
+  'attention',
+  'blocked',
 ]);
 export const capabilityStateSchema = z.enum([
   'unavailable',
@@ -120,6 +129,7 @@ export const privilegedActionTypeSchema = z.enum([
   'archive-follow-up-refresh',
   'archive-anchor',
   'safe-deployment',
+  'safe-add-owner',
   'green-goods-transaction',
   'erc8004-registration',
   'erc8004-feedback',
@@ -421,6 +431,7 @@ export const encryptedLocalPayloadKindSchema = z.enum([
   'receiver-capture',
   'receiver-blob',
   'agent-memory',
+  'coop-blob',
 ]);
 
 export const encryptedLocalPayloadSchema = z.object({
@@ -1054,6 +1065,8 @@ export const onchainStateSchema = z
       .string()
       .regex(/^0x[a-fA-F0-9]+$/)
       .optional(),
+    safeOwners: z.array(z.string().regex(/^0x[a-fA-F0-9]{40}$/)).optional(),
+    safeThreshold: z.number().int().positive().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.chainId !== supportedOnchainChainIds[value.chainKey]) {
@@ -1325,9 +1338,21 @@ export const reviewDraftProvenanceSchema = z.discriminatedUnion('type', [
     coopId: z.string().min(1).optional(),
     memberId: z.string().min(1).optional(),
     receiverKind: receiverCaptureKindSchema,
-    seedMethod: z.literal('metadata-only'),
+    seedMethod: z.enum(['metadata-only', 'transcript-enriched']),
   }),
 ]);
+
+export const blobKindSchema = z.enum(['image', 'audio-source', 'audio-transcript', 'file']);
+export const blobOriginSchema = z.enum(['self', 'peer', 'gateway']);
+
+export const artifactAttachmentSchema = z.object({
+  blobId: z.string().min(1),
+  mimeType: z.string().min(1),
+  byteSize: z.number().int().nonnegative(),
+  kind: blobKindSchema,
+  archiveCid: z.string().min(1).optional(),
+  thumbnailDataUrl: z.string().optional(),
+});
 
 export const reviewDraftSchema = z.object({
   id: z.string().min(1),
@@ -1348,6 +1373,7 @@ export const reviewDraftSchema = z.object({
   status: z.literal('draft').default('draft'),
   workflowStage: reviewDraftWorkflowStageSchema.default('ready'),
   archiveWorthiness: archiveWorthinessSchema.optional(),
+  attachments: z.array(artifactAttachmentSchema).default([]),
   provenance: reviewDraftProvenanceSchema,
   createdAt: z.string().datetime(),
 });
@@ -1357,6 +1383,19 @@ export const artifactOriginSchema = z.object({
   sourceDraftId: z.string().min(1),
   sourceUrls: z.array(z.string()).min(1),
   createdAt: z.string().datetime(),
+});
+
+export const coopBlobRecordSchema = z.object({
+  blobId: z.string().min(1),
+  sourceEntityId: z.string().min(1),
+  coopId: z.string().min(1),
+  mimeType: z.string().min(1),
+  byteSize: z.number().int().nonnegative(),
+  kind: blobKindSchema,
+  origin: blobOriginSchema,
+  archiveCid: z.string().min(1).optional(),
+  createdAt: z.string().datetime(),
+  accessedAt: z.string().datetime(),
 });
 
 export const artifactSchema = z.object({
@@ -1377,6 +1416,7 @@ export const artifactSchema = z.object({
   archiveStatus: archiveStatusSchema,
   archiveReceiptIds: z.array(z.string()).default([]),
   archiveWorthiness: archiveWorthinessSchema.optional(),
+  attachments: z.array(artifactAttachmentSchema).default([]),
   membershipProof: membershipProofSchema.optional(),
 });
 
@@ -1741,8 +1781,13 @@ export const uiPreferencesSchema = z.object({
   preferredExportMethod: preferredExportMethodSchema.default('download'),
   heartbeatEnabled: z.boolean().default(true),
   agentCadenceMinutes: z
-    .union([z.literal(10), z.literal(15), z.literal(30), z.literal(60)])
+    .union([z.literal(5), z.literal(10), z.literal(15), z.literal(30), z.literal(60)])
     .default(60),
+  excludedCategories: z
+    .array(captureExclusionCategorySchema)
+    .default(['email', 'banking', 'health']),
+  customExcludedDomains: z.array(z.string()).default([]),
+  captureOnClose: z.boolean().default(false),
 });
 
 export const coopSharedStateSchema = z.object({
@@ -1819,12 +1864,17 @@ export type ArchiveWorthiness = z.infer<typeof archiveWorthinessSchema>;
 export type AnchorCapability = z.infer<typeof anchorCapabilitySchema>;
 export type Artifact = z.infer<typeof artifactSchema>;
 export type ArtifactCategory = z.infer<typeof artifactCategorySchema>;
+export type ArtifactAttachment = z.infer<typeof artifactAttachmentSchema>;
 export type ArtifactOrigin = z.infer<typeof artifactOriginSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type AuthMode = z.infer<typeof authModeSchema>;
+export type BlobKind = z.infer<typeof blobKindSchema>;
+export type BlobOrigin = z.infer<typeof blobOriginSchema>;
 export type CapabilityState = z.infer<typeof capabilityStateSchema>;
+export type CaptureExclusionCategory = z.infer<typeof captureExclusionCategorySchema>;
 export type CaptureMode = z.infer<typeof captureModeSchema>;
 export type CoopChainKey = z.infer<typeof coopChainKeySchema>;
+export type CoopBlobRecord = z.infer<typeof coopBlobRecordSchema>;
 export type CoopBootstrapSnapshot = z.infer<typeof coopBootstrapSnapshotSchema>;
 export type CoopInterpretation = z.infer<typeof coopInterpretationSchema>;
 export type CoopMemoryProfile = z.infer<typeof coopMemoryProfileSchema>;

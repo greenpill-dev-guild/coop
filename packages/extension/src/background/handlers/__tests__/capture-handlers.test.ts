@@ -38,6 +38,19 @@ vi.mock('../../context', () => ({
   prefersLocalEnhancement: false,
   setRuntimeHealth: vi.fn(),
   notifyExtensionEvent: vi.fn(),
+  getLocalSetting: vi.fn().mockResolvedValue('manual'),
+  stateKeys: { captureMode: 'capture-mode' },
+  getCapturePeriodMinutes: vi.fn().mockReturnValue(null),
+  markUrlCaptured: vi.fn(),
+  wasRecentlyCaptured: vi.fn().mockReturnValue(false),
+  uiPreferences: {
+    excludedCategories: [],
+    customExcludedDomains: [],
+    captureOnClose: false,
+  },
+  ensureDbReady: vi.fn().mockResolvedValue(undefined),
+  tabUrlCache: new Map(),
+  removeFromTabCache: vi.fn(),
 }));
 
 vi.mock('../../dashboard', () => ({
@@ -53,6 +66,8 @@ vi.mock('../../operator', () => ({
 
 vi.mock('../agent', () => ({
   syncHighConfidenceDraftObservations: vi.fn(),
+  emitRoundupBatchObservation: vi.fn(),
+  drainAgentCycles: vi.fn(),
 }));
 
 const { captureActiveTab, runCaptureCycle } = await import('../capture');

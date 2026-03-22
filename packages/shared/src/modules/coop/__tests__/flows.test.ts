@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sessionToMember } from '../../auth/auth';
 import {
   createCoop,
+  createMember,
   createStateFromInviteBootstrap,
   generateInviteCode,
   joinCoop,
@@ -107,6 +108,7 @@ describe('create, join, and publish flows', () => {
       captureMode: 'manual',
       seedContribution: 'I want our regional work and funding paths to stay visible.',
       setupInsights: buildSetupInsights(),
+      creator: createMember('June', 'creator', { passkeyCredentialId: 'cred-june' }),
       greenGoods: {
         enabled: true,
       },
@@ -133,6 +135,7 @@ describe('create, join, and publish flows', () => {
       captureMode: 'manual',
       seedContribution: 'I want our regional work and funding paths to stay visible.',
       setupInsights: buildSetupInsights(),
+      creator: createMember('June', 'creator', { passkeyCredentialId: 'cred-june' }),
       greenGoods: {
         enabled: true,
       },
@@ -151,6 +154,7 @@ describe('create, join, and publish flows', () => {
       invite,
       displayName: 'Mina',
       seedContribution: 'I bring review energy and member context.',
+      member: createMember('Mina', 'member', { passkeyCredentialId: 'cred-mina' }),
     });
 
     expect(joined.state.memberAccounts).toHaveLength(2);
@@ -400,6 +404,7 @@ describe('create, join, and publish flows', () => {
         rationale: 'Keyword overlap with funding and stewardship language.',
         status: 'draft',
         workflowStage: 'ready',
+        attachments: [],
         provenance: {
           type: 'tab',
           interpretationId: 'interp-1',
@@ -479,6 +484,7 @@ describe('create, join, and publish flows', () => {
         rationale: 'The grant supports both stewardship and watershed efforts.',
         status: 'draft',
         workflowStage: 'ready',
+        attachments: [],
         provenance: {
           type: 'tab',
           interpretationId: 'interp-2',

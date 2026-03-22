@@ -649,6 +649,191 @@ describe('storacha archive helpers', () => {
   });
 
   /* ================================================================ */
+  /*  uploadArchiveBundleToStoracha — blob file uploads                */
+  /* ================================================================ */
+
+  it('uploads each blob file before the JSON payload and embeds blobCids', async () => {
+    let uploadCallIndex = 0;
+    const uploadOrder: string[] = [];
+
+    storachaMocks.uploadFile.mockImplementation(async (blob: Blob) => {
+      uploadCallIndex++;
+      const text = await blob.text();
+      // Blobs are binary, JSON payload is parseable text
+      try {
+        JSON.parse(text);
+        uploadOrder.push('json-payload');
+      } catch {
+        uploadOrder.push(`blob-${uploadCallIndex}`);
+      }
+      return { toString: () => `bafycid-${uploadCallIndex}` };
+    });
+
+    const blobBytes = new Map<string, Uint8Array>([
+      ['photo-abc', new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
+      ['audio-xyz', new Uint8Array([0x49, 0x44, 0x33])],
+    ]);
+
+    const client = await createStorachaArchiveClient();
+    const result = await uploadArchiveBundleToStoracha({
+      client,
+      bundle: {
+        id: 'bundle-blobs',
+        scope: 'artifact',
+        targetCoopId: 'coop-1',
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        payload: {
+          coop: { id: 'coop-1', name: 'Blob Coop' },
+          artifacts: [{ id: 'artifact-1' }],
+        },
+      },
+      delegation: {
+        spaceDid: 'did:key:space',
+        delegationIssuer: 'trusted-node-demo',
+        gatewayBaseUrl: 'https://storacha.link',
+        spaceDelegation: 'space-proof',
+        proofs: [],
+        allowsFilecoinInfo: false,
+      },
+      blobBytes,
+    });
+
+    // Two blob uploads + one JSON payload upload = 3 total
+    expect(storachaMocks.uploadFile).toHaveBeenCalledTimes(3);
+
+    // Blobs are uploaded before JSON payload
+    expect(uploadOrder.slice(0, 2)).toEqual(['blob-1', 'blob-2']);
+    expect(uploadOrder[2]).toBe('json-payload');
+
+    // blobCids maps blobId → CID string
+    expect(result.blobCids).toBeDefined();
+    expect(Object.keys(result.blobCids ?? {})).toHaveLength(2);
+    expect(result.blobCids?.['photo-abc']).toBeDefined();
+    expect(result.blobCids?.['audio-xyz']).toBeDefined();
+  });
+
+  it('embeds blobCids in the JSON payload uploaded to Storacha', async () => {
+    let capturedPayload: Record<string, unknown> | undefined;
+
+    storachaMocks.uploadFile.mockImplementation(async (blob: Blob) => {
+      const text = await blob.text();
+      try {
+        capturedPayload = JSON.parse(text);
+      } catch {
+        // binary blob, ignore
+      }
+      return { toString: () => 'bafycid-captured' };
+    });
+
+    const blobBytes = new Map<string, Uint8Array>([['file-1', new Uint8Array([1, 2, 3])]]);
+
+    const client = await createStorachaArchiveClient();
+    await uploadArchiveBundleToStoracha({
+      client,
+      bundle: {
+        id: 'bundle-embed',
+        scope: 'artifact',
+        targetCoopId: 'coop-1',
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        payload: {
+          coop: { id: 'coop-1', name: 'Embed Coop' },
+          artifacts: [],
+        },
+      },
+      delegation: {
+        spaceDid: 'did:key:space',
+        delegationIssuer: 'trusted-node-demo',
+        gatewayBaseUrl: 'https://storacha.link',
+        spaceDelegation: 'space-proof',
+        proofs: [],
+        allowsFilecoinInfo: false,
+      },
+      blobBytes,
+    });
+
+    // The last uploadFile call is the JSON payload — it should contain blobCids
+    expect(capturedPayload).toBeDefined();
+    expect(capturedPayload?.blobCids).toBeDefined();
+    expect((capturedPayload?.blobCids as Record<string, string>)?.['file-1']).toBe(
+      'bafycid-captured',
+    );
+  });
+
+  it('returns blobCids in the ArchiveUploadResult', async () => {
+    let callCount = 0;
+    storachaMocks.uploadFile.mockImplementation(async () => {
+      callCount++;
+      return { toString: () => `bafycid-${callCount}` };
+    });
+
+    const blobBytes = new Map<string, Uint8Array>([
+      ['media-a', new Uint8Array([10, 20])],
+      ['media-b', new Uint8Array([30, 40])],
+    ]);
+
+    const client = await createStorachaArchiveClient();
+    const result = await uploadArchiveBundleToStoracha({
+      client,
+      bundle: {
+        id: 'bundle-result',
+        scope: 'artifact',
+        targetCoopId: 'coop-1',
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        payload: { coop: { id: 'coop-1', name: 'Result Coop' }, artifacts: [] },
+      },
+      delegation: {
+        spaceDid: 'did:key:space',
+        delegationIssuer: 'trusted-node-demo',
+        gatewayBaseUrl: 'https://storacha.link',
+        spaceDelegation: 'space-proof',
+        proofs: [],
+        allowsFilecoinInfo: false,
+      },
+      blobBytes,
+    });
+
+    expect(result.blobCids).toEqual({
+      'media-a': 'bafycid-1',
+      'media-b': 'bafycid-2',
+    });
+    // rootCid comes from the third (JSON payload) upload
+    expect(result.rootCid).toBe('bafycid-3');
+  });
+
+  it('omits blobCids when no blobBytes are provided (backward compat)', async () => {
+    storachaMocks.uploadFile.mockResolvedValue({ toString: () => 'bafyroot-no-blobs' });
+
+    const client = await createStorachaArchiveClient();
+    const result = await uploadArchiveBundleToStoracha({
+      client,
+      bundle: {
+        id: 'bundle-no-blobs',
+        scope: 'artifact',
+        targetCoopId: 'coop-1',
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        payload: { coop: { id: 'coop-1', name: 'No Blob Coop' }, artifacts: [] },
+      },
+      delegation: {
+        spaceDid: 'did:key:space',
+        delegationIssuer: 'trusted-node-demo',
+        gatewayBaseUrl: 'https://storacha.link',
+        spaceDelegation: 'space-proof',
+        proofs: [],
+        allowsFilecoinInfo: false,
+      },
+    });
+
+    // Only one uploadFile call for the JSON payload
+    expect(storachaMocks.uploadFile).toHaveBeenCalledTimes(1);
+    expect(result.blobCids).toBeUndefined();
+    expect(result.rootCid).toBe('bafyroot-no-blobs');
+  });
+
+  /* ================================================================ */
   /*  requestArchiveReceiptFilecoinInfo                               */
   /* ================================================================ */
 

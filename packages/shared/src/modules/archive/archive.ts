@@ -45,8 +45,9 @@ export function createArchiveBundle(input: {
   scope: ArchiveBundle['scope'];
   state: CoopSharedState;
   artifactIds?: string[];
+  blobs?: Map<string, Uint8Array>;
 }) {
-  const payload =
+  const payload: Record<string, unknown> =
     input.scope === 'artifact'
       ? {
           coop: {
@@ -67,7 +68,14 @@ export function createArchiveBundle(input: {
           previousSnapshotCid: findLatestSnapshotCid(input.state.archiveReceipts),
         };
 
-  return {
+  if (input.blobs && input.blobs.size > 0) {
+    payload.blobManifest = Array.from(input.blobs.entries()).map(([blobId, bytes]) => ({
+      blobId,
+      byteSize: bytes.length,
+    }));
+  }
+
+  const bundle = {
     id: createId('bundle'),
     scope: input.scope,
     targetCoopId: input.state.profile.id,
@@ -75,6 +83,11 @@ export function createArchiveBundle(input: {
     schemaVersion: 1,
     payload,
   } satisfies ArchiveBundle;
+
+  return {
+    ...bundle,
+    blobBytes: input.blobs,
+  };
 }
 
 export function createMockArchiveReceipt(input: {

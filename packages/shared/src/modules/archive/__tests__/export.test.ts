@@ -73,6 +73,7 @@ function createTestArtifact(state: CoopSharedState): Artifact {
     createdAt: '2026-03-13T14:00:00.000Z',
     reviewStatus: 'published',
     archiveStatus: 'not-archived',
+    attachments: [],
     archiveReceiptIds: [],
   };
 }

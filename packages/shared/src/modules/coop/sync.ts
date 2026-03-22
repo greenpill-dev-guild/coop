@@ -7,11 +7,13 @@ import {
   type CoopSharedState,
   type SyncRoomBootstrap,
   type SyncRoomConfig,
+  artifactSchema,
   coopSharedStateSchema,
 } from '../../contracts/schema';
 import { createId, hashText } from '../../utils';
 
 const ROOT_KEY = 'coop';
+const ARTIFACTS_MAP_KEY = 'coop-artifacts';
 export {
   buildIceServers,
   defaultIceServers,
@@ -92,17 +94,50 @@ export function createCoopDoc(state: CoopSharedState) {
 
 export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   const root = doc.getMap<string>(ROOT_KEY);
+  const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
+
   doc.transact(() => {
     for (const key of sharedKeys) {
+      // Dual-write: old format kept for backward compat with pre-migration peers
       root.set(key, JSON.stringify(state[key]));
+    }
+
+    // New format: per-artifact entries in dedicated Y.Map
+    const currentIds = new Set(state.artifacts.map((a) => a.id));
+    for (const id of artifactsMap.keys()) {
+      if (!currentIds.has(id)) {
+        artifactsMap.delete(id);
+      }
+    }
+    for (const artifact of state.artifacts) {
+      artifactsMap.set(artifact.id, JSON.stringify(artifact));
     }
   });
 }
 
 export function readCoopState(doc: Y.Doc): CoopSharedState {
   const root = doc.getMap<string>(ROOT_KEY);
+  const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
+
+  // Read per-artifact map (new format) if populated, else fall back to old JSON string
+  let artifacts: unknown[];
+  if (artifactsMap.size > 0) {
+    artifacts = [];
+    for (const value of artifactsMap.values()) {
+      try {
+        artifacts.push(JSON.parse(value));
+      } catch {
+        // skip corrupted entries
+      }
+    }
+  } else {
+    const raw = root.get('artifacts');
+    artifacts = raw ? JSON.parse(raw) : [];
+  }
+
   const raw = Object.fromEntries(
     sharedKeys.map((key) => {
+      if (key === 'artifacts') return ['artifacts', artifacts];
       const value = root.get(key);
       return [key, value ? JSON.parse(value) : undefined];
     }),
@@ -263,4 +298,93 @@ export function summarizeSyncTransportHealth(
     broadcastPeerCount,
     websocketConnected,
   };
+}
+
+// --- Per-artifact observation (Step 20) ---
+
+/**
+ * Observe per-artifact Y.Map changes for UI reactivity.
+ * Returns an unsubscribe function.
+ */
+export function observeArtifacts(
+  doc: Y.Doc,
+  callback: (artifacts: CoopSharedState['artifacts']) => void,
+): () => void {
+  const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
+
+  const handler = () => {
+    const artifacts: CoopSharedState['artifacts'] = [];
+    for (const value of artifactsMap.values()) {
+      try {
+        const parsed = artifactSchema.safeParse(JSON.parse(value));
+        if (parsed.success) {
+          artifacts.push(parsed.data);
+        }
+      } catch {
+        // skip corrupted entries
+      }
+    }
+    callback(artifacts);
+  };
+
+  artifactsMap.observe(handler);
+  return () => artifactsMap.unobserve(handler);
+}
+
+// --- Horizon compaction (Step 21) ---
+
+const DEFAULT_MAX_LIVE_ARTIFACTS = 200;
+const DEFAULT_MAX_AGE_DAYS = 90;
+
+export interface CompactionResult {
+  archivedIds: string[];
+  remainingCount: number;
+}
+
+/**
+ * Identify artifacts beyond the horizon and remove them from the live Yjs doc.
+ * Callers should archive the returned IDs before calling this.
+ */
+export function compactCoopArtifacts(input: {
+  doc: Y.Doc;
+  state: CoopSharedState;
+  maxLiveArtifacts?: number;
+  maxAgeDays?: number;
+}): CompactionResult {
+  const maxLive = input.maxLiveArtifacts ?? DEFAULT_MAX_LIVE_ARTIFACTS;
+  const maxAgeDays = input.maxAgeDays ?? DEFAULT_MAX_AGE_DAYS;
+  const now = Date.now();
+  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+  // Sort newest first
+  const sorted = [...input.state.artifacts].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  const archivedIds: string[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const age = now - new Date(sorted[i].createdAt).getTime();
+    if (i >= maxLive || age > maxAgeMs) {
+      archivedIds.push(sorted[i].id);
+    }
+  }
+
+  if (archivedIds.length === 0) {
+    return { archivedIds: [], remainingCount: sorted.length };
+  }
+
+  // Remove from both old and new Yjs structures
+  const artifactsMap = input.doc.getMap<string>(ARTIFACTS_MAP_KEY);
+  const root = input.doc.getMap<string>(ROOT_KEY);
+  const archivedSet = new Set(archivedIds);
+
+  input.doc.transact(() => {
+    for (const id of archivedIds) {
+      artifactsMap.delete(id);
+    }
+    const remaining = sorted.filter((a) => !archivedSet.has(a.id));
+    root.set('artifacts', JSON.stringify(remaining));
+  });
+
+  return { archivedIds, remainingCount: sorted.length - archivedIds.length };
 }

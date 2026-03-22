@@ -21,6 +21,7 @@ export interface ArchiveUploadResult {
   shardCids: string[];
   pieceCids: string[];
   gatewayUrl: string;
+  blobCids?: Record<string, string>;
 }
 
 export type StorachaArchiveClient = Awaited<ReturnType<typeof StorachaClient.create>>;
@@ -201,14 +202,29 @@ export async function uploadArchiveBundleToStoracha(input: {
   bundle: ArchiveBundle;
   delegation: ArchiveDelegationMaterial;
   client?: StorachaArchiveClient;
+  blobBytes?: Map<string, Uint8Array>;
 }): Promise<ArchiveUploadResult> {
   const client = input.client ?? (await createStorachaArchiveClient());
   const audienceDid = client.did();
   await applyArchiveDelegationToClient(client, input.delegation);
 
+  const blobCids = new Map<string, string>();
+  if (input.blobBytes) {
+    for (const [blobId, bytes] of input.blobBytes) {
+      const blobFile = new Blob([bytes as BlobPart]);
+      const blobCid = await client.uploadFile(blobFile);
+      blobCids.set(blobId, blobCid.toString());
+    }
+  }
+
+  const enrichedPayload = {
+    ...input.bundle.payload,
+    ...(blobCids.size > 0 ? { blobCids: Object.fromEntries(blobCids) } : {}),
+  };
+
   const shardCids: string[] = [];
   const pieceCids = new Set<string>();
-  const blob = new Blob([JSON.stringify(input.bundle.payload, null, 2)], {
+  const blob = new Blob([JSON.stringify(enrichedPayload, null, 2)], {
     type: 'application/json',
   });
 
@@ -227,6 +243,7 @@ export async function uploadArchiveBundleToStoracha(input: {
     shardCids,
     pieceCids: [...pieceCids],
     gatewayUrl: `${input.delegation.gatewayBaseUrl}/ipfs/${root}`,
+    ...(blobCids.size > 0 ? { blobCids: Object.fromEntries(blobCids) } : {}),
   };
 }
 

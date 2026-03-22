@@ -120,6 +120,7 @@ export async function createArchiveReceiptForBundle(input: {
       bundle: input.bundle,
       delegation,
       client,
+      blobBytes: input.bundle.blobBytes,
     });
 
     return createArchiveReceiptFromUpload({

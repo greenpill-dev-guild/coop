@@ -97,6 +97,7 @@ export function createSiblingArtifacts(input: {
     reviewStatus: 'published',
     archiveStatus: 'not-archived',
     archiveReceiptIds: [],
+    attachments: input.draft.attachments ?? [],
     archiveWorthiness: input.draft.archiveWorthiness,
   }));
 }

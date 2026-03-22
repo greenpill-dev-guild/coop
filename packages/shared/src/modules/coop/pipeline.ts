@@ -24,6 +24,7 @@ import {
   truncateWords,
   unique,
 } from '../../utils';
+import type { TranscriptionSegment } from '../transcribe/types';
 
 export interface PageSignalInput {
   candidate: TabCandidate;
@@ -386,6 +387,7 @@ export function shapeReviewDraft(
     previewImageUrl: extract.previewImageUrl,
     status: 'draft',
     workflowStage: 'ready',
+    attachments: [],
     provenance: {
       type: 'tab',
       interpretationId: interpretation.id,
@@ -418,6 +420,59 @@ export function runPassivePipeline(input: {
     .filter((draft): draft is ReviewDraft => Boolean(draft));
 
   return { extract, drafts };
+}
+
+export interface TranscriptInferenceResult {
+  category: ArtifactCategory;
+  confidence: number;
+  tags: string[];
+}
+
+/**
+ * Infer category, confidence, and tags from transcript text using the same
+ * keyword-based heuristics the tab pipeline uses for page extracts.
+ *
+ * This is a standalone adapter that does NOT require coop state -- it applies
+ * `categoryKeywords` matching and basic keyword extraction directly to the
+ * transcript content.
+ */
+export function inferFromTranscript(input: {
+  transcriptText: string;
+  title: string;
+  segments?: TranscriptionSegment[];
+}): TranscriptInferenceResult {
+  const haystack = [input.title, input.transcriptText].join(' ').toLowerCase();
+
+  // Category classification: same keyword map as classifyCategory
+  const ordered = Object.entries(categoryKeywords)
+    .map(([category, keywords]) => ({
+      category: artifactCategorySchema.parse(category),
+      score: keywords.filter((keyword) => haystack.includes(keyword)).length,
+    }))
+    .sort((left, right) => right.score - left.score);
+
+  const category: ArtifactCategory = ordered[0]?.score ? ordered[0].category : 'insight';
+
+  // Confidence: baseline of 0.42 (above metadata-only 0.34), scaled by keyword hits
+  const topScore = ordered[0]?.score ?? 0;
+  const confidence = clamp(0.42 + topScore * 0.06, 0.42, 0.82);
+
+  // Tag extraction: pull words > 4 chars from title + transcript + segments
+  const segmentWords = (input.segments ?? [])
+    .flatMap((segment) => segment.text.split(/\s+/))
+    .map((word) => word.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+    .filter((word) => word.length > 4);
+
+  const transcriptWords = [
+    ...input.title.split(/[\s/]+/),
+    ...input.transcriptText.split(/\s+/).slice(0, 80),
+  ]
+    .map((word) => word.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+    .filter((word) => word.length > 4);
+
+  const tags = unique([...transcriptWords, ...segmentWords]).slice(0, 6);
+
+  return { category, confidence, tags };
 }
 
 export function buildMemoryProfileSeed(profile?: Partial<CoopMemoryProfile>): CoopMemoryProfile {

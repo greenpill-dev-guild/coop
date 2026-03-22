@@ -11,6 +11,7 @@ import type {
   AnchorCapability,
   AuthSession,
   CoopArchiveSecrets,
+  CoopBlobRecord,
   CoopKnowledgeSkillOverride,
   CoopSharedState,
   EncryptedLocalPayload,
@@ -84,6 +85,8 @@ export interface CaptureRunRecord {
   state: 'idle' | 'running' | 'failed' | 'completed';
   capturedAt: string;
   candidateCount: number;
+  capturedDomains?: string[];
+  skippedCount?: number;
 }
 
 export interface LocalSetting {
@@ -133,6 +136,7 @@ export class CoopDexie extends Dexie {
   stealthKeyPairs!: EntityTable<StealthKeyPairRecord, 'id'>;
   agentMemories!: EntityTable<AgentMemory, 'id'>;
   encryptedLocalPayloads!: EntityTable<EncryptedLocalPayload, 'id'>;
+  coopBlobs!: EntityTable<CoopBlobRecord, 'blobId'>;
 
   constructor(name = 'coop-v1') {
     super(name);
@@ -474,6 +478,42 @@ export class CoopDexie extends Dexie {
         await tx.table('knowledgeSkills').clear();
         await tx.table('coopKnowledgeSkillOverrides').clear();
       });
+    this.version(15).stores({
+      tabCandidates: 'id, canonicalUrl, domain, capturedAt',
+      pageExtracts: 'id, canonicalUrl, domain, createdAt',
+      reviewDrafts: 'id, category, createdAt, workflowStage',
+      coopDocs: 'id, updatedAt',
+      captureRuns: 'id, state, capturedAt',
+      settings: 'key',
+      identities: 'id, ownerAddress, displayName, createdAt, lastUsedAt',
+      localMemberSignerBindings:
+        'id, [coopId+memberId], coopId, memberId, accountAddress, passkeyCredentialId, createdAt, lastUsedAt',
+      receiverPairings: 'pairingId, coopId, memberId, roomId, issuedAt, acceptedAt, active',
+      receiverCaptures:
+        'id, kind, createdAt, syncState, pairingId, coopId, memberId, intakeStatus, linkedDraftId',
+      receiverBlobs: 'captureId',
+      actionBundles: 'id, status, coopId, actionClass, createdAt',
+      actionLogEntries: 'id, bundleId, eventType, createdAt',
+      replayIds: 'replayId, bundleId, executedAt',
+      executionPermits: 'id, coopId, status, createdAt, expiresAt',
+      permitLogEntries: 'id, permitId, eventType, createdAt',
+      sessionCapabilities: 'id, coopId, status, createdAt, updatedAt, sessionAddress',
+      sessionCapabilityLogEntries: 'id, capabilityId, eventType, createdAt',
+      encryptedSessionMaterials: 'capabilityId, sessionAddress, wrappedAt',
+      agentObservations: 'id, status, trigger, coopId, createdAt, fingerprint',
+      agentPlans: 'id, observationId, status, createdAt, updatedAt',
+      skillRuns: 'id, observationId, planId, skillId, status, startedAt',
+      tabRoutings:
+        'id, [extractId+coopId], sourceCandidateId, extractId, coopId, status, createdAt, updatedAt',
+      knowledgeSkills: 'id, &url, name, domain, enabled',
+      coopKnowledgeSkillOverrides: 'id, [coopId+knowledgeSkillId], coopId',
+      agentLogs: 'id, traceId, spanType, skillId, observationId, level, timestamp',
+      privacyIdentities: 'id, [coopId+memberId], coopId, memberId, commitment, createdAt',
+      stealthKeyPairs: 'id, coopId, createdAt',
+      agentMemories: 'id, coopId, type, domain, createdAt, expiresAt, contentHash',
+      encryptedLocalPayloads: 'id, [kind+entityId], kind, entityId, wrappedAt, expiresAt',
+      coopBlobs: 'blobId, sourceEntityId, coopId, kind, origin, accessedAt',
+    });
   }
 }
 
@@ -486,7 +526,7 @@ const LOCAL_DATA_REDACTED_SOURCE = {
   domain: 'local',
 } as const;
 
-function buildEncryptedLocalPayloadId(kind: EncryptedLocalPayloadKind, entityId: string) {
+export function buildEncryptedLocalPayloadId(kind: EncryptedLocalPayloadKind, entityId: string) {
   return `${kind}:${entityId}`;
 }
 
@@ -611,7 +651,7 @@ async function deriveLocalDataKey(secret: string, salt: Uint8Array) {
   );
 }
 
-async function buildEncryptedLocalPayloadRecord(input: {
+export async function buildEncryptedLocalPayloadRecord(input: {
   db: CoopDexie;
   kind: EncryptedLocalPayloadKind;
   entityId: string;
@@ -643,7 +683,7 @@ async function buildEncryptedLocalPayloadRecord(input: {
   });
 }
 
-async function getEncryptedLocalPayloadRecord(
+export async function getEncryptedLocalPayloadRecord(
   db: CoopDexie,
   kind: EncryptedLocalPayloadKind,
   entityId: string,
@@ -651,7 +691,10 @@ async function getEncryptedLocalPayloadRecord(
   return db.encryptedLocalPayloads.get(buildEncryptedLocalPayloadId(kind, entityId));
 }
 
-async function decryptEncryptedLocalPayloadRecord(db: CoopDexie, record: EncryptedLocalPayload) {
+export async function decryptEncryptedLocalPayloadRecord(
+  db: CoopDexie,
+  record: EncryptedLocalPayload,
+) {
   const secret = await ensureLocalDataWrappingSecret(db);
   const key = await deriveLocalDataKey(secret, base64ToBytes(record.salt));
   const decrypted = await crypto.subtle.decrypt(

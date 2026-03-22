@@ -274,6 +274,7 @@ function createInitialArtifacts(input: {
       createdAt,
       reviewStatus: 'published',
       archiveStatus: 'not-archived',
+      attachments: [],
       archiveReceiptIds: [],
     },
     {
@@ -297,6 +298,7 @@ function createInitialArtifacts(input: {
       createdAt,
       reviewStatus: 'published',
       archiveStatus: 'not-archived',
+      attachments: [],
       archiveReceiptIds: [],
     },
     {
@@ -320,6 +322,7 @@ function createInitialArtifacts(input: {
       createdAt,
       reviewStatus: 'published',
       archiveStatus: 'not-archived',
+      attachments: [],
       archiveReceiptIds: [],
     },
     {
@@ -343,6 +346,7 @@ function createInitialArtifacts(input: {
       createdAt,
       reviewStatus: 'published',
       archiveStatus: 'not-archived',
+      attachments: [],
       archiveReceiptIds: [],
     },
   ];
@@ -389,14 +393,13 @@ export function createCoop(input: CreateCoopInput) {
     seedContribution: input.seedContribution,
   });
   creator.seedContributionId = artifacts[3]?.id;
-  const memberAccounts = input.greenGoods?.enabled
-    ? provisionMemberAccounts({
-        members: [creator],
-        existingAccounts: [],
-        coopId,
-        chainKey: onchainState.chainKey,
-      })
-    : [];
+  const memberAccounts = provisionMemberAccounts({
+    members: [creator],
+    existingAccounts: [],
+    coopId,
+    chainKey: onchainState.chainKey,
+    accountType: 'kernel',
+  });
   const greenGoods: GreenGoodsGardenState | undefined = input.greenGoods?.enabled
     ? {
         ...createInitialGreenGoodsState({
@@ -554,21 +557,21 @@ export function joinCoop(input: JoinCoopInput) {
     createdAt: nowIso(),
     reviewStatus: 'published',
     archiveStatus: 'not-archived',
+    attachments: [],
     archiveReceiptIds: [],
   };
   member.seedContributionId = seedArtifact.id;
 
-  const memberAccounts = input.state.greenGoods?.enabled
-    ? [
-        ...(input.state.memberAccounts ?? []),
-        ...provisionMemberAccounts({
-          members: [member],
-          existingAccounts: input.state.memberAccounts ?? [],
-          coopId: input.state.profile.id,
-          chainKey: input.state.onchainState.chainKey,
-        }),
-      ]
-    : (input.state.memberAccounts ?? []);
+  const memberAccounts = [
+    ...(input.state.memberAccounts ?? []),
+    ...provisionMemberAccounts({
+      members: [member],
+      existingAccounts: input.state.memberAccounts ?? [],
+      coopId: input.state.profile.id,
+      chainKey: input.state.onchainState.chainKey,
+      accountType: 'kernel',
+    }),
+  ];
 
   const nextState = coopSharedStateSchema.parse({
     ...input.state,
