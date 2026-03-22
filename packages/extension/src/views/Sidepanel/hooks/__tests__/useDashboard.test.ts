@@ -56,7 +56,7 @@ function makeDashboardResponse(overrides: Record<string, unknown> = {}) {
       drafts: [],
       candidates: [],
       summary: {
-        iconState: 'idle',
+        iconState: 'setup',
         iconLabel: 'Coop',
         pendingDrafts: 0,
         coopCount: 0,

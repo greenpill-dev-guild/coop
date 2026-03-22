@@ -116,7 +116,7 @@ vi.mock('../hooks/useDashboard', () => ({
       coopBadges: [],
       receiverPairings: [],
       summary: {
-        iconState: 'idle',
+        iconState: 'ready',
         iconLabel: 'Coop',
         pendingDrafts: 0,
         syncState: 'idle',
@@ -190,6 +190,34 @@ describe('SidepanelApp', () => {
     loadDashboardMock.mockResolvedValue(undefined);
     loadAgentDashboardMock.mockResolvedValue(undefined);
     updateUiPreferencesMock.mockResolvedValue(null);
+
+    Object.defineProperty(globalThis, 'chrome', {
+      configurable: true,
+      value: {
+        storage: {
+          local: {
+            get: vi.fn().mockResolvedValue({}),
+            set: vi.fn().mockResolvedValue(undefined),
+            onChanged: {
+              addListener: vi.fn(),
+              removeListener: vi.fn(),
+            },
+          },
+        },
+        runtime: {
+          getURL: vi.fn((path: string) => `chrome-extension://${path}`),
+        },
+      },
+    });
+
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
   });
 
   it('reloads both dashboards after switching coops via filter pill', async () => {

@@ -9,6 +9,7 @@ import type {
   Artifact,
   AuthSession,
   CaptureMode,
+  CaptureRunRecord,
   CoopKnowledgeSkillOverride,
   CoopSharedState,
   CoopSpaceType,
@@ -75,6 +76,22 @@ export interface PopupSidepanelState {
   canClose: boolean;
 }
 
+export const POPUP_SNAPSHOT_KEY = 'coop:popup-snapshot';
+
+export interface PopupSnapshot {
+  hasCoops: boolean;
+  coopCount: number;
+  coopOptions: Array<{ id: string; name: string }>;
+  activeCoopId?: string;
+  syncLabel: string;
+  syncTone: 'ok' | 'warning' | 'error';
+  syncDetail: string;
+  draftCount: number;
+  artifactCount: number;
+  lastCaptureAt?: string;
+  cachedAt: string;
+}
+
 export interface CoopBadgeSummary {
   coopId: string;
   coopName: string;
@@ -128,6 +145,7 @@ export interface DashboardResponse {
     sessionCapabilities: SessionCapability[];
     sessionCapabilityLog: SessionCapabilityLogEntry[];
   };
+  recentCaptureRuns: CaptureRunRecord[];
 }
 
 export interface ReceiverSyncConfigResponse {

@@ -54,11 +54,13 @@ import {
   syncAgentCadenceAlarm,
   syncCaptureAlarm,
   uiPreferences,
+  updateTabCache,
+  warmTabCache,
 } from './background/context';
 
+import { handleAlarmEvent } from './background/alarm-dispatch';
 // ---- Operator ----
 import { getActiveReviewContextForSession } from './background/operator';
-import { handleAlarmEvent } from './background/alarm-dispatch';
 
 // ---- Dashboard ----
 import { getDashboard, refreshBadge } from './background/dashboard';
@@ -120,6 +122,7 @@ import {
 import {
   captureActiveTab,
   captureVisibleScreenshot,
+  handleTabRemoved,
   openCoopSidepanel,
   registerContextMenus,
   runCaptureCycle,
@@ -226,6 +229,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   await ensureDefaults();
   await runLocalDataMaintenance();
   await registerContextMenus();
+  await warmTabCache();
   await syncAgentCadenceAlarm((await hydrateUiPreferences()).agentCadenceMinutes);
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
   await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
@@ -241,6 +245,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await ensureDefaults();
   await runLocalDataMaintenance();
   await registerContextMenus();
+  await warmTabCache();
   await syncAgentCadenceAlarm((await hydrateUiPreferences()).agentCadenceMinutes);
   await syncCaptureAlarm(await getLocalSetting(stateKeys.captureMode, 'manual'));
   await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
@@ -253,6 +258,16 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   void handleAlarmEvent(alarm);
+});
+
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (tab.id != null && (changeInfo.url || changeInfo.status === 'complete')) {
+    updateTabCache(tab.id, tab);
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void handleTabRemoved(tabId);
 });
 
 // ---- Message Dispatcher ----

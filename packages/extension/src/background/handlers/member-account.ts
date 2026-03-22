@@ -168,6 +168,7 @@ function createMemberGreenGoodsLiveExecutor(input: {
       pimlicoApiKey: configuredPimlicoApiKey ?? '',
       chainKey: input.coop.onchainState.chainKey,
       accountAddress: input.localBinding.accountAddress as Address,
+      accountType: input.localBinding.accountType,
       to,
       data,
       value,

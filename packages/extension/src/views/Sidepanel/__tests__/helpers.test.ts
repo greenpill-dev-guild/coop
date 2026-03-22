@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getAddressExplorerUrl,
   getAnchorExplorerUrl,
   getFilfoxDealUrl,
   getFilfoxProviderUrl,
+  truncateAddress,
   truncateCid,
 } from '../helpers';
 
@@ -12,14 +14,14 @@ describe('getAnchorExplorerUrl', () => {
     expect(url).toBe('https://arbiscan.io/tx/0xabc123');
   });
 
-  it('returns sepolia.arbiscan.io URL for sepolia chain', () => {
+  it('returns sepolia.etherscan.io URL for sepolia chain', () => {
     const url = getAnchorExplorerUrl('0xdef456', 'sepolia');
-    expect(url).toBe('https://sepolia.arbiscan.io/tx/0xdef456');
+    expect(url).toBe('https://sepolia.etherscan.io/tx/0xdef456');
   });
 
   it('falls back to sepolia for unknown chain keys', () => {
     const url = getAnchorExplorerUrl('0x789', 'unknown');
-    expect(url).toBe('https://sepolia.arbiscan.io/tx/0x789');
+    expect(url).toBe('https://sepolia.etherscan.io/tx/0x789');
   });
 });
 
@@ -62,5 +64,32 @@ describe('truncateCid', () => {
     const cid = '12345678901234567';
     const result = truncateCid(cid);
     expect(result).toBe(cid);
+  });
+});
+
+describe('getAddressExplorerUrl', () => {
+  it('returns arbiscan.io address URL for arbitrum chain', () => {
+    const url = getAddressExplorerUrl('0xabc123', 'arbitrum');
+    expect(url).toBe('https://arbiscan.io/address/0xabc123');
+  });
+
+  it('returns sepolia.etherscan.io address URL for sepolia chain', () => {
+    const url = getAddressExplorerUrl('0xdef456', 'sepolia');
+    expect(url).toBe('https://sepolia.etherscan.io/address/0xdef456');
+  });
+
+  it('falls back to sepolia for unknown chain keys', () => {
+    const url = getAddressExplorerUrl('0x789', 'unknown');
+    expect(url).toBe('https://sepolia.etherscan.io/address/0x789');
+  });
+});
+
+describe('truncateAddress', () => {
+  it('truncates a standard 42-char address', () => {
+    expect(truncateAddress('0x1234567890abcdef1234567890abcdef12345678')).toBe('0x1234...5678');
+  });
+
+  it('returns short addresses as-is', () => {
+    expect(truncateAddress('0x1234567890')).toBe('0x1234567890');
   });
 });

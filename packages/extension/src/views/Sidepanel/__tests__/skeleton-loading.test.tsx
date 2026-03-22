@@ -25,7 +25,7 @@ function SkeletonHeader({ dashboard }: { dashboard: { summary: DashboardSummary 
       {dashboard ? (
         <div
           className={
-            dashboard.summary.iconState === 'error-offline' ? 'state-pill is-error' : 'state-pill'
+            dashboard.summary.iconState === 'blocked' ? 'state-pill is-error' : 'state-pill'
           }
         >
           {dashboard.summary.iconLabel}
@@ -143,7 +143,7 @@ describe('Skeleton loading indicators', () => {
     const dashboard = {
       summary: {
         iconLabel: 'Ready',
-        iconState: 'ok',
+        iconState: 'ready',
         pendingDrafts: 0,
         syncState: 'synced',
       },
@@ -188,7 +188,7 @@ describe('Skeleton loading indicators', () => {
     const dashboard = {
       summary: {
         iconLabel: 'Ready',
-        iconState: 'ok',
+        iconState: 'ready',
         pendingDrafts: 5,
         syncState: 'synced',
       },
@@ -215,7 +215,7 @@ describe('Skeleton loading indicators', () => {
     const dashboard = {
       summary: {
         iconLabel: 'Ready',
-        iconState: 'ok',
+        iconState: 'ready',
         pendingDrafts: 0,
         syncState: 'synced',
       },

@@ -581,14 +581,105 @@ export async function syncAgentCadenceAlarm(
   });
 }
 
+const captureModePeriodMap: Record<string, number> = {
+  '5-min': 5,
+  '10-min': 10,
+  '15-min': 15,
+  '30-min': 30,
+  '60-min': 60,
+};
+
+export function getCapturePeriodMinutes(captureMode: string): number | null {
+  return captureModePeriodMap[captureMode] ?? null;
+}
+
 export async function syncCaptureAlarm(captureMode: string) {
   await chrome.alarms.clear(alarmNames.capture);
-  if (captureMode === 'manual') {
+  const period = getCapturePeriodMinutes(captureMode);
+  if (!period) {
     return;
   }
   await chrome.alarms.create(alarmNames.capture, {
-    periodInMinutes: captureMode === '30-min' ? 30 : 60,
+    periodInMinutes: period,
   });
+}
+
+// ---- Recent Capture Dedup ----
+
+const recentCaptureUrls = new Map<string, number>();
+const DEDUP_PRUNE_THRESHOLD_MS = 60 * 60_000; // 1 hour
+const DEDUP_MAX_ENTRIES = 2000;
+
+export function markUrlCaptured(url: string) {
+  recentCaptureUrls.set(url, Date.now());
+}
+
+function pruneRecentCaptureUrls() {
+  const now = Date.now();
+  for (const [key, ts] of recentCaptureUrls) {
+    if (now - ts > DEDUP_PRUNE_THRESHOLD_MS) {
+      recentCaptureUrls.delete(key);
+    }
+  }
+  // Hard cap: evict oldest entries if still over limit
+  if (recentCaptureUrls.size > DEDUP_MAX_ENTRIES) {
+    const sorted = [...recentCaptureUrls.entries()].sort((a, b) => a[1] - b[1]);
+    const toRemove = sorted.slice(0, recentCaptureUrls.size - DEDUP_MAX_ENTRIES);
+    for (const [key] of toRemove) {
+      recentCaptureUrls.delete(key);
+    }
+  }
+}
+
+export function wasRecentlyCaptured(url: string, cooldownMs: number): boolean {
+  if (recentCaptureUrls.size > DEDUP_MAX_ENTRIES / 2) {
+    pruneRecentCaptureUrls();
+  }
+
+  const lastCaptured = recentCaptureUrls.get(url);
+  if (lastCaptured === undefined) {
+    return false;
+  }
+  return Date.now() - lastCaptured < cooldownMs;
+}
+
+// ---- Tab URL Cache (for tab-close capture) ----
+
+export type TabCacheEntry = {
+  url: string;
+  title: string;
+  favIconUrl?: string;
+  windowId: number;
+};
+
+export const tabUrlCache = new Map<number, TabCacheEntry>();
+
+export function updateTabCache(
+  tabId: number,
+  tab: { url?: string; title?: string; favIconUrl?: string; windowId?: number },
+) {
+  if (!tab.url) {
+    return;
+  }
+  tabUrlCache.set(tabId, {
+    url: tab.url,
+    title: tab.title ?? '',
+    favIconUrl: tab.favIconUrl,
+    windowId: tab.windowId ?? 0,
+  });
+}
+
+export function removeFromTabCache(tabId: number) {
+  tabUrlCache.delete(tabId);
+}
+
+export async function warmTabCache() {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.id != null && tab.url) {
+      updateTabCache(tab.id, tab);
+    }
+  }
 }
 
 // ---- Local Enhancement ----

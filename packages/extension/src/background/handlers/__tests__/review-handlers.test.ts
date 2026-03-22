@@ -140,6 +140,7 @@ describe('review handlers', () => {
           rationale: '',
           status: 'draft',
           workflowStage: 'candidate',
+          attachments: [],
           provenance: { type: 'tab', interpretationId: '', extractId: '', sourceCandidateId: '' },
           createdAt: '2026-03-11T18:00:00.000Z',
         } satisfies ReviewDraft,

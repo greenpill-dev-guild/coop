@@ -50,10 +50,10 @@ export async function getPopupSidepanelState(windowId: number): Promise<PopupSid
 
 export async function togglePopupSidepanel(windowId: number): Promise<PopupSidepanelState> {
   const sidePanelApi = getSidepanelApi();
-  const currentState = await getPopupSidepanelState(windowId);
+  const wasOpen = await isSidepanelOpen(windowId);
 
-  if (currentState.open && currentState.canClose) {
-    await sidePanelApi.close?.({ windowId });
+  if (wasOpen && typeof sidePanelApi.close === 'function') {
+    await sidePanelApi.close({ windowId });
     await setSidepanelWindowState(windowId, false);
     return {
       open: false,
@@ -61,10 +61,11 @@ export async function togglePopupSidepanel(windowId: number): Promise<PopupSidep
     };
   }
 
+  // Open first to stay within user gesture chain
   await sidePanelApi.open({ windowId });
   await setSidepanelWindowState(windowId, true);
   return {
     open: true,
-    canClose: currentState.canClose,
+    canClose: typeof sidePanelApi.close === 'function',
   };
 }

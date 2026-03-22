@@ -30,6 +30,8 @@ import { isTrustedNodeRole } from '../runtime/agent-harness';
 import {
   type CoopBadgeSummary,
   type DashboardResponse,
+  POPUP_SNAPSHOT_KEY,
+  type PopupSnapshot,
   type RuntimeSummary,
   notifyDashboardUpdated,
 } from '../runtime/messages';
@@ -52,6 +54,7 @@ import {
   localEnhancementAvailability,
   stateKeys,
 } from './context';
+import { getAgentCycleState } from './handlers/agent';
 import { refreshStoredSessionCapabilityStatuses } from './handlers/session';
 import { getActiveReviewContextForSession, getOperatorState } from './operator';
 
@@ -89,34 +92,46 @@ export async function refreshStoredPermitStatuses() {
 
 export function extensionIconPaths(state: RuntimeSummary['iconState']) {
   switch (state) {
-    case 'idle':
+    case 'setup':
       return {
         16: 'icons/icon-16.png',
         32: 'icons/icon-32.png',
         48: 'icons/icon-48.png',
         128: 'icons/icon-128.png',
       };
-    case 'watching':
+    case 'ready':
       return {
         16: 'icons/icon-watching-16.png',
         32: 'icons/icon-watching-32.png',
         48: 'icons/icon-watching-48.png',
         128: 'icons/icon-watching-128.png',
       };
-    case 'review-needed':
+    case 'working':
+      // TODO: create blue icon assets — reusing watching (green) for now
+      return {
+        16: 'icons/icon-watching-16.png',
+        32: 'icons/icon-watching-32.png',
+        48: 'icons/icon-watching-48.png',
+        128: 'icons/icon-watching-128.png',
+      };
+    case 'attention':
       return {
         16: 'icons/icon-review-needed-16.png',
         32: 'icons/icon-review-needed-32.png',
         48: 'icons/icon-review-needed-48.png',
         128: 'icons/icon-review-needed-128.png',
       };
-    case 'error-offline':
+    case 'blocked':
       return {
         16: 'icons/icon-error-offline-16.png',
         32: 'icons/icon-error-offline-32.png',
         48: 'icons/icon-error-offline-48.png',
         128: 'icons/icon-error-offline-128.png',
       };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
   }
 }
 
@@ -189,50 +204,28 @@ export function summarizeSyncStatus(input: {
 }
 
 export function extensionActionTitle(
-  summary: Pick<
-    RuntimeSummary,
-    'coopCount' | 'pendingAttentionCount' | 'syncDetail' | 'syncLabel' | 'syncTone'
-  >,
+  summary: Pick<RuntimeSummary, 'iconState' | 'pendingAttentionCount' | 'syncDetail'>,
 ) {
-  if (summary.coopCount === 0) {
-    return 'Coop';
+  switch (summary.iconState) {
+    case 'setup':
+      return 'Coop';
+    case 'blocked':
+      return summary.syncDetail ? `Coop: ${summary.syncDetail}` : 'Coop: Error';
+    case 'attention':
+      return `Coop: ${summary.pendingAttentionCount} waiting for review`;
+    case 'working':
+      return 'Coop: Processing';
+    case 'ready':
+      return 'Coop';
+    default: {
+      const _exhaustive: never = summary.iconState;
+      return _exhaustive;
+    }
   }
-
-  const detail = summary.syncDetail?.trim();
-  const normalized = detail?.toLowerCase() ?? '';
-
-  if (
-    normalized.includes('no signaling server connection') ||
-    normalized.includes('limited to this browser profile') ||
-    summary.syncLabel === 'Local'
-  ) {
-    return detail ? `Coop: Local. ${detail}` : 'Coop: Local';
-  }
-
-  if (normalized.includes('offline') || summary.syncLabel === 'Offline') {
-    return detail ? `Coop: Offline. ${detail}` : 'Coop: Offline';
-  }
-
-  if (summary.syncTone === 'error') {
-    return detail ? `Coop: Error. ${detail}` : 'Coop: Error';
-  }
-
-  if (summary.syncTone === 'warning' && summary.syncLabel) {
-    return detail ? `Coop: ${summary.syncLabel}. ${detail}` : `Coop: ${summary.syncLabel}`;
-  }
-
-  if (summary.pendingAttentionCount > 0) {
-    return `Coop: ${summary.pendingAttentionCount} waiting for review`;
-  }
-
-  return 'Coop';
 }
 
 export function describeActionIndicator(
-  summary: Pick<
-    RuntimeSummary,
-    'iconState' | 'coopCount' | 'pendingAttentionCount' | 'syncDetail' | 'syncLabel' | 'syncTone'
-  >,
+  summary: Pick<RuntimeSummary, 'iconState' | 'pendingAttentionCount' | 'syncDetail'>,
 ) {
   const badge = extensionIconBadge(summary.iconState);
   const count = summary.pendingAttentionCount;
@@ -256,6 +249,7 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     prefs,
     tabRoutings,
     actionBundles,
+    agentCycleState,
   ] = await Promise.all([
     listReviewDrafts(db),
     getCoops(),
@@ -266,6 +260,7 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     hydrateUiPreferences(),
     listTabRoutings(db, { status: ['routed', 'drafted'], limit: 500 }),
     listActionBundles(db),
+    getAgentCycleState(),
   ]);
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
   const visibleDrafts = filterVisibleReviewDrafts(
@@ -292,11 +287,10 @@ export async function buildSummary(): Promise<RuntimeSummary> {
   const pendingAttentionCount = visibleDrafts.length + routedTabs + pendingActions;
   const enhancement = localEnhancementAvailability();
   const iconState = deriveExtensionIconState({
-    pendingDrafts: pendingAttentionCount,
-    watching: coops.length > 0,
-    offline: runtimeHealth.offline,
-    missingPermission: runtimeHealth.missingPermission,
-    syncError: runtimeHealth.syncError || Boolean(runtimeHealth.lastCaptureError),
+    hasCoop: coops.length > 0,
+    agentActive: agentCycleState.running,
+    pendingAttention: pendingAttentionCount,
+    blocked: runtimeHealth.missingPermission,
   });
   const syncSummary = summarizeSyncStatus({
     coopCount: coops.length,
@@ -328,8 +322,29 @@ export async function buildSummary(): Promise<RuntimeSummary> {
   };
 }
 
+export async function writePopupSnapshot(
+  summary: RuntimeSummary,
+  coops: Array<{ profile: { id: string; name: string }; artifacts: unknown[] }>,
+) {
+  const snapshot: PopupSnapshot = {
+    hasCoops: coops.length > 0,
+    coopCount: coops.length,
+    coopOptions: coops.map((c) => ({ id: c.profile.id, name: c.profile.name })),
+    activeCoopId: summary.activeCoopId,
+    syncLabel: summary.syncLabel ?? 'Checking',
+    syncTone: summary.syncTone ?? 'ok',
+    syncDetail: summary.syncDetail ?? 'Checking sync status.',
+    draftCount: summary.pendingDrafts,
+    artifactCount: coops.reduce((sum, c) => sum + c.artifacts.length, 0),
+    lastCaptureAt: summary.lastCaptureAt,
+    cachedAt: new Date().toISOString(),
+  };
+
+  await chrome.storage.local.set({ [POPUP_SNAPSHOT_KEY]: snapshot }).catch(() => {});
+}
+
 export async function refreshBadge() {
-  const summary = await buildSummary();
+  const [summary, coops] = await Promise.all([buildSummary(), getCoops()]);
   const indicator = describeActionIndicator(summary);
   await chrome.action.setIcon({ path: extensionIconPaths(summary.iconState) });
   await chrome.action.setBadgeText({ text: indicator.badgeText });
@@ -337,6 +352,7 @@ export async function refreshBadge() {
   await chrome.action.setTitle({
     title: indicator.title,
   });
+  void writePopupSnapshot(summary, coops);
   void notifyDashboardUpdated();
 }
 
@@ -355,6 +371,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     identities,
     receiverPairings,
     receiverIntake,
+    recentCaptureRuns,
   ] = await Promise.all([
     getCoops(),
     listReviewDrafts(db),
@@ -367,6 +384,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     listLocalIdentities(db),
     listReceiverPairings(db),
     listReceiverCaptures(db),
+    db.captureRuns.orderBy('capturedAt').reverse().limit(5).toArray(),
   ]);
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
   const orderedDrafts = drafts;
@@ -523,5 +541,6 @@ export async function getDashboard(): Promise<DashboardResponse> {
       sessionCapabilities: scopedSessionCapabilities,
       sessionCapabilityLog: scopedSessionCapabilityLogEntries,
     },
+    recentCaptureRuns,
   };
 }

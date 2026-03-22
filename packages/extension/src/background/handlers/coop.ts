@@ -1,8 +1,10 @@
 import {
   type AnchorCapability,
   type CoopSharedState,
+  computeThresholdForOwnerCount,
   createAnchorCapability,
   createCoop,
+  createLocalMemberSignerBinding,
   createMockOnchainState,
   createStateFromInviteBootstrap,
   createUnavailableOnchainState,
@@ -11,8 +13,11 @@ import {
   initializeCoopPrivacy,
   initializeMemberPrivacy,
   joinCoop,
+  markAccountPredicted,
   nowIso,
   parseInviteCode,
+  predictMemberAccountAddress,
+  saveLocalMemberSignerBinding,
   setAnchorCapability,
   verifyInviteCodeProof,
 } from '@coop/shared';
@@ -252,46 +257,96 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
     seedContribution: message.payload.seedContribution,
     member: message.payload.member,
   });
-  await saveState(joined.state);
-  await setLocalSetting(stateKeys.activeCoopId, joined.state.profile.id);
+  let latestState = joined.state;
+  const joinedMember = joined.member;
+  await setLocalSetting(stateKeys.activeCoopId, latestState.profile.id);
+
   // Initialize privacy identity for the new member
   try {
-    const newMember = joined.state.members.find(
-      (m) => m.displayName === message.payload.displayName,
-    );
-    if (newMember) {
-      const privacyRecord = await initializeMemberPrivacy(db, {
-        coopId: joined.state.profile.id,
-        memberId: newMember.id,
-      });
-      const currentCommitments = joined.state.memberCommitments ?? [];
-      if (!currentCommitments.includes(privacyRecord.commitment)) {
-        await saveState({
-          ...joined.state,
-          memberCommitments: [...currentCommitments, privacyRecord.commitment],
-        });
-      }
+    const privacyRecord = await initializeMemberPrivacy(db, {
+      coopId: latestState.profile.id,
+      memberId: joinedMember.id,
+    });
+    const currentCommitments = latestState.memberCommitments ?? [];
+    if (!currentCommitments.includes(privacyRecord.commitment)) {
+      latestState = {
+        ...latestState,
+        memberCommitments: [...currentCommitments, privacyRecord.commitment],
+      };
     }
   } catch (privacyError) {
     console.warn('[coop:privacy] Failed to initialize member privacy:', privacyError);
   }
+
+  // Auto-predict Kernel account address for the joining member
   try {
-    const joinedMember = joined.state.members.find(
-      (member) => member.displayName === message.payload.displayName,
-    );
-    if (joinedMember) {
-      await ensureOnboardingBurst({
-        coopId: joined.state.profile.id,
-        memberId: joinedMember.id,
-        reason: 'coop-join',
-      });
+    const authSession = await getAuthSession(db);
+    if (authSession?.passkey) {
+      const memberAccount = latestState.memberAccounts.find((a) => a.memberId === joinedMember.id);
+      if (memberAccount && memberAccount.status === 'pending') {
+        const predictedAddress = await predictMemberAccountAddress({
+          authSession,
+          coopId: latestState.profile.id,
+          memberId: joinedMember.id,
+          chainKey: latestState.onchainState.chainKey,
+          accountType: memberAccount.accountType,
+        });
+        const updatedAccount = markAccountPredicted(memberAccount, predictedAddress);
+        latestState = {
+          ...latestState,
+          memberAccounts: latestState.memberAccounts.map((a) =>
+            a.memberId === joinedMember.id ? updatedAccount : a,
+          ),
+        };
+        await saveLocalMemberSignerBinding(
+          db,
+          createLocalMemberSignerBinding({
+            coopId: latestState.profile.id,
+            memberId: joinedMember.id,
+            accountAddress: predictedAddress,
+            accountType: memberAccount.accountType,
+            passkeyCredentialId: authSession.passkey.id,
+          }),
+        );
+
+        // If trusted member, queue safe-add-owner action
+        if (joinedMember.role === 'trusted') {
+          const currentOwners = latestState.onchainState.safeOwners ?? [];
+          const newThreshold = computeThresholdForOwnerCount(currentOwners.length + 1);
+          await emitAgentObservationIfMissing({
+            trigger: 'safe-add-owner-requested',
+            title: `Trusted member ${joinedMember.displayName} needs Safe co-signer access`,
+            summary: `Add Kernel account ${predictedAddress} as Safe owner with threshold ${newThreshold}.`,
+            coopId: latestState.profile.id,
+            payload: {
+              memberId: joinedMember.id,
+              ownerAddress: predictedAddress,
+              newThreshold,
+              memberRole: joinedMember.role,
+            },
+          });
+        }
+      }
     }
+  } catch (accountError) {
+    console.warn('[coop:member-account] Failed to auto-predict member account:', accountError);
+  }
+
+  // Single consolidated save for all post-join state mutations
+  await saveState(latestState);
+
+  try {
+    await ensureOnboardingBurst({
+      coopId: latestState.profile.id,
+      memberId: joinedMember.id,
+      reason: 'coop-join',
+    });
   } catch (onboardingError) {
     console.warn('[coop:onboarding] Failed to schedule join proactive cycle:', onboardingError);
   }
   await refreshBadge();
   return {
     ok: true,
-    data: joined.state,
+    data: latestState,
   } satisfies RuntimeActionResponse;
 }

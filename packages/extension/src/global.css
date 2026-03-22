@@ -3,7 +3,7 @@
 
 :root {
   font-family: "Avenir Next", "Segoe UI", sans-serif;
-  --coop-shadow: 0 16px 40px rgba(79, 46, 31, 0.12);
+  --coop-shadow: var(--coop-shadow-md);
 }
 
 @keyframes coop-rise {
@@ -25,9 +25,7 @@
 body {
   margin: 0;
   min-width: 100%;
-  background: radial-gradient(circle at top right, rgba(90, 125, 16, 0.12), transparent 18rem),
-    radial-gradient(circle at top left, rgba(253, 138, 1, 0.12), transparent 18rem),
-    var(--coop-cream);
+  background: var(--coop-page-gradient);
   color: var(--coop-brown);
 }
 
@@ -69,7 +67,7 @@ img {
   flex-direction: column;
   gap: 0.8rem;
   border-bottom: 1px solid var(--coop-line);
-  background: rgba(255, 252, 249, 0.88);
+  background: var(--coop-surface);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -119,7 +117,7 @@ img {
   border-radius: 16px;
   border: 1px solid var(--coop-line);
   padding: 0.7rem 0.9rem;
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--coop-surface-elevated);
   color: var(--coop-brown);
 }
 
@@ -140,8 +138,13 @@ img {
   border-color: transparent;
 }
 
+.primary-button {
+  min-height: 48px;
+}
+
 .secondary-button {
-  background: rgba(255, 255, 255, 0.82);
+  min-height: 38px;
+  background: var(--coop-surface-strong);
 }
 
 .ghost-button {
@@ -163,7 +166,7 @@ img {
 .panel-card {
   border: 1px solid var(--coop-line);
   border-radius: 22px;
-  background: rgba(255, 252, 249, 0.82);
+  background: var(--coop-surface-card);
   box-shadow: var(--coop-shadow);
   padding: 1rem;
 }
@@ -193,7 +196,7 @@ img {
 .secondary-button:hover:not(:disabled),
 .inline-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 18px 42px rgba(79, 46, 31, 0.14);
+  box-shadow: var(--coop-shadow-md);
 }
 
 button:disabled {
@@ -231,6 +234,7 @@ button:disabled {
   content: "-";
 }
 
+.collapsible-card > summary > h2,
 .collapsible-card > summary > h3 {
   display: inline;
   font-size: inherit;
@@ -264,7 +268,7 @@ button:disabled {
   padding: 0.85rem;
   border-radius: 18px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--coop-surface-elevated);
 }
 
 .summary-card strong,
@@ -340,7 +344,7 @@ button:disabled {
   padding: 0.8rem 0.9rem;
   border-radius: 14px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--coop-surface-input);
   color: var(--coop-brown);
 }
 
@@ -375,7 +379,7 @@ button:disabled {
   border: 1px solid var(--coop-line);
   border-radius: 18px;
   padding: 0.9rem;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--coop-surface-elevated);
 }
 
 .source-link {
@@ -450,7 +454,7 @@ button:disabled {
   border: 1px solid rgba(47, 90, 37, 0.12);
   border-radius: 16px;
   padding: 0.85rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--coop-surface-elevated);
 }
 
 .skeleton {
@@ -502,7 +506,7 @@ button:disabled {
   z-index: 100;
   display: grid;
   place-items: center;
-  background: rgba(79, 46, 31, 0.32);
+  background: var(--coop-overlay);
   border: none;
   padding: 1rem;
   margin: 0;
@@ -570,7 +574,7 @@ button:disabled {
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--coop-surface-strong);
   font-weight: 700;
   font-size: 0.92rem;
   color: var(--coop-brown);
@@ -688,15 +692,43 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.75rem;
   border-bottom: 1px solid var(--coop-line);
-  background: rgba(255, 252, 249, 0.88);
+  background: var(--coop-surface);
   backdrop-filter: blur(10px);
   z-index: 1;
 }
 
 .sidepanel-header__brand img {
-  width: 96px;
+  width: 72px;
+}
+
+.sidepanel-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidepanel-header__action {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--coop-line);
+  background: var(--coop-surface-elevated);
+  color: var(--coop-brown);
+  display: grid;
+  place-items: center;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.sidepanel-header__action:hover {
+  background: rgba(90, 125, 16, 0.08);
+  border-color: rgba(90, 125, 16, 0.24);
+}
+
+.sidepanel-header__action:focus-visible {
+  outline: 2px solid rgba(90, 125, 16, 0.32);
+  outline-offset: 2px;
 }
 
 /* ---- Sidepanel scrollable content ---- */
@@ -704,9 +736,11 @@ button:disabled {
 .sidepanel-content {
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
   display: grid;
   gap: 1rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* ---- Sidepanel footer nav ---- */
@@ -716,7 +750,7 @@ button:disabled {
   gap: 6px;
   padding: 0.5rem 1rem;
   border-top: 1px solid var(--coop-line);
-  background: rgba(255, 252, 249, 0.88);
+  background: var(--coop-surface);
   backdrop-filter: blur(10px);
 }
 
@@ -724,7 +758,7 @@ button:disabled {
   min-height: 46px;
   border: 1px solid var(--coop-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--coop-surface-elevated);
   color: var(--coop-brown-soft);
   display: grid;
   justify-items: center;
@@ -782,7 +816,7 @@ button:disabled {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--coop-surface-elevated);
   color: var(--coop-brown);
   font-size: 0.82rem;
   font-weight: 600;
@@ -794,7 +828,7 @@ button:disabled {
   right: 0;
   top: calc(100% + 4px);
   min-width: 160px;
-  background: rgba(255, 252, 249, 0.98);
+  background: var(--coop-surface-card);
   border: 1px solid var(--coop-line);
   border-radius: 12px;
   padding: 0.25rem;
@@ -830,16 +864,18 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+  align-items: center;
 }
 
 .chickens-filter-row button {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--coop-surface-elevated);
   color: var(--coop-brown-soft);
   font-size: 0.82rem;
   font-weight: 600;
+  align-self: flex-start;
 }
 
 .chickens-filter-row button.is-active {
@@ -890,7 +926,7 @@ button:disabled {
   padding: 0.25rem 0.5rem;
   border-radius: 8px;
   border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--coop-surface-elevated);
   color: var(--coop-green);
   font-size: 0.78rem;
   font-weight: 600;

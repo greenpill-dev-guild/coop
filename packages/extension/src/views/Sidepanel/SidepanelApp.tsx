@@ -14,6 +14,7 @@ import { InferenceBridge, type InferenceBridgeState } from '../../runtime/infere
 import { type AgentDashboardResponse, sendRuntimeMessage } from '../../runtime/messages';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NotificationBanner } from '../shared/NotificationBanner';
+import { useCoopTheme } from '../shared/useCoopTheme';
 import { CoopFilterPill } from './CoopSwitcher';
 import { SidepanelFooterNav } from './TabStrip';
 import { describeLocalHelperState, formatAgentCadence } from './helpers';
@@ -51,7 +52,25 @@ async function downloadText(filename: string, value: string) {
   URL.revokeObjectURL(url);
 }
 
+function PairDeviceIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 20 20" width="16" height="16">
+      <rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10 14h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M16 7l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M12 10h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function SidepanelApp() {
+  useCoopTheme();
   const [panelTab, setPanelTab] = useState<SidepanelTab>('chickens');
 
   // --- Core hooks ---
@@ -910,11 +929,25 @@ export function SidepanelApp() {
         <div className="sidepanel-header__brand">
           <img src="/branding/coop-wordmark-flat.png" alt="Coop" />
         </div>
-        <CoopFilterPill
-          coops={(dashboard?.coops ?? []).map((c) => ({ id: c.profile.id, name: c.profile.name }))}
-          activeCoopId={dashboard?.activeCoopId ?? activeCoop?.profile.id}
-          onFilter={(coopId) => (coopId ? selectActiveCoop(coopId) : undefined)}
-        />
+        <div className="sidepanel-header__actions">
+          <button
+            className="sidepanel-header__action"
+            onClick={createReceiverPairing}
+            type="button"
+            aria-label="Pair a Device"
+            title="Pair a Device"
+          >
+            <PairDeviceIcon />
+          </button>
+          <CoopFilterPill
+            coops={(dashboard?.coops ?? []).map((c) => ({
+              id: c.profile.id,
+              name: c.profile.name,
+            }))}
+            activeCoopId={dashboard?.activeCoopId ?? activeCoop?.profile.id}
+            onFilter={(coopId) => (coopId ? selectActiveCoop(coopId) : undefined)}
+          />
+        </div>
       </header>
 
       <main className="sidepanel-content">
@@ -968,7 +1001,6 @@ export function SidepanelApp() {
             <ContributeTab
               activeCoop={activeCoop}
               activeMember={activeMember}
-              createReceiverPairing={createReceiverPairing}
               copyText={copyText}
             />
           </ErrorBoundary>

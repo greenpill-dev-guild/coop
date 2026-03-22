@@ -1,4 +1,4 @@
-import type { ReceiverCapture, UiPreferences } from '@coop/shared';
+import type { CaptureExclusionCategory, ReceiverCapture, UiPreferences } from '@coop/shared';
 import { sendRuntimeMessage } from '../../../runtime/messages';
 
 export function useTabCapture(deps: {
@@ -66,11 +66,74 @@ export function useTabCapture(deps: {
     await loadDashboard();
   }
 
+  async function updateExcludedCategories(excludedCategories: CaptureExclusionCategory[]) {
+    const currentPreferences = await sendRuntimeMessage<UiPreferences>({
+      type: 'get-ui-preferences',
+    });
+    if (!currentPreferences.ok || !currentPreferences.data) {
+      setMessage(currentPreferences.error ?? 'Could not load settings.');
+      return;
+    }
+    const response = await sendRuntimeMessage<UiPreferences>({
+      type: 'set-ui-preferences',
+      payload: { ...currentPreferences.data, excludedCategories },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update exclusions.');
+      return;
+    }
+    await loadDashboard();
+  }
+
+  async function updateCustomExcludedDomains(customExcludedDomains: string[]) {
+    const currentPreferences = await sendRuntimeMessage<UiPreferences>({
+      type: 'get-ui-preferences',
+    });
+    if (!currentPreferences.ok || !currentPreferences.data) {
+      setMessage(currentPreferences.error ?? 'Could not load settings.');
+      return;
+    }
+    const response = await sendRuntimeMessage<UiPreferences>({
+      type: 'set-ui-preferences',
+      payload: { ...currentPreferences.data, customExcludedDomains },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update custom domains.');
+      return;
+    }
+    await loadDashboard();
+  }
+
+  async function toggleCaptureOnClose(captureOnClose: boolean) {
+    const currentPreferences = await sendRuntimeMessage<UiPreferences>({
+      type: 'get-ui-preferences',
+    });
+    if (!currentPreferences.ok || !currentPreferences.data) {
+      setMessage(currentPreferences.error ?? 'Could not load settings.');
+      return;
+    }
+    const response = await sendRuntimeMessage<UiPreferences>({
+      type: 'set-ui-preferences',
+      payload: { ...currentPreferences.data, captureOnClose },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update capture-on-close setting.');
+      return;
+    }
+    setMessage(
+      captureOnClose ? 'Closing tabs will now be captured.' : 'Capture on tab close disabled.',
+    );
+    await loadDashboard();
+  }
+
   return {
     runManualCapture,
     runActiveTabCapture,
     captureVisibleScreenshotAction,
     updateAgentCadence,
+    updateExcludedCategories,
+    updateCustomExcludedDomains,
+    toggleCaptureOnClose,
   };
 }
 

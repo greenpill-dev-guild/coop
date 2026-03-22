@@ -113,7 +113,19 @@ export function getAnchorExplorerUrl(txHash: string, chainKey: string): string {
   if (chainKey === 'arbitrum') {
     return `https://arbiscan.io/tx/${txHash}`;
   }
-  return `https://sepolia.arbiscan.io/tx/${txHash}`;
+  return `https://sepolia.etherscan.io/tx/${txHash}`;
+}
+
+export function getAddressExplorerUrl(address: string, chainKey: string): string {
+  if (chainKey === 'arbitrum') {
+    return `https://arbiscan.io/address/${address}`;
+  }
+  return `https://sepolia.etherscan.io/address/${address}`;
+}
+
+export function truncateAddress(address: string): string {
+  if (address.length <= 13) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export { getFvmExplorerTxUrl };
