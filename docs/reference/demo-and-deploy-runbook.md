@@ -24,38 +24,46 @@ other docs aligned to this one.
   - `live`: bounded Smart Session execution for phase-1 Green Goods actions
 - Production passkeys must be created on the final production PWA domain.
 
-## Environment 1: Two-Dev Local/Local
+## Environment 1: Local Development (with `bun dev`)
 
-Use this when two developers are both running source locally and want the full pair flow on their
-own machines.
+Use `bun dev` to start all services concurrently. The dev script automatically configures the
+extension with the correct signaling and receiver URLs.
 
-### Root `.env.local`
+### Root `.env.local` (minimal)
 
 ```bash
-VITE_COOP_CHAIN=sepolia
-VITE_COOP_ONCHAIN_MODE=mock
-VITE_COOP_ARCHIVE_MODE=mock
-VITE_COOP_SESSION_MODE=off
-VITE_COOP_RECEIVER_APP_URL=http://127.0.0.1:3001
-VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
+# Tunnel (optional — enables dev-api.coop.town and local.coop.town)
+COOP_TUNNEL_NAME=coop-api
+COOP_TUNNEL_API_HOSTNAME=dev-api.coop.town
+COOP_TUNNEL_APP_HOSTNAME=local.coop.town
 ```
+
+Other defaults are safe: sepolia, mock onchain/archive, session off.
 
 ### Processes
 
-Run these from the repo root:
-
 ```bash
 bun install
-bun run dev:app
-bun run dev:extension
-bun run dev:api
+bun dev          # starts app + extension + api + tunnel (if configured)
 ```
 
-Expected local surfaces:
+Expected surfaces:
 
-- App and receiver PWA: `http://127.0.0.1:3001`
-- Signaling server: `ws://127.0.0.1:4444`
+- App / receiver PWA: `http://127.0.0.1:3001` (local) or `https://local.coop.town` (tunnel)
+- Signaling: `ws://127.0.0.1:4444` (local) or `wss://dev-api.coop.town` (tunnel)
+- Production fallback signaling: `wss://api.coop.town` (always available)
 - Extension bundle: `packages/extension/dist`
+
+The extension is built with both local and production signaling URLs. If the local API is down,
+it falls back to production automatically.
+
+To run services individually instead of `bun dev`:
+
+```bash
+bun run dev:app        # port 3001
+bun run dev:extension  # watch build
+bun run dev:api        # port 4444
+```
 
 ### Chrome Setup
 
@@ -74,32 +82,28 @@ Each developer should:
 2. Dev A generates a receiver pairing from the `Coops` tab.
 3. Dev B opens `http://127.0.0.1:3001/pair` and accepts the pairing payload or QR.
 4. Dev B goes to `http://127.0.0.1:3001/receiver`, captures a voice note, photo, or link.
-5. Dev A confirms the item lands in `Private Receiver Intake`.
+5. Dev A confirms the item lands in the **Nest** tab (Receiver section).
 6. Dev A converts it into the Roost, edits it, and publishes it.
-7. Both devs verify the published artifact in `Feed` and on the board route.
+7. Both devs verify the published artifact in the **Coops** tab feed and on the board route.
 8. Dev A archives the snapshot and exports the latest receipt.
 
-## Environment 2: Two-Dev Local Extension + Production PWA
+## Environment 2: Local Extension + Production PWA
 
-Use this as the default peer demo path before the owned production signaling host is ready.
+Use this to test the extension against the production receiver and signaling.
 
 ### Root `.env.local`
 
 ```bash
-VITE_COOP_CHAIN=sepolia
-VITE_COOP_ONCHAIN_MODE=mock
-VITE_COOP_ARCHIVE_MODE=mock
-VITE_COOP_SESSION_MODE=off
-VITE_COOP_RECEIVER_APP_URL=https://<vercel-prod-domain>
-VITE_COOP_SIGNALING_URLS=wss://<temporary-public-yjs-signal>
+VITE_COOP_RECEIVER_APP_URL=https://coop.town
+VITE_COOP_SIGNALING_URLS=wss://api.coop.town
 ```
 
 Notes:
 
 - Both developers still run `bun run dev:extension`.
-- Running `bun run dev:app` is optional in this mode unless someone is testing the local landing
-  page or board shell.
-- The extension build must be reloaded in Chrome after changing `VITE_COOP_RECEIVER_APP_URL`.
+- Running `bun run dev:app` is optional unless testing the local landing page or board shell.
+- The extension build must be reloaded in Chrome after changing env vars (Vite bakes them at
+  build time).
 
 ### Demo Flow
 
@@ -107,10 +111,10 @@ Notes:
 2. Both load the unpacked extension from `packages/extension/dist`.
 3. Dev A creates or opens the coop locally in the extension.
 4. Dev A generates a receiver pairing.
-5. Dev B opens `https://<vercel-prod-domain>/pair`.
-6. Dev B accepts the pairing and captures from `https://<vercel-prod-domain>/receiver`.
+5. Dev B opens `https://coop.town/pair`.
+6. Dev B accepts the pairing and captures from `https://coop.town/receiver`.
 7. Dev A verifies sync into the local extension intake.
-8. Dev A publishes to Feed and opens the board on the production PWA.
+8. Dev A publishes to the **Coops** tab feed and opens the board on the production PWA.
 
 Use this mode when you want the extension under active development while validating the deployed
 receiver origin and passkey scope.
@@ -137,14 +141,11 @@ This is the release target.
 
 ### Signaling
 
-- Public launch must not depend on a shared public relay.
-- Self-host the open-source signaling server using the existing repo script as the baseline:
-
-```bash
-bun run dev:api
-```
-
-- Move that service behind a durable `wss://` endpoint before public release.
+- Production signaling server: `wss://api.coop.town` (Fly.io, app `coop`, region `iad`)
+- Yjs document sync: `wss://api.coop.town/yws`
+- Deploy with: `flyctl deploy -a coop` from `packages/api/`
+- Health check: `https://api.coop.town/health`
+- Machines auto-suspend when idle and auto-start on request.
 
 ### Live Modes
 
@@ -182,15 +183,15 @@ Use this for a clean two-person rehearsal.
 ### Person A: Extension Operator
 
 1. Open the extension sidepanel.
-2. Check `Settings -> Nest Runtime` and confirm chain, modes, receiver origin, and signaling.
+2. Open the **Nest** tab and confirm chain, modes, receiver origin, and signaling in the Runtime section.
 3. Create a coop with the right preset: `friends`, `family`, `personal`, `project`, or
    `community`.
 4. If needed, enable `Green Goods garden` during setup.
 5. Generate a receiver pairing in the `Coops` tab.
-6. Watch the `Feed` tab after sync.
+6. Watch the **Coops** tab after sync.
 7. Run `Manual round-up`, review the Roost, and publish.
-8. If live session mode is enabled, open `Feed -> Operator Console -> Session Keys` and issue or
-   inspect the bounded session.
+8. If live session mode is enabled, open the **Nest** tab Operator Console and go to `Session Keys`
+   to issue or inspect the bounded session.
 
 ### Person B: Receiver
 
@@ -217,7 +218,7 @@ Use this before demos and before production launch.
 - Preset-specific copy renders correctly.
 - Friends, family, and personal never fall back to generic `community` language.
 - State badges and extension icon states match the actual coop state.
-- Onchain mode, archive mode, and session mode are visible in `Settings -> Nest Runtime`.
+- Onchain mode, archive mode, and session mode are visible in the **Nest** tab Runtime section.
 
 ### Join And Sync With A Peer
 
@@ -251,7 +252,7 @@ Use this before demos and before production launch.
 
 ### Publish, Archive, And Export
 
-- Publish reaches Feed and the board route.
+- Publish reaches the **Coops** tab feed and the board route.
 - Archive receipts remain legible.
 - Export works with file picker or download fallback.
 - The latest snapshot and receipt are easy to find during the demo.

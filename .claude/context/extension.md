@@ -63,7 +63,7 @@ packages/extension/
       permit-runtime.ts       # Permit validation at runtime
       session-capability.ts   # Session capability runtime checks
       webauthn-bridge.ts      # WebAuthn credential bridge for passkeys
-      config.ts               # Environment variable resolution
+      # (config.ts is under runtime/ above)
     catalog/
       main.tsx                # Catalog entry point
       CatalogApp.tsx          # Design token catalog (colors, spacing, radii, typography)
@@ -127,7 +127,7 @@ packages/extension/
           GreenGoodsActionCards.tsx # Green Goods action queue cards
         cards.tsx              # Shared card components
         hooks/
-          useSidepanelOrchestration.ts # Central sidepanel state (~700+ lines)
+          useSidepanelOrchestration.ts # Central sidepanel state (~1160 lines)
           useDashboard.ts      # Dashboard polling and sync state
           useSyncBindings.ts   # Yjs sync binding lifecycle
           useCoopForm.ts       # Coop creation form state

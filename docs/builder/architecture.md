@@ -41,12 +41,26 @@ Coop deliberately uses different storage layers for different jobs:
 Some of the most important shared modules are:
 
 - `auth` for passkey-first identity and onchain auth
-- `coop` for core workflow, feed, board, and publish logic
+- `coop` for core workflow, feed, board, publish logic, and the offline outbox
 - `storage` for Dexie and Yjs persistence
 - `archive` for Storacha and Filecoin flows
+- `blob` for media compression and peer-to-peer binary relay via WebRTC data channels
 - `policy`, `session`, `permit`, and `operator` for bounded execution
 - `agent` for observations, skills, and local automation
 - `receiver` for the app-side capture and pairing model
+- `privacy` for Semaphore ZK membership proofs and anonymous publishing
+- `stealth` for ERC-5564 stealth addresses (secp256k1)
+- `erc8004` for on-chain agent registry integration
+- `greengoods` for Green Goods garden bootstrap and sync
+- `onchain` for Safe creation, ERC-4337, Kernel member accounts, and Safe co-signers
+- `fvm` for Filecoin VM interactions
+- `transcribe` for audio transcription
+
+### Cross-Cutting: Design Tokens
+
+A shared design token system (`packages/shared/src/styles/tokens.css`) defines colors, spacing, and
+typography scales consumed by both the extension popup and sidepanel views. This keeps visual
+consistency across surfaces without duplicating CSS.
 
 ## Architectural Rules That Matter In Practice
 

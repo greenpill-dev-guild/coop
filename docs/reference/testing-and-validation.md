@@ -61,6 +61,15 @@ bun run validate session-key-live
 - `session-key-live`: lint, targeted onchain/session-key tests, build, then an opt-in live Smart
   Session probe
 
+## Visual E2E Tests
+
+Playwright-based visual regression tests for the extension UI:
+
+- `e2e/visual-popup.spec.cjs` -- Captures and compares popup view snapshots across changes.
+- `e2e/visual-sidepanel.spec.cjs` -- Captures and compares sidepanel view snapshots across changes.
+
+These run as part of the E2E suite and catch unintended visual regressions in the popup and sidepanel.
+
 ## Targeted Test Entry Points
 
 ```bash

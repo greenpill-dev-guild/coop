@@ -72,12 +72,19 @@ These colors were pulled from the flat logo variants and are close enough to use
 :root {
   --coop-cream: #fcf5ef;
   --coop-brown: #4f2e1f;
-  --coop-brown-soft: #55392a;
+  --coop-brown-soft: #6b4a36;
   --coop-green: #5a7d10;
   --coop-orange: #fd8a01;
   --coop-mist: #d8d4d0;
+  --coop-ink: #27140e;
+  --coop-error: #a63b20;
 }
 ```
+
+> **Canonical source**: `packages/shared/src/styles/tokens.css` is the single source of truth for
+> all design tokens. The `scripts/lint-tokens.ts` script enforces that only declared tokens are used
+> in stylesheets. The token file also includes full dark mode overrides (via `prefers-color-scheme`
+> media query and explicit `[data-theme="dark"]` attribute).
 
 How to use them:
 
@@ -93,6 +100,10 @@ How to use them:
   CTA accents, beak-like action moments, archive/publish emphasis, audio/success moments.
 - `--coop-mist`
   Neutral backdrop for glow treatments, sidepanel dividers, soft inactive UI.
+- `--coop-ink`
+  Deep brown-black for high-contrast headlines, hero text, and strong emphasis where `--coop-brown` is too light.
+- `--coop-error`
+  Error states, destructive action accents, validation feedback, and offline indicators.
 
 ## 4. Visual Principles
 
@@ -197,7 +208,7 @@ Recommended UI language:
 
 Use:
 
-- large rounded cards for `Loose Chickens` and `Roost`
+- large rounded cards for the `Chickens` tab and `Roost`
 - pill tags with green/brown contrast
 - soft shadow or glow only on high-signal states
 - simple borders rather than heavy panels
@@ -266,7 +277,7 @@ For the first build:
 
 1. Derive a favicon and extension icon set from `coop-mark-flat.png`.
 2. Use `coop-wordmark-flat.png` in the landing page masthead and hero.
-3. Create a small CSS token file with the working palette above.
+3. ~~Create a small CSS token file with the working palette above.~~ DONE — `packages/shared/src/styles/tokens.css`.
 4. Use the glow variants only in hero and success-state concepts.
 5. Source or synthesize the v1 audio set using `docs/coop-audio-and-asset-ops.md`.
 6. If a designer joins, hand them this doc plus the branding and audio asset folders as the starting brand package.

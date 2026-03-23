@@ -88,7 +88,9 @@ Working brand: `Coop Town`
 **Color palette** (from logo variants):
 - `--coop-cream: #fcf5ef` — Default background and card base
 - `--coop-brown: #4f2e1f` — Primary text, logo wordmark, dense UI
-- `--coop-brown-soft: #55392a` — Secondary text, decorative linework
+- `--coop-brown-soft: #6b4a36` — Secondary text, decorative linework
+- `--coop-ink: #27140e` — Deepest brown, used for high-contrast text
+- `--coop-error: #a63b20` — Error states, destructive actions
 - `--coop-green: #5a7d10` — Knowledge/growth, active states, tag accents
 - `--coop-orange: #fd8a01` — CTA accents, publish/archive emphasis, success moments
 - `--coop-mist: #d8d4d0` — Neutral backdrop, soft dividers
@@ -186,8 +188,8 @@ The hackathon demo (PL Genesis) must prove:
 
 ## Key Files
 
-- `docs/coop-os-architecture-vnext.md` — Canonical v1 build plan (sections 1-4 cover product)
-- `docs/coop-design-direction.md` — Visual direction, palette, asset usage, motion/sound
-- `docs/coop-audio-and-asset-ops.md` — Audio sourcing and asset operations
-- `docs/scoped-roadmap-2026-03-11.md` — Current scoped roadmap
+- `docs/reference/coop-os-architecture-vnext.md` — Canonical v1 build plan (sections 1-4 cover product)
+- `docs/reference/coop-design-direction.md` — Visual direction, palette, asset usage, motion/sound
+- `docs/reference/coop-audio-and-asset-ops.md` — Audio sourcing and asset operations
+- `docs/reference/scoped-roadmap-2026-03-11.md` — Current scoped roadmap
 - `packages/app/src/views/Landing/index.tsx` — Landing page implementation

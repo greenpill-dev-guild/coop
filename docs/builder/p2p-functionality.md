@@ -16,6 +16,9 @@ The current sync layer combines:
 - y-indexeddb for local persistence
 - y-webrtc for direct browser-to-browser transport
 - a lightweight signaling relay so peers can discover each other
+- WebSocket Yjs document sync (`wss://api.coop.town/yws`) as a server-side fallback when peer-to-peer connections are unavailable
+- blob relay for binary asset transport (photos, audio, files) via WebRTC data channels, running alongside but separate from CRDT sync
+- an outbox pattern for offline-first publish reliability with automatic retry
 
 ## What Syncs And What Does Not
 
@@ -39,6 +42,23 @@ shared arrays are written into the document. JSON-serializing full arrays into a
 merge story and creates avoidable concurrency risk.
 
 That is why the roadmap prioritizes CRDT correctness work ahead of more ambitious agent features.
+
+## Blob Relay
+
+Binary captures (photos, audio recordings, files) are too large for CRDT state. The blob relay
+(`packages/shared/src/modules/blob/relay.ts`) transports them separately over WebRTC data channels
+using a chunked protocol. A peer advertises available blobs via a `BlobRelayManifest`, and other peers
+request specific blobs by ID. The relay responds with sequenced `BlobRelayChunk` messages, each
+carrying a slice of the binary data along with chunk index and total count so the receiver can
+reassemble. All relay messages cross a trust boundary and are validated with Zod schemas on arrival.
+
+## Outbox
+
+The outbox (`packages/shared/src/modules/coop/outbox.ts`) queues publish operations when the device
+is offline or sync fails. Each entry records the coop, entity key, type, and retry count. When
+connectivity returns, pending entries are flushed in order. Entries transition through `pending`,
+`synced`, and `failed` states, with failed entries incrementing a retry counter and capturing the last
+error. Stale entries older than seven days are pruned automatically.
 
 ## Why Builders Should Care
 

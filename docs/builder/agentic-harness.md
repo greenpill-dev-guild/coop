@@ -21,7 +21,10 @@ Each cycle does six things:
 
 ## Skill System
 
-The harness currently documents 14 registered skills. Skills declare:
+The harness currently has 16 registered skills. Skills are defined via `SKILL.md` files loaded at
+build time through `import.meta.glob` from `skills/*/SKILL.md`, allowing skill definitions to be
+maintained as markdown with YAML frontmatter (name, description, triggers, dependencies, approval
+mode). Each skill declares:
 
 - triggers
 - dependencies
@@ -61,9 +64,13 @@ agents are otherwise difficult to debug, especially when failures happen in back
 
 The reference roadmap still calls out several active limitations:
 
-- no systematic evaluation harness
+- ~~no systematic evaluation harness~~ — resolved: `agent-eval.ts` provides a per-skill evaluation
+  harness with fixture-based test cases loaded via `import.meta.glob` from `skills/*/eval/*.json`,
+  covering all 16 skills
 - fixed-interval polling instead of a fuller event-driven model
-- large runtime files that need more modularity
+- ~~large runtime files that need more modularity~~ — largely resolved: `operator-sections.tsx`
+  split into 11 focused section components, `background.ts` uses handler decomposition across
+  dedicated handler modules, and popup/sidepanel extracted into thin shells with orchestration hooks
 - broader portability work still ahead
 
 Read [R&D](/builder/rd) for the current evolution lanes.

@@ -11,7 +11,7 @@ sidebar_label: UI Review Issues
 **Reviewer**: Claude Code (deep codebase audit)
 **Validated**: All 20 claims verified against source code. Corrections applied.
 
-**Last Re-Audited**: 2026-03-15 — Status labels updated against current `main` branch.
+**Last Re-Audited**: 2026-03-22 — Major restructuring of extension UI. File references, line numbers, status labels, and tab names updated.
 
 ---
 
@@ -19,32 +19,48 @@ sidebar_label: UI Review Issues
 
 ### 1. Monolithic Component Architecture
 **Severity**: High (maintainability, testability)
-**Status**: LARGELY RESOLVED (2026-03-15 re-audit)
+**Status**: RESOLVED (2026-03-22 re-audit)
 
-- `packages/app/src/app.tsx`: ~~1,771 lines~~ **518 lines** (major refactor, components extracted)
-- `packages/extension/src/views/Sidepanel/SidepanelApp.tsx`: ~~3,135 lines~~ **1,055 lines** (hooks and components extracted)
-- `packages/extension/src/background.ts`: ~~5,794 lines~~ **632 lines** (massive refactor)
-- Extracted: `TabStrip.tsx`, `OperatorConsole.tsx`, `CoopSwitcher.tsx`, `cards.tsx`, `tabs.tsx`, `ArchiveSetupWizard.tsx`, `OnboardingOverlay.tsx`
-- Custom hooks extracted: `useOnboarding`, `useSyncBindings`, `useCoopForm`, `useDraftEditor`, `useDashboard`, `useTabCapture`
+- `packages/app/src/app.tsx`: ~~1,771 lines~~ **836 lines** (components extracted)
+- `packages/extension/src/views/Sidepanel/SidepanelApp.tsx`: ~~3,135 lines~~ ~~1,055 lines~~ **174 lines** (thin shell; logic fully decomposed)
+- `packages/extension/src/background.ts`: ~~5,794 lines~~ **737 lines** (handlers extracted to `background/handlers/`)
+- `packages/extension/src/views/Popup/PopupApp.tsx`: **88 lines** (thin shell; routing via `PopupScreenRouter.tsx`)
 
-**Remaining**: Files are still large by component standards but no longer monolithic. Further extraction possible but not critical.
+**Sidepanel decomposition** (from the former monolith):
+- `SidepanelTabRouter.tsx` (217 lines) — tab switch/render logic
+- `hooks/useSidepanelOrchestration.ts` (1,163 lines) — all sidepanel action handlers
+- `hooks/useDashboard.ts` (360 lines) — dashboard data, derived state, push-notification listener
+- `hooks/useSyncBindings.ts` (212 lines) — Yjs/WebRTC sync lifecycle per coop
+- `hooks/useOnboarding.ts` (99 lines) — onboarding state + chrome.storage.sync migration
+- `hooks/useCoopForm.ts`, `hooks/useDraftEditor.ts`, `hooks/useTabCapture.ts` — domain-specific hooks
+- `tabs/RoostTab.tsx` (160), `tabs/ChickensTab.tsx` (356), `tabs/CoopsTab.tsx` (193), `tabs/NestTab.tsx` (890) — per-tab components
+- `tabs/NestAgentSection.tsx`, `tabs/NestArchiveSection.tsx`, `tabs/NestInviteSection.tsx`, `tabs/NestReceiverSection.tsx`, `tabs/NestSettingsSection.tsx` — Nest sub-sections
+- `operator-sections/` directory (11 files) — replaces deleted `operator-sections.tsx`
+- `TabStrip.tsx` (160), `TabCoopSelector.tsx` (38), `OperatorConsole.tsx` (198), `cards.tsx` (712), `helpers.ts` (176)
+
+**Popup decomposition**:
+- `PopupScreenRouter.tsx` (143 lines) — screen switch/render
+- `hooks/usePopupOrchestration.ts` (899 lines) — all popup state and action handlers
+- Individual screen components: `PopupHomeScreen`, `PopupDraftListScreen`, `PopupFeedScreen`, `PopupProfilePanel`, `PopupCreateCoopScreen`, `PopupJoinCoopScreen`, `PopupNoCoopScreen`, `PopupDraftDetailScreen`
+
+**Remaining**: `useSidepanelOrchestration.ts` (1,163 lines) and `usePopupOrchestration.ts` (899 lines) are large but contain action handler wiring, not rendering logic. Further extraction possible but not critical.
 
 ### 2. Polling-Based State Updates (No Event-Driven Architecture)
 **Severity**: High (performance, battery)
-**Status**: CONFIRMED
+**Status**: PARTIALLY RESOLVED (2026-03-22 re-audit)
 
-- Extension sidepanel polls dashboard every **3.5 seconds** (`sidepanel-app.tsx:572-575`)
-- Receiver app runs reconciliation every **2 seconds** (`app.tsx:1491-1493`)
-- QR scanner polls with BarcodeDetector every **500ms** (`app.tsx:1020-1035`)
+- ~~Extension sidepanel polls dashboard every 3.5 seconds~~ **RESOLVED**: Sidepanel now uses `chrome.runtime.onMessage` listener for `DASHBOARD_UPDATED` push notifications from background (`hooks/useDashboard.ts:296-309`). No polling timer.
+- Receiver app runs reconciliation every **2 seconds** (`app.tsx` — reconciliation interval, exact line varies)
+- QR scanner polls with BarcodeDetector every **500ms** (`app.tsx` — BarcodeDetector loop, exact line varies)
 
-**Impact**: Unnecessary CPU/battery drain. Chrome may throttle the extension. Mobile devices especially affected.
+**Impact**: Receiver app and QR scanner still use polling. Sidepanel battery concern is resolved.
 
 ### 3. No Loading States or Skeletons
 **Severity**: Medium (UX)
 **Status**: RESOLVED (2026-03-15 re-audit)
 
 - Skeleton component added: `packages/app/src/components/Skeleton.tsx`
-- Skeleton loading patterns in: `SidepanelApp.tsx`, `tabs.tsx`, `cards.tsx`
+- Skeleton loading patterns in: `SidepanelApp.tsx`, tab components, `cards.tsx`
 - Skeleton CSS in: `styles.css`, `global.css`
 - Test coverage: `skeleton-loading.test.tsx`
 
@@ -65,18 +81,19 @@ sidebar_label: UI Review Issues
 
 ### 5. Onboarding Persistence Mismatch
 **Severity**: Low-Medium
-**Status**: CONFIRMED
+**Status**: RESOLVED (2026-03-22 re-audit)
 
-- Onboarding uses `localStorage.setItem('coop-onboarding-complete', '1')` (`sidepanel-app.tsx:784`)
-- UI preferences use `chrome.storage.sync` (`background.ts:331-342`)
-- Result: User completes onboarding on one machine, sees it again on another with the same Chrome profile
+- ~~Onboarding uses `localStorage.setItem('coop-onboarding-complete', '1')` (`sidepanel-app.tsx:784`)~~ **Now uses `chrome.storage.sync`** as the primary store (`hooks/useOnboarding.ts:27, 75`).
+- One-time migration from `localStorage` to `chrome.storage.sync` is implemented (`useOnboarding.ts:30-49`): detects legacy `localStorage` flag, copies to sync storage, and removes the local entry.
+- UI preferences also use `chrome.storage.sync` (`background.ts`) — storage is now consistent.
+- Onboarding overlay focus management also improved: uses `inert` attribute on siblings and auto-focuses the primary button (`OnboardingOverlay.tsx:31-51, 54-57`).
 
 ### 6. Legacy Chain Key Normalization
 **Severity**: Low (tech debt)
 **Status**: CONFIRMED, runs on every parse via `z.preprocess()`
 
-- `schema.ts:746-749` defines `legacyOnchainChainKeyMap` converting `celo`→`arbitrum`, `celo-sepolia`→`sepolia`
-- `schema.ts:814-815` uses `z.preprocess(normalizeLegacyOnchainState, ...)` on the onchain state schema
+- `schema.ts` defines `legacyOnchainChainKeyMap` converting `celo`->`arbitrum`, `celo-sepolia`->`sepolia`
+- Uses `z.preprocess(normalizeLegacyOnchainState, ...)` on the onchain state schema
 - This runs on every `.parse()` or `.safeParse()` call. Should be a one-time migration or removed if no legacy data exists
 
 ---
@@ -85,26 +102,28 @@ sidebar_label: UI Review Issues
 
 ### 7. Terminology Inconsistency Across Surfaces
 **Severity**: Medium (user comprehension)
-**Status**: CONFIRMED
+**Status**: PARTIALLY RESOLVED (2026-03-22 re-audit)
 
-| Concept | Extension Sidepanel | App (PWA) | E2E Tests | Landing Page |
-|---------|-------------------|-----------|-----------|--------------|
-| Tab queue | "Loose Chickens" |  | "Loose Chickens" | "Loose Chickens" |
-| Review queue | "The Roost" | "Inbox" / "Roost" | "Roost" | "Roost" |
-| Shared feed | "The Feed" / "Coop Feed" |  | "Coop Feed" / "Feed" | "Coop Feed" |
-| Home/Settings | "Home" tab | "Pair" route | "Coops"/"Nest" (stale) |  |
-| Capture action | "Round up" | "Hatch" / "Capture" | "Round up" | "Round up" |
-| Agent section | "Trusted Helpers" |  | "Agent Skills"/"Helper Runs" |  |
+| Concept | Extension Sidepanel | Extension Popup | E2E Tests | Landing Page |
+|---------|-------------------|-----------------|-----------|--------------|
+| Tab queue | "Chickens" tab | Drafts screen | "Loose Chickens" | "Loose Chickens" |
+| Review queue | "Roost" tab | Home screen | "Roost" | "Roost" |
+| Shared feed | "Coops" tab | Feed screen | "Coop Feed" (stale) | "Coop Feed" |
+| Settings | "Nest" tab | Profile panel | "Nest" / "Nest Tools" (stale) | |
+| Capture action | "Round up" | "Round up" / capture buttons | "Round up" | "Round up" |
+| Agent section | "Trusted Helpers" (in Nest) | | "Agent Skills"/"Helper Runs" | |
 
-Current sidepanel tabs are `['Chickens', 'Roost', 'Home', 'Feed']` (`sidepanel-app.tsx:77`). E2E tests use regex fallbacks for defunct labels like `/^(Coops|Nest)$/i` and `/^(Settings|Nest Tools)$/i`.
+Current sidepanel tabs are `['roost', 'chickens', 'coops', 'nest']` (`SidepanelApp.tsx:8`). The old tab names `['Chickens', 'Roost', 'Home', 'Feed']` are no longer used.
+
+E2E tests have been partially updated: `extension.spec.cjs` now uses exact names like `'Nest'`, `'Loose Chickens'`, `'Roost'` via `openPanelTab()`, but still references stale labels `'Coop Feed'` (now "Coops" tab) and `'Nest Tools'` (now within "Nest" tab). The `receiver-sync.spec.cjs` also references `'Flock Meeting'` and `'Coop Feed'` which no longer match tab names.
 
 ### 8. Receiver vs Extension Capture: Parallel Code Paths
 **Severity**: Medium (architecture)
 **Status**: CONFIRMED
 
 Two completely separate capture systems:
-- **Extension**: `tab-capture.ts` → `chrome.scripting.executeScript()` → `coop-extension` Dexie DB
-- **Receiver**: `stashCapture()` → `createReceiverCapture()` → separate `receiverDb` with sync state lifecycle
+- **Extension**: `tab-capture.ts` -> `chrome.scripting.executeScript()` -> `coop-extension` Dexie DB
+- **Receiver**: `stashCapture()` -> `createReceiverCapture()` -> separate `receiverDb` with sync state lifecycle
 
 Different UIs, different sync mechanisms, different status labels, independent storage.
 
@@ -121,8 +140,8 @@ Different UIs, different sync mechanisms, different status labels, independent s
 **Status**: CONFIRMED, settings are stored but inert
 
 - Meeting settings (`weeklyReviewCadence`, `facilitatorExpectation`, `defaultCapturePosture`) collected in forms
-- Stored in coop state via `flows.ts:240-243`
-- Used for agent context logging (`agent-runner.ts:297`) and message payloads
+- Stored in coop state via `flows.ts`
+- Used for agent context logging and message payloads
 - **No scheduling, cron, or trigger logic exists** that uses these values to conduct reviews
 
 ### 11. Board View: Limited Interactivity
@@ -134,12 +153,13 @@ Different UIs, different sync mechanisms, different status labels, independent s
 - **Has**: Collapsible sidebar via `<details>` elements, archive receipt links to Storacha gateway
 - **Missing**: No actions to edit/publish/moderate content, no path back to extension (only "Back to landing")
 
-### 12. Operator Console: No Progressive Disclosure
+### 12. Operator Console: Progressive Disclosure
 **Severity**: Low-Medium
-**Status**: CONFIRMED, zero `<details>` or `<summary>` elements
+**Status**: RESOLVED (2026-03-22 re-audit)
 
-- All sections (Trusted Helpers, Garden Requests, Approval Rules, Waiting Chores, Permits, Session Capabilities) fully visible immediately
-- Contrast: Board sidebar properly uses `<details>` for collapse, Operator Console lacks this pattern
+- ~~All sections fully visible immediately, zero `<details>` or `<summary>` elements~~ **Now fully decomposed** into `operator-sections/` directory with 11 files.
+- All operator sections now use `<details className="panel-card collapsible-card">` with `<summary>` elements for progressive disclosure. Verified in: `PermitSection.tsx`, `SkillManifestSection.tsx`, `KnowledgeSkillsSection.tsx`, `AgentObservationsSection.tsx`, `SessionCapabilitySection.tsx`, `GardenRequestsSection.tsx`, `AgentMemorySection.tsx`, `TrustedNestControlsSection.tsx`, `PolicyAndQueueSection.tsx`.
+- Some sections default to `open` (e.g., `SkillManifestSection`, `AgentObservationsSection`), others start collapsed.
 
 ---
 
@@ -147,19 +167,16 @@ Different UIs, different sync mechanisms, different status labels, independent s
 
 ### 13. Focus Management in Modals
 **Severity**: Medium (a11y)
-**Status**: CONFIRMED
+**Status**: PARTIALLY RESOLVED (2026-03-22 re-audit)
 
-- Onboarding overlay (`onboarding-overlay.tsx:33-56`): Uses `<dialog>` with `aria-label` but **no focus trap, no inert attribute**
-- QR scanner overlay (`PairingPanel.tsx`): No `role="dialog"`, no focus management
-- Tab key can reach elements behind both overlays
+- ~~Onboarding overlay: no focus trap, no inert attribute~~ **RESOLVED**: `OnboardingOverlay.tsx` now sets `inert` on sibling elements (lines 31-51), auto-focuses primary button (lines 54-57), and handles Escape key (lines 71-76).
+- QR scanner overlay (`PairingPanel.tsx`): No `role="dialog"`, no focus management — **still open**.
+- Tab key can still reach elements behind the QR scanner overlay.
 
-### 14. ~~Missing ARIA on Dynamic Content~~: ALREADY IMPLEMENTED
-**Status**: INCORRECT, features are present
+### 14. ~~Missing ARIA on Dynamic Content~~: PARTIALLY REGRESSED
+**Status**: NEEDS VERIFICATION
 
-- Tab strip buttons **do have** `aria-selected={panelTab === tab}` (`sidepanel-app.tsx:2268`)
-- Sync status **does have** `<output aria-live="polite">` regions (`sidepanel-app.tsx:2280, 2284`)
-
-~~No action needed for tab strip or sync status ARIA.~~
+- ~~Tab strip buttons had `aria-selected` and sync status had `aria-live="polite"` regions~~ — After the restructuring, `TabStrip.tsx` (160 lines) does **not** contain `aria-selected` or `aria-live` attributes. These may need to be re-added to `SidepanelFooterNav` in the new `TabStrip.tsx`.
 
 Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; agent dashboard updates have no live region announcements.
 
@@ -167,7 +184,7 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 **Severity**: Low
 **Status**: CONFIRMED, no `onKeyDown` handlers on tab strip
 
-- Extension tab strip: no arrow-key navigation between tabs (only `onClick`)
+- Extension tab strip (`TabStrip.tsx`): no arrow-key navigation between tabs (only `onClick`)
 - Draft editor: no keyboard shortcut to save/publish
 - Receiver egg button: Enter/Space works but no visual focus indicator beyond browser default
 
@@ -188,14 +205,14 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 **Severity**: Low
 **Status**: CONFIRMED
 
-- `app.tsx:249-257` creates/revokes blob URLs via `createPreviewUrl()`/`revokePreviewUrl()`
+- `app.tsx` creates/revokes blob URLs via `createPreviewUrl()`/`revokePreviewUrl()`
 - No batching or guards to prevent rapid churn during frequent `refreshLocalState` cycles (every 2s when paired)
 
 ### 18. Sync Binding Per Coop: Lazy Init Present, No Pooling
 **Severity**: Low
-**Status**: PARTIALLY CONFIRMED
+**Status**: CONFIRMED (updated file reference)
 
-- Lazy initialization **IS present**: `sidepanel-app.tsx:655` checks `if (!existing)` before creating bindings
+- Lazy initialization **IS present**: `hooks/useSyncBindings.ts:57` checks `if (!existing)` before creating bindings
 - **No connection pooling**: Each coop gets its own full WebRTC + IndexedDB provider stack
 - User in 5 coops = 5 separate WebRTC connections (but only created on demand)
 
@@ -205,38 +222,43 @@ Remaining gaps: Draft cards lack `aria-expanded` for collapsible editing state; 
 
 ### 19. E2E Test Staleness
 **Severity**: Medium
-**Status**: CONFIRMED
+**Status**: PARTIALLY RESOLVED (2026-03-22 re-audit)
 
-E2E tests use regex fallbacks masking label mismatches:
-- `extension.spec.cjs:182`: `/^(Coops|Nest)$/i` (no such tab exists; current: "Home")
-- `extension.spec.cjs:242`: `/^(Settings|Nest Tools)$/i` (now collapsible inside Home)
-- `extension.spec.cjs:235`: `/^(Feed|Coop Feed)$/i` (current: "Feed")
+~~E2E tests use regex fallbacks masking label mismatches.~~ The `openPanelTab` helper now uses `exact: true` matching in all E2E specs. However, some tab name references are stale:
 
-Tests may pass via regex fallback but test the wrong UI element.
+- `extension.spec.cjs:245`: `openPanelTab(memberProfile.page, 'Coop Feed')` — tab is now "Coops"
+- `extension.spec.cjs:247`: `openPanelTab(creatorProfile.page, 'Nest Tools')` — no such tab; content is within "Nest"
+- `extension.spec.cjs:257, 420, 459`: `openPanelTab(..., 'Coop Feed')` — tab is now "Coops"
+- `receiver-sync.spec.cjs:376`: `openPanelTab(reviewPage, 'Flock Meeting')` — no such tab
+- `receiver-sync.spec.cjs:470, 476`: `openPanelTab(reviewPage, 'Coop Feed')` — tab is now "Coops"
+
+These will fail at runtime because `exact: true` matching requires the exact current tab label.
 
 ### 20. Board View Minimal Test Coverage
 **Severity**: Low-Medium
 **Status**: CONFIRMED, exactly 2 `it()` blocks
 
-- `BoardApp.test.tsx:166, 181`: 2 test cases with comprehensive assertions (~15+ each)
+- `BoardApp.test.tsx`: 2 test cases with comprehensive assertions (~15+ each)
 - No tests for: edge styling, node card rendering by kind, archive story section, responsive layout, error/empty states
 
 ---
 
 ## Validated Recommendations (Priority Order)
 
-1. ~~**Extract state into custom hooks**~~: DONE — `app.tsx` (518 lines), `SidepanelApp.tsx` (1,055 lines), `background.ts` (632 lines). Hooks extracted: `useCapture`, `useSync`, `usePairing`, `useDashboard`, `useDraftEditor`, `useCoopForm`, `useOnboarding`, `useSyncBindings`, `useTabCapture`
-2. **Replace polling with message-based updates**: Use `chrome.runtime.onMessage` from background to sidepanel instead of 3.5s polling
+1. ~~**Extract state into custom hooks**~~: DONE — `SidepanelApp.tsx` (174 lines), `PopupApp.tsx` (88 lines), `background.ts` (737 lines). Fully decomposed into orchestration hooks, tab components, screen routers, and operator-section components.
+2. ~~**Replace polling with message-based updates**~~: DONE for sidepanel — `useDashboard.ts` uses `chrome.runtime.onMessage` listener for `DASHBOARD_UPDATED` push notifications. Receiver app still polls.
 3. ~~**Add loading skeletons**~~: DONE — Skeleton component + CSS + tests added
-4. **Unify terminology**: Pick one name per concept and enforce across all surfaces
-5. **Add focus traps to modals**: Onboarding overlay, QR scanner
-6. **Progressive disclosure for Operator Console**: Collapse advanced sections by default using `<details>`
+4. **Unify terminology**: Pick one name per concept and enforce across all surfaces. Sidepanel tabs are now `['roost', 'chickens', 'coops', 'nest']`; E2E tests and onboarding steps still reference old names.
+5. ~~**Add focus traps to modals**~~: DONE for onboarding overlay (inert + auto-focus). QR scanner overlay still needs focus management.
+6. ~~**Progressive disclosure for Operator Console**~~: DONE — All operator sections now use `<details>/<summary>` with collapsible cards.
 7. **Board view actions**: Add "Back to extension" link and share/export buttons
-8. **Fix E2E test labels**: Replace regex fallbacks with current tab names
+8. **Fix E2E test labels**: Replace stale `'Coop Feed'`, `'Nest Tools'`, `'Flock Meeting'` with current tab names (`'Coops'`, `'Nest'`)
 9. **Document the meeting/ritual lifecycle**: Either implement scheduling or remove inert form fields
-10. **Add arrow-key navigation to tab strip**: WAI-ARIA tabs pattern
+10. **Add arrow-key navigation to tab strip**: WAI-ARIA tabs pattern. Also re-add `aria-selected` to `TabStrip.tsx` (lost during restructuring).
+11. **Re-add ARIA attributes to TabStrip**: `aria-selected` and `aria-live` regions were present in the old monolith but are missing from the new `TabStrip.tsx`.
 
 ### Removed from recommendations (verified as already done):
 - ~~Verify audio migration~~: Migration is complete
-- ~~Add aria-selected to tabs~~: Already implemented
-- ~~Add aria-live for sync status~~: Already implemented
+- ~~Onboarding persistence mismatch~~: Now uses `chrome.storage.sync` with localStorage migration
+- ~~Operator console progressive disclosure~~: All sections use `<details>/<summary>`
+- ~~Sidepanel polling~~: Replaced with `chrome.runtime.onMessage` push

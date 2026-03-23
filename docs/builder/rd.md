@@ -22,7 +22,10 @@ The current reference docs repeatedly point to the same core issues:
 
 - make the sync model more correct before adding more autonomy
 - improve model loading, capability detection, and fallback behavior
-- extract monolithic runtime files into clearer handlers and interfaces
+- ~~extract monolithic runtime files into clearer handlers and interfaces~~ — largely resolved:
+  background.ts uses handler decomposition (12 handler modules), SidepanelApp.tsx is 174 lines with
+  orchestration extracted to hooks, PopupApp.tsx is a thin shell with a screen router, and
+  operator-sections.tsx has been split into 11 files
 - improve storage quota awareness and blob lifecycle handling
 
 ## Longer-Horizon Work

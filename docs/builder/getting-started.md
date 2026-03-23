@@ -71,6 +71,13 @@ Build it with:
 bun run build
 ```
 
+## Development Tools
+
+**UI Catalog** -- Preview design tokens (palette, spacing, radii, shadows) in light and dark themes.
+Run with `bunx vite --config packages/extension/vite.catalog.config.ts` from the repo root.
+
+**Token Linter** -- `scripts/lint-tokens.ts` enforces CSS token usage across stylesheets, catching raw color and spacing values that should use design tokens instead.
+
 ## Validation Entry Points
 
 Use the workspace scripts rather than package-local ad hoc commands:

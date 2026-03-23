@@ -1,5 +1,7 @@
 # Extension UI Redesign Plan
 
+> **Implementation Status (2026-03-22)**: Phase 1 implemented with significant naming changes. Planned tabs (Chickens | Feed | Contrib | Manage) shipped as **Roost | Chickens | Coops | Nest**. The Nest tab absorbs planned Contribute + Manage + Settings functionality.
+
 > Date: 2026-03-21
 > Status: Approved — ready to build
 
@@ -98,12 +100,15 @@ Redesign the extension's popup and sidepanel to share a consistent layout patter
 
 ### Footer Nav (4 tabs)
 
-| Tab | Badge | Who sees it |
-|-----|-------|-------------|
-| **Chickens** | Pending draft count | Everyone |
-| **Feed** | New artifact count | Everyone |
-| **Contribute** | Pending actions count | Any member |
-| **Manage** | Pending approvals count | Trusted members (conditionally shown or collapsed) |
+> **As-shipped (2026-03-22):** Tabs are **Roost | Chickens | Coops | Nest** (see [Divergences from Plan](#divergences-from-plan)).
+
+| Tab (planned) | Tab (shipped) | Badge | Who sees it |
+|---------------|---------------|-------|-------------|
+| **Chickens** (merged Roost) | **Roost** (kept separate) | Pending draft count | Everyone |
+| *(merged into Chickens)* | **Chickens** | Loose chicken count | Everyone |
+| **Feed** | **Coops** | New artifact count | Everyone |
+| **Contribute** | **Nest** (combined) | Pending actions count | Any member |
+| **Manage** | **Nest** (combined) | Pending approvals count | Trusted members (Nest tab conditionally shown via `showNestTab`) |
 
 ### Tab Content
 
@@ -295,3 +300,19 @@ The user never sees "routing candidates" or "relevance scores." They capture thi
 
 1. **Social posting**: What constitutes a "post"? Text? Artifact summary? Link? Needs product definition.
 2. **Filter pill in sidepanel header**: Should it be a dropdown, a pill with tap-to-cycle, or a sheet? Will determine during implementation.
+
+---
+
+## Divergences from Plan
+
+Documented 2026-03-22 after Phase 1 implementation.
+
+| Area | Planned | Shipped |
+|------|---------|---------|
+| **Sidepanel tab names** | Chickens \| Feed \| Contrib \| Manage | Roost \| Chickens \| Coops \| Nest |
+| **Roost tab** | Merged into unified Chickens tab | Kept as a separate tab — review queue remains distinct from loose chickens |
+| **Contribute tab** | Standalone tab (receiver pairing, impact reporting, garden) | Absorbed into NestTab as sections: `NestReceiverSection`, `NestInviteSection` |
+| **Manage tab** | Standalone tab (members, invites, operator console, data ops) | Absorbed into NestTab as sections: `NestAgentSection`, `NestArchiveSection`, `NestSettingsSection` |
+| **Feed tab** | Sidepanel tab showing published artifacts | Feed moved to popup footer nav; sidepanel equivalent is CoopsTab showing feed content |
+| **Coop filter** | "Filter pill" in sidepanel header | Implemented as `TabCoopSelector` (pill strip) and `FilterPopover` components usable per-tab |
+| **Popup** | Minor enhancements (Phase 2) | Fully redesigned with multi-screen router (`PopupScreenRouter`), share menu, subheader, and orchestration hook — exceeds original plan scope |

@@ -20,7 +20,8 @@ When you launch a coop, you are defining:
 
 ## What The Flow Looks Like
 
-1. Open the extension sidepanel and choose to create a coop.
+1. Open the extension sidepanel and choose to create a coop. Coop creation can also be started from
+   the popup via the header button or the welcome screen shown when no coop exists yet.
 2. Add the coop name, purpose, preset, and your display name.
 3. Seed the space with initial context so the coop does not begin empty.
 4. Walk through the setup lenses that clarify the group's current state, pain points, and desired

@@ -54,7 +54,9 @@ When a member publishes a draft, it becomes shared coop state. That shared state
 ## Where Each Surface Fits
 
 The extension is the primary workspace. It is where people create coops, join them, review drafts,
-and manage the Coop Feed.
+and manage the Coop Feed. Within the extension, the popup handles quick actions like draft review,
+feed browsing, coop creation and joining, and profile management, while the sidepanel handles deeper
+editorial and admin work.
 
 The app exists to make mobile and secondary-device capture practical. It is especially useful when a
 piece of context starts as a voice memo, photo, or quick link rather than a browser tab.

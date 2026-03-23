@@ -232,7 +232,7 @@ Beyond the core flows, sync, and pipeline:
 ### Storage Module (Detailed Sub-modules)
 
 - `storage/db.ts` -- Dexie schema definitions, all CRUD functions, table declarations
-- `storage/portability.ts` -- Encrypted database export/import. Uses PBKDF2 (200K iterations) for key derivation. `ALL_TABLE_NAMES` enumerates all 30 Dexie tables. Schema version `PORTABILITY_SCHEMA_VERSION = 1`. Supports full database backup and restore with password-based encryption.
+- `storage/portability.ts` -- Encrypted database export/import. Uses PBKDF2 (200K iterations) for key derivation. `ALL_TABLE_NAMES` enumerates all 33 Dexie tables. Schema version `PORTABILITY_SCHEMA_VERSION = 1`. Supports full database backup and restore with password-based encryption.
 
 ### Agent Module
 
@@ -357,11 +357,11 @@ Beyond the core flows, sync, and pipeline:
 `styles/tokens.css` is the CSS custom property system imported by both app and extension:
 
 - **Palette**: `--coop-cream`, `--coop-brown`, `--coop-green`, `--coop-orange`, `--coop-mist`, `--coop-ink`, `--coop-error`
-- **Alpha palette**: `--coop-brown-{4..20}`, `--coop-green-{12..16}`, `--coop-orange-{15..18}` via `color-mix()`
+- **Alpha palette**: `--coop-brown-{4,6,8,12,14,16,18,20}`, `--coop-green-{12,14,16}`, `--coop-orange-{15,16,18}` via `color-mix()`
 - **Borders/Lines**: `--coop-line`, `--coop-border`
 - **Shadows**: `--coop-shadow-sm`, `--coop-shadow-md`, `--coop-shadow-lg`
-- **Radii**: `--coop-radius-pill` (999px), `--coop-radius-card` (24px), `--coop-radius-input` (16px), `--coop-radius-chip` (12px), `--coop-radius-button` (14px), etc.
-- **Z-index scale**: `--coop-z-base` (0) through `--coop-z-overlay` (100)
+- **Radii**: `--coop-radius-pill` (999px), `--coop-radius-card` (24px), `--coop-radius-card-lg` (28px), `--coop-radius-card-xl` (30px), `--coop-radius-input` (16px), `--coop-radius-input-lg` (20px), `--coop-radius-photo` (18px), `--coop-radius-chip` (12px), `--coop-radius-sm` (8px), `--coop-radius-xs` (6px), `--coop-radius-button` (14px), `--coop-radius-icon` (10px)
+- **Z-index scale**: `--coop-z-base` (0), `--coop-z-sticky` (1), `--coop-z-dropdown` (10), `--coop-z-tooltip` (20), `--coop-z-toast` (25), `--coop-z-modal` (30), `--coop-z-overlay` (100)
 - **Spacing**: `--coop-space-3xs` (0.15rem) through `--coop-space-xl` (2rem)
 - **Typography**: `--coop-font-display` (Gill Sans), `--coop-font-body` (Avenir Next), `--coop-font-mono` (SFMono)
 - **Transitions**: `--coop-ease` (180ms ease)

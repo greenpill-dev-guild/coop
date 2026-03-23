@@ -75,7 +75,7 @@ This is the highest-value scope for the next few days:
 - Arbitrum switch in the onchain layer: **DONE** (Sepolia default, Arbitrum available)
 - Filecoin/Storacha flow surfaced as a visible product story: **PARTIAL** (archive works, no piece-level follow-up)
 - ritual scheduler and meeting-mode review surface: **NOT STARTED** (form fields stored but inert)
-- stronger multi-coop UX: **PARTIAL** (works technically, UX is shallow)
+- stronger multi-coop UX: **PARTIAL** (TabCoopSelector provides per-tab coop filtering; FilterPopover adds status/category filtering across Chickens and Coops tabs; full coop-switcher replaced with filter-by-coop pattern as designed)
 - read-only React Flow knowledge view on desktop: **DONE**
 
 ### 3.2 Near-Term Platform
@@ -101,7 +101,7 @@ This should be scoped as a second architecture milestone:
 
 ### Infrastructure: API Server (DONE)
 
-The `api` package provides a Hono + Bun API server deployed on Fly.io at `wss://signal.coop.town`. This was not in the original roadmap but provides the signaling and routing backbone for P2P sync.
+The `api` package provides a Hono + Bun API server deployed on Fly.io at `wss://api.coop.town`. This was not in the original roadmap but provides the signaling and routing backbone for P2P sync.
 
 ## 4.1 Receiver PWA: DONE
 
@@ -304,7 +304,7 @@ Make multi-coop membership feel native instead of technically possible.
 
 ### Hackathon-Complete Scope
 
-- visible coop switcher in the extension and board UI
+- ~~visible coop switcher in the extension and board UI~~ Replaced with `TabCoopSelector` filter pills and `FilterPopover` per-tab — no whole-UI context switch (2026-03-22)
 - draft target editing before publish
 - quick route presets:
   - current coop
