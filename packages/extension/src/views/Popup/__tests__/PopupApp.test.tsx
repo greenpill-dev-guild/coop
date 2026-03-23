@@ -11,7 +11,8 @@ const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } 
   }),
 );
 
-vi.mock('../../../runtime/messages', () => ({
+vi.mock('../../../runtime/messages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../runtime/messages')>()),
   sendRuntimeMessage: mockSendRuntimeMessage,
 }));
 
@@ -136,7 +137,7 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
       syncTone: 'ok',
       lastCaptureAt: new Date('2026-03-17T11:50:00.000Z').toISOString(),
       captureMode: 'manual',
-      agentCadenceMinutes: 60,
+      agentCadenceMinutes: 64,
       localEnhancement: 'Heuristics-first fallback',
       localInferenceOptIn: false,
       activeCoopId: 'coop-1',
@@ -151,7 +152,7 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
       localInferenceOptIn: false,
       preferredExportMethod: 'download',
       heartbeatEnabled: true,
-      agentCadenceMinutes: 60,
+      agentCadenceMinutes: 64,
     },
     authSession: {
       primaryAddress: '0x1234567890abcdef1234567890abcdef12345678',
@@ -371,7 +372,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    expect(await screen.findByRole('button', { name: 'Round Up' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Roundup Chickens' })).toBeInTheDocument();
     expect(screen.queryByText('Review queue')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Capture Tab' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
@@ -394,7 +395,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await screen.findByRole('button', { name: 'Round Up' });
+    await screen.findByRole('button', { name: 'Roundup Chickens' });
 
     // Type into the note input
     const noteInput = screen.getByLabelText('Note');
@@ -449,9 +450,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByText('Your coops')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Coop' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Join Coop' })).toBeInTheDocument();
+    expect(await screen.findByText('Your Coops')).toBeInTheDocument();
     expect(screen.getAllByText('Starter Coop').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Delta Field Coop').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: 'On' }).length).toBeGreaterThan(0);
@@ -544,7 +543,13 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: /Chickens/i }));
+    // Wait for home screen to load, then navigate to Chickens tab via footer nav
+    await screen.findByRole('button', { name: 'Roundup Chickens' });
+    const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
+    const chickensFooterTab = chickensTabButtons.find((btn) =>
+      btn.classList.contains('popup-footer-nav__button'),
+    )!;
+    await user.click(chickensFooterTab);
 
     expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
     expect(screen.getByText('Wetland policy summary')).toBeInTheDocument();
@@ -593,8 +598,14 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: /Chickens/i }));
-    await user.click(screen.getByRole('button', { name: 'Delta Field Coop' }));
+    // Wait for home screen to load, then navigate to Chickens tab via footer nav
+    await screen.findByRole('button', { name: 'Roundup Chickens' });
+    const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
+    const chickensFooterTab = chickensTabButtons.find((btn) =>
+      btn.classList.contains('popup-footer-nav__button'),
+    )!;
+    await user.click(chickensFooterTab);
+    await user.click(await screen.findByRole('button', { name: 'Delta Field Coop' }));
     await user.click(screen.getByRole('button', { name: 'Review' }));
     await user.click(await screen.findByRole('button', { name: 'Open sidepanel' }));
 
@@ -762,24 +773,86 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByText('Your coops')).toBeInTheDocument();
+    expect(await screen.findByText('Your Coops')).toBeInTheDocument();
     expect(screen.getByText('Starter Coop')).toBeInTheDocument();
     expect(screen.getByText('No invite code yet')).toBeInTheDocument();
   });
 
-  it('shows the local inference toggle in the profile panel', async () => {
-    installDefaultRuntimeHandlers();
+  it('shows a Copy Invite button when the coop has invite codes', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          {
+            ...makeDashboard().coops[0],
+            invites: [
+              {
+                id: 'invite-1',
+                type: 'member',
+                code: 'COOP-JOIN-ABC123',
+                expiresAt: new Date(Date.now() + 86400000).toISOString(),
+                createdAt: new Date().toISOString(),
+                createdBy: 'member-1',
+                usedByMemberIds: [],
+                bootstrap: {
+                  coopName: 'Starter Coop',
+                  coopId: 'coop-1',
+                  syncRoom: { roomId: 'room-1', signalingUrls: [] },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
     const user = userEvent.setup();
+
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: vi.fn().mockResolvedValue(''),
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
 
     render(<PopupApp />);
 
     await user.click(await screen.findByRole('button', { name: 'Open profile' }));
 
-    expect(await screen.findByText('Your coops')).toBeInTheDocument();
-    expect(screen.getByText('Local inference')).toBeInTheDocument();
+    expect(await screen.findByText('Your Coops')).toBeInTheDocument();
+    expect(screen.queryByText('No invite code yet')).not.toBeInTheDocument();
 
-    const localInferenceGroup = screen.getByRole('group', { name: 'Local inference' });
-    expect(localInferenceGroup).toBeInTheDocument();
+    const copyButton = screen.getByRole('button', { name: 'Copy Invite' });
+    await user.click(copyButton);
+
+    expect(window.navigator.clipboard.writeText).toHaveBeenCalledWith('COOP-JOIN-ABC123');
+  });
+
+  it('shows the illustrated feed empty state when no artifacts are shared', async () => {
+    installDefaultRuntimeHandlers(
+      makeDashboard({
+        coops: [
+          {
+            ...makeDashboard().coops[0],
+            artifacts: [],
+          },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: /Feed/ }));
+
+    // Should show the warm illustrated empty state, not the old plain text
+    expect(await screen.findByText('Nothing shared in the coop yet')).toBeInTheDocument();
+    expect(
+      screen.getByText('When someone shares a chicken, it will show up here.'),
+    ).toBeInTheDocument();
+
+    // Should NOT have an action button (feed items come from the coop, not user action)
+    expect(screen.queryByRole('button', { name: /Roundup/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Share/i })).not.toBeInTheDocument();
   });
 
   it('shows a feed badge count on the footer nav', async () => {
@@ -799,7 +872,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await screen.findByRole('button', { name: 'Round Up' });
+    await screen.findByRole('button', { name: 'Roundup Chickens' });
 
     const feedButton = screen.getByRole('button', { name: /Feed/ });
     expect(feedButton.querySelector('.popup-footer-nav__badge')).toBeInTheDocument();

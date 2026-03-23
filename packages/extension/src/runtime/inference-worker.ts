@@ -63,20 +63,37 @@ async function ensureModel() {
     env.useBrowserCache = true;
     env.backends.onnx.wasm.wasmPaths = resolveOnnxRuntimeWasmPaths();
 
-    pipeline = await createPipeline('text-generation', MODEL_ID, {
-      dtype: 'q4',
-      device: 'wasm',
-      progress_callback: (progress: { progress?: number; status?: string }) => {
-        if (progress?.progress !== undefined) {
-          const msg: InferenceWorkerResponse = {
-            type: 'init-progress',
-            progress: progress.progress,
-            message: progress.status || 'Downloading model weights...',
-          };
-          self.postMessage(msg);
-        }
-      },
-    });
+    const progressCallback = (progress: { progress?: number; status?: string }) => {
+      if (progress?.progress !== undefined) {
+        const msg: InferenceWorkerResponse = {
+          type: 'init-progress',
+          progress: progress.progress,
+          message: progress.status || 'Downloading model weights...',
+        };
+        self.postMessage(msg);
+      }
+    };
+
+    const hasWebGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
+    if (hasWebGpu) {
+      try {
+        pipeline = await createPipeline('text-generation', MODEL_ID, {
+          dtype: 'q4',
+          device: 'webgpu',
+          progress_callback: progressCallback,
+        });
+      } catch {
+        // WebGPU pipeline failed — fall back to WASM
+        pipeline = null;
+      }
+    }
+    if (!pipeline) {
+      pipeline = await createPipeline('text-generation', MODEL_ID, {
+        dtype: 'q4',
+        device: 'wasm',
+        progress_callback: progressCallback,
+      });
+    }
 
     // Set up the reusable stopping criteria for cooperative cancellation.
     stoppingCriteria = new InterruptableStoppingCriteria();

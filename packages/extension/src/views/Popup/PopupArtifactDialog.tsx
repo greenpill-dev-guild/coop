@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { ShareMenu } from './ShareMenu';
 import { usePopupOverlayFocusTrap } from './hooks/usePopupOverlayFocusTrap';
 import type { PopupFeedArtifactItem } from './popup-types';
 
@@ -26,8 +27,9 @@ export function PopupArtifactDialog(props: {
   artifact: PopupFeedArtifactItem;
   onClose: () => void;
   onOpenInSidepanel: () => void | Promise<void>;
+  onShareToFeed?: () => void;
 }) {
-  const { artifact, onClose, onOpenInSidepanel } = props;
+  const { artifact, onClose, onOpenInSidepanel, onShareToFeed } = props;
   const [imageMissing, setImageMissing] = useState(!artifact.previewImageUrl);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -111,16 +113,24 @@ export function PopupArtifactDialog(props: {
               </ul>
             </section>
           ) : null}
+        </div>
 
-          <div className="popup-dialog__actions">
-            <button
-              className="popup-primary-action popup-primary-action--small"
-              onClick={() => void onOpenInSidepanel()}
-              type="button"
-            >
-              Full view
-            </button>
-          </div>
+        <div className="popup-dialog__footer">
+          {artifact.sources[0]?.url ? (
+            <ShareMenu
+              url={artifact.sources[0].url}
+              title={artifact.title}
+              summary={artifact.summary}
+              onShareToFeed={onShareToFeed}
+            />
+          ) : null}
+          <button
+            className="popup-primary-action popup-primary-action--small"
+            onClick={() => void onOpenInSidepanel()}
+            type="button"
+          >
+            Full view
+          </button>
         </div>
       </div>
     </div>

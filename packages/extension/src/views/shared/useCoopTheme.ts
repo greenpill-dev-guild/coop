@@ -118,5 +118,13 @@ export function useCoopTheme() {
     }
   }, [loading, resolvedTheme]);
 
-  return { loading, resolvedTheme, preference };
+  const toggleTheme = () => {
+    const next: ThemePreference = resolvedTheme === 'light' ? 'dark' : 'light';
+    setPreference(next);
+    if (hasChromeStorage()) {
+      void chrome.storage.local.set({ [THEME_STORAGE_KEY]: next });
+    }
+  };
+
+  return { loading, resolvedTheme, preference, toggleTheme };
 }

@@ -1,5 +1,6 @@
-import { PopupChoiceGroup } from './PopupChoiceGroup';
-import type { PopupChoiceOption, PopupFeedArtifactItem } from './popup-types';
+import { PopupOnboardingHero } from './PopupOnboardingHero';
+import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
+import type { PopupFeedArtifactItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
   return value
@@ -10,29 +11,15 @@ function formatCategoryLabel(value: string) {
 
 export function PopupFeedScreen(props: {
   artifacts: PopupFeedArtifactItem[];
-  filterOptions: Array<PopupChoiceOption<string>>;
-  activeFilterId: string;
-  onChangeFilter: (filterId: string) => void;
+  filterTags: PopupSubheaderTag[];
   onOpenArtifact: (artifactId: string) => void;
   onDismissArtifact: (artifactId: string) => void;
 }) {
-  const {
-    artifacts,
-    filterOptions,
-    activeFilterId,
-    onChangeFilter,
-    onOpenArtifact,
-    onDismissArtifact,
-  } = props;
+  const { artifacts, filterTags, onOpenArtifact, onDismissArtifact } = props;
 
   return (
     <section className="popup-screen popup-screen--fill">
-      <PopupChoiceGroup
-        ariaLabel="Filter feed by coop"
-        onChange={onChangeFilter}
-        options={filterOptions}
-        value={activeFilterId}
-      />
+      <PopupSubheader ariaLabel="Filter feed by coop" tags={filterTags} />
 
       <div className="popup-list-grow">
         {artifacts.length > 0 ? (
@@ -69,9 +56,13 @@ export function PopupFeedScreen(props: {
             ))}
           </ul>
         ) : (
-          <p className="popup-empty-state">
-            Nothing shared yet for this view. Publish a chicken to start the feed.
-          </p>
+          <div className="popup-empty-state popup-empty-state--illustrated popup-empty-state--centered">
+            <PopupOnboardingHero variant="empty-coop-feed" />
+            <p>Nothing shared in the coop yet</p>
+            <span className="popup-empty-state__hint">
+              When someone shares a chicken, it will show up here.
+            </span>
+          </div>
         )}
       </div>
     </section>

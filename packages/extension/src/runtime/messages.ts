@@ -247,6 +247,26 @@ export type RuntimeRequest =
       payload: { coopId: string; inviteType: InviteType; createdBy: string };
     }
   | {
+      type: 'revoke-invite';
+      payload: { coopId: string; inviteId: string; revokedBy: string };
+    }
+  | {
+      type: 'update-coop-profile';
+      payload: {
+        coopId: string;
+        name?: string;
+        purpose?: string;
+        captureMode?: CaptureMode;
+      };
+    }
+  | {
+      type: 'leave-coop';
+      payload: {
+        coopId: string;
+        memberId: string;
+      };
+    }
+  | {
       type: 'set-active-receiver-pairing';
       payload: { pairingId: string };
     }

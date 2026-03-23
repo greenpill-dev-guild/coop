@@ -9,6 +9,7 @@ import {
   type ReviewDraft,
   buildAgentObservationFingerprint,
   completeAgentPlan,
+  createAgentMemory,
   createAgentObservation,
   createId,
   findAgentObservationByFingerprint,
@@ -20,6 +21,7 @@ import {
   greenGoodsWorkApprovalRequestSchema,
   isArchiveReceiptRefreshable,
   listActionBundles,
+  listAgentMemories,
   listAgentObservations,
   listAgentObservationsByStatus,
   listAgentPlans,
@@ -216,6 +218,36 @@ function isRitualReviewDue(input: { coop: CoopSharedState; drafts: ReviewDraft[]
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   return new Date(latest.createdAt).getTime() < sevenDaysAgo;
+}
+
+const MEMORY_INSIGHT_MIN_MEMORIES = 5;
+const MEMORY_INSIGHT_STALE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+function isMemoryInsightDue(input: {
+  coopId: string;
+  observations: AgentObservation[];
+  memories: { coopId?: string; createdAt: string }[];
+}): boolean {
+  const coopMemories = input.memories.filter((m) => m.coopId === input.coopId);
+  if (coopMemories.length === 0) {
+    return false;
+  }
+
+  const lastInsightObs = input.observations
+    .filter((obs) => obs.trigger === 'memory-insight-due' && obs.coopId === input.coopId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+
+  if (!lastInsightObs) {
+    return coopMemories.length >= MEMORY_INSIGHT_MIN_MEMORIES;
+  }
+
+  const memoriesSince = coopMemories.filter((m) => m.createdAt > lastInsightObs.createdAt);
+  if (memoriesSince.length >= MEMORY_INSIGHT_MIN_MEMORIES) {
+    return true;
+  }
+
+  const elapsed = Date.now() - new Date(lastInsightObs.createdAt).getTime();
+  return elapsed >= MEMORY_INSIGHT_STALE_MS;
 }
 
 function isGreenGoodsSyncNeeded(greenGoods?: GreenGoodsGardenState) {
@@ -532,10 +564,12 @@ export async function reconcileAgentObservations(input: {
 }
 
 export async function syncAgentObservations() {
-  const [coops, drafts, receiverCaptures] = await Promise.all([
+  const [coops, drafts, receiverCaptures, observations, memories] = await Promise.all([
     getCoops(),
     listReviewDrafts(db),
     listReceiverCaptures(db),
+    listAgentObservations(db, 200),
+    listAgentMemories(db),
   ]);
 
   await reconcileAgentObservations({
@@ -663,6 +697,16 @@ export async function syncAgentObservations() {
           requestCycle: false,
         },
       );
+    }
+
+    if (isMemoryInsightDue({ coopId: coop.profile.id, observations, memories })) {
+      await emitAgentObservationIfMissing({
+        trigger: 'memory-insight-due',
+        title: `Memory insights due for ${coop.profile.name}`,
+        summary: `${coop.profile.name} has accumulated enough agent memories to synthesize new insights.`,
+        coopId: coop.profile.id,
+        payload: {},
+      });
     }
   }
 }
@@ -970,8 +1014,9 @@ export async function handleApproveAgentPlan(
   if (!plan) {
     return { ok: false, error: 'Agent plan not found.' };
   }
+  const observation = await getAgentObservation(db, plan.observationId);
   const trustedNodeContext = await getTrustedNodeContext({
-    coopId: (await getAgentObservation(db, plan.observationId))?.coopId,
+    coopId: observation?.coopId,
   });
   if (!trustedNodeContext.ok) {
     return { ok: false, error: trustedNodeContext.error };
@@ -991,6 +1036,16 @@ export async function handleApproveAgentPlan(
   }
 
   await saveAgentPlan(db, approvedPlan);
+
+  createAgentMemory(db, {
+    type: 'user-feedback',
+    coopId: observation?.coopId ?? trustedNodeContext.coop.profile.id,
+    memberId: trustedNodeContext.member.id,
+    content: `Plan approved: ${plan.goal ?? plan.rationale ?? plan.id}`,
+    confidence: 1,
+    sourceObservationId: plan.observationId,
+  }).catch(() => {});
+
   return { ok: true, data: approvedPlan };
 }
 
@@ -1001,8 +1056,9 @@ export async function handleRejectAgentPlan(
   if (!plan) {
     return { ok: false, error: 'Agent plan not found.' };
   }
+  const observation = await getAgentObservation(db, plan.observationId);
   const trustedNodeContext = await getTrustedNodeContext({
-    coopId: (await getAgentObservation(db, plan.observationId))?.coopId,
+    coopId: observation?.coopId,
   });
   if (!trustedNodeContext.ok) {
     return { ok: false, error: trustedNodeContext.error };
@@ -1010,7 +1066,6 @@ export async function handleRejectAgentPlan(
   const rejected = markAgentPlanRejected(plan, message.payload.reason);
   await saveAgentPlan(db, rejected);
 
-  const observation = await getAgentObservation(db, rejected.observationId);
   if (observation) {
     await saveAgentObservation(
       db,
@@ -1020,6 +1075,17 @@ export async function handleRejectAgentPlan(
       }),
     );
   }
+
+  const reason = message.payload.reason;
+  createAgentMemory(db, {
+    type: 'user-feedback',
+    coopId: observation?.coopId ?? trustedNodeContext.coop.profile.id,
+    memberId: trustedNodeContext.member.id,
+    content: `Plan rejected: ${plan.goal ?? plan.rationale ?? plan.id}${reason ? `\nReason: ${reason}` : ''}`,
+    confidence: 1,
+    sourceObservationId: plan.observationId,
+  }).catch(() => {});
+
   return { ok: true, data: rejected };
 }
 

@@ -1,6 +1,7 @@
 import {
   type CoopSharedState,
   type ReviewDraft,
+  createAgentMemory,
   deleteReviewDraft,
   getAuthSession,
   getReviewDraft,
@@ -109,6 +110,20 @@ export async function publishDraftWithContext(input: {
   await requestAgentCycle(`publish:${validation.draft.id}`);
   await refreshBadge();
 
+  // Record user-feedback memory when an agent-generated draft is published
+  if (validation.draft.provenance.type === 'agent') {
+    const skillId = validation.draft.provenance.skillId;
+    const coopId = validation.targetActors[0]?.coopId ?? validation.draft.suggestedTargetCoopIds[0];
+    createAgentMemory(db, {
+      type: 'user-feedback',
+      coopId,
+      memberId: input.activeMemberId,
+      content: `Draft published: "${validation.draft.title}" (skill: ${skillId})`,
+      confidence: 1,
+      sourceObservationId: validation.draft.provenance.observationId,
+    }).catch(() => {});
+  }
+
   return {
     ok: true,
     data: artifacts,
@@ -138,6 +153,27 @@ export async function handleUpdateReviewDraft(
   await syncReceiverCaptureFromDraft(validation.draft);
   await requestAgentCycle(`draft-update:${validation.draft.id}`);
   await refreshBadge();
+
+  // Record user-feedback memory when an agent-generated draft changes workflowStage
+  if (
+    persistedDraft &&
+    persistedDraft.provenance.type === 'agent' &&
+    persistedDraft.workflowStage !== validation.draft.workflowStage
+  ) {
+    const promoted = validation.draft.workflowStage === 'ready';
+    const skillId = persistedDraft.provenance.skillId;
+    const coopId = validation.draft.suggestedTargetCoopIds[0];
+    createAgentMemory(db, {
+      type: 'user-feedback',
+      coopId,
+      memberId: activeContext.activeMemberId,
+      content: promoted
+        ? `Draft accepted: "${validation.draft.title}" (skill: ${skillId})`
+        : `Draft demoted back to candidate: "${validation.draft.title}" (skill: ${skillId})`,
+      confidence: 1,
+      sourceObservationId: persistedDraft.provenance.observationId,
+    }).catch(() => {});
+  }
 
   return {
     ok: true,

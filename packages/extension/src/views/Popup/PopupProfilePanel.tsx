@@ -16,8 +16,6 @@ export function PopupProfilePanel(props: {
   onSetAgentCadence: (minutes: UiPreferences['agentCadenceMinutes']) => void | Promise<void>;
   onSetTheme: (theme: PopupThemePreference) => void;
   onCopyInviteCode: (coopName: string, code: string) => void;
-  localInferenceEnabled: boolean;
-  onToggleLocalInference: (enabled: boolean) => void | Promise<void>;
 }) {
   const {
     soundPreferences,
@@ -32,8 +30,6 @@ export function PopupProfilePanel(props: {
     onSetAgentCadence,
     onSetTheme,
     onCopyInviteCode,
-    localInferenceEnabled,
-    onToggleLocalInference,
   } = props;
   const [copiedCoopName, setCopiedCoopName] = useState<string | null>(null);
 
@@ -48,7 +44,7 @@ export function PopupProfilePanel(props: {
 
       <section className="popup-profile-panel__section">
         <div className="popup-section-heading">
-          <strong>Your coops</strong>
+          <strong>Your Coops</strong>
           <span className="popup-footnote">{coops.length}</span>
         </div>
         {coops.length > 0 ? (
@@ -79,22 +75,6 @@ export function PopupProfilePanel(props: {
         ) : (
           <p className="popup-empty-state">No coops yet. Create one or join with an invite.</p>
         )}
-        <div className="popup-inline-actions">
-          <button
-            className="popup-secondary-action popup-primary-action--small"
-            onClick={onCreate}
-            type="button"
-          >
-            Create Coop
-          </button>
-          <button
-            className="popup-secondary-action popup-primary-action--small"
-            onClick={onJoin}
-            type="button"
-          >
-            Join Coop
-          </button>
-        </div>
       </section>
 
       <section className="popup-profile-panel__section">
@@ -138,30 +118,18 @@ export function PopupProfilePanel(props: {
       </section>
 
       <section className="popup-profile-panel__section">
-        <strong>Agent cadence</strong>
+        <strong>Agent Cadence</strong>
         <PopupChoiceGroup
           ariaLabel="Agent cadence"
           onChange={(value) => void onSetAgentCadence(value)}
           options={[
-            { id: 5, label: '5m' },
-            { id: 15, label: '15m' },
-            { id: 30, label: '30m' },
-            { id: 60, label: '60m' },
+            { id: 4, label: '4m' },
+            { id: 8, label: '8m' },
+            { id: 16, label: '16m' },
+            { id: 32, label: '32m' },
+            { id: 64, label: '64m' },
           ]}
           value={uiPreferences.agentCadenceMinutes}
-        />
-      </section>
-
-      <section className="popup-profile-panel__section">
-        <strong>Local inference</strong>
-        <PopupChoiceGroup
-          ariaLabel="Local inference"
-          onChange={(value) => void onToggleLocalInference(value === 'on')}
-          options={[
-            { id: 'on', label: 'On' },
-            { id: 'off', label: 'Off' },
-          ]}
-          value={localInferenceEnabled ? 'on' : 'off'}
         />
       </section>
     </section>

@@ -10,18 +10,9 @@ interface SidepanelFooterNavProps {
 function ChickensIcon() {
   return (
     <svg aria-hidden="true" className="sidepanel-footer-nav__icon" fill="none" viewBox="0 0 20 20">
-      <path
-        d="M6 3.5h5l3.5 3.5V16.5H6z"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M8.5 10h3M8.5 12.5h2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.3"
-      />
+      {/* Two eggs side by side */}
+      <ellipse cx="7.5" cy="11" rx="3.2" ry="4.2" stroke="currentColor" strokeWidth="1.4" />
+      <ellipse cx="12.5" cy="11" rx="3.2" ry="4.2" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -29,12 +20,28 @@ function ChickensIcon() {
 function RoostIcon() {
   return (
     <svg aria-hidden="true" className="sidepanel-footer-nav__icon" fill="none" viewBox="0 0 20 20">
+      {/* Rooster head crowing — profile view, open beak pointing right, comb on top */}
+      {/* Head circle */}
+      <circle cx="9" cy="10.5" r="4" stroke="currentColor" strokeWidth="1.4" />
+      {/* Comb (three bumps on top) */}
       <path
-        d="M10 3L3 9h2v7h4v-4h2v4h4V9h2L10 3z"
+        d="M7 6.5q1-2.5 2 0q1-2.5 2 0q1-2.5 2 0"
         stroke="currentColor"
+        strokeLinecap="round"
         strokeLinejoin="round"
+        strokeWidth="1.3"
+      />
+      {/* Open beak — two angled lines */}
+      <path
+        d="M12.8 9.2L16.5 7.5M12.8 10.5L16.5 11"
+        stroke="currentColor"
+        strokeLinecap="round"
         strokeWidth="1.4"
       />
+      {/* Eye */}
+      <circle cx="8.5" cy="9.8" r="0.7" fill="currentColor" />
+      {/* Wattle */}
+      <path d="M11 13q0 2.2-2 2.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -42,9 +49,27 @@ function RoostIcon() {
 function CoopsIcon() {
   return (
     <svg aria-hidden="true" className="sidepanel-footer-nav__icon" fill="none" viewBox="0 0 20 20">
-      <rect x="3" y="8" width="6" height="8" rx="1" stroke="currentColor" strokeWidth="1.4" />
-      <rect x="11" y="8" width="6" height="8" rx="1" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M6 8V5h8v3" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.4" />
+      {/* Barn / coop structure — peaked roof, walls, door */}
+      {/* Walls */}
+      <rect
+        x="4"
+        y="9"
+        width="12"
+        height="8"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      {/* Peaked roof */}
+      <path
+        d="M3 9.5L10 3.5L17 9.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      {/* Door */}
+      <path d="M8.5 17V12.5h3V17" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -52,13 +77,25 @@ function CoopsIcon() {
 function NestIcon() {
   return (
     <svg aria-hidden="true" className="sidepanel-footer-nav__icon" fill="none" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4" />
+      {/* Bird nest — bowl shape with twigs and eggs inside */}
+      {/* Nest bowl (curved cradle) */}
       <path
-        d="M10 3v2M10 15v2M17 10h-2M5 10H3M14.95 5.05l-1.41 1.41M6.46 13.54l-1.41 1.41M14.95 14.95l-1.41-1.41M6.46 6.46L5.05 5.05"
+        d="M3 12q0 5 7 5q7 0 7-5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
+      {/* Twig texture on rim */}
+      <path
+        d="M2.5 11.5q2 1 4-0.5M7 12q2-1 4 0.5M13 11.5q2 1 4-0.5"
         stroke="currentColor"
         strokeLinecap="round"
         strokeWidth="1.3"
       />
+      {/* Three eggs nestled inside */}
+      <ellipse cx="7.5" cy="13" rx="1.5" ry="2" stroke="currentColor" strokeWidth="1.3" />
+      <ellipse cx="10" cy="12.8" rx="1.5" ry="2" stroke="currentColor" strokeWidth="1.3" />
+      <ellipse cx="12.5" cy="13" rx="1.5" ry="2" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   );
 }

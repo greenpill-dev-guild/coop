@@ -26,10 +26,23 @@ afterEach(() => {
 
 // --- Mocks for context ---
 
+function mockDexieTable() {
+  const chain = {
+    put: vi.fn(),
+    where: vi.fn().mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(undefined),
+        sortBy: vi.fn().mockResolvedValue([]),
+      }),
+    }),
+  };
+  return chain;
+}
+
 vi.mock('../../context', () => ({
   db: {
-    tabCandidates: { put: vi.fn() },
-    pageExtracts: { put: vi.fn() },
+    tabCandidates: mockDexieTable(),
+    pageExtracts: mockDexieTable(),
     reviewDrafts: { bulkPut: vi.fn() },
     captureRuns: { put: vi.fn() },
   },

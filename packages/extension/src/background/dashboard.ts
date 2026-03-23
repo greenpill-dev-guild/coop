@@ -8,6 +8,7 @@ import {
   filterReceiverCapturesForMemberContext,
   filterVisibleReviewDrafts,
   getAuthSession,
+  getPendingOutboxCount,
   getSoundPreferences,
   listActionBundles,
   listActionLogEntries,
@@ -138,8 +139,9 @@ export function extensionIconPaths(state: RuntimeSummary['iconState']) {
 export function summarizeSyncStatus(input: {
   coopCount: number;
   runtimeHealth: Awaited<ReturnType<typeof getRuntimeHealth>>;
+  pendingOutboxCount?: number;
 }): Pick<RuntimeSummary, 'syncState' | 'syncLabel' | 'syncDetail' | 'syncTone'> {
-  const { coopCount, runtimeHealth } = input;
+  const { coopCount, runtimeHealth, pendingOutboxCount = 0 } = input;
 
   if (coopCount === 0) {
     return {
@@ -192,6 +194,16 @@ export function summarizeSyncStatus(input: {
       syncLabel: 'Needs attention',
       syncDetail,
       syncTone: 'error',
+    };
+  }
+
+  if (pendingOutboxCount > 0) {
+    const noun = pendingOutboxCount === 1 ? 'change' : 'changes';
+    return {
+      syncState: `Peer-ready local-first sync. ${pendingOutboxCount} ${noun} pending sync.`,
+      syncLabel: 'Syncing',
+      syncDetail: `${pendingOutboxCount} ${noun} pending sync.`,
+      syncTone: 'ok',
     };
   }
 
@@ -292,9 +304,11 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     pendingAttention: pendingAttentionCount,
     blocked: runtimeHealth.missingPermission,
   });
+  const outboxCount = await getPendingOutboxCount(db).catch(() => 0);
   const syncSummary = summarizeSyncStatus({
     coopCount: coops.length,
     runtimeHealth,
+    pendingOutboxCount: outboxCount,
   });
 
   return {

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
+    "dev:catalog": "vite dev --config vite.catalog.config.ts",
     "build": "vite build"
   },
   "dependencies": {

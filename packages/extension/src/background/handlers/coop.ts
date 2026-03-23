@@ -13,6 +13,7 @@ import {
   initializeCoopPrivacy,
   initializeMemberPrivacy,
   joinCoop,
+  leaveCoop,
   markAccountPredicted,
   nowIso,
   parseInviteCode,
@@ -349,4 +350,53 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
     ok: true,
     data: latestState,
   } satisfies RuntimeActionResponse;
+}
+
+export async function handleUpdateCoopProfile(
+  message: Extract<RuntimeRequest, { type: 'update-coop-profile' }>,
+) {
+  const coops = await getCoops();
+  const coop = coops.find((c) => c.profile.id === message.payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+  const patch = message.payload;
+  const nextState: CoopSharedState = {
+    ...coop,
+    profile: {
+      ...coop.profile,
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+      ...(patch.purpose !== undefined ? { purpose: patch.purpose } : {}),
+      ...(patch.captureMode !== undefined ? { captureMode: patch.captureMode } : {}),
+    },
+  };
+  await saveState(nextState);
+  if (patch.captureMode !== undefined) {
+    await setLocalSetting(stateKeys.captureMode, patch.captureMode);
+  }
+  await refreshBadge();
+  return { ok: true, data: nextState } satisfies RuntimeActionResponse<CoopSharedState>;
+}
+
+export async function handleLeaveCoop(message: Extract<RuntimeRequest, { type: 'leave-coop' }>) {
+  const coops = await getCoops();
+  const coop = coops.find((c) => c.profile.id === message.payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+  try {
+    const result = leaveCoop({ state: coop, memberId: message.payload.memberId });
+    await saveState(result.state);
+    if (!result.state.profile.active) {
+      const remaining = coops.filter((c) => c.profile.id !== message.payload.coopId);
+      await setLocalSetting(stateKeys.activeCoopId, remaining[0]?.profile.id ?? '');
+    }
+    await refreshBadge();
+    return { ok: true, data: result.state } satisfies RuntimeActionResponse<CoopSharedState>;
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Leave coop failed.',
+    } satisfies RuntimeActionResponse;
+  }
 }

@@ -130,8 +130,10 @@ import {
 import {
   handleCreateCoop,
   handleJoinCoop,
+  handleLeaveCoop,
   handleResolveOnchainState,
   handleSetAnchorMode,
+  handleUpdateCoopProfile,
 } from './background/handlers/coop';
 import {
   handleProvisionMemberOnchainAccount,
@@ -144,6 +146,7 @@ import {
   handleCreateInvite,
   handleCreateReceiverPairing,
   handleIngestReceiverCapture,
+  handleRevokeInvite,
   handleSetActiveReceiverPairing,
   handleSetReceiverIntakeArchiveWorthiness,
 } from './background/handlers/receiver';
@@ -258,6 +261,15 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   void handleAlarmEvent(alarm);
+});
+
+// Proactive online/offline detection — updates RuntimeHealth immediately
+// instead of waiting for the next passive getRuntimeHealth() poll.
+self.addEventListener('online', () => {
+  void setRuntimeHealth({ offline: false }).then(() => refreshBadge());
+});
+self.addEventListener('offline', () => {
+  void setRuntimeHealth({ offline: true }).then(() => refreshBadge());
 });
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
@@ -403,6 +415,15 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
         return;
       case 'create-invite':
         sendResponse(await handleCreateInvite(message));
+        return;
+      case 'revoke-invite':
+        sendResponse(await handleRevokeInvite(message));
+        return;
+      case 'update-coop-profile':
+        sendResponse(await handleUpdateCoopProfile(message));
+        return;
+      case 'leave-coop':
+        sendResponse(await handleLeaveCoop(message));
         return;
       case 'set-active-receiver-pairing':
         sendResponse(await handleSetActiveReceiverPairing(message));

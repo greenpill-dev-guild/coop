@@ -5,6 +5,7 @@ import {
   GreenGoodsProvisionButton,
   GreenGoodsWorkSubmissionForm,
 } from '../cards/GreenGoodsActionCards';
+import { TabCoopSelector } from '../TabCoopSelector';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,6 +32,8 @@ function readBundleTargetMemberId(bundle: ActionBundle) {
 export interface RoostTabProps {
   activeCoop: CoopSharedState | undefined;
   activeMember: CoopSharedState['members'][number] | undefined;
+  allCoops: CoopSharedState[];
+  selectActiveCoop: (coopId: string) => void;
   greenGoodsActionQueue: ActionBundle[];
   onProvisionMemberOnchainAccount: () => Promise<void>;
   onSubmitGreenGoodsWorkSubmission: (input: {
@@ -54,6 +57,8 @@ export interface RoostTabProps {
 export function RoostTab({
   activeCoop,
   activeMember,
+  allCoops,
+  selectActiveCoop,
   greenGoodsActionQueue,
   onProvisionMemberOnchainAccount,
   onSubmitGreenGoodsWorkSubmission,
@@ -93,6 +98,8 @@ export function RoostTab({
 
   return (
     <section className="stack">
+      <TabCoopSelector allCoops={allCoops} activeCoop={activeCoop} onSelect={selectActiveCoop} />
+
       {/* --- 1. Garden Status Card --- */}
       <article className="panel-card">
         <h2>Green Goods Access</h2>

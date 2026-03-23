@@ -1,7 +1,9 @@
 import {
+  type BlobRelayTransport,
   type CoopSharedState,
   buildIceServers,
   connectSyncProviders,
+  createBlobRelayTransport,
   createCoopDoc,
   hashJson,
   readCoopState,
@@ -17,6 +19,7 @@ type SyncBinding = {
   lastHash: string;
   healthTimer?: number;
   timer?: number;
+  blobRelay?: BlobRelayTransport;
 };
 
 export function useSyncBindings(deps: {
@@ -133,6 +136,27 @@ export function useSyncBindings(deps: {
           disposers.push(() => {
             wsProvider.off('status', onProviderSignal);
           });
+
+          // Create blob relay transport for WS fallback when WebRTC is unavailable.
+          // The relay is created once the WS connection is established.
+          const tryCreateRelay = () => {
+            const relay = createBlobRelayTransport(wsProvider);
+            if (relay) {
+              binding.blobRelay = relay;
+            }
+          };
+          if (wsProvider.wsconnected) {
+            tryCreateRelay();
+          } else {
+            const onWsConnect = ({ status }: { status: string }) => {
+              if (status === 'connected') {
+                tryCreateRelay();
+                wsProvider.off('status', onWsConnect);
+              }
+            };
+            wsProvider.on('status', onWsConnect);
+            disposers.push(() => wsProvider.off('status', onWsConnect));
+          }
         }
 
         scheduleSyncHealthReport(2500);

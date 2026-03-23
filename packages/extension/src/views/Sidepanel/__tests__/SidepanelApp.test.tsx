@@ -46,14 +46,6 @@ vi.mock('../ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: ReactNode }) => children,
 }));
 
-vi.mock('../CoopSwitcher', () => ({
-  CoopFilterPill: ({ onFilter }: { onFilter: (coopId: string | null) => void }) => (
-    <button onClick={() => void onFilter('coop-2')} type="button">
-      Switch to Coop Two
-    </button>
-  ),
-}));
-
 vi.mock('../TabStrip', () => ({
   SidepanelFooterNav: ({
     showNestTab,
@@ -205,6 +197,9 @@ describe('SidepanelApp', () => {
         runtime: {
           getURL: vi.fn((path: string) => `chrome-extension://${path}`),
         },
+        action: {
+          openPopup: vi.fn(),
+        },
       },
     });
 
@@ -218,25 +213,6 @@ describe('SidepanelApp', () => {
     });
   });
 
-  it('reloads both dashboards after switching coops via filter pill', async () => {
-    const user = userEvent.setup();
-
-    render(<SidepanelApp />);
-
-    await user.click(screen.getByRole('button', { name: 'Switch to Coop Two' }));
-
-    await waitFor(() => {
-      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-        type: 'set-active-coop',
-        payload: { coopId: 'coop-2' },
-      });
-    });
-    await waitFor(() => {
-      expect(loadDashboardMock).toHaveBeenCalledTimes(1);
-      expect(loadAgentDashboardMock).toHaveBeenCalledTimes(1);
-    });
-  });
-
   it('does not show nest tab when hasTrustedNodeAccess is false', () => {
     render(<SidepanelApp />);
 
@@ -244,11 +220,39 @@ describe('SidepanelApp', () => {
     expect(footerNav).toHaveAttribute('data-show-nest', 'false');
   });
 
-  it('renders the compact header with brand and filter pill', () => {
+  it('renders the header with brand, pair, theme toggle, profile, and close buttons', () => {
     render(<SidepanelApp />);
 
     expect(screen.getByAltText('Coop')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Switch to Coop Two' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pair a Device' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle Theme' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close Panel' })).toBeInTheDocument();
+  });
+
+  it('toggles theme when the theme button is clicked', async () => {
+    const user = userEvent.setup();
+
+    render(<SidepanelApp />);
+
+    const themeButton = screen.getByRole('button', { name: 'Toggle Theme' });
+    await user.click(themeButton);
+
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({
+      'coop:popup-theme': 'dark',
+    });
+  });
+
+  it('closes the panel when the close button is clicked', async () => {
+    const closeSpy = vi.spyOn(window, 'close').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+
+    render(<SidepanelApp />);
+
+    await user.click(screen.getByRole('button', { name: 'Close Panel' }));
+
+    expect(closeSpy).toHaveBeenCalled();
+    closeSpy.mockRestore();
   });
 
   it('defaults to the roost tab', () => {

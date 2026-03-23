@@ -3,10 +3,14 @@ import {
   type ReceiverCapture,
   type TabCandidate,
   buildReadablePageExtract,
+  canonicalizeUrl,
   compressImage,
   createId,
   createReceiverCapture,
+  findExistingExtractByTextHash,
+  findRecentCandidateByUrlHash,
   getAuthSession,
+  hashText,
   isDomainExcluded,
   listPageExtracts,
   nowIso,
@@ -43,6 +47,7 @@ import { drainAgentCycles, emitRoundupBatchObservation } from './agent';
 
 export async function collectCandidate(
   tab: chrome.tabs.Tab,
+  options?: { captureRunId?: string },
 ): Promise<{ candidate: TabCandidate; snapshot: CaptureSnapshot } | null> {
   if (!tab.id || !tab.url || !isSupportedUrl(tab.url)) {
     return null;
@@ -58,18 +63,32 @@ export async function collectCandidate(
     return null;
   }
 
+  // Resolve tab group name if the tab belongs to a Chrome tab group
+  let tabGroupHint: string | undefined;
+  if (tab.groupId && tab.groupId !== -1 && chrome.tabGroups) {
+    try {
+      const group = await chrome.tabGroups.get(tab.groupId);
+      tabGroupHint = group.title || undefined;
+    } catch {
+      // Tab group may have been removed between query and get
+    }
+  }
+
+  const canonical = canonicalizeUrl(tab.url);
   return {
     candidate: {
       id: createId('candidate'),
       tabId: tab.id,
       windowId: tab.windowId ?? 0,
       url: tab.url,
-      canonicalUrl: tab.url,
+      canonicalUrl: canonical,
+      canonicalUrlHash: hashText(canonical),
       title: result.title || tab.title || tab.url,
       domain: new URL(tab.url).hostname.replace(/^www\./, ''),
       favicon: tab.favIconUrl,
       excerpt: result.metaDescription ?? result.paragraphs[0],
-      tabGroupHint: undefined,
+      tabGroupHint,
+      captureRunId: options?.captureRunId,
       capturedAt: nowIso(),
     },
     snapshot: result,
@@ -86,6 +105,7 @@ export async function runCaptureForTabs(
   const capturedDomains = new Set<string>();
   let skippedCount = 0;
   let lastCaptureError: string | undefined;
+  const captureRunId = createId('capture');
 
   const captureMode = await getLocalSetting<string>(stateKeys.captureMode, 'manual');
   const periodMinutes = getCapturePeriodMinutes(captureMode);
@@ -103,13 +123,28 @@ export async function runCaptureForTabs(
       continue;
     }
 
+    // Fast path: in-memory dedup (survives within a single SW lifetime)
     if (wasRecentlyCaptured(tab.url, dedupCooldownMs)) {
       skippedCount++;
       continue;
     }
 
+    // Persistent dedup: check Dexie for a recent candidate with the same canonical URL hash.
+    // This survives MV3 service-worker restarts where the in-memory map is lost.
+    // Uses canonicalUrlHash (not canonicalUrl) because the stored canonicalUrl is redacted.
+    const canonical = canonicalizeUrl(tab.url);
+    const urlHash = hashText(canonical);
+    const existingCandidate = await findRecentCandidateByUrlHash(db, urlHash);
+    if (
+      existingCandidate &&
+      Date.now() - new Date(existingCandidate.capturedAt).getTime() < dedupCooldownMs
+    ) {
+      skippedCount++;
+      continue;
+    }
+
     try {
-      const collected = await collectCandidate(tab);
+      const collected = await collectCandidate(tab, { captureRunId });
       if (!collected) {
         continue;
       }
@@ -126,8 +161,15 @@ export async function runCaptureForTabs(
         paragraphs: snapshot.paragraphs,
         previewImageUrl: snapshot.previewImageUrl,
       });
-      await savePageExtract(db, extract);
-      newExtractIds.push(extract.id);
+
+      // Content-hash dedup: skip extract if identical content already exists
+      const duplicateExtractId = await findExistingExtractByTextHash(db, extract.textHash);
+      if (duplicateExtractId) {
+        newExtractIds.push(duplicateExtractId);
+      } else {
+        await savePageExtract(db, extract);
+        newExtractIds.push(extract.id);
+      }
     } catch (error) {
       lastCaptureError =
         error instanceof Error ? error.message : `Capture failed for ${tab.url ?? 'unknown tab'}.`;
@@ -148,7 +190,6 @@ export async function runCaptureForTabs(
     }
   }
 
-  const captureRunId = createId('capture');
   await db.captureRuns.put({
     id: captureRunId,
     state: lastCaptureError ? 'failed' : 'completed',
@@ -306,12 +347,24 @@ export async function handleTabRemoved(tabId: number) {
       return;
     }
 
+    // Persistent dedup for tab-close captures (uses hash since canonicalUrl is redacted in Dexie)
+    const canonical = canonicalizeUrl(cached.url);
+    const urlHash = hashText(canonical);
+    const existingCandidate = await findRecentCandidateByUrlHash(db, urlHash);
+    if (
+      existingCandidate &&
+      Date.now() - new Date(existingCandidate.capturedAt).getTime() < 5 * 60_000
+    ) {
+      return;
+    }
+
     const candidate: TabCandidate = {
       id: createId('candidate'),
       tabId,
       windowId: cached.windowId,
       url: cached.url,
-      canonicalUrl: cached.url,
+      canonicalUrl: canonical,
+      canonicalUrlHash: urlHash,
       title: cached.title || cached.url,
       domain,
       favicon: cached.favIconUrl,
@@ -330,12 +383,18 @@ export async function handleTabRemoved(tabId: number) {
       paragraphs: [],
       previewImageUrl: undefined,
     });
-    await savePageExtract(db, extract);
 
+    // Content-hash dedup: skip extract if identical content already exists
+    const duplicateExtractId = await findExistingExtractByTextHash(db, extract.textHash);
+    if (!duplicateExtractId) {
+      await savePageExtract(db, extract);
+    }
+
+    const extractIdForObservation = duplicateExtractId ?? extract.id;
     const coops = await getCoops();
     if (coops.length > 0) {
       await emitRoundupBatchObservation({
-        extractIds: [extract.id],
+        extractIds: [extractIdForObservation],
         eligibleCoopIds: coops.map((coop) => coop.profile.id),
       });
     }

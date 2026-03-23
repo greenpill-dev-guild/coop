@@ -1,6 +1,15 @@
 import { type CaptureMode, type UiPreferences, getFvmExplorerTxUrl } from '@coop/shared';
 import type { InferenceBridgeState } from '../../runtime/inference-bridge';
 
+export async function downloadText(filename: string, value: string) {
+  const url = URL.createObjectURL(new Blob([value], { type: 'text/plain;charset=utf-8' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function formatRoundUpTiming(mode: CaptureMode) {
   switch (mode) {
     case '30-min':

@@ -1,17 +1,22 @@
-import { useMemo } from 'react';
-import { PopupTooltip } from './PopupTooltip';
-
-interface PopupHomeStatusItem {
-  id: string;
-  label: string;
-  value: string;
-  tone?: 'ok' | 'warning' | 'error';
-  detail?: string;
-}
+import type { ArtifactCategory } from '@coop/shared';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
 
 export interface YardItem {
   id: string;
   type: 'draft' | 'artifact';
+  category?: ArtifactCategory;
+  isExternal?: boolean;
+}
+
+function categoryGroup(cat?: ArtifactCategory): string | undefined {
+  if (!cat) return undefined;
+  if (cat === 'thought' || cat === 'insight') return 'thought';
+  if (cat === 'opportunity' || cat === 'funding-lead') return 'opportunity';
+  if (cat === 'resource' || cat === 'evidence') return 'resource';
+  if (cat === 'ritual' || cat === 'coop-soul' || cat === 'setup-insight') return 'ritual';
+  if (cat === 'seed-contribution') return 'seed';
+  return undefined;
 }
 
 /* ── Deterministic pseudo-random from string ID ── */
@@ -151,10 +156,8 @@ function PasteIcon() {
 
 function ChickenYard({
   items,
-  onClear,
 }: {
   items: YardItem[];
-  onClear: () => void;
 }) {
   const positions = useMemo(() => {
     return items.map((item) => {
@@ -185,9 +188,12 @@ function ChickenYard({
     <div className="popup-yard" aria-label="Chicken yard">
       {items.map((item, i) => {
         const pos = positions[i];
+        const catGroup = categoryGroup(item.category);
+        const externalClass = item.isExternal ? ' popup-yard__chicken--external' : '';
         return (
           <span
-            className={`popup-yard__chicken popup-yard__chicken--${item.type}`}
+            className={`popup-yard__chicken popup-yard__chicken--${item.type}${externalClass}`}
+            data-category={catGroup}
             key={item.id}
             style={{
               left: `${pos.x}%`,
@@ -200,11 +206,6 @@ function ChickenYard({
           </span>
         );
       })}
-      {items.length > 0 ? (
-        <button className="popup-yard__clear" onClick={onClear} type="button">
-          Clear yard
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -212,9 +213,8 @@ function ChickenYard({
 /* ── Home Screen ── */
 
 export function PopupHomeScreen(props: {
-  statusItems: PopupHomeStatusItem[];
+  statusItems: PopupSubheaderTag[];
   yardItems: YardItem[];
-  onClearYard: () => void;
   noteText: string;
   onChangeNote: (value: string) => void;
   onSaveNote: () => void;
@@ -228,7 +228,6 @@ export function PopupHomeScreen(props: {
   const {
     statusItems,
     yardItems,
-    onClearYard,
     noteText,
     onChangeNote,
     onSaveNote,
@@ -240,46 +239,26 @@ export function PopupHomeScreen(props: {
     onOpenFiles,
   } = props;
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(46, Math.min(el.scrollHeight, 92))}px`;
+  }, []);
+
+  useEffect(() => {
+    autoResize();
+  }, [noteText, autoResize]);
+
   return (
     <section className="popup-screen popup-screen--home-aggregate">
-      <div aria-label="Home status" className="popup-status-strip">
-        {statusItems.map((item) => {
-          const chip = (
-            <span
-              className={`popup-status-pill popup-status-pill--tone-${item.tone ?? 'ok'}`}
-              key={item.id}
-            >
-              <strong>{item.label}</strong>
-              <span>{item.value}</span>
-            </span>
-          );
+      <PopupSubheader ariaLabel="Home status" equalWidth tags={statusItems} />
 
-          if (!item.detail) {
-            return chip;
-          }
-
-          return (
-            <PopupTooltip content={item.detail} key={item.id}>
-              {({ targetProps }) => (
-                <button
-                  {...targetProps}
-                  aria-label={`${item.label}: ${item.value}`}
-                  className="popup-status-pill popup-status-pill--button"
-                  type="button"
-                >
-                  <strong>{item.label}</strong>
-                  <span>{item.value}</span>
-                </button>
-              )}
-            </PopupTooltip>
-          );
-        })}
-      </div>
-
-      <ChickenYard items={yardItems} onClear={onClearYard} />
+      <ChickenYard items={yardItems} />
 
       <button className="popup-primary-action" onClick={onRoundUp} type="button">
-        Round Up
+        Roundup Chickens
       </button>
 
       <div className="popup-action-grid" aria-label="Quick actions">
@@ -326,7 +305,10 @@ export function PopupHomeScreen(props: {
           <textarea
             aria-label="Note"
             className="popup-note-bar__input"
-            onChange={(event) => onChangeNote(event.target.value)}
+            onChange={(event) => {
+              onChangeNote(event.target.value);
+              autoResize();
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
@@ -334,6 +316,7 @@ export function PopupHomeScreen(props: {
               }
             }}
             placeholder="Jot a quick note..."
+            ref={textareaRef}
             rows={1}
             value={noteText}
           />

@@ -125,15 +125,17 @@ export function OperatorConsole(props: OperatorConsoleProps) {
         onToggleSkillAutoRun={props.onToggleSkillAutoRun}
       />
 
-      <GardenRequestsSection
-        greenGoodsContext={props.greenGoodsContext}
-        actionQueue={props.actionQueue}
-        actionHistory={props.actionHistory}
-        onQueueGreenGoodsWorkApproval={props.onQueueGreenGoodsWorkApproval}
-        onQueueGreenGoodsAssessment={props.onQueueGreenGoodsAssessment}
-        onQueueGreenGoodsGapAdminSync={props.onQueueGreenGoodsGapAdminSync}
-        onQueueGreenGoodsMemberSync={props.onQueueGreenGoodsMemberSync}
-      />
+      {props.greenGoodsContext?.enabled ? (
+        <GardenRequestsSection
+          greenGoodsContext={props.greenGoodsContext}
+          actionQueue={props.actionQueue}
+          actionHistory={props.actionHistory}
+          onQueueGreenGoodsWorkApproval={props.onQueueGreenGoodsWorkApproval}
+          onQueueGreenGoodsAssessment={props.onQueueGreenGoodsAssessment}
+          onQueueGreenGoodsGapAdminSync={props.onQueueGreenGoodsGapAdminSync}
+          onQueueGreenGoodsMemberSync={props.onQueueGreenGoodsMemberSync}
+        />
+      ) : null}
 
       <AgentObservationsSection
         agentObservations={props.agentObservations}

@@ -1,7 +1,7 @@
 import type { ReviewDraft } from '@coop/shared';
-import { PopupChoiceGroup } from './PopupChoiceGroup';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
-import type { PopupChoiceOption, PopupDraftListItem } from './popup-types';
+import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
+import type { PopupDraftListItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
   return value
@@ -12,33 +12,17 @@ function formatCategoryLabel(value: string) {
 
 export function PopupDraftListScreen(props: {
   drafts: PopupDraftListItem[];
-  filterOptions: Array<PopupChoiceOption<string>>;
-  activeFilterId: string;
-  onChangeFilter: (filterId: string) => void;
+  filterTags: PopupSubheaderTag[];
   onOpenDraft: (draftId: string) => void;
   onMarkReady: (draft: ReviewDraft) => void | Promise<void>;
   onShare: (draft: ReviewDraft) => void | Promise<void>;
   onRoundUp: () => void;
 }) {
-  const {
-    drafts,
-    filterOptions,
-    activeFilterId,
-    onChangeFilter,
-    onOpenDraft,
-    onMarkReady,
-    onShare,
-    onRoundUp,
-  } = props;
+  const { drafts, filterTags, onOpenDraft, onMarkReady, onShare, onRoundUp } = props;
 
   return (
     <section className="popup-screen popup-screen--fill">
-      <PopupChoiceGroup
-        ariaLabel="Filter chickens by coop"
-        onChange={onChangeFilter}
-        options={filterOptions}
-        value={activeFilterId}
-      />
+      <PopupSubheader ariaLabel="Filter chickens by coop" tags={filterTags} />
 
       <div className="popup-list-grow">
         {drafts.length > 0 ? (
@@ -85,11 +69,11 @@ export function PopupDraftListScreen(props: {
             ))}
           </ul>
         ) : (
-          <div className="popup-empty-state popup-empty-state--illustrated">
-            <PopupOnboardingHero variant="empty" />
-            <p>No chickens here yet. Round up some tabs to get started.</p>
+          <div className="popup-empty-state popup-empty-state--illustrated popup-empty-state--centered">
+            <PopupOnboardingHero variant="empty-meadow" />
+            <p>No chickens here yet.</p>
             <button className="popup-primary-action" onClick={onRoundUp} type="button">
-              Round Up
+              Roundup Chickens
             </button>
           </div>
         )}

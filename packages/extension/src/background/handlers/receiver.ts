@@ -3,6 +3,7 @@ import {
   type ReceiverCapture,
   type ReviewDraft,
   addInviteToState,
+  revokeInviteCode,
   assertReceiverSyncEnvelope,
   buildReceiverPairingDeepLink,
   createReceiverDraftSeed,
@@ -132,6 +133,7 @@ export async function handleCreateReceiverPairing(
   await upsertReceiverPairing(db, pairing);
   await setActiveReceiverPairing(db, pairing.pairingId);
   await ensureReceiverSyncOffscreenDocument();
+  notifyReceiverBindingsRefresh();
 
   return {
     ok: true,
@@ -163,6 +165,35 @@ export async function handleCreateInvite(
   } satisfies RuntimeActionResponse;
 }
 
+// TODO: Use applyRevokeInviteToDoc to mutate the live Yjs doc directly so
+// revocation propagates to peers even when the sidepanel is closed. Currently
+// follows the same Dexie-first pattern as handleCreateInvite — the sidepanel's
+// useSyncBindings reconciles on next render cycle via loadDashboard().
+export async function handleRevokeInvite(
+  message: Extract<RuntimeRequest, { type: 'revoke-invite' }>,
+) {
+  const coops = await getCoops();
+  const coop = coops.find((item) => item.profile.id === message.payload.coopId);
+  if (!coop) {
+    return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
+  }
+  try {
+    const nextState = revokeInviteCode({
+      state: coop,
+      inviteId: message.payload.inviteId,
+      revokedBy: message.payload.revokedBy,
+    });
+    await saveState(nextState);
+    await refreshBadge();
+    return { ok: true, data: null } satisfies RuntimeActionResponse;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Revoke failed.',
+    } satisfies RuntimeActionResponse;
+  }
+}
+
 export async function handleSetActiveReceiverPairing(
   message: Extract<RuntimeRequest, { type: 'set-active-receiver-pairing' }>,
 ) {
@@ -191,6 +222,7 @@ export async function handleSetActiveReceiverPairing(
   }
   await setActiveReceiverPairing(db, message.payload.pairingId);
   await ensureReceiverSyncOffscreenDocument();
+  notifyReceiverBindingsRefresh();
   return { ok: true } satisfies RuntimeActionResponse;
 }
 
@@ -444,4 +476,16 @@ export async function handleSetReceiverIntakeArchiveWorthiness(
     ok: true,
     data: nextCapture,
   } satisfies RuntimeActionResponse;
+}
+
+/**
+ * Notify the offscreen receiver-sync document that bindings should refresh.
+ * This replaces aggressive 1.5s polling with message-driven wake.
+ */
+function notifyReceiverBindingsRefresh() {
+  try {
+    chrome.runtime.sendMessage({ type: 'refresh-receiver-bindings' });
+  } catch {
+    // Offscreen document may not be alive — will catch up on heartbeat.
+  }
 }

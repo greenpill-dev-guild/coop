@@ -7,6 +7,7 @@ import {
 } from '@coop/shared';
 import type { InferenceBridgeState } from '../../runtime/inference-bridge';
 import type { DashboardResponse } from '../../runtime/messages';
+import { ShareMenu } from '../Popup/ShareMenu';
 import {
   formatArtifactCategoryLabel,
   formatReviewStatusLabel,
@@ -268,6 +269,9 @@ export function DraftCard({
         >
           Open source
         </a>
+        {value.sources[0]?.url ? (
+          <ShareMenu url={value.sources[0].url} title={value.title} summary={value.summary} />
+        ) : null}
       </div>
     </article>
   );
@@ -418,6 +422,13 @@ export function ArtifactCard({
         >
           Save this find
         </button>
+        {artifact.sources[0]?.url ? (
+          <ShareMenu
+            url={artifact.sources[0].url}
+            title={artifact.title}
+            summary={artifact.summary}
+          />
+        ) : null}
       </div>
     </article>
   );
