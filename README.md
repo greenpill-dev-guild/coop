@@ -34,7 +34,7 @@ Browser tabs (extension), audio recordings, photos, files, and links (companion 
 16-skill pipeline running a three-tier inference cascade (WebGPU, WASM, heuristics). Opportunity extraction, grant fit scoring, theme clustering, brief drafting, and cross-session memory persistence. No API keys, no cloud calls.
 
 ### Sharing
-Peer-to-peer sync via Yjs CRDTs and y-webrtc. Multi-coop publishing with per-coop feeds and board visualization.
+Peer-to-peer sync via Yjs CRDTs and y-webrtc with blob relay for peer forwarding. Offline outbox queues publishes when disconnected and flushes on reconnect. Multi-coop publishing with per-coop feeds and board visualization.
 
 ### Identity
 Passkey-first authentication via WebAuthn, bridged to Safe smart accounts through ERC-4337 account abstraction. No wallet extension required.
@@ -43,7 +43,7 @@ Passkey-first authentication via WebAuthn, bridged to Safe smart accounts throug
 Semaphore zero-knowledge membership proofs for anonymous publishing. ERC-5564 stealth addresses for private on-chain interactions. All captures stay local-only until explicit share.
 
 ### Archiving
-Storacha/Filecoin permanent storage with verifiable receipt chains. Every archived artifact carries full CID provenance linking capture to human review to permanent storage.
+Storacha/Filecoin permanent storage with verifiable receipt chains. Every archived artifact carries full CID provenance linking capture to human review to permanent storage. Archive restore for recovery flows and data portability (import/export) for migration and backup.
 
 ### Governance
 Operator console for anchor node management. Policy engine with typed action bundles and approval workflows. Session permits with scoped execution permissions, time-bounded capabilities, and replay protection.
@@ -60,10 +60,10 @@ Bun monorepo with four runtime packages:
 
 | Package | Description |
 |---------|-------------|
-| `@coop/shared` | Schemas, flows, sync contracts, and 16+ domain modules: agent, app, archive, auth, coop, erc8004, greengoods, onchain, operator, permit, policy, privacy, receiver, session, stealth, storage |
+| `@coop/shared` | Schemas, flows, sync contracts, and 16+ domain modules: agent, app, archive (+ restore), auth, blob (+ relay), coop (+ outbox, flows), erc8004, greengoods, onchain, operator, permit, policy, privacy, receiver, session, stealth, storage (+ portability) |
 | `@coop/app` | Landing page + receiver PWA shell (audio, photo, file, link capture) |
-| `@coop/extension` | MV3 browser extension (popup, sidepanel, background worker, offscreen) |
-| `@coop/api` | Hono + Bun TypeScript API server, deployed on Fly.io |
+| `@coop/extension` | MV3 browser extension — popup (screen router, share menu), sidepanel (tab router, coop selector, filter popover), background handlers, offscreen workers |
+| `@coop/api` | Hono + Bun TypeScript API server with Yjs document sync, deployed on Fly.io |
 
 Build order: shared -> app -> extension (shared is the dependency root).
 
@@ -89,6 +89,7 @@ bun dev:extension        # Start extension only (watch build)
 bun dev:api              # Start API server
 bun run test             # Run unit tests (vitest)
 bun run test:e2e         # Run Playwright E2E tests
+bun run test:visual      # Run visual regression tests
 bun build                # Build everything (shared -> app -> extension)
 bun format && bun lint   # Format (Biome) and lint workspace
 bun run validate full    # Full validation before merging
@@ -114,22 +115,22 @@ For Playwright E2E runs, the repo starts its own local signaling server automati
 
 ## Documentation
 
-- [Introduction](docs/intro.md)
-- [Architecture Overview](docs/architecture/coop-os-architecture-vnext.md)
-- [Agent Harness](docs/architecture/agent-harness.md)
-- [Knowledge Sharing & Scaling](docs/architecture/knowledge-sharing-and-scaling.md)
-- [Green Goods Integration](docs/architecture/green-goods-integration-spec.md)
-- [Privacy & Stealth Addresses](docs/architecture/privacy-and-stealth.md)
-- [Policy, Sessions & Permits](docs/architecture/policy-session-permit.md)
-- [Agent Registry & API Server](docs/architecture/erc8004-and-api.md)
-- [Product Requirements](docs/product/prd.md)
-- [Scoped Roadmap](docs/product/scoped-roadmap-2026-03-11.md)
-- [EF Mandate Alignment](docs/product/ethereum-foundation-mandate.md)
-- [Extension Install & Distribution](docs/getting-started/extension-install-and-distribution.md)
-- [Design Direction](docs/guides/coop-design-direction.md)
-- [Audio & Asset Ops](docs/guides/coop-audio-and-asset-ops.md)
-- [Testing & Validation](docs/guides/testing-and-validation.md)
-- [Demo & Deploy Runbook](docs/guides/demo-and-deploy-runbook.md)
+- [Introduction](docs/reference/original-introduction.md)
+- [Architecture Overview](docs/reference/coop-os-architecture-vnext.md)
+- [Agent Harness](docs/reference/agent-harness.md)
+- [Knowledge Sharing & Scaling](docs/reference/knowledge-sharing-and-scaling.md)
+- [Green Goods Integration](docs/reference/green-goods-integration-spec.md)
+- [Privacy & Stealth Addresses](docs/reference/privacy-and-stealth.md)
+- [Policy, Sessions & Permits](docs/reference/policy-session-permit.md)
+- [Agent Registry & API Server](docs/reference/erc8004-and-api.md)
+- [Product Requirements](docs/reference/product-requirements.md)
+- [Scoped Roadmap](docs/reference/scoped-roadmap-2026-03-11.md)
+- [EF Mandate Alignment](docs/reference/ethereum-foundation-mandate.md)
+- [Extension Install & Distribution](docs/reference/extension-install-and-distribution.md)
+- [Design Direction](docs/reference/coop-design-direction.md)
+- [Audio & Asset Ops](docs/reference/coop-audio-and-asset-ops.md)
+- [Testing & Validation](docs/reference/testing-and-validation.md)
+- [Demo & Deploy Runbook](docs/reference/demo-and-deploy-runbook.md)
 
 ## Regen Coordination Foundation
 
