@@ -277,7 +277,7 @@ async function main() {
       distPath: path.join(repoRoot, 'packages/extension/dist'),
       mode: 'watch',
       receiverAppUrl: appLocalUrl,
-      signalingUrls: [`ws://${LOCAL_HOST}:${API_PORT}`],
+      signalingUrls: [`ws://${LOCAL_HOST}:${API_PORT}`, 'wss://api.coop.town'],
       status: 'starting',
     },
     tunnel: {
@@ -438,7 +438,8 @@ async function main() {
         state.extension.receiverAppUrl = state.app.publicUrl;
       }
 
-      state.extension.signalingUrls = [state.api.websocketUrl];
+      // Dev tunnel first, production fallback
+      state.extension.signalingUrls = [state.api.websocketUrl, 'wss://api.coop.town'];
       state.tunnel.status = 'ready';
       writeDevState(state);
     } catch (error) {
@@ -482,7 +483,8 @@ async function main() {
       )}`;
       state.tunnel.status = 'ready';
       state.extension.receiverAppUrl = state.app.publicUrl;
-      state.extension.signalingUrls = [state.api.websocketUrl];
+      // Quick tunnel first, production fallback
+      state.extension.signalingUrls = [state.api.websocketUrl, 'wss://api.coop.town'];
       writeDevState(state);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

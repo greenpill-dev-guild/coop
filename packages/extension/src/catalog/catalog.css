@@ -1,0 +1,134 @@
+.catalog {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.catalog-panel {
+  padding: 1.5rem;
+  border-radius: 12px;
+}
+
+.catalog-panel[data-theme="light"] {
+  background: #fcf5ef;
+  color: #4f2e1f;
+}
+
+.catalog-panel[data-theme="dark"] {
+  background: #1a1410;
+  color: #e8d5c4;
+}
+
+.catalog-section {
+  margin-bottom: 2rem;
+}
+
+.catalog-section h2 {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.catalog-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.catalog-column {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.catalog-swatch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.catalog-swatch__color {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  flex-shrink: 0;
+}
+
+.catalog-swatch__label {
+  display: grid;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.catalog-swatch__label code {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.catalog-spacing-box {
+  height: 24px;
+  background: var(--coop-green);
+  opacity: 0.3;
+  border-radius: 4px;
+}
+
+.catalog-spacing-label {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  font-family: monospace;
+}
+
+.catalog-radius-box {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--coop-brown, #4f2e1f);
+  opacity: 0.4;
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  font-family: monospace;
+}
+
+.catalog-shadow-box {
+  width: 100px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--coop-surface-card, rgba(255, 252, 249, 0.82));
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-family: monospace;
+}
+
+.catalog-type-sample {
+  margin: 0;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  background: #f0ebe6;
+}
+
+h1.catalog-title {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+  color: #4f2e1f;
+}
+
+.catalog-subtitle {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6b4a36;
+  margin: -0.75rem 0 0.5rem;
+}

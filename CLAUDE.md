@@ -89,14 +89,31 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 **Subagent Discipline**: Spawn teammates when tasks can run in parallel. Work directly for single-file edits or tasks needing fewer than 10 tool calls.
 
+## Infrastructure URLs
+
+| URL | Points to | Notes |
+|-----|-----------|-------|
+| `wss://api.coop.town` | Fly.io production signaling | Always available (auto-start on request) |
+| `wss://api.coop.town/yws` | Fly.io Yjs document sync | WebSocket fallback for peer sync |
+| `https://coop.town` | Vercel PWA (landing + receiver) | Proxied through Cloudflare |
+| `https://docs.coop.town` | Vercel docs | Proxied through Cloudflare |
+| `wss://dev-api.coop.town` | Cloudflare tunnel → localhost:4444 | Only up during `bun dev` |
+| `https://local.coop.town` | Cloudflare tunnel → localhost:3001 | Only up during `bun dev` |
+
 ## Environment
 
-Single `.env.local` at root (never create package-specific .env). `.env.local` vars:
+Single `.env.local` at root (never create package-specific .env). Env vars are baked into bundles at build time by Vite — rebuild after changes.
+
+`.env.local` vars:
 - `VITE_COOP_CHAIN`: Target chain (`sepolia` or `arbitrum`)
 - `VITE_COOP_ONCHAIN_MODE`: `mock` (default) or `live`
 - `VITE_COOP_ARCHIVE_MODE`: `mock` (default) or `live`
+- `VITE_COOP_SIGNALING_URLS`: Comma-separated signaling URLs (default: `wss://api.coop.town`)
+- `VITE_COOP_RECEIVER_APP_URL`: Receiver PWA URL (default: `http://127.0.0.1:3001`)
 - `VITE_PIMLICO_API_KEY`: For live Safe/4337 operations
-- `VITE_STORACHA_ISSUER_URL`: For live archive delegation
+- `COOP_TUNNEL_NAME`: Cloudflare named tunnel (enables `dev-api` and `local` subdomains)
+
+`bun dev` automatically sets `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension build. The extension gets both local and production signaling URLs for fallback.
 
 ## Validation Suites
 

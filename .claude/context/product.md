@@ -72,6 +72,9 @@ Someone using the paired mobile web app:
 |----------|----------------|
 | Loose Chickens | Open browser tabs that contain potentially useful context |
 | Roost | The review queue where drafts wait for human judgment |
+| Chickens Tab | Candidate list in popup and sidepanel (captured tabs awaiting review) |
+| Coops Tab | Coop management and published artifact feed surface |
+| Nest | Settings and admin tab in sidepanel (agent, receiver, invites, archive, settings) |
 | Coop Feed | The shared feed of published artifacts across members |
 | Launching the Coop | Creating a new coop (with Safe deployment) |
 | Rooster Call | Success sound on coop creation |
@@ -105,7 +108,7 @@ Working brand: `Coop Town`
 - **Artifact published**: Soft cluck (success)
 - **Passive capture**: No sound (silent)
 - Sound is OFF by default. Users enable it in settings.
-- Sounds are synthesized via Web Audio API (not audio files) in the extension views.
+- Sounds are `.wav` files loaded from `packages/extension/public/audio/` (e.g., `coop-rooster-call.wav`, `coop-soft-cluck.wav`, `coop-squeaky-test.wav`). Played via `HTMLAudioElement` in extension views.
 
 ### Asset Files
 
@@ -146,7 +149,7 @@ The hackathon demo (PL Genesis) must prove:
 
 ### V1 Includes
 
-- Extension as primary product surface (popup + sidepanel)
+- Extension as primary product surface (popup is a full multi-screen app with Home/Chickens/Feed nav; sidepanel is the full workspace with Roost/Chickens/Coops/Nest tabs)
 - Landing page (responsive, mobile-friendly)
 - Passkey-first identity (no wallet extension required)
 - Real Safe creation via Pimlico/ERC-4337

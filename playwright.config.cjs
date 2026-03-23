@@ -7,11 +7,15 @@ module.exports = defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   retries: process.env.CI ? 2 : 0,
+  snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
   use: {
     baseURL: appBaseUrl,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+    },
   },
   projects: [
     {

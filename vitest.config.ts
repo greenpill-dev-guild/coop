@@ -38,6 +38,7 @@ export default defineConfig({
       'packages/extension/src/**/*.test.{ts,tsx}',
       'packages/shared/src/**/*.test.{ts,tsx}',
       'packages/api/**/*.test.{ts,tsx}',
+      'scripts/__tests__/**/*.test.{ts,tsx}',
     ],
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     globals: true,
