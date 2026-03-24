@@ -2495,50 +2495,109 @@ html.has-receiver {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.1), transparent 28rem),
-    radial-gradient(circle at top right, rgba(253, 138, 1, 0.1), transparent 24rem),
-    linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 36%, #fffdfb 100%);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(90, 125, 16, 0.09), transparent 28rem),
+    radial-gradient(circle at 80% 5%, rgba(253, 138, 1, 0.08), transparent 22rem),
+    radial-gradient(circle at 50% 60%, rgba(79, 46, 31, 0.03), transparent 32rem),
+    linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 40%, #fffdfb 100%);
 }
 
-/* ── Compact top bar ── */
+/* Subtle dot-grid texture overlay for depth */
+.receiver-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, var(--coop-brown-4) 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+  opacity: 0.45;
+}
+
+/* ── Frosted-glass top bar ── */
 
 .receiver-topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.65rem;
-  padding: calc(env(safe-area-inset-top, 0px) + 0.6rem) 1rem 0.5rem;
+  padding: calc(env(safe-area-inset-top, 0px) + 0.65rem) 1rem 0.55rem;
   z-index: 2;
   flex-shrink: 0;
+  background: rgba(255, 252, 249, 0.72);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  border-bottom: 1px solid var(--coop-brown-6);
+  box-shadow: 0 1px 8px var(--coop-brown-4);
 }
 
 .receiver-mark-link {
+  position: relative;
   display: inline-flex;
   flex-shrink: 0;
 }
 
 .receiver-mark {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--coop-radius-sm);
+}
+
+/* Status dot anchored to the logo mark */
+.receiver-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--coop-radius-pill);
+  border: 2px solid rgba(255, 252, 249, 0.9);
+  transition: background var(--coop-ease);
+}
+
+.receiver-status-dot.is-connected {
+  background: var(--coop-green);
+}
+
+.receiver-status-dot.is-online {
+  background: var(--coop-orange);
+}
+
+.receiver-status-dot.is-offline {
+  background: var(--coop-mist);
 }
 
 .receiver-screen-title {
   margin: 0;
   font-family: var(--coop-font-display);
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--coop-brown);
+  text-align: center;
   text-wrap: balance;
 }
 
-.receiver-status-dots {
+/* Three-dot menu button */
+.receiver-topbar-action {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-left: auto;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--coop-radius-sm);
+  background: transparent;
+  color: var(--coop-brown-soft);
+  cursor: pointer;
+  transition: background var(--coop-ease);
 }
 
+.receiver-topbar-action:hover {
+  background: var(--coop-brown-6);
+}
+
+/* Status dots (used in BottomSheet) */
 .status-dot {
   width: 7px;
   height: 7px;
@@ -2554,18 +2613,10 @@ html.has-receiver {
   background: var(--coop-mist);
 }
 
-.receiver-status-summary {
-  font-size: 0.72rem;
-  color: var(--coop-brown-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 14rem;
-}
-
 /* ── Scrollable main area ── */
 
 .receiver-main {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -2575,7 +2626,7 @@ html.has-receiver {
   scrollbar-gutter: stable;
   display: grid;
   gap: 1rem;
-  padding: 0.75rem 1rem calc(5rem + env(safe-area-inset-bottom));
+  padding: 0.75rem 1rem calc(5.5rem + env(safe-area-inset-bottom));
   z-index: 1;
 }
 
@@ -2647,13 +2698,14 @@ html.has-receiver {
 .receiver-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
   border-radius: var(--coop-radius-pill);
   background: var(--coop-brown-6);
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--coop-brown);
+  min-height: 2rem;
 }
 
 .receiver-settings-detail {
@@ -2908,33 +2960,45 @@ audio {
   z-index: 24;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-  padding: 0.75rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--coop-brown-12);
-  background: rgba(255, 252, 249, 0.94);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 -14px 36px var(--coop-brown-8);
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--coop-brown-8);
+  background: rgba(255, 252, 249, 0.78);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow: 0 -4px 20px var(--coop-brown-6);
 }
 
 .receiver-appbar-link {
   display: grid;
   justify-items: center;
-  gap: 0.34rem;
-  padding: 0.6rem 0.5rem;
-  border-radius: var(--coop-radius-input-lg);
+  gap: 0.25rem;
+  min-height: 48px;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--coop-radius-input);
   color: var(--coop-brown-soft);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color var(--coop-ease), background var(--coop-ease);
 }
 
 .receiver-appbar-link.is-active {
   background: var(--coop-green-12);
   color: var(--coop-brown);
+  font-weight: 700;
 }
 
 .receiver-appbar-icon {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  transition: transform var(--coop-ease);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .receiver-appbar-link.is-active .receiver-appbar-icon {
+    transform: scale(1.06);
+  }
 }
 
 @keyframes egg-pulse {
@@ -3151,10 +3215,12 @@ audio {
   display: flex;
   align-items: center;
   gap: var(--coop-space-sm);
-  padding: var(--coop-space-sm) 0.85rem;
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
   border-radius: var(--coop-radius-input);
   border: 1px solid var(--coop-line);
   background: rgba(255, 252, 249, 0.85);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   cursor: pointer;
   font-size: 0.82rem;
@@ -3162,6 +3228,12 @@ audio {
   color: var(--coop-brown-soft);
   width: 100%;
   text-align: left;
+  transition: background var(--coop-ease), box-shadow var(--coop-ease);
+}
+
+.receiver-settings-trigger:hover {
+  background: rgba(255, 252, 249, 0.95);
+  box-shadow: var(--coop-shadow-sm);
 }
 
 .receiver-install-banner {
@@ -3752,9 +3824,34 @@ audio {
   }
 
   .receiver-shell {
-    background: radial-gradient(circle at top left, rgba(138, 184, 64, 0.06), transparent 28rem),
-      radial-gradient(circle at top right, rgba(255, 170, 68, 0.06), transparent 24rem),
-      linear-gradient(180deg, #1a1410 0%, #1a1410 36%, #1e1814 100%);
+    background:
+      radial-gradient(circle at 20% 10%, rgba(138, 184, 64, 0.06), transparent 28rem),
+      radial-gradient(circle at 80% 5%, rgba(255, 170, 68, 0.06), transparent 22rem),
+      radial-gradient(circle at 50% 60%, rgba(0, 0, 0, 0.06), transparent 32rem),
+      linear-gradient(180deg, #1a1410 0%, #1a1410 40%, #1e1814 100%);
+  }
+
+  .receiver-shell::before {
+    background-image: radial-gradient(circle, rgba(232, 213, 196, 0.04) 0.75px, transparent 0.75px);
+    opacity: 0.6;
+  }
+
+  .receiver-topbar {
+    background: rgba(26, 20, 16, 0.72);
+    border-bottom-color: rgba(232, 213, 196, 0.08);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.12);
+  }
+
+  .receiver-status-dot {
+    border-color: rgba(26, 20, 16, 0.9);
+  }
+
+  .receiver-topbar-action {
+    color: var(--coop-text-soft);
+  }
+
+  .receiver-topbar-action:hover {
+    background: rgba(232, 213, 196, 0.08);
   }
 
   .hero-art,
@@ -3772,8 +3869,15 @@ audio {
   }
 
   .receiver-appbar {
-    background: rgba(26, 20, 16, 0.94);
-    border-top-color: var(--coop-brown-12);
+    background: rgba(26, 20, 16, 0.78);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    backdrop-filter: blur(20px) saturate(1.6);
+    border-top-color: rgba(232, 213, 196, 0.08);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.16);
+  }
+
+  .receiver-appbar-link.is-active {
+    background: var(--coop-active-bg);
   }
 
   .button-secondary {

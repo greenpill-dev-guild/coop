@@ -68,6 +68,8 @@ export function ReceiverShell({
     setIsPulling(false);
   }, [isPulling, onRefresh]);
 
+  const isPaired = pairingStatusLabel === 'Paired';
+
   return (
     <div className="receiver-shell">
       <header className="receiver-topbar">
@@ -80,14 +82,29 @@ export function ReceiverShell({
           }}
         >
           <img className="receiver-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
+          <span
+            className={
+              online && isPaired
+                ? 'receiver-status-dot is-connected'
+                : online
+                  ? 'receiver-status-dot is-online'
+                  : 'receiver-status-dot is-offline'
+            }
+          />
         </a>
         <h1 className="receiver-screen-title">{screenTitle}</h1>
-        <div className="receiver-status-dots">
-          <span className={online ? 'status-dot is-online' : 'status-dot is-offline'} />
-          <span className="receiver-status-summary">
-            {online ? 'Online' : 'Offline'} · {pairingStatusLabel} · {captureCount} items
-          </span>
-        </div>
+        <button
+          className="receiver-topbar-action"
+          onClick={() => setSettingsOpen(true)}
+          type="button"
+          aria-label="Settings and status"
+        >
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="4" r="1.5" fill="currentColor" />
+            <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+            <circle cx="10" cy="16" r="1.5" fill="currentColor" />
+          </svg>
+        </button>
       </header>
 
       <main
@@ -150,11 +167,7 @@ export function ReceiverShell({
               {online ? 'Online' : 'Offline'}
             </div>
             <div className="receiver-status-chip">
-              <span
-                className={
-                  pairingStatusLabel === 'Paired' ? 'status-dot is-online' : 'status-dot is-offline'
-                }
-              />
+              <span className={isPaired ? 'status-dot is-online' : 'status-dot is-offline'} />
               {pairingStatusLabel}
             </div>
             <div className="receiver-status-chip">{captureCount} items</div>
