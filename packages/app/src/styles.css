@@ -489,8 +489,11 @@ pre {
   position: relative;
   z-index: 2;
   isolation: isolate;
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .ritual-section::before {
@@ -526,7 +529,15 @@ pre {
 }
 
 .ritual-section-heading {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ritual-section-heading h2 {
+  margin-bottom: 0.15rem;
+}
+
+.ritual-section-heading .lede {
+  font-size: 0.9rem;
 }
 
 .ritual-reset {
@@ -550,7 +561,9 @@ pre {
 
 .ritual-game-shell {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
+  flex: 1;
+  grid-template-rows: auto 1fr auto;
   background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.1), transparent 22rem),
     radial-gradient(circle at top right, rgba(253, 138, 1, 0.1), transparent 24rem),
     rgba(255, 252, 249, 0.84);
@@ -642,13 +655,13 @@ pre {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch;
   perspective: 1200px;
 }
 
 .flashcard {
   position: relative;
-  min-height: 13rem;
+  min-height: max(13rem, calc(100vh - 18rem));
   cursor: pointer;
   border-radius: var(--coop-radius-card-lg);
   background: transparent;
@@ -660,7 +673,7 @@ pre {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 13rem;
+  min-height: inherit;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
@@ -754,6 +767,12 @@ pre {
   align-content: start;
   border: 1px solid var(--coop-line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 252, 248, 0.98));
+  overflow-y: auto;
+}
+
+.flashcard-back textarea {
+  min-height: 5rem;
+  flex: 1;
 }
 
 .flashcard-close-btn {
@@ -970,6 +989,11 @@ pre {
 
 .why-build-spacer {
   height: clamp(24rem, 50vh, 36rem);
+}
+
+.arrival-scroll-spacer {
+  height: 200vh;
+  pointer-events: none;
 }
 
 .why-build-copy {

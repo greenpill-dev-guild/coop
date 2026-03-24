@@ -226,49 +226,69 @@ const storyFlightPaths: Record<
   ],
 };
 
+// Chickens waddle toward the coop door (center-bottom) then shrink/fade as they enter.
+// Each path has 5 keyframes for fluid motion with alternating rotation (waddle).
+// The door is roughly at (50%, 72%) of the scene — chickens from the left move
+// rightward and chickens from the right move leftward, all converging on the door.
 const arrivalFlightPaths: Record<
   JourneyChicken['id'],
   Array<{ x: string; y: string; rotate: number; scale?: number; opacity?: number }>
 > = {
   tabs: [
-    { x: '6vw', y: '-3vh', rotate: -8, scale: 0.95, opacity: 1 },
-    { x: '4vw', y: '-7vh', rotate: -3, scale: 0.65, opacity: 0.7 },
-    { x: '2vw', y: '-10vh', rotate: 0, scale: 0.35, opacity: 0 },
+    { x: '4vw', y: '-1vh', rotate: -5, scale: 0.96, opacity: 1 },
+    { x: '12vw', y: '-3vh', rotate: 4, scale: 0.88, opacity: 1 },
+    { x: '20vw', y: '-5vh', rotate: -3, scale: 0.68, opacity: 0.9 },
+    { x: '28vw', y: '-6vh', rotate: 2, scale: 0.42, opacity: 0.45 },
+    { x: '34vw', y: '-7vh', rotate: 0, scale: 0.18, opacity: 0 },
   ],
   notes: [
-    { x: '5vw', y: '-1vh', rotate: 7, scale: 0.94, opacity: 1 },
-    { x: '3vw', y: '-5vh', rotate: 2, scale: 0.65, opacity: 0.7 },
-    { x: '1vw', y: '-8vh', rotate: 0, scale: 0.35, opacity: 0 },
+    { x: '3vw', y: '0vh', rotate: 5, scale: 0.95, opacity: 1 },
+    { x: '9vw', y: '-2vh', rotate: -4, scale: 0.85, opacity: 1 },
+    { x: '16vw', y: '-4vh', rotate: 3, scale: 0.66, opacity: 0.88 },
+    { x: '22vw', y: '-5vh', rotate: -2, scale: 0.4, opacity: 0.4 },
+    { x: '26vw', y: '-6vh', rotate: 0, scale: 0.16, opacity: 0 },
   ],
   ideas: [
-    { x: '-5vw', y: '-1vh', rotate: -7, scale: 0.94, opacity: 1 },
-    { x: '-1vw', y: '-5vh', rotate: -2, scale: 0.65, opacity: 0.7 },
-    { x: '1vw', y: '-8vh', rotate: 0, scale: 0.35, opacity: 0 },
+    { x: '-3vw', y: '0vh', rotate: -5, scale: 0.95, opacity: 1 },
+    { x: '-9vw', y: '-2vh', rotate: 4, scale: 0.85, opacity: 1 },
+    { x: '-16vw', y: '-4vh', rotate: -3, scale: 0.66, opacity: 0.88 },
+    { x: '-22vw', y: '-5vh', rotate: 2, scale: 0.4, opacity: 0.4 },
+    { x: '-26vw', y: '-6vh', rotate: 0, scale: 0.16, opacity: 0 },
   ],
   signals: [
-    { x: '-6vw', y: '-3vh', rotate: 8, scale: 0.95, opacity: 1 },
-    { x: '-2vw', y: '-7vh', rotate: 3, scale: 0.65, opacity: 0.7 },
-    { x: '0vw', y: '-10vh', rotate: 0, scale: 0.35, opacity: 0 },
+    { x: '-4vw', y: '-1vh', rotate: 5, scale: 0.96, opacity: 1 },
+    { x: '-12vw', y: '-3vh', rotate: -4, scale: 0.88, opacity: 1 },
+    { x: '-20vw', y: '-5vh', rotate: 3, scale: 0.68, opacity: 0.9 },
+    { x: '-28vw', y: '-6vh', rotate: -2, scale: 0.42, opacity: 0.45 },
+    { x: '-34vw', y: '-7vh', rotate: 0, scale: 0.18, opacity: 0 },
   ],
   links: [
-    { x: '4vw', y: '-2vh', rotate: -5, scale: 0.92, opacity: 1 },
-    { x: '3vw', y: '-6vh', rotate: -2, scale: 0.6, opacity: 0.65 },
-    { x: '1vw', y: '-9vh', rotate: 0, scale: 0.32, opacity: 0 },
+    { x: '2vw', y: '0vh', rotate: -4, scale: 0.93, opacity: 1 },
+    { x: '8vw', y: '-2vh', rotate: 3, scale: 0.82, opacity: 1 },
+    { x: '15vw', y: '-4vh', rotate: -2, scale: 0.62, opacity: 0.85 },
+    { x: '24vw', y: '-6vh', rotate: 1, scale: 0.36, opacity: 0.35 },
+    { x: '30vw', y: '-7vh', rotate: 0, scale: 0.14, opacity: 0 },
   ],
   drafts: [
-    { x: '3vw', y: '-1vh', rotate: 4, scale: 0.9, opacity: 1 },
-    { x: '2vw', y: '-4vh', rotate: 1, scale: 0.58, opacity: 0.65 },
-    { x: '1vw', y: '-7vh', rotate: 0, scale: 0.3, opacity: 0 },
+    { x: '2vw', y: '1vh', rotate: 3, scale: 0.91, opacity: 1 },
+    { x: '6vw', y: '-1vh', rotate: -3, scale: 0.78, opacity: 1 },
+    { x: '12vw', y: '-3vh', rotate: 2, scale: 0.58, opacity: 0.82 },
+    { x: '18vw', y: '-5vh', rotate: -1, scale: 0.34, opacity: 0.32 },
+    { x: '22vw', y: '-6vh', rotate: 0, scale: 0.12, opacity: 0 },
   ],
   threads: [
-    { x: '-4vw', y: '-2vh', rotate: 5, scale: 0.92, opacity: 1 },
-    { x: '-1vw', y: '-6vh', rotate: 2, scale: 0.6, opacity: 0.65 },
-    { x: '1vw', y: '-9vh', rotate: 0, scale: 0.32, opacity: 0 },
+    { x: '-2vw', y: '0vh', rotate: 4, scale: 0.93, opacity: 1 },
+    { x: '-8vw', y: '-2vh', rotate: -3, scale: 0.82, opacity: 1 },
+    { x: '-15vw', y: '-4vh', rotate: 2, scale: 0.62, opacity: 0.85 },
+    { x: '-24vw', y: '-6vh', rotate: -1, scale: 0.36, opacity: 0.35 },
+    { x: '-30vw', y: '-7vh', rotate: 0, scale: 0.14, opacity: 0 },
   ],
   clips: [
-    { x: '-3vw', y: '-1vh', rotate: -4, scale: 0.9, opacity: 1 },
-    { x: '-1vw', y: '-4vh', rotate: -1, scale: 0.58, opacity: 0.65 },
-    { x: '1vw', y: '-7vh', rotate: 0, scale: 0.3, opacity: 0 },
+    { x: '-2vw', y: '1vh', rotate: -3, scale: 0.91, opacity: 1 },
+    { x: '-6vw', y: '-1vh', rotate: 3, scale: 0.78, opacity: 1 },
+    { x: '-12vw', y: '-3vh', rotate: -2, scale: 0.58, opacity: 0.82 },
+    { x: '-18vw', y: '-5vh', rotate: 1, scale: 0.34, opacity: 0.32 },
+    { x: '-22vw', y: '-6vh', rotate: 0, scale: 0.12, opacity: 0 },
   ],
 };
 
@@ -930,9 +950,29 @@ export function App({
               { opacity: 1, scale: 1.2 },
               0.28,
             )
-            .to(storyHillBackRef.current, { filter: 'brightness(0.5)' }, 0.35)
-            .to(storyHillMidRef.current, { filter: 'brightness(0.4)' }, 0.4)
-            .to(storyHillFrontRef.current, { filter: 'brightness(0.3)' }, 0.45);
+            .to(
+              storyHillBackRef.current,
+              {
+                background:
+                  'linear-gradient(180deg, rgba(82, 98, 48, 0.92), rgba(58, 72, 30, 0.95))',
+              },
+              0.3,
+            )
+            .to(
+              storyHillMidRef.current,
+              {
+                background:
+                  'linear-gradient(180deg, rgba(62, 78, 34, 0.96), rgba(46, 58, 22, 0.98))',
+              },
+              0.35,
+            )
+            .to(
+              storyHillFrontRef.current,
+              {
+                background: 'linear-gradient(180deg, rgba(48, 62, 24, 0.98), rgba(36, 48, 16, 1))',
+              },
+              0.4,
+            );
 
           for (const chicken of journeyChickens) {
             const node = storyChickenRefs.current[chicken.id];
@@ -1012,15 +1052,15 @@ export function App({
               { autoAlpha: 0, scale: 0.85 },
               { autoAlpha: 1, scale: 1 },
               0.62,
-            )
-            .fromTo(whyBuildRef.current, { autoAlpha: 0.18, y: 72 }, { autoAlpha: 1, y: 0 }, 0.3);
-
+            );
           arrivalTimeline
             .fromTo(arrivalStarsRef.current, { opacity: 0 }, { opacity: 0.35 }, 0.3)
             .fromTo(arrivalCoopGlowRef.current, { opacity: 0 }, { opacity: 1 }, 0.35)
             .to(arrivalCloudRef.current, { opacity: 0.25 }, 0.15);
 
-          for (const chicken of journeyChickens) {
+          // Stagger chicken arrivals — each starts slightly later for a natural procession
+          for (let i = 0; i < journeyChickens.length; i++) {
+            const chicken = journeyChickens[i];
             const node = arrivalChickenRefs.current[chicken.id];
             const path = arrivalFlightPaths[chicken.id];
 
@@ -1028,9 +1068,12 @@ export function App({
               continue;
             }
 
+            const staggerDelay = 0.04 + i * 0.03;
+
             arrivalTimeline.to(
               node,
               {
+                ease: 'power1.inOut',
                 keyframes: path.map((frame) => ({
                   x: frame.x,
                   y: frame.y,
@@ -1039,7 +1082,7 @@ export function App({
                   opacity: frame.opacity ?? 1,
                 })),
               },
-              0.06,
+              staggerDelay,
             );
           }
         }, scope);
@@ -1741,38 +1784,7 @@ export function App({
           </div>
 
           <div className="journey-panels">
-            <article className="journey-panel journey-panel-center why-build-panel">
-              <div className="why-build-shell">
-                <div aria-hidden="true" className="why-build-spacer" />
-
-                <div className="why-build-copy nest-card" ref={whyBuildRef}>
-                  <p className="eyebrow">Our Story</p>
-                  <h2>Why we build</h2>
-                  <p className="lede">
-                    Coop came from the coordination gaps we kept seeing across Greenpill and regen
-                    communities in the Ethereum ecosystem. The context was always shifting, but the
-                    knowledge never settled into something reusable quickly enough.
-                  </p>
-
-                  <div className="team-strip" aria-label="Team">
-                    {teamMembers.map((member) => (
-                      <article className="team-card" key={member}>
-                        <span className="team-avatar">{initialsForName(member)}</span>
-                        <strong>{member}</strong>
-                      </article>
-                    ))}
-                  </div>
-
-                  <div className="partner-strip" aria-label="Partners">
-                    {partnerMarks.map((partner) => (
-                      <span className="partner-pill" key={partner}>
-                        {partner}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </article>
+            <div className="arrival-scroll-spacer" aria-hidden="true" />
           </div>
         </section>
       </main>
