@@ -2698,14 +2698,133 @@ html.has-receiver {
 .receiver-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.8rem;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
   border-radius: var(--coop-radius-pill);
   background: var(--coop-brown-6);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--coop-brown);
+  color: var(--coop-brown-soft);
   min-height: 2rem;
+  transition: background var(--coop-ease), color var(--coop-ease);
+}
+
+.receiver-status-chip-icon {
+  flex-shrink: 0;
+}
+
+.receiver-status-chip.is-good {
+  background: var(--coop-green-12);
+  color: var(--coop-green);
+}
+
+.receiver-status-chip.is-warning {
+  background: var(--coop-orange-15);
+  color: var(--coop-orange);
+}
+
+.receiver-status-chip.is-muted {
+  background: var(--coop-brown-6);
+  color: var(--coop-brown-soft);
+}
+
+/* ── Paired nest card ── */
+
+.receiver-paired-nest-card {
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--coop-radius-chip);
+  background: var(--coop-brown-4);
+  border: 1px solid var(--coop-line);
+}
+
+.receiver-paired-nest-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--coop-brown);
+}
+
+.receiver-paired-nest-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.receiver-paired-nest-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--coop-brown);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiver-paired-nest-member {
+  font-size: 0.76rem;
+  color: var(--coop-brown-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Toggle switch (CSS-only) ── */
+
+.receiver-toggle-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.receiver-toggle-switch-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--coop-brown);
+}
+
+.receiver-toggle-switch-track {
+  position: relative;
+  width: 2.75rem;
+  height: 1.6rem;
+  border-radius: var(--coop-radius-pill);
+  background: var(--coop-brown-14);
+  flex-shrink: 0;
+  transition: background 200ms ease;
+}
+
+.receiver-toggle-switch-thumb {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(79, 46, 31, 0.18);
+  transition: transform 200ms ease;
+}
+
+.receiver-toggle-switch.is-on .receiver-toggle-switch-track {
+  background: var(--coop-green);
+}
+
+.receiver-toggle-switch.is-on .receiver-toggle-switch-thumb {
+  transform: translateX(1.15rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receiver-toggle-switch-track,
+  .receiver-toggle-switch-thumb {
+    transition: none;
+  }
 }
 
 .receiver-settings-detail {
@@ -2715,9 +2834,8 @@ html.has-receiver {
 }
 
 .receiver-settings-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 0.65rem;
 }
 
 /* ── Receiver content cards ── */
@@ -3150,12 +3268,14 @@ audio {
   width: 100%;
   max-width: 100%;
   background: rgba(255, 252, 249, 0.96);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   box-shadow: 0 -14px 40px var(--coop-brown-12);
 }
 
 .bottom-sheet::backdrop {
   background: rgba(39, 20, 14, 0.4);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -3169,11 +3289,18 @@ audio {
 }
 
 .bottom-sheet-handle {
-  width: 2.5rem;
-  height: 0.25rem;
+  display: flex;
+  justify-content: center;
+  padding: 0.6rem 0 0.25rem;
+  cursor: grab;
+}
+
+.bottom-sheet-handle-bar {
+  width: 3rem;
+  height: 0.3rem;
   border-radius: var(--coop-radius-pill);
   background: var(--coop-brown-20);
-  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(79, 46, 31, 0.08);
 }
 
 .bottom-sheet-title {
@@ -3186,26 +3313,37 @@ audio {
 
 .bottom-sheet-body {
   display: grid;
-  gap: var(--coop-space-sm);
+  gap: var(--coop-space-md);
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .bottom-sheet[open] {
-    animation: sheet-slide-up 280ms ease;
-    transition: transform 280ms ease;
+    animation: sheet-spring-up 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
     @starting-style {
       transform: translateY(100%);
     }
   }
+
+  .bottom-sheet::backdrop {
+    animation: sheet-backdrop-in 280ms ease;
+  }
 }
 
-@keyframes sheet-slide-up {
+@keyframes sheet-spring-up {
   from {
     transform: translateY(100%);
   }
-
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -3228,7 +3366,7 @@ audio {
   color: var(--coop-brown-soft);
   width: 100%;
   text-align: left;
-  transition: background var(--coop-ease), box-shadow var(--coop-ease);
+  transition: background var(--coop-ease), box-shadow var(--coop-ease), border-color var(--coop-ease);
 }
 
 .receiver-settings-trigger:hover {
@@ -3236,34 +3374,73 @@ audio {
   box-shadow: var(--coop-shadow-sm);
 }
 
+.receiver-settings-trigger-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.receiver-settings-trigger-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
 .receiver-install-banner {
   display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem 0.85rem;
+  padding: 1rem 1.1rem;
   border-radius: var(--coop-radius-card);
-  border: 1px solid var(--coop-line);
-  background: linear-gradient(180deg, rgba(255, 252, 249, 0.94) 0%, rgba(255, 248, 242, 0.92) 100%);
-  box-shadow: var(--coop-shadow);
+  border: 1px solid color-mix(in srgb, var(--coop-orange) 20%, var(--coop-line));
+  background: linear-gradient(
+    160deg,
+    rgba(253, 138, 1, 0.06) 0%,
+    rgba(255, 252, 249, 0.94) 40%,
+    rgba(90, 125, 16, 0.05) 100%
+  );
+  box-shadow: var(--coop-shadow-sm);
+}
+
+.receiver-install-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--coop-radius-chip);
+  background: var(--coop-orange-15);
+  color: var(--coop-orange);
+  grid-row: 1 / 3;
 }
 
 .receiver-install-copy {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.2rem;
+  align-self: center;
 }
 
 .receiver-install-copy h2 {
   margin: 0;
+  font-size: 0.95rem;
 }
 
 .receiver-install-copy .quiet-note {
   margin: 0;
-  font-size: 0.94rem;
+  font-size: 0.82rem;
 }
 
 .receiver-install-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+  grid-column: 1 / -1;
+}
+
+.receiver-install-btn-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* ── Receiver: touch feedback ── */
