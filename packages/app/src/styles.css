@@ -2724,10 +2724,21 @@ html.has-receiver {
   content: "";
   position: absolute;
   inset: auto -12% -18% auto;
-  width: 14rem;
-  height: 14rem;
+  width: 16rem;
+  height: 16rem;
   border-radius: var(--coop-radius-pill);
-  background: radial-gradient(circle, rgba(90, 125, 16, 0.12), transparent 68%);
+  background: radial-gradient(circle, rgba(90, 125, 16, 0.14), transparent 62%);
+  pointer-events: none;
+}
+
+.receiver-capture-card::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto auto -14%;
+  width: 12rem;
+  height: 12rem;
+  border-radius: var(--coop-radius-pill);
+  background: radial-gradient(circle, rgba(253, 138, 1, 0.1), transparent 64%);
   pointer-events: none;
 }
 
@@ -2744,12 +2755,26 @@ html.has-receiver {
   aspect-ratio: 0.84;
   border: none;
   border-radius: 48% 48% 46% 46% / 60% 60% 34% 34%;
-  background: linear-gradient(180deg, #fffaf4 0%, #ffe8c9 54%, #ffc06d 100%);
-  box-shadow: 0 22px 50px var(--coop-brown-18);
+  background: linear-gradient(
+    180deg,
+    #fffbf6 0%,
+    #ffe8c9 42%,
+    #ffd499 72%,
+    #ffc06d 100%
+  );
+  box-shadow:
+    0 22px 50px var(--coop-brown-18),
+    0 4px 16px rgba(253, 138, 1, 0.1);
   color: var(--coop-brown);
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+
+.egg-button:active {
+  transform: scale(0.97);
 }
 
 .egg-button::before,
@@ -2761,7 +2786,7 @@ html.has-receiver {
 }
 
 .egg-button::before {
-  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.85), transparent 54%);
+  background: radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.9), transparent 58%);
 }
 
 .egg-button::after {
@@ -2770,11 +2795,24 @@ html.has-receiver {
   background: radial-gradient(circle, var(--coop-brown-16), transparent 72%);
 }
 
+.egg-halo {
+  position: absolute;
+  inset: -8%;
+  border-radius: inherit;
+  border: 2px solid rgba(253, 138, 1, 0.15);
+  box-shadow:
+    0 0 24px rgba(253, 138, 1, 0.08),
+    inset 0 0 16px rgba(255, 248, 240, 0.2);
+  pointer-events: none;
+  transition: border-color 240ms ease, box-shadow 240ms ease;
+}
+
 .egg-shell {
   position: absolute;
-  inset: 6%;
+  inset: 5%;
   border-radius: inherit;
-  border: 1px solid var(--coop-brown-12);
+  border: 1.5px solid rgba(79, 46, 31, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .egg-core {
@@ -2783,16 +2821,97 @@ html.has-receiver {
   font-family: "Gill Sans", "Trebuchet MS", sans-serif;
   font-size: clamp(1.5rem, 4vw, 2.3rem);
   font-weight: 700;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .egg-button.is-recording {
   animation: egg-pulse 1.2s ease-in-out infinite;
-  background: linear-gradient(180deg, #fff9f0 0%, #ffd8a8 52%, #fd8a01 100%);
+  background: linear-gradient(
+    180deg,
+    #fff9f0 0%,
+    #ffd8a8 40%,
+    #ffb060 68%,
+    #fd8a01 100%
+  );
+  box-shadow:
+    0 22px 50px rgba(253, 138, 1, 0.3),
+    0 0 40px rgba(253, 138, 1, 0.18);
+}
+
+.egg-button.is-recording .egg-halo {
+  border-color: rgba(253, 138, 1, 0.35);
+  box-shadow:
+    0 0 36px rgba(253, 138, 1, 0.2),
+    inset 0 0 24px rgba(253, 138, 1, 0.1);
+}
+
+.egg-pulse-ring {
+  position: absolute;
+  inset: -4%;
+  border-radius: inherit;
+  border: 1.5px solid rgba(253, 138, 1, 0.3);
+  pointer-events: none;
+  animation: egg-ring-expand 2.4s ease-out infinite;
+}
+
+.egg-pulse-ring-2 {
+  animation-delay: 0.8s;
+}
+
+.egg-pulse-ring-3 {
+  animation-delay: 1.6s;
 }
 
 .receiver-actions-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 1rem;
+}
+
+.capture-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 52px;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--coop-brown-12);
+  border-radius: var(--coop-radius-input);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(252, 245, 239, 0.88) 100%
+  );
+  box-shadow: 0 2px 8px var(--coop-brown-6);
+  color: var(--coop-brown);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--coop-ease), box-shadow var(--coop-ease),
+    border-color var(--coop-ease);
+}
+
+.capture-action-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+  border-color: var(--coop-brown-18);
+}
+
+.capture-action-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  opacity: 0.72;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .capture-action-btn:hover {
+    border-color: var(--coop-brown-18);
+    box-shadow: 0 4px 14px var(--coop-brown-8);
+    transform: translateY(-1px);
+  }
 }
 
 .empty-nest,
@@ -2803,21 +2922,72 @@ html.has-receiver {
 
 .empty-nest {
   border-radius: var(--coop-radius-card);
-  padding: 1.2rem;
-  border: 1px dashed var(--coop-line);
-  background: rgba(255, 255, 255, 0.64);
+  padding: 1.6rem;
+  border: 1.5px dashed color-mix(in srgb, var(--coop-brown) 18%, transparent);
+  background: radial-gradient(
+      circle at 50% 30%,
+      rgba(253, 138, 1, 0.06),
+      transparent 60%
+    ),
+    rgba(255, 255, 255, 0.64);
   color: var(--coop-brown-soft);
+  text-align: center;
+  justify-items: center;
+}
+
+.empty-nest-egg-svg {
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 0.35rem;
+  animation: empty-egg-bob 3s ease-in-out infinite;
+}
+
+.empty-nest-egg-top {
+  transform-origin: 50% 100%;
+  animation: empty-egg-crack 3s ease-in-out infinite;
+}
+
+.empty-nest-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--coop-brown);
+  margin: 0;
+}
+
+.empty-nest-hint {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0.2rem 0 0;
+  max-width: 28ch;
 }
 
 .nest-item-card {
   display: grid;
   gap: 0.8rem;
   padding: 1.2rem;
+  padding-left: 1.5rem;
   border-radius: var(--coop-radius-card);
   border: 1px solid var(--coop-brown-14);
+  border-left: 3.5px solid var(--coop-orange);
   background: radial-gradient(circle at top, rgba(255, 255, 255, 0.88), transparent 52%),
     linear-gradient(180deg, rgba(255, 252, 249, 0.94) 0%, rgba(247, 236, 221, 0.96) 100%);
   box-shadow: inset 0 -8px 28px rgba(253, 138, 1, 0.08);
+}
+
+.nest-item-card.accent-audio {
+  border-left-color: var(--coop-orange);
+}
+
+.nest-item-card.accent-photo {
+  border-left-color: var(--coop-green);
+}
+
+.nest-item-card.accent-file {
+  border-left-color: var(--coop-brown-soft);
+}
+
+.nest-item-card.accent-link {
+  border-left-color: #e8d5b0;
 }
 
 .nest-item-card.is-newborn {
@@ -2846,6 +3016,21 @@ html.has-receiver {
 .nest-item-chick {
   background: var(--coop-orange-15);
   color: var(--coop-brown);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.nest-item-title {
+  font-size: 1.02rem;
+  line-height: 1.35;
+  color: var(--coop-brown);
+}
+
+.nest-item-detail {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--coop-brown-soft);
+  margin: 0;
 }
 
 .sync-pill.is-local-only {
@@ -2941,12 +3126,56 @@ audio {
   0%,
   100% {
     transform: translateY(0) scale(1);
-    box-shadow: 0 22px 50px var(--coop-brown-18);
+    box-shadow:
+      0 22px 50px rgba(253, 138, 1, 0.3),
+      0 0 40px rgba(253, 138, 1, 0.18);
   }
 
   50% {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 28px 60px rgba(253, 138, 1, 0.28);
+    transform: translateY(-3px) scale(1.035);
+    box-shadow:
+      0 28px 60px rgba(253, 138, 1, 0.36),
+      0 0 56px rgba(253, 138, 1, 0.24);
+  }
+}
+
+@keyframes egg-ring-expand {
+  0% {
+    inset: -4%;
+    opacity: 0.6;
+    border-color: rgba(253, 138, 1, 0.35);
+  }
+
+  100% {
+    inset: -22%;
+    opacity: 0;
+    border-color: rgba(253, 138, 1, 0);
+  }
+}
+
+@keyframes empty-egg-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes empty-egg-crack {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+
+  40% {
+    transform: rotate(-4deg) translateY(-2px);
+  }
+
+  60% {
+    transform: rotate(-4deg) translateY(-2px);
   }
 }
 
@@ -3002,6 +3231,15 @@ audio {
   .skeleton {
     animation: none;
     background: var(--coop-brown-8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .egg-button.is-recording,
+  .egg-pulse-ring,
+  .empty-nest-egg-svg,
+  .empty-nest-egg-top {
+    animation: none;
   }
 }
 
