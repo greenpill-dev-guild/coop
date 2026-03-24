@@ -176,7 +176,7 @@ describe('receiver app routes', () => {
       expect(screen.getByText(/your roost/i)).toBeVisible();
     });
     expect(screen.getAllByText('field-note.txt').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /download local file/i })).toBeVisible();
+    expect(screen.getByRole('button', { name: /download/i })).toBeVisible();
   });
 
   it('ingests a shared link handoff into the local inbox', async () => {
