@@ -111,12 +111,45 @@ export function ReceiverShell({
           onClick={() => setSettingsOpen(true)}
           type="button"
         >
-          <span className="receiver-settings-toggle-label">Settings &amp; status</span>
+          <svg
+            aria-hidden="true"
+            className="receiver-settings-trigger-icon"
+            fill="none"
+            viewBox="0 0 16 16"
+          >
+            {online && pairingStatusLabel === 'Paired' ? (
+              <path
+                d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm2.85 5.15-3.5 3.5a.5.5 0 0 1-.7 0l-1.5-1.5a.5.5 0 0 1 .7-.7L7 9.09l3.15-3.14a.5.5 0 0 1 .7.7Z"
+                fill="var(--coop-green)"
+              />
+            ) : online ? (
+              <circle cx="8" cy="8" r="4" fill="var(--coop-orange)" />
+            ) : (
+              <circle cx="8" cy="8" r="4" fill="var(--coop-mist)" />
+            )}
+          </svg>
+          <span className="receiver-settings-toggle-label">
+            {pairingStatusLabel === 'Paired' ? 'Paired' : pairingStatusLabel}
+          </span>
           {message ? (
             <span className="receiver-settings-message" aria-hidden="true">
               {message}
             </span>
           ) : null}
+          <svg
+            aria-hidden="true"
+            className="receiver-settings-trigger-chevron"
+            fill="none"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="m6 4 4 4-4 4"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.5"
+            />
+          </svg>
         </button>
 
         {showInstallNudge ? (
@@ -145,30 +178,113 @@ export function ReceiverShell({
           title="Settings & status"
         >
           <div className="receiver-status-grid">
-            <div className="receiver-status-chip">
-              <span className={online ? 'status-dot is-online' : 'status-dot is-offline'} />
+            <div className={`receiver-status-chip ${online ? 'is-good' : 'is-muted'}`}>
+              <svg
+                aria-hidden="true"
+                className="receiver-status-chip-icon"
+                fill="none"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M8 2c1.7 0 3.2.7 4.3 1.8l1.1-1.1A7.5 7.5 0 0 0 .6 2.7l1.1 1.1A5.5 5.5 0 0 1 8 2Zm0 3c.9 0 1.8.4 2.4 1l1.1-1.1a5 5 0 0 0-7 0L5.6 6c.6-.6 1.5-1 2.4-1Zm1.5 2.5a2 2 0 0 0-3 0L8 9l1.5-1.5Z"
+                  fill="currentColor"
+                />
+              </svg>
               {online ? 'Online' : 'Offline'}
             </div>
-            <div className="receiver-status-chip">
-              <span
-                className={
-                  pairingStatusLabel === 'Paired' ? 'status-dot is-online' : 'status-dot is-offline'
-                }
-              />
+            <div
+              className={`receiver-status-chip ${pairingStatusLabel === 'Paired' ? 'is-good' : 'is-warning'}`}
+            >
+              <svg
+                aria-hidden="true"
+                className="receiver-status-chip-icon"
+                fill="none"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M6.5 9.5 5 11a2.1 2.1 0 0 0 3 3l1.5-1.5M9.5 6.5 11 5a2.1 2.1 0 0 0-3-3L6.5 3.5M6 10l4-4"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.4"
+                />
+              </svg>
               {pairingStatusLabel}
             </div>
-            <div className="receiver-status-chip">{captureCount} items</div>
+            <div className="receiver-status-chip is-muted">
+              <svg
+                aria-hidden="true"
+                className="receiver-status-chip-icon"
+                fill="none"
+                viewBox="0 0 16 16"
+              >
+                <rect
+                  x="3"
+                  y="7"
+                  width="10"
+                  height="6"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                />
+                <rect
+                  x="5"
+                  y="3"
+                  width="6"
+                  height="5"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                />
+              </svg>
+              {captureCount} items
+            </div>
           </div>
-          {pairedNestLabel ? <p className="receiver-settings-detail">{pairedNestLabel}</p> : null}
+
+          {pairedNestLabel ? (
+            <div className="receiver-paired-nest">
+              <strong className="receiver-paired-nest-heading">
+                {pairedNestLabel.split(' · ')[0]}
+              </strong>
+              {pairedNestLabel.includes(' · ') ? (
+                <span className="receiver-paired-nest-sub">{pairedNestLabel.split(' · ')[1]}</span>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="receiver-settings-actions">
+            {canNotify ? (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notificationsEnabled}
+                className={`receiver-toggle ${notificationsEnabled ? 'is-on' : ''}`}
+                onClick={onToggleNotifications}
+              >
+                <span className="receiver-toggle-track">
+                  <span className="receiver-toggle-thumb" />
+                </span>
+                <span className="receiver-toggle-label">Notifications</span>
+              </button>
+            ) : null}
             {installPrompt ? (
               <Button variant="secondary" size="small" onClick={onInstall}>
-                Install
-              </Button>
-            ) : null}
-            {canNotify ? (
-              <Button variant="secondary" size="small" onClick={onToggleNotifications}>
-                {notificationsEnabled ? 'Notifications off' : 'Notifications on'}
+                <svg
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  viewBox="0 0 16 16"
+                  className="receiver-install-btn-icon"
+                >
+                  <path
+                    d="M8 2v8m0 0L5 7m3 3 3-3M3 12h10"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+                Install Coop
               </Button>
             ) : null}
             <a className="button button-secondary button-small" href="/landing">
