@@ -3828,4 +3828,237 @@ audio {
   .sync-pill-popover {
     background: rgba(30, 24, 20, 0.96);
   }
+
+  /* ── Egg button ── */
+
+  .egg-button {
+    background: linear-gradient(180deg, #3a2e24 0%, #5c3d20 54%, #8b5a1e 100%);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.35);
+  }
+
+  .egg-button::before {
+    background: radial-gradient(circle at top, rgba(232, 213, 196, 0.25), transparent 54%);
+  }
+
+  .egg-button::after {
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.22), transparent 72%);
+  }
+
+  .egg-shell {
+    border-color: var(--coop-border);
+  }
+
+  .egg-button.is-recording {
+    background: linear-gradient(180deg, #4a3520 0%, #7a4a10 52%, #c06800 100%);
+  }
+
+  /* ── Capture / inbox card gradients ── */
+
+  .receiver-capture-card::before,
+  .receiver-inbox-card::before {
+    background: radial-gradient(circle, rgba(138, 184, 64, 0.1), transparent 68%);
+  }
+
+  /* ── Empty nest / empty state ── */
+
+  .empty-nest,
+  .empty-state {
+    border-color: var(--coop-border);
+    background: rgba(30, 24, 20, 0.4);
+  }
+
+  /* ── Install banner ── */
+
+  .receiver-install-banner {
+    border-color: color-mix(in srgb, var(--coop-orange) 16%, transparent);
+    background: linear-gradient(
+      160deg,
+      rgba(203, 113, 17, 0.14) 0%,
+      rgba(30, 24, 20, 0.88) 40%,
+      rgba(30, 24, 20, 0.92) 100%
+    );
+    box-shadow: var(--coop-shadow-sm);
+  }
+
+  /* ── Status chips ── */
+
+  .receiver-status-chip {
+    background: rgba(232, 213, 196, 0.08);
+  }
+
+  /* ── Boot / splash screens ── */
+
+  .boot-shell {
+    background: radial-gradient(circle at top left, rgba(138, 184, 64, 0.1), transparent 24rem),
+      radial-gradient(circle at top right, rgba(255, 170, 68, 0.1), transparent 22rem),
+      linear-gradient(180deg, #1a1410 0%, #1a1410 42%, #1e1814 100%);
+  }
+
+  .boot-card {
+    background: rgba(30, 24, 20, 0.9);
+  }
+
+  /* ── Receiver card backgrounds ── */
+
+  .receiver-card {
+    background: rgba(30, 24, 20, 0.8);
+  }
+
+  /* ── Form textarea placeholder ── */
+
+  .receiver-form textarea::placeholder {
+    color: var(--coop-placeholder);
+  }
+
+  /* ── Labels ── */
+
+  .receiver-label {
+    color: var(--coop-text);
+  }
+
+  /* ── Primary button ── */
+
+  .button-primary {
+    background: var(--coop-primary);
+    color: var(--coop-primary-contrast);
+  }
+
+  /* ── Pull indicator ── */
+
+  .pull-indicator {
+    color: var(--coop-text-soft);
+  }
+
+  /* ── Skeleton ── */
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(232, 213, 196, 0.06) 25%,
+      rgba(232, 213, 196, 0.12) 50%,
+      rgba(232, 213, 196, 0.06) 75%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* ── Sync pill variants ── */
+
+  .sync-pill.is-local-only {
+    background: rgba(232, 213, 196, 0.08);
+    color: var(--coop-text-soft);
+  }
+
+  .sync-pill.is-queued {
+    background: rgba(255, 170, 68, 0.14);
+    color: var(--coop-orange);
+  }
+
+  .sync-pill.is-synced {
+    background: rgba(138, 184, 64, 0.14);
+    color: var(--coop-green);
+  }
+
+  .sync-pill.is-failed {
+    background: color-mix(in srgb, var(--coop-error) 14%, transparent);
+    color: var(--coop-error);
+  }
+
+  /* ── Detail grid ── */
+
+  .detail-grid {
+    color: var(--coop-text);
+  }
+
+  /* ── Typography on dark surfaces ── */
+
+  .lede,
+  .quiet-note,
+  .helper-text,
+  .receiver-settings-detail,
+  .nest-card p,
+  .story-point p,
+  .resource-card p {
+    color: var(--coop-text-soft);
+  }
+
+  /* ── Audio element ── */
+
+  audio {
+    background: rgba(30, 24, 20, 0.6);
+  }
+
+  /* ── Nest photo border ── */
+
+  .nest-photo {
+    background: rgba(30, 24, 20, 0.6);
+    border: 1px solid var(--coop-brown-8);
+  }
+
+  /* ── Story point cards ── */
+
+  .story-point {
+    background: rgba(30, 24, 20, 0.5);
+  }
+
+  /* ── Summary card ── */
+
+  .summary-card {
+    background: rgba(232, 213, 196, 0.06);
+  }
+
+  /* ── Badge ── */
+
+  .badge {
+    background: rgba(232, 213, 196, 0.08);
+  }
+
+  /* ── Board relationship items ── */
+
+  .board-relationship-card {
+    background: rgba(30, 24, 20, 0.6);
+  }
+
+  .board-relationship-item {
+    background: rgba(232, 213, 196, 0.06);
+  }
+
+  .board-relationship-label {
+    background: rgba(138, 184, 64, 0.14);
+    color: var(--coop-green);
+  }
+
+  .board-relationship-item,
+  .board-relationship-header span,
+  .board-relationship-arrow,
+  .dev-tunnel-card__eyebrow,
+  .dev-tunnel-card__code-label,
+  .dev-tunnel-card__meta {
+    color: var(--coop-text-soft);
+  }
+
+  /* ── Dialogs / overlays ── */
+
+  .qr-scanner-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .bottom-sheet::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* ── Dev tunnel card ── */
+
+  .dev-tunnel-card {
+    border-color: var(--coop-border);
+    background: rgba(30, 24, 20, 0.94);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+  }
+
+  .dev-tunnel-card__qr {
+    background: #fff;
+  }
+
+  .dev-tunnel-card__meta span {
+    color: var(--coop-text);
+  }
 }
