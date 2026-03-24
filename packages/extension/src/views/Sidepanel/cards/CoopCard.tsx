@@ -1,5 +1,6 @@
 import type { CoopSharedState } from '@coop/shared';
 import { formatCoopSpaceTypeLabel, getCoopChainLabel } from '@coop/shared';
+import { formatRelativeTime } from '../../Popup/helpers';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -22,12 +23,6 @@ function computeStats(coop: CoopSharedState) {
   return { sharedFinds, archiveReceipts, pendingDrafts };
 }
 
-function resolveRole(coop: CoopSharedState, memberId: string | undefined) {
-  if (!memberId) return null;
-  const member = coop.members.find((m) => m.id === memberId);
-  return member?.role ?? null;
-}
-
 function resolveLastActivity(coop: CoopSharedState): string | null {
   const timestamps: string[] = [];
 
@@ -44,48 +39,57 @@ function resolveLastActivity(coop: CoopSharedState): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Chevron icon
+// ---------------------------------------------------------------------------
+
+function ChevronRight() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      style={{ flexShrink: 0, opacity: 0.5 }}
+    >
+      <path
+        d="M6 3l5 5-5 5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function CoopCard({ coop, currentMemberId, onClick }: CoopCardProps) {
   const { sharedFinds, archiveReceipts, pendingDrafts } = computeStats(coop);
-  const role = resolveRole(coop, currentMemberId);
   const lastActivity = resolveLastActivity(coop);
+  const memberCount = coop.members.length;
 
   return (
-    <button className="panel-card summary-card coop-card-button" onClick={onClick} type="button">
-      <h3>{coop.profile.name}</h3>
-
-      <div className="badge-row">
-        <span className="badge">{formatCoopSpaceTypeLabel(coop.profile.spaceType)}</span>
-        <span className="badge">{getCoopChainLabel(coop.onchainState.chainKey, 'short')}</span>
-        <span className="badge">
-          {coop.members.length} {coop.members.length === 1 ? 'member' : 'members'}
-        </span>
-      </div>
-
-      <div className="summary-strip">
-        <div className="summary-card">
-          <span>Shared finds</span>
-          <strong>{sharedFinds}</strong>
-        </div>
-        <div className="summary-card">
-          <span>Saved</span>
-          <strong>{archiveReceipts}</strong>
-        </div>
-        <div className="summary-card">
-          <span>Drafts</span>
-          <strong>{pendingDrafts}</strong>
-        </div>
-      </div>
-
-      {role ? <span className="badge">{role}</span> : null}
-
-      {lastActivity ? (
-        <span className="helper-text">
-          Last activity {new Date(lastActivity).toLocaleDateString()}
-        </span>
-      ) : null}
+    <button className="panel-card coop-card-button" onClick={onClick} type="button">
+      <span className="coop-card__name-row">
+        <strong className="coop-card__name">{coop.profile.name}</strong>
+        <ChevronRight />
+      </span>
+      <span className="coop-card__stat-line">
+        {sharedFinds} shared · {archiveReceipts} saved
+      </span>
+      <span className="coop-card__stat-line">
+        {pendingDrafts} {pendingDrafts === 1 ? 'draft' : 'drafts'} · {memberCount}{' '}
+        {memberCount === 1 ? 'member' : 'members'}
+      </span>
+      <span className="coop-card__meta-line">
+        {getCoopChainLabel(coop.onchainState.chainKey, 'short')} ·{' '}
+        {formatCoopSpaceTypeLabel(coop.profile.spaceType)}
+        {lastActivity ? ` · ${formatRelativeTime(lastActivity)}` : ''}
+      </span>
     </button>
   );
 }

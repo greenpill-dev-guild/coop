@@ -13,6 +13,7 @@ disallowedTools:
   - Task
 permissionMode: plan
 maxTurns: 5
+effort: low
 ---
 
 # Triage Agent

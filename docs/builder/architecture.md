@@ -18,6 +18,60 @@ browser surfaces.
 | API server | Signaling relay and minimal support routes |
 | Shared package | Schemas, flows, storage, identity, archive, policy, onchain, privacy, agent modules |
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+graph TB
+    subgraph Extension["Extension (MV3)"]
+        Popup[Popup]
+        Sidepanel[Sidepanel]
+        BG[Background Worker]
+        Offscreen[Offscreen Doc]
+        Skills[16 Agent Skills]
+    end
+
+    subgraph App["App (PWA)"]
+        Landing[Landing Page]
+        Receiver[Receiver Shell]
+        Board[Board View]
+    end
+
+    subgraph Shared["@coop/shared"]
+        Auth[auth]
+        Coop[coop]
+        Storage[storage]
+        Archive[archive]
+        Agent[agent]
+        Onchain[onchain]
+        Policy[policy]
+        Privacy[privacy]
+        Blob[blob]
+        Receiver_Mod[receiver]
+    end
+
+    subgraph API["API Server"]
+        Signaling[Signaling Relay]
+        YjsSync[Yjs Doc Sync]
+    end
+
+    subgraph External["External"]
+        Dexie[(Dexie/IndexedDB)]
+        Yjs[(Yjs CRDT)]
+        WebRTC{WebRTC Peers}
+        Filecoin[(Filecoin)]
+        Safe[Safe Multisig]
+    end
+
+    Extension --> Shared
+    App --> Shared
+    Shared --> Dexie
+    Shared --> Yjs
+    Yjs --> WebRTC
+    WebRTC --> API
+    Shared --> Filecoin
+    Shared --> Safe
+    Receiver -->|pairing| Extension
+```
+
 ## Data Layers
 
 Coop deliberately uses different storage layers for different jobs:

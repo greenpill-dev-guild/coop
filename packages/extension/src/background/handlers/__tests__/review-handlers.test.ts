@@ -15,6 +15,7 @@ const mockDb = {
   captureRuns: { put: vi.fn() },
   receiverPairings: { get: vi.fn() },
   receiverCaptures: { get: vi.fn() },
+  syncOutbox: { put: vi.fn() },
 };
 
 vi.mock('../../context', () => ({
@@ -43,11 +44,13 @@ vi.mock('../receiver', () => ({
 }));
 
 let mockCreateAgentMemory: ReturnType<typeof vi.fn>;
+let mockAddOutboxEntry: ReturnType<typeof vi.fn>;
 
 // Import after mocks are registered
 const { getCoops } = await import('../../context');
 const { getActiveReviewContextForSession } = await import('../../operator');
-const { handleUpdateReviewDraft, handleUpdateMeetingSettings } = await import('../review');
+const { handleUpdateReviewDraft, handleUpdateMeetingSettings, publishDraftWithContext } =
+  await import('../review');
 
 function buildSetupInsights() {
   return {
@@ -114,8 +117,11 @@ describe('review handlers', () => {
       activeMemberId: coopState.members[0]?.id,
     });
 
-    // Set up createAgentMemory spy on the shared module for feedback memory tests
+    // Set up outbox spy
     const shared = await import('@coop/shared');
+    mockAddOutboxEntry = vi.spyOn(shared, 'addOutboxEntry').mockResolvedValue(undefined);
+
+    // Set up createAgentMemory spy on the shared module for feedback memory tests
     mockCreateAgentMemory = vi.spyOn(shared, 'createAgentMemory').mockResolvedValue({
       id: 'agent-memory-mock',
       type: 'user-feedback',
@@ -359,6 +365,63 @@ describe('review handlers', () => {
           content: expect.stringContaining('demoted'),
         }),
       );
+    });
+  });
+
+  // --- Outbox integration tests ---
+
+  describe('outbox tracking on publish', () => {
+    it('adds outbox entries for each published artifact', async () => {
+      const draft = makeTabDraft(coopState.profile.id, {
+        workflowStage: 'ready',
+      });
+
+      vi.spyOn(await import('@coop/shared'), 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+      vi.spyOn(await import('@coop/shared'), 'getReviewDraft').mockResolvedValue(draft);
+      vi.spyOn(await import('@coop/shared'), 'deleteReviewDraft').mockResolvedValue(undefined);
+      vi.spyOn(await import('@coop/shared'), 'getTabRoutingByExtractAndCoop').mockResolvedValue(
+        undefined,
+      );
+      mockAddOutboxEntry.mockClear();
+
+      const result = await publishDraftWithContext({
+        draft,
+        targetCoopIds: [coopState.profile.id],
+        authSession: AUTH_SESSION,
+        activeCoopId: coopState.profile.id,
+        activeMemberId: coopState.members[0]?.id,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mockAddOutboxEntry).toHaveBeenCalled();
+      // Each published artifact should produce one outbox entry
+      const calls = mockAddOutboxEntry.mock.calls;
+      expect(calls.length).toBeGreaterThanOrEqual(1);
+      // Verify the entry shape: db, entry with type 'artifact-publish'
+      expect(calls[0][1]).toMatchObject({
+        coopId: coopState.profile.id,
+        type: 'artifact-publish',
+        status: 'pending',
+      });
+    });
+
+    it('does not add outbox entries when publish fails validation', async () => {
+      const draft = makeTabDraft(coopState.profile.id);
+
+      vi.spyOn(await import('@coop/shared'), 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+      vi.spyOn(await import('@coop/shared'), 'getReviewDraft').mockResolvedValue(undefined);
+      mockAddOutboxEntry.mockClear();
+
+      const result = await publishDraftWithContext({
+        draft,
+        targetCoopIds: [coopState.profile.id],
+        authSession: AUTH_SESSION,
+        activeCoopId: coopState.profile.id,
+        activeMemberId: coopState.members[0]?.id,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(mockAddOutboxEntry).not.toHaveBeenCalled();
     });
   });
 });

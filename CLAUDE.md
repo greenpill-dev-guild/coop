@@ -85,9 +85,38 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 **Brand Metaphors**: Tabs = "Loose Chickens", review queue = "Roost", shared feed = "Coop Feed", creating a coop = "Launching the Coop", success sound = "Rooster Call".
 
+**Build and Verify**: After making changes, choose the appropriate verification tier and verify the result before reporting the task is done. Never tell the user a change is ready without verifying first. UI/CSS changes are invisible until the Vite build runs and the extension or app is reloaded.
+
+**Verification Tiers**: Not every change needs a full build. Choose the lightest tier that covers your change:
+
+| Tier | Command | When to use | ~Time |
+|------|---------|-------------|-------|
+| **typecheck** | `bun run validate typecheck` | Single-package changes, no shared export changes | ~10s |
+| **quick** | `bun run validate quick` | Typecheck + lint, good for formatting/type fixes | ~15s |
+| **smoke** | `bun run validate smoke` | Cross-package changes, shared module edits | ~1m |
+| **build** | `bun build` | CSS token changes, new shared exports, pre-commit | ~45s |
+| **core-loop** | `bun run validate core-loop` | UI workflow changes needing E2E confirmation | ~5m |
+
+Use `typecheck` or `quick` during iteration. Use `smoke` or higher before committing. Full `bun build` is required when: changing `@coop/shared` exports consumed by downstream packages, modifying CSS tokens in `shared/src/styles/`, or as part of pre-commit validation.
+
+**UI Component Reuse**: Before creating new UI elements, check `packages/extension/src/views/shared/` for existing components and `packages/extension/src/global.css` for existing CSS classes. Reusable patterns already available:
+
+- **Tooltip** — `shared/Tooltip.tsx` (position-aware, portal-rendered)
+- **NotificationBanner** — `shared/NotificationBanner.tsx`
+- **Theme toggle** — `Popup/PopupThemePicker.tsx` (used by both Popup and Sidepanel)
+- **Icon buttons** — `.popup-icon-button` class in `global.css`
+- **Subheader pills** — `.popup-subheader__tag` class in `global.css`
+- **Cards** — `.panel-card`, `.draft-card`, `.artifact-card` in `global.css`
+- **Badges** — `.badge`, `.state-pill` in `global.css`
+- **Filter popover** — `.filter-popover` classes in `global.css`
+- **Skeleton loaders** — `.skeleton`, `.skeleton-card`, `.skeleton-text` in `global.css`
+- **Design tokens** — `shared/src/styles/tokens.css` (palette, spacing, radii, shadows, typography)
+
+Do not duplicate these. Import or apply existing classes.
+
 **Investigate Before Answering**: Never speculate about code you have not opened. If referencing a specific file, you MUST read it before answering.
 
-**Subagent Discipline**: Spawn teammates when tasks can run in parallel. Work directly for single-file edits or tasks needing fewer than 10 tool calls.
+**Subagent Discipline**: Spawn teammates when tasks can run in parallel. Work directly for single-file edits or tasks needing fewer than 10 tool calls. When spawning 2+ implementation agents in parallel, use `isolation: worktree` to prevent file conflicts. Read-only agents (code-reviewer, oracle, triage) don't need isolation.
 
 ## Infrastructure URLs
 
@@ -104,20 +133,23 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 Single `.env.local` at root (never create package-specific .env). Env vars are baked into bundles at build time by Vite — rebuild after changes.
 
-`.env.local` vars:
+`.env.local` vars (essential defaults):
 - `VITE_COOP_CHAIN`: Target chain (`sepolia` or `arbitrum`)
 - `VITE_COOP_ONCHAIN_MODE`: `mock` (default) or `live`
 - `VITE_COOP_ARCHIVE_MODE`: `mock` (default) or `live`
+- `VITE_COOP_SESSION_MODE`: `mock`, `live`, or `off` (default)
 - `VITE_COOP_SIGNALING_URLS`: Comma-separated signaling URLs (default: `wss://api.coop.town`)
 - `VITE_COOP_RECEIVER_APP_URL`: Receiver PWA URL (default: `http://127.0.0.1:3001`)
-- `VITE_PIMLICO_API_KEY`: For live Safe/4337 operations
-- `COOP_TUNNEL_NAME`: Cloudflare named tunnel (enables `dev-api` and `local` subdomains)
+
+Full reference: `docs/builder/environment.md` (30+ vars covering TURN, Pimlico, FVM, Green Goods, trusted-node archive, tunnels)
 
 `bun dev` automatically sets `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension build. The extension gets both local and production signaling URLs for fallback.
 
 ## Validation Suites
 
 Named suites via `scripts/validate.ts`:
+- `typecheck`: Fast type-check only (~10s, no build)
+- `quick`: Typecheck + lint (~15s)
 - `smoke`: Unit tests + workspace build
 - `core-loop`: Unit tests, build, two-profile extension flow
 - `flow-board`: Board/archive unit tests + Playwright checks
@@ -141,6 +173,15 @@ Named suites via `scripts/validate.ts`:
 - Scopes: shared, extension, app, claude
 
 **Validation before committing**: `bun format && bun lint && bun run test && bun build`
+
+## Context Hygiene
+
+- `/clear` between unrelated tasks — context pollution is the #1 cause of degraded output
+- After 2 failed corrections, `/clear` and start fresh with a better prompt
+- `/btw` for side questions that shouldn't enter conversation history
+- Scope investigations: use subagents for broad exploration, keep main context focused
+
+**On compaction, preserve**: current task, modified files list, test state (passing/failing), active verification tier, any blockers. The `PreCompact` hook auto-saves `session-state.md` but verify it captured your state.
 
 ## Session Continuity
 

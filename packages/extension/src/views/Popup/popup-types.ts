@@ -50,6 +50,7 @@ export interface PopupDraftListItem {
   coopLabel: string;
   coopIds: string[];
   workflowStage: ReviewDraftWorkflowStage;
+  sourceUrl?: string;
 }
 
 export interface PopupFeedArtifactItem extends Artifact {

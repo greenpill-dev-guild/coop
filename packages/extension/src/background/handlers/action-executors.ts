@@ -19,7 +19,6 @@ import {
   nowIso,
   proposeAddOwner,
   registerAgentIdentity,
-  validateOwnerChange,
   removeGreenGoodsGardener,
   resolveGreenGoodsGapAdminChanges,
   resolveScopedActionPayload,
@@ -28,18 +27,19 @@ import {
   syncGreenGoodsGapAdmins,
   syncGreenGoodsGardenProfile,
   updateGreenGoodsState,
+  validateOwnerChange,
 } from '@coop/shared';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import { validateReviewDraftPublish } from '../../runtime/review';
 import {
   configuredOnchainMode,
   configuredPimlicoApiKey,
+  db,
   ensureReceiverSyncOffscreenDocument,
   getCoops,
   saveState,
   updateCoopGreenGoodsState,
 } from '../context';
-import { db } from '../context';
 import { logPrivilegedAction } from '../operator';
 import { emitAgentObservationIfMissing, requestAgentCycle } from './agent';
 import {

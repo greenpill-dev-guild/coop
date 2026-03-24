@@ -548,7 +548,7 @@ describe('PopupApp', () => {
     const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
     const chickensFooterTab = chickensTabButtons.find((btn) =>
       btn.classList.contains('popup-footer-nav__button'),
-    )!;
+    ) as HTMLElement;
     await user.click(chickensFooterTab);
 
     expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
@@ -603,7 +603,7 @@ describe('PopupApp', () => {
     const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
     const chickensFooterTab = chickensTabButtons.find((btn) =>
       btn.classList.contains('popup-footer-nav__button'),
-    )!;
+    ) as HTMLElement;
     await user.click(chickensFooterTab);
     await user.click(await screen.findByRole('button', { name: 'Delta Field Coop' }));
     await user.click(screen.getByRole('button', { name: 'Review' }));

@@ -71,10 +71,22 @@ export interface JoinCoopInput {
   member?: Member;
 }
 
+/**
+ * Generates a warning message about device-bound passkey identity.
+ * @param displayName - Human-readable name of the member
+ * @returns Warning string about passkey storage risk
+ */
 export function createDeviceBoundWarning(displayName: string) {
   return `${displayName}'s passkey is stored on this device profile. Clearing extension data may remove access to this account.`;
 }
 
+/**
+ * Creates a new coop member with a deterministic address and passkey identity.
+ * @param displayName - Human-readable display name
+ * @param role - Member role (creator, trusted, member)
+ * @param options - Optional overrides for address, auth mode, identity warning, and passkey credential
+ * @returns A fully populated Member record
+ */
 export function createMember(
   displayName: string,
   role: Member['role'],
@@ -95,6 +107,11 @@ export function createMember(
   };
 }
 
+/**
+ * Extracts a bootstrap snapshot from the current coop state for embedding in invite codes.
+ * @param state - Current coop shared state
+ * @returns A snapshot containing the essential coop state needed to bootstrap a joining member
+ */
 export function createInviteBootstrapSnapshot(state: CoopSharedState): InviteCoopBootstrapSnapshot {
   return {
     profile: state.profile,
@@ -113,6 +130,12 @@ export function createInviteBootstrapSnapshot(state: CoopSharedState): InviteCoo
   };
 }
 
+/**
+ * Reconstructs a full coop shared state from an invite code's embedded bootstrap snapshot.
+ * @param invite - Parsed invite code containing the bootstrap state
+ * @returns A validated CoopSharedState hydrated from the invite's bootstrap data
+ * @throws If the invite is missing its bootstrap state
+ */
 export function createStateFromInviteBootstrap(invite: InviteCode) {
   if (!invite.bootstrap.bootstrapState) {
     throw new Error('Invite is missing coop bootstrap state.');
@@ -147,6 +170,12 @@ function serializeInviteBootstrapForProof(input: {
   });
 }
 
+/**
+ * Generates a cryptographic proof for an invite code using the coop's signing secret.
+ * @param bootstrap - Invite bootstrap data (without the proof field)
+ * @param inviteSigningSecret - The coop's invite signing secret
+ * @returns A hash string serving as the invite integrity proof
+ */
 export function createInviteProof(
   bootstrap: Omit<InviteCode['bootstrap'], 'inviteProof'>,
   inviteSigningSecret: string,
@@ -154,6 +183,12 @@ export function createInviteProof(
   return hashText(`${inviteSigningSecret}:${serializeInviteBootstrapForProof(bootstrap)}`);
 }
 
+/**
+ * Verifies that an invite code's proof matches the expected hash for the coop's signing secret.
+ * @param invite - The invite code to verify
+ * @param inviteSigningSecret - The coop's invite signing secret
+ * @returns True if the invite proof is valid
+ */
 export function verifyInviteCodeProof(invite: InviteCode, inviteSigningSecret: string) {
   return (
     invite.bootstrap.inviteProof ===
@@ -355,6 +390,12 @@ function createInitialArtifacts(input: {
   ];
 }
 
+/**
+ * Creates a new coop with its initial state, Yjs document, creator member, and seed artifacts.
+ * Derives the coop soul, rituals, onchain state, and optional Green Goods integration.
+ * @param input - Coop creation parameters including name, purpose, space type, and creator info
+ * @returns Object containing the validated state, Yjs doc, creator member, and sound event
+ */
 export function createCoop(input: CreateCoopInput) {
   const setupInsights = setupInsightsSchema.parse(input.setupInsights);
   const spaceType = input.spaceType ?? 'community';
@@ -443,6 +484,16 @@ export function createCoop(input: CreateCoopInput) {
   };
 }
 
+/**
+ * Generates a signed invite code for a coop, embedding a bootstrap snapshot of the current state.
+ * @param input - Object containing the coop state, creator member ID, invite type, and optional expiry
+ * @param input.state - Current coop shared state
+ * @param input.createdBy - Member ID of the invite creator
+ * @param input.type - Invite type (trusted or member)
+ * @param input.expiresInHours - Custom expiry in hours (defaults to 48h for trusted, 7d for member)
+ * @returns A validated InviteCode with an encoded shareable code string
+ * @throws If sync has not completed on this member or if the member lacks invite permissions
+ */
 export function generateInviteCode(input: {
   state: CoopSharedState;
   createdBy: string;
@@ -486,6 +537,12 @@ export function generateInviteCode(input: {
   });
 }
 
+/**
+ * Decodes and validates a base64url-encoded invite code string.
+ * @param code - The raw base64url invite code string
+ * @returns A validated InviteCode parsed from the encoded data
+ * @throws If the code is malformed or corrupted
+ */
 export function parseInviteCode(code: string) {
   try {
     const decoded = JSON.parse(decodeBase64Url(code));
@@ -504,11 +561,26 @@ export function parseInviteCode(code: string) {
   }
 }
 
+/**
+ * Checks whether an invite code is still within its expiry window.
+ * @param input - Object with the invite code and optional reference time
+ * @param input.invite - The invite code to check
+ * @param input.now - Reference time for expiry check (defaults to current time)
+ * @returns True if the invite has not expired
+ */
 export function validateInvite(input: { invite: InviteCode; now?: Date }) {
   const now = input.now ?? new Date();
   return new Date(input.invite.expiresAt).getTime() > now.getTime();
 }
 
+/**
+ * Joins an existing coop using a valid invite code, creating a new member and seed artifact.
+ * Validates the invite (expiry, revocation, proof, duplicate identity), provisions onchain accounts,
+ * and updates the coop state with the new member.
+ * @param input - Join parameters including current state, invite code, display name, and seed contribution
+ * @returns Object with the updated coop state and the newly created member
+ * @throws If the invite is revoked, expired, has a failed integrity check, or the identity is already a member
+ */
 export function joinCoop(input: JoinCoopInput) {
   const stateInvite = input.state.invites.find((i) => i.id === input.invite.id);
   if (stateInvite?.status === 'revoked') {
@@ -614,6 +686,12 @@ export function joinCoop(input: JoinCoopInput) {
   return { state: nextState, member };
 }
 
+/**
+ * Appends an invite code to the coop's shared state invite list.
+ * @param state - Current coop shared state
+ * @param invite - The invite code to add
+ * @returns Updated coop state with the new invite appended
+ */
 export function addInviteToState(state: CoopSharedState, invite: InviteCode) {
   return coopSharedStateSchema.parse({
     ...state,
@@ -621,6 +699,14 @@ export function addInviteToState(state: CoopSharedState, invite: InviteCode) {
   });
 }
 
+/**
+ * Applies a join operation directly to a Yjs document, updating its coop state in place.
+ * @param doc - The Yjs document to update
+ * @param invite - The invite code used to join
+ * @param displayName - Display name for the joining member
+ * @param seedContribution - The member's seed contribution text
+ * @returns The updated coop shared state
+ */
 export function applyJoinToDoc(
   doc: Y.Doc,
   invite: InviteCode,
@@ -633,6 +719,11 @@ export function applyJoinToDoc(
   );
 }
 
+/**
+ * Reads the current coop shared state from a Yjs document.
+ * @param doc - The Yjs document containing coop state
+ * @returns The parsed coop shared state
+ */
 export function readStateFromDoc(doc: Y.Doc) {
   return readCoopState(doc);
 }
@@ -641,6 +732,12 @@ export function readStateFromDoc(doc: Y.Doc) {
 // Invite lifecycle
 // ---------------------------------------------------------------------------
 
+/**
+ * Checks whether a member has permission to create or revoke invite codes.
+ * @param state - Current coop shared state
+ * @param memberId - ID of the member to check
+ * @returns True if the member is a creator or trusted member
+ */
 export function canManageInvites(state: CoopSharedState, memberId: string): boolean {
   const member = state.members.find((m) => m.id === memberId);
   if (!member) return false;
@@ -649,6 +746,12 @@ export function canManageInvites(state: CoopSharedState, memberId: string): bool
 
 export type ComputedInviteStatus = 'active' | 'revoked' | 'expired' | 'used';
 
+/**
+ * Computes the effective status of an invite code considering revocation, expiry, and usage.
+ * @param invite - The invite code to evaluate
+ * @param now - Optional reference time for expiry check
+ * @returns The computed status: 'active', 'revoked', 'expired', or 'used'
+ */
 export function getComputedInviteStatus(invite: InviteCode, now?: Date): ComputedInviteStatus {
   if (invite.status === 'revoked') return 'revoked';
   if (!validateInvite({ invite, now })) return 'expired';
@@ -656,6 +759,12 @@ export function getComputedInviteStatus(invite: InviteCode, now?: Date): Compute
   return 'active';
 }
 
+/**
+ * Revokes an active invite code, preventing further use.
+ * @param input - Object with the coop state, invite ID, and revoking member ID
+ * @returns Updated coop state with the invite marked as revoked
+ * @throws If the revoker lacks permissions, or the invite is not found or already revoked
+ */
 export function revokeInviteCode(input: {
   state: CoopSharedState;
   inviteId: string;
@@ -683,6 +792,23 @@ export function revokeInviteCode(input: {
   });
 }
 
+/**
+ * Adds an invite code to the coop state within a Yjs document.
+ * @param doc - The Yjs document to update
+ * @param invite - The invite code to add
+ * @returns The updated coop shared state
+ */
+export function applyAddInviteToDoc(doc: Y.Doc, invite: InviteCode) {
+  return updateCoopState(doc, (current) => addInviteToState(current, invite));
+}
+
+/**
+ * Revokes an invite code within a Yjs document's coop state.
+ * @param doc - The Yjs document to update
+ * @param inviteId - ID of the invite to revoke
+ * @param revokedBy - Member ID of the revoker
+ * @returns The updated coop shared state
+ */
 export function applyRevokeInviteToDoc(doc: Y.Doc, inviteId: string, revokedBy: string) {
   return updateCoopState(doc, (current) =>
     revokeInviteCode({ state: current, inviteId, revokedBy }),
@@ -703,6 +829,12 @@ export interface LeaveCoopResult {
   removedMember: Member;
 }
 
+/**
+ * Removes a member from a coop, cleaning up their accounts and deactivating the coop if empty.
+ * @param input - Object with the coop state and the departing member's ID
+ * @returns Object with the updated state and the removed member record
+ * @throws If the member is not found, or if the creator tries to leave while other members remain
+ */
 export function leaveCoop(input: LeaveCoopInput): LeaveCoopResult {
   const member = input.state.members.find((m) => m.id === input.memberId);
   if (!member) throw new Error('Member not found in coop.');

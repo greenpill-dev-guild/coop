@@ -14,6 +14,7 @@ export const AGENT_MAX_CONSECUTIVE_FAILURES = 3;
 export const AGENT_SKILL_TIMEOUT_MS = 30_000;
 export const AGENT_QUALITY_STALL_THRESHOLD = 0.3;
 export const AGENT_QUALITY_WINDOW_SIZE = 10;
+export const AGENT_STUCK_STATE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export type AgentCycleRequest = {
   id: string;

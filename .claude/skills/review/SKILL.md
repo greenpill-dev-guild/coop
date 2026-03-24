@@ -1,6 +1,8 @@
 ---
 name: review
 description: Code Review & PR Creation - 6-pass systematic review covering correctness, security, performance, patterns, testing, and documentation. Use when reviewing a PR, auditing code changes, or the user asks for systematic code quality analysis.
+context: fork
+agent: code-reviewer
 argument-hint: "[file-or-PR]"
 version: "1.0.0"
 status: active
@@ -28,6 +30,18 @@ Code review workflow: request reviews, perform 6-pass analysis, process feedback
 | After implementation | Request review |
 | PR feedback received | Process and respond |
 
+## Scope Confirmation
+
+When invoked without specific files or PR reference, echo back scope before reviewing:
+
+```
+Review scope: [files/PR/branch described]
+Mode: [report_only | verify_only | apply_fixes]
+Packages affected: [shared | app | extension | multiple]
+
+Proceed? [y/n]
+```
+
 ## Progress Tracking (REQUIRED)
 
 Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in the response. See `CLAUDE.md` -> Session Continuity.
@@ -36,6 +50,7 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 
 - **Default mode**: `report_only`
 - **Fix mode**: switch to `apply_fixes` only when explicitly requested (for example: `"apply fixes"`)
+- **Cross-package verify**: `/review --mode verify_only --scope cross-package` — runs checks in dependency order (shared → app → extension), reports by severity. Use after migrations, dependency upgrades, or changes spanning multiple packages.
 
 ---
 

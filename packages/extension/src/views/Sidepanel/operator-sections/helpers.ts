@@ -1,13 +1,13 @@
 import type {
   ActionBundle,
   ActionLogEntry,
+  AgentPlan,
   IntegrationMode,
   PrivilegedActionLogEntry,
   SessionCapabilityLogEntry,
   SessionCapableActionClass,
   SessionMode,
   SkillRun,
-  AgentPlan,
 } from '@coop/shared';
 import type { AgentDashboardKnowledgeSkill } from '../../../runtime/messages';
 

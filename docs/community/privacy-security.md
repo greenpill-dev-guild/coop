@@ -23,6 +23,19 @@ The current architecture keeps a lot of work on the device:
 That gives members room to collect signal without assuming that every draft belongs in a shared
 system immediately.
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+flowchart TD
+    Capture["Context captured"] --> Local["Stays on device\n(drafts, AI analysis,\nreceiver intake)"]
+    Local --> Decision{"Member\npublishes?"}
+    Decision -->|No| Private["Remains local\nNever leaves device"]
+    Decision -->|Yes| Shared["Enters shared\ncoop state"]
+    Shared --> Sync["Syncs to peers\nvia P2P"]
+    Shared --> ArchiveQ{"Archive\nrequested?"}
+    ArchiveQ -->|No| PeerOnly["Lives in\npeer network only"]
+    ArchiveQ -->|Yes| Durable["Archived to Filecoin\nwith receipt"]
+```
+
 ## Passkey-First Identity
 
 Coop is built around passkey identity rather than a wallet-extension-first onboarding. That keeps

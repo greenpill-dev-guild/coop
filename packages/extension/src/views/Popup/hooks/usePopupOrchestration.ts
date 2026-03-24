@@ -750,6 +750,29 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     const draftCount = dashboard ? visibleDrafts.length : (snapshot?.draftCount ?? 0);
     const lastCaptureAt = dashboard?.summary?.lastCaptureAt ?? snapshot?.lastCaptureAt;
 
+    // Chickens tone: empty roost or getting crowded
+    const chickenTone: 'ok' | 'warning' =
+      draftCount === 0 ? 'warning' : draftCount >= 10 ? 'warning' : 'ok';
+    const chickenDetail =
+      draftCount === 0
+        ? 'Your roost is empty — capture some tabs to get started.'
+        : draftCount >= 10
+          ? `${draftCount} drafts piling up — time to review or share.`
+          : `${draftCount} draft${draftCount === 1 ? '' : 's'} in your roost.`;
+
+    // Roundup tone: never captured or stale (>24h)
+    const captureElapsed = lastCaptureAt
+      ? Date.now() - new Date(lastCaptureAt).getTime()
+      : undefined;
+    const roundupTone: 'ok' | 'warning' =
+      captureElapsed === undefined ? 'warning' : captureElapsed > 86_400_000 ? 'warning' : 'ok';
+    const roundupDetail =
+      captureElapsed === undefined
+        ? 'No captures yet — try rounding up some tabs.'
+        : captureElapsed > 86_400_000
+          ? "It's been a while — round up your loose chickens."
+          : 'Last roundup was recent. Looking good!';
+
     return [
       {
         id: 'sync',
@@ -762,13 +785,15 @@ export function usePopupOrchestration(): PopupOrchestrationState {
         id: 'drafts',
         label: 'Chickens',
         value: String(draftCount),
-        tone: 'ok' as const,
+        tone: chickenTone,
+        detail: chickenDetail,
       },
       {
         id: 'roundup',
         label: 'Roundup',
         value: formatRelativeTime(lastCaptureAt),
-        tone: 'ok' as const,
+        tone: roundupTone,
+        detail: roundupDetail,
       },
     ];
   }, [

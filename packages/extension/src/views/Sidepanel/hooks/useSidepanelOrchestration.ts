@@ -272,10 +272,10 @@ export function useSidepanelOrchestration(
 
   // --- Actions not covered by hooks ---
   async function createInvite(inviteType: 'trusted' | 'member') {
-    if (!activeCoop) {
+    if (!activeCoop || !activeMember) {
       return;
     }
-    const creator = activeCoop.members[0]?.id;
+    const creator = activeMember.id;
     const response = await sendRuntimeMessage<InviteCode>({
       type: 'create-invite',
       payload: {

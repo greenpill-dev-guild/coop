@@ -46,6 +46,8 @@ VITE_COOP_RECEIVER_APP_URL=http://127.0.0.1:3001
 VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
 ```
 
+For the full variable reference, see [Environment Reference](/builder/environment).
+
 ## Core Packages
 
 | Package | Role |

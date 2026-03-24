@@ -25,6 +25,11 @@ interface CompositeSuite {
 type Suite = LeafSuite | CompositeSuite;
 
 const suites: Record<string, Suite> = {
+  typecheck: {
+    description:
+      'Fast tsc --noEmit across all packages (~5-10s). Catches type errors without building.',
+    steps: [{ label: 'typecheck', command: ['bun', 'run', 'typecheck'] }],
+  },
   lint: {
     description: 'Biome static checks across the workspace.',
     steps: [{ label: 'lint', command: ['bun', 'run', 'lint'] }],
@@ -111,6 +116,10 @@ const suites: Record<string, Suite> = {
     description:
       'Archive probe that issues local trusted-node delegation material from repo-root env or an in-process fallback.',
     steps: [{ label: 'probe:archive-live', command: ['bun', 'run', 'probe:archive-live'] }],
+  },
+  quick: {
+    description: 'Fastest useful validation: typecheck + lint (~15s). No build or tests.',
+    includes: ['typecheck', 'lint'],
   },
   smoke: {
     description: 'Fast confidence pass for shared logic and package builds.',

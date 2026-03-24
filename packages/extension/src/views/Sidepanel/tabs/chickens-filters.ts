@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 export type ChickensStatus = 'all' | 'drafts' | 'shared';
-export type TimeRange = 'all' | 'today' | 'week' | 'month';
+export type TimeRange = 'all' | 'today' | 'week' | 'month' | 'year';
 
 export interface ChickensFilterState {
   status: ChickensStatus;
@@ -53,6 +53,8 @@ function getCutoff(range: TimeRange, now: Date): Date | null {
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case 'month':
       return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case 'year':
+      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
   }
 }
 

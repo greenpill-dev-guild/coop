@@ -46,7 +46,7 @@ function traceImportGraph(entryPath: string): string[] {
   const queue = [entryPath];
 
   while (queue.length > 0) {
-    const filePath = queue.pop()!;
+    const filePath = queue.pop() as string;
     const resolved = path.resolve(
       path.dirname(entryPath),
       filePath.startsWith('.') ? filePath : filePath,

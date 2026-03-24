@@ -8,12 +8,14 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
-export function PopupTooltip(props: {
+export function Tooltip(props: {
   content: string;
   align?: 'start' | 'center' | 'end';
+  /** Preferred placement — auto-flips when there isn't enough space. */
+  placement?: TooltipPlacement;
   children: (input: { targetProps: HTMLAttributes<HTMLElement> }) => ReactNode;
 }) {
-  const { content, align = 'center', children } = props;
+  const { content, align = 'center', placement: preferPlacement = 'above', children } = props;
   const [open, setOpen] = useState(false);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [placement, setPlacement] = useState<TooltipPlacement>('above');
@@ -23,7 +25,7 @@ export function PopupTooltip(props: {
   const bubbleRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    setHost(document.querySelector<HTMLElement>('[data-popup-tooltip-root]'));
+    setHost(document.querySelector<HTMLElement>('[data-tooltip-root]'));
   }, []);
 
   const updatePosition = useCallback(() => {
@@ -48,10 +50,14 @@ export function PopupTooltip(props: {
           : wrapperRect.left - hostRect.left + wrapperRect.width / 2 - bubbleRect.width / 2;
     const left = clamp(alignedLeft, inset, maxLeft);
 
-    const preferredTop = wrapperRect.top - hostRect.top - bubbleRect.height - gap;
-    const nextPlacement: TooltipPlacement = preferredTop >= inset ? 'above' : 'below';
-    const rawTop =
-      nextPlacement === 'above' ? preferredTop : wrapperRect.bottom - hostRect.top + gap;
+    const aboveTop = wrapperRect.top - hostRect.top - bubbleRect.height - gap;
+    const belowTop = wrapperRect.bottom - hostRect.top + gap;
+    const aboveFits = aboveTop >= inset;
+    const belowFits = belowTop + bubbleRect.height <= hostRect.height - inset;
+
+    const nextPlacement: TooltipPlacement =
+      preferPlacement === 'below' ? (belowFits ? 'below' : 'above') : aboveFits ? 'above' : 'below';
+    const rawTop = nextPlacement === 'above' ? aboveTop : belowTop;
     const top = clamp(rawTop, inset, maxTop);
 
     setPlacement(nextPlacement);
@@ -59,8 +65,10 @@ export function PopupTooltip(props: {
       left,
       top,
     });
-  }, [align, host, open]);
+  }, [align, host, open, preferPlacement]);
 
+  // content and open are intentionally included: updatePosition is stable but must re-fire when tooltip content or visibility changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: content/open trigger repositioning on change
   useLayoutEffect(() => {
     updatePosition();
   }, [content, open, updatePosition]);
@@ -84,7 +92,7 @@ export function PopupTooltip(props: {
 
   return (
     <div
-      className={`popup-tooltip popup-tooltip--${align}`}
+      className={`coop-tooltip coop-tooltip--${align}`}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       ref={wrapperRef}
@@ -109,7 +117,7 @@ export function PopupTooltip(props: {
       {open && host
         ? createPortal(
             <span
-              className={`popup-tooltip__bubble popup-tooltip__bubble--${placement} is-open`}
+              className={`coop-tooltip__bubble coop-tooltip__bubble--${placement} is-open`}
               id={tooltipId}
               ref={bubbleRef}
               role="tooltip"

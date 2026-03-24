@@ -87,7 +87,7 @@ describe('privacy UI elements', () => {
               <button
                 className="btn-sm"
                 onClick={() => navigator.clipboard.writeText(stealthMetaAddress)}
-                title="Copy stealth address"
+                aria-label="Copy stealth address"
                 type="button"
               >
                 Copy
@@ -99,7 +99,7 @@ describe('privacy UI elements', () => {
 
       expect(screen.getByText('Private payment address')).toBeInTheDocument();
       expect(screen.getByText(stealthMetaAddress)).toBeInTheDocument();
-      expect(screen.getByTitle('Copy stealth address')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Copy stealth address' })).toBeInTheDocument();
     });
 
     it('does not render when stealthMetaAddress is null', () => {

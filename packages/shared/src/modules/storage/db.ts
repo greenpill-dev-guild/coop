@@ -547,6 +547,31 @@ const LOCAL_DATA_WRAPPING_SECRET_KEY = 'session-wrapping-secret';
 const wrappingSecretCache = new Map<string, string>();
 const LOCAL_DATA_PLACEHOLDER_PREFIX = 'encrypted://local';
 const LOCAL_DATA_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------------------
+// Derived-key LRU cache — avoids re-running 120k PBKDF2 iterations for the
+// same (secret, salt) pair on every encrypted row read.
+// ---------------------------------------------------------------------------
+const DERIVED_KEY_CACHE_MAX = 2000;
+const derivedKeyCache = new Map<string, CryptoKey>();
+
+/**
+ * Clear the in-memory PBKDF2 derived-key cache.
+ * Call when the wrapping secret changes or from tests.
+ */
+export function clearDerivedKeyCache() {
+  derivedKeyCache.clear();
+}
+
+/**
+ * Clear the in-memory wrapping-secret cache for a specific database.
+ * Must be called whenever the wrapping secret is replaced (e.g. import)
+ * so that subsequent encrypt/decrypt operations pick up the new secret
+ * instead of the stale cached value.
+ */
+export function clearWrappingSecretCache(dbName: string) {
+  wrappingSecretCache.delete(dbName);
+}
 const LOCAL_DATA_REDACTED_SOURCE = {
   label: 'Encrypted local source',
   url: 'encrypted://local/source',
@@ -659,6 +684,10 @@ async function ensureLocalDataWrappingSecret(db: CoopDexie) {
 }
 
 async function deriveLocalDataKey(secret: string, salt: Uint8Array) {
+  const saltKey = bytesToBase64(salt);
+  const cached = derivedKeyCache.get(saltKey);
+  if (cached) return cached;
+
   const encoder = new TextEncoder();
   const saltBytes = Uint8Array.from(salt);
   const keyMaterial = await crypto.subtle.importKey(
@@ -669,7 +698,7 @@ async function deriveLocalDataKey(secret: string, salt: Uint8Array) {
     ['deriveKey'],
   );
 
-  return crypto.subtle.deriveKey(
+  const key = await crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: saltBytes,
@@ -681,6 +710,14 @@ async function deriveLocalDataKey(secret: string, salt: Uint8Array) {
     false,
     ['encrypt', 'decrypt'],
   );
+
+  // LRU-style eviction: if the cache is full, drop the oldest entry.
+  if (derivedKeyCache.size >= DERIVED_KEY_CACHE_MAX) {
+    const oldest = derivedKeyCache.keys().next().value;
+    if (oldest !== undefined) derivedKeyCache.delete(oldest);
+  }
+  derivedKeyCache.set(saltKey, key);
+  return key;
 }
 
 export async function buildEncryptedLocalPayloadRecord(input: {
@@ -1720,7 +1757,8 @@ export async function purgeQuarantinedKnowledgeSkills(db: CoopDexie) {
 }
 
 export async function clearSensitiveLocalData(db: CoopDexie) {
-  wrappingSecretCache.delete(db.name);
+  clearWrappingSecretCache(db.name);
+  clearDerivedKeyCache();
   await db.transaction(
     'rw',
     [

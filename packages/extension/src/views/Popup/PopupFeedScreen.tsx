@@ -1,3 +1,4 @@
+import { Tooltip } from '../shared/Tooltip';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
 import type { PopupFeedArtifactItem } from './popup-types';
@@ -44,14 +45,19 @@ export function PopupFeedScreen(props: {
                     </span>
                   </div>
                 </button>
-                <button
-                  className="popup-feed-dismiss"
-                  onClick={() => onDismissArtifact(artifact.id)}
-                  type="button"
-                  aria-label="Dismiss"
-                >
-                  &times;
-                </button>
+                <Tooltip content="Dismiss">
+                  {({ targetProps }) => (
+                    <button
+                      {...targetProps}
+                      className="popup-feed-dismiss"
+                      onClick={() => onDismissArtifact(artifact.id)}
+                      type="button"
+                      aria-label="Dismiss"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </Tooltip>
               </li>
             ))}
           </ul>

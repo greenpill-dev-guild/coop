@@ -9,7 +9,12 @@ export function PopupOnboardingHero(props: {
         className="popup-onboarding-hero popup-onboarding-hero--empty-coop-feed"
         aria-hidden="true"
       >
-        <svg className="popup-onboarding-hero__coop-feed-svg" viewBox="0 0 160 100" fill="none">
+        <svg
+          className="popup-onboarding-hero__coop-feed-svg"
+          viewBox="0 0 160 100"
+          fill="none"
+          aria-hidden="true"
+        >
           {/* Ground */}
           <ellipse cx="80" cy="92" rx="70" ry="8" fill="currentColor" opacity="0.06" />
 
@@ -77,7 +82,12 @@ export function PopupOnboardingHero(props: {
   if (variant === 'empty-meadow') {
     return (
       <div className="popup-onboarding-hero popup-onboarding-hero--empty-meadow" aria-hidden="true">
-        <svg className="popup-onboarding-hero__meadow-svg" viewBox="0 0 160 100" fill="none">
+        <svg
+          className="popup-onboarding-hero__meadow-svg"
+          viewBox="0 0 160 100"
+          fill="none"
+          aria-hidden="true"
+        >
           {/* Ground */}
           <ellipse cx="80" cy="92" rx="70" ry="8" fill="currentColor" opacity="0.06" />
 

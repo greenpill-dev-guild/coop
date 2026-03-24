@@ -31,13 +31,13 @@ export function PopupShell({
       </div>
       {message ? (
         <div className="popup-toast-layer">
-          <output aria-live="polite" className="popup-toast" role="status">
+          <output aria-live="polite" className="popup-toast">
             {message}
           </output>
         </div>
       ) : null}
       {overlay ? <div className="popup-overlay-layer">{overlay}</div> : null}
-      <div className="popup-tooltip-layer" data-popup-tooltip-root />
+      <div className="coop-tooltip-layer" data-tooltip-root />
     </div>
   );
 }

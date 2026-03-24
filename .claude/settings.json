@@ -49,8 +49,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "CMD=$(cat | jq -r '.tool_input.command // empty'); if printf '%s' \"$CMD\" | grep -qE '(^|[;&|] *)git commit'; then cd /Users/afo/Code/regen-coordination/coop && bun lint --quiet 2>&1 | tail -5; fi; exit 0",
-            "statusMessage": "Pre-commit lint check..."
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty'); if printf '%s' \"$CMD\" | grep -qE '(^|[;&|] *)git commit'; then cd /Users/afo/Code/regen-coordination/coop && bun run validate quick 2>&1 | tail -10; fi; exit 0",
+            "statusMessage": "Pre-commit typecheck + lint..."
           }
         ]
       }
@@ -75,6 +75,39 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '⚠️  Before finishing: did you verify your changes? Choose the right tier:\\n  typecheck (~10s) — single-package, no shared exports\\n  quick (~15s) — typecheck + lint\\n  smoke (~1m) — cross-package changes\\n  build (~45s) — CSS tokens, new shared exports\\nRun: bun run validate <tier>'",
+            "statusMessage": "Verification reminder"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/afo/Code/regen-coordination/coop && printf '## Session State (auto-saved %s)\\n\\n' \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > session-state.md && git diff --name-only HEAD 2>/dev/null | sed 's/^/- /' >> session-state.md && echo '\\n---\\nReview and update this file after compaction.' >> session-state.md",
+            "statusMessage": "Auto-saving session state..."
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Task marked complete — ensure verification was run before reporting done to user.'",
+            "statusMessage": "Task completion check"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -82,6 +115,16 @@
           {
             "type": "command",
             "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|json)$'; then npx @biomejs/biome format --write \"$FILE\" 2>/dev/null; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(css|tsx)$' && echo \"$FILE\" | grep -q 'views/'; then echo 'UI file modified — verify visually in Chrome before reporting done. Use Chrome MCP screenshot or manual check.'; fi; exit 0",
+            "statusMessage": "Checking for UI impact..."
           }
         ]
       }
@@ -103,5 +146,29 @@
     "code-simplifier@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
   },
-  "teammateMode": "in-process"
+  "teammateMode": "in-process",
+  "plansDirectory": ".plans",
+  "worktree": {
+    "symlinkDirectories": ["node_modules", ".cache"]
+  },
+  "attribution": {
+    "commit": "Co-Roosted-By: Claude (Coop AI) <noreply@anthropic.com>",
+    "pr": "Hatched with [Claude Code](https://claude.ai/claude-code) in the Coop"
+  },
+  "spinnerTipsOverride": {
+    "excludeDefault": false,
+    "tips": [
+      "Use /plan for complex features, /debug for mysteries",
+      "bun run validate smoke — your pre-commit confidence check",
+      "Loose chickens = uncaptured tabs. Roost them!",
+      "Local-first: data stays local until you publish",
+      "Passkey > wallet extension. Always.",
+      "/review before merging — 6-pass systematic analysis"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "MSGS=('All chickens roosted' 'Coop is warm' 'Eggs incubating' 'Flock assembled'); printf '%s | %s' \"$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'no-branch')\" \"${MSGS[$((RANDOM % 4))]}\"",
+    "padding": 1
+  }
 }

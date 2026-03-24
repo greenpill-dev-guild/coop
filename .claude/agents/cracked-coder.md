@@ -11,11 +11,19 @@ tools:
   - Bash
   - Task
 memory: project
+effort: max
 skills:
   - testing
   - react
   - error-handling-patterns
 maxTurns: 50
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "bun run test --reporter=dot 2>&1 | tail -3"
+          timeout: 30
 ---
 
 # Cracked Coder Agent
@@ -23,6 +31,10 @@ maxTurns: 50
 Elite code implementation specialist for complex technical problems.
 
 See `CLAUDE.md` for detailed codebase patterns (module boundaries, persistence, error handling).
+
+## Isolation
+
+When spawned alongside other implementation agents, request `isolation: worktree` to prevent file conflicts. Read-only agents (reviewers, researchers) don't need isolation.
 
 ## TDD Workflow
 
@@ -46,8 +58,10 @@ GATHER → PLAN → TEST → IMPLEMENT → VERIFY
 
 - [ ] Failing tests written before implementation (TDD)
 - [ ] All tests pass (`bun run test`)
+- [ ] Typecheck passes (`tsc --noEmit`)
 - [ ] Lint passes (`bun lint`)
 - [ ] Build succeeds (`bun build`)
 - [ ] Module boundaries respected (shared modules in @coop/shared)
 - [ ] Barrel exports updated if new public API was added
 - [ ] Cathedral Check performed (most similar existing file used as reference)
+- [ ] **If UI change (*.css, *.tsx in views/)**: Visually verified in Chrome via MCP screenshot or manual check. Never claim a UI fix works without seeing it.

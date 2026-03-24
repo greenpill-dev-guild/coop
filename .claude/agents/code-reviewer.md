@@ -13,7 +13,14 @@ disallowedTools:
   - Task
 permissionMode: plan
 memory: project
+effort: max
 maxTurns: 20
+hooks:
+  Stop:
+    - hooks:
+        - type: prompt
+          prompt: "The code reviewer is about to stop. Check if the last assistant message contains all 6 review passes (Correctness, Security, Performance, Patterns, Testing, Documentation) and a final APPROVE or REQUEST_CHANGES verdict. If any pass is missing, respond with {\"decision\": \"block\", \"reason\": \"Missing review passes. Complete all 6 passes before stopping.\"}. If all passes are present, respond with {\"decision\": \"allow\"}. Here is the context: $ARGUMENTS"
+          timeout: 15
 ---
 
 # Code Reviewer Agent
@@ -47,3 +54,7 @@ Required section order:
 5. Nice-to-Have (Low)
 6. Verification
 7. Recommendation
+
+## Memory
+
+Update your agent memory with recurring patterns, codebase conventions, and common issues you discover during reviews. This builds institutional knowledge across review sessions.

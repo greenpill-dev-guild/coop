@@ -10,6 +10,7 @@ tools:
   - Write
   - Bash
 memory: project
+effort: max
 maxTurns: 50
 ---
 
@@ -18,6 +19,10 @@ maxTurns: 50
 Cross-package migration orchestrator for coordinating breaking changes.
 
 See `CLAUDE.md` for dependency order and build patterns.
+
+## Isolation
+
+When spawned alongside other implementation agents, request `isolation: worktree` to prevent file conflicts during cross-package changes.
 
 ## Activation
 

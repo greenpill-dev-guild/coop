@@ -9,7 +9,7 @@ export function PopupChoiceGroup<T extends string | number>(props: {
   const { ariaLabel, options, value, onChange } = props;
 
   return (
-    <div aria-label={ariaLabel} className="popup-choice-group" role="group">
+    <fieldset aria-label={ariaLabel} className="popup-choice-group">
       {options.map((option) => {
         const active = option.id === value;
 
@@ -25,6 +25,6 @@ export function PopupChoiceGroup<T extends string | number>(props: {
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }

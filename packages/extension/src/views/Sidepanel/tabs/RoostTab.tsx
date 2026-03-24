@@ -1,11 +1,12 @@
 import type { ActionBundle, CoopSharedState } from '@coop/shared';
+import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
+import { SidepanelSubheader } from '../SidepanelSubheader';
 import {
   GreenGoodsAccessSummary,
   GreenGoodsImpactReportForm,
   GreenGoodsProvisionButton,
   GreenGoodsWorkSubmissionForm,
 } from '../cards/GreenGoodsActionCards';
-import { TabCoopSelector } from '../TabCoopSelector';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,7 +99,19 @@ export function RoostTab({
 
   return (
     <section className="stack">
-      <TabCoopSelector allCoops={allCoops} activeCoop={activeCoop} onSelect={selectActiveCoop} />
+      <SidepanelSubheader>
+        <PopupSubheader
+          ariaLabel="Filter by coop"
+          tags={allCoops.map(
+            (c): PopupSubheaderTag => ({
+              id: c.profile.id,
+              label: c.profile.name,
+              active: c.profile.id === (activeCoop?.profile.id ?? allCoops[0]?.profile.id),
+              onClick: () => selectActiveCoop(c.profile.id),
+            }),
+          )}
+        />
+      </SidepanelSubheader>
 
       {/* --- 1. Garden Status Card --- */}
       <article className="panel-card">

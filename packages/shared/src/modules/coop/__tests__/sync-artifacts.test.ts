@@ -205,7 +205,7 @@ describe('Yjs per-artifact map migration', () => {
     expect(fieldMap).toBeDefined();
 
     // Update only 'title' — 'tags' remains untouched
-    fieldMap!.set('title', JSON.stringify('Updated Title'));
+    (fieldMap as Y.Map<string>).set('title', JSON.stringify('Updated Title'));
 
     const result = readCoopState(doc);
     expect(result.artifacts[0].title).toBe('Updated Title');
@@ -222,7 +222,7 @@ describe('Yjs per-artifact map migration', () => {
 
     const fieldMap = artifactsV2.get('a1');
     expect(fieldMap).toBeDefined();
-    expect(JSON.parse(fieldMap!.get('title') ?? '')).toBe('Test');
+    expect(JSON.parse((fieldMap as Y.Map<string>).get('title') ?? '')).toBe('Test');
   });
 
   it('createCoopDoc initialises both old and new format', () => {

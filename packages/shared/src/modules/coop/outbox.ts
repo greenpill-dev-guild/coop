@@ -1,10 +1,21 @@
-import type { SyncOutboxEntry, SyncOutboxEntryStatus, SyncOutboxEntryType } from '../storage/db';
-import type { CoopDexie } from '../storage/db';
 import { createId, nowIso } from '../../utils';
+import type {
+  CoopDexie,
+  SyncOutboxEntry,
+  SyncOutboxEntryStatus,
+  SyncOutboxEntryType,
+} from '../storage/db';
 
 const OUTBOX_PRUNE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-/** Create an outbox entry for a pending sync operation. */
+/**
+ * Creates a new outbox entry for a pending sync operation.
+ * @param input - Entry parameters
+ * @param input.coopId - The coop this sync operation belongs to
+ * @param input.type - The type of sync operation (artifact-publish or state-update)
+ * @param input.entityKey - Unique key identifying the change (e.g., artifact ID) for dedup
+ * @returns A new SyncOutboxEntry with 'pending' status and zero retry count
+ */
 export function createOutboxEntry(input: {
   coopId: string;
   type: SyncOutboxEntryType;
@@ -21,12 +32,20 @@ export function createOutboxEntry(input: {
   };
 }
 
-/** Write an outbox entry to the database. */
+/**
+ * Persists an outbox entry to the database.
+ * @param db - Dexie database instance
+ * @param entry - The outbox entry to store
+ */
 export async function addOutboxEntry(db: CoopDexie, entry: SyncOutboxEntry): Promise<void> {
   await db.syncOutbox.put(entry);
 }
 
-/** Mark an outbox entry as synced. */
+/**
+ * Marks an outbox entry as successfully synced.
+ * @param db - Dexie database instance
+ * @param id - The outbox entry ID to mark
+ */
 export async function markOutboxSynced(db: CoopDexie, id: string): Promise<void> {
   await db.syncOutbox.update(id, {
     status: 'synced' satisfies SyncOutboxEntryStatus,
@@ -34,7 +53,12 @@ export async function markOutboxSynced(db: CoopDexie, id: string): Promise<void>
   });
 }
 
-/** Mark an outbox entry as failed. */
+/**
+ * Marks an outbox entry as failed, incrementing its retry count.
+ * @param db - Dexie database instance
+ * @param id - The outbox entry ID to mark
+ * @param error - Error message describing the failure
+ */
 export async function markOutboxFailed(db: CoopDexie, id: string, error: string): Promise<void> {
   const entry = await db.syncOutbox.get(id);
   if (!entry) return;
@@ -45,7 +69,12 @@ export async function markOutboxFailed(db: CoopDexie, id: string, error: string)
   });
 }
 
-/** Get pending outbox entries for a coop. */
+/**
+ * Retrieves all pending outbox entries for a specific coop.
+ * @param db - Dexie database instance
+ * @param coopId - The coop to query pending entries for
+ * @returns Array of pending outbox entries
+ */
 export async function getPendingOutboxEntries(
   db: CoopDexie,
   coopId: string,

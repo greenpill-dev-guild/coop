@@ -31,6 +31,33 @@ page is the map before the deeper integration pages.
 | Storacha | Delegated upload and archive workflow |
 | Filecoin | Durable storage and provenance story |
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+graph TB
+    subgraph Identity["Identity & Execution"]
+        WebAuthn[WebAuthn / Passkeys]
+        Safe[Gnosis Safe]
+        GG[Green Goods]
+    end
+
+    subgraph Intelligence["Local Intelligence"]
+        WebLLM[WebLLM]
+        Yjs[Yjs CRDT]
+        Dexie[Dexie / IndexedDB]
+    end
+
+    subgraph Durability["Durability & Archive"]
+        Storacha[Storacha]
+        Filecoin[Filecoin]
+    end
+
+    WebAuthn -->|"passkey → identity"| Safe
+    Safe -->|"bounded execution"| GG
+    WebLLM -->|"AI analysis"| Dexie
+    Yjs -->|"shared state"| Dexie
+    Storacha -->|"upload"| Filecoin
+```
+
 ## Design Principle
 
 Each integration exists to support the local-first coordination loop. Coop is not trying to become a

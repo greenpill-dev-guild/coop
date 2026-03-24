@@ -184,7 +184,7 @@ export function provisionMemberAccounts(input: {
       createMemberAccountRecord({
         memberId: member.id,
         coopId: input.coopId,
-        ownerPasskeyCredentialId: member.passkeyCredentialId!,
+        ownerPasskeyCredentialId: member.passkeyCredentialId as string,
         chainKey: input.chainKey,
         accountType: input.accountType,
       }),

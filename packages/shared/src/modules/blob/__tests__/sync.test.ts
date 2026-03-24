@@ -62,9 +62,9 @@ describe('reassembleChunks', () => {
     const reassembled = reassembleChunks(chunks);
 
     expect(reassembled).not.toBeNull();
-    expect(reassembled!.length).toBe(original.length);
+    expect(reassembled?.length).toBe(original.length);
     // Byte-level comparison avoids Vitest deep-equality overhead on large Uint8Arrays
-    expect(Buffer.compare(Buffer.from(reassembled!), Buffer.from(original))).toBe(0);
+    expect(Buffer.compare(Buffer.from(reassembled as Uint8Array), Buffer.from(original))).toBe(0);
   });
 
   it('reassembles out-of-order chunks', () => {
@@ -76,8 +76,8 @@ describe('reassembleChunks', () => {
     const reassembled = reassembleChunks(reversed);
 
     expect(reassembled).not.toBeNull();
-    expect(reassembled!.length).toBe(original.length);
-    expect(Buffer.compare(Buffer.from(reassembled!), Buffer.from(original))).toBe(0);
+    expect(reassembled?.length).toBe(original.length);
+    expect(Buffer.compare(Buffer.from(reassembled as Uint8Array), Buffer.from(original))).toBe(0);
   });
 
   it('returns null for empty chunks array', () => {

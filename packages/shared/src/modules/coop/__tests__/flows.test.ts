@@ -605,7 +605,7 @@ describe('create, join, and publish flows', () => {
       displayName: 'Mina',
       seedContribution: 'Regular member here.',
     });
-    const regularMember = joined.state.members[1]!;
+    const regularMember = joined.state.members[1] as (typeof joined.state.members)[number];
 
     expect(canManageInvites(joined.state, created.creator.id)).toBe(true);
     expect(canManageInvites(joined.state, regularMember.id)).toBe(false);
@@ -737,7 +737,7 @@ describe('create, join, and publish flows', () => {
       displayName: 'Mina',
       seedContribution: 'Trusted member here.',
     });
-    const trustedMember = joined.state.members[1]!;
+    const trustedMember = joined.state.members[1] as (typeof joined.state.members)[number];
     expect(trustedMember.role).toBe('trusted');
     expect(canManageInvites(joined.state, trustedMember.id)).toBe(true);
 
@@ -776,7 +776,7 @@ describe('create, join, and publish flows', () => {
       displayName: 'Mina',
       seedContribution: 'Regular member here.',
     });
-    const regularMember = joined.state.members[1]!;
+    const regularMember = joined.state.members[1] as (typeof joined.state.members)[number];
 
     const result = leaveCoop({ state: joined.state, memberId: regularMember.id });
 

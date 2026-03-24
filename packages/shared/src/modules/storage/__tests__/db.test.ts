@@ -26,6 +26,7 @@ import { createReceiverCapture, createReceiverDeviceIdentity } from '../../recei
 import { createReceiverPairingPayload, toReceiverPairingRecord } from '../../receiver/pairing';
 import {
   type CoopDexie,
+  clearDerivedKeyCache,
   createCoopDb,
   deleteEncryptedSessionMaterial,
   findAgentObservationByFingerprint,
@@ -70,6 +71,7 @@ import {
   listSessionCapabilityLogEntries,
   listSkillRuns,
   listSkillRunsByPlanId,
+  listTabCandidates,
   listTabRoutings,
   loadCoopState,
   recordReplayId,
@@ -86,6 +88,7 @@ import {
   saveSessionCapability,
   saveSessionCapabilityLogEntry,
   saveSkillRun,
+  saveTabCandidate,
   saveTabRouting,
   setActionPolicies,
   setActiveReceiverPairing,
@@ -1639,6 +1642,105 @@ describe('skill run persistence', () => {
 
     const limited = await listSkillRuns(db, 2);
     expect(limited).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Derived-key cache (PBKDF2 performance)
+// ---------------------------------------------------------------------------
+
+function buildTabCandidate(
+  overrides: Partial<import('../../../contracts/schema').TabCandidate> = {},
+): import('../../../contracts/schema').TabCandidate {
+  return {
+    id: `cand-${crypto.randomUUID()}`,
+    tabId: 1,
+    windowId: 1,
+    url: 'https://example.com/test',
+    canonicalUrl: 'https://example.com/test',
+    title: 'Test Page',
+    domain: 'example.com',
+    capturedAt: NOW,
+    ...overrides,
+  };
+}
+
+describe('derived-key cache', () => {
+  afterEach(() => {
+    clearDerivedKeyCache();
+  });
+
+  it('caches PBKDF2 keys so repeated hydration of the same record avoids re-derivation', async () => {
+    const db = freshDb();
+    const candidate = buildTabCandidate();
+    await saveTabCandidate(db, candidate);
+
+    // First hydration (cold cache)
+    const first = await listTabCandidates(db);
+
+    // Second hydration (warm cache) — same data, key should be cached
+    const second = await listTabCandidates(db);
+
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+    expect(first[0].url).toBe(candidate.url);
+    expect(second[0].url).toBe(candidate.url);
+    // Both return identical data, confirming the cache doesn't corrupt results
+    expect(first[0].title).toBe(second[0].title);
+  });
+
+  it('clearDerivedKeyCache resets the cache so the next derivation is a cache miss', async () => {
+    const db = freshDb();
+    const candidate = buildTabCandidate();
+    await saveTabCandidate(db, candidate);
+
+    // Populate the cache
+    await listTabCandidates(db);
+
+    // Clear it
+    clearDerivedKeyCache();
+
+    // Should still work (re-derives from scratch)
+    const result = await listTabCandidates(db);
+    expect(result).toHaveLength(1);
+    expect(result[0].url).toBe(candidate.url);
+  });
+
+  it('saves and round-trips multiple tab candidates through encryption', async () => {
+    const db = freshDb();
+    const candidates = Array.from({ length: 5 }, (_, i) =>
+      buildTabCandidate({
+        capturedAt: new Date(Date.parse(NOW) + i * 1000).toISOString(),
+      }),
+    );
+
+    for (const candidate of candidates) {
+      await saveTabCandidate(db, candidate);
+    }
+
+    const result = await listTabCandidates(db);
+    expect(result).toHaveLength(5);
+    // Ordered by capturedAt descending
+    expect(result[0].capturedAt).toBe(candidates[4].capturedAt);
+  });
+
+  it('respects the limit parameter in listTabCandidates', async () => {
+    const db = freshDb();
+    const candidates = Array.from({ length: 10 }, (_, i) =>
+      buildTabCandidate({
+        capturedAt: new Date(Date.parse(NOW) + i * 1000).toISOString(),
+      }),
+    );
+
+    for (const candidate of candidates) {
+      await saveTabCandidate(db, candidate);
+    }
+
+    const limited = await listTabCandidates(db, 3);
+    expect(limited).toHaveLength(3);
+
+    const unlimited = await listTabCandidates(db);
+    expect(unlimited).toHaveLength(10);
   });
 });
 

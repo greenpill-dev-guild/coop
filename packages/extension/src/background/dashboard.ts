@@ -23,6 +23,8 @@ import {
   listTabCandidates,
   listTabRoutings,
   pendingBundles,
+  pruneOutbox,
+  reconcileOutbox,
   refreshPermitStatus,
   saveExecutionPermit,
   savePermitLogEntry,
@@ -357,7 +359,20 @@ export async function writePopupSnapshot(
   await chrome.storage.local.set({ [POPUP_SNAPSHOT_KEY]: snapshot }).catch(() => {});
 }
 
+/** Reconcile + prune outbox entries. Call after writes (sync, capture, publish), not on reads. */
+export async function reconcileOutboxEntries() {
+  const coops = await getCoops();
+  await Promise.all(
+    coops.map((coop) => {
+      const syncedKeys = new Set(coop.artifacts.map((a) => a.id));
+      return reconcileOutbox(db, coop.profile.id, syncedKeys).catch(() => 0);
+    }),
+  );
+  await pruneOutbox(db).catch(() => 0);
+}
+
 export async function refreshBadge() {
+  await reconcileOutboxEntries();
   const [summary, coops] = await Promise.all([buildSummary(), getCoops()]);
   const indicator = describeActionIndicator(summary);
   await chrome.action.setIcon({ path: extensionIconPaths(summary.iconState) });
@@ -389,7 +404,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
   ] = await Promise.all([
     getCoops(),
     listReviewDrafts(db),
-    listTabCandidates(db),
+    listTabCandidates(db, 200),
     listTabRoutings(db, { status: ['routed', 'drafted', 'published'], limit: 500 }),
     buildSummary(),
     getSoundPreferences(db),

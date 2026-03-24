@@ -18,6 +18,36 @@ The MV3 package is split across three user-facing or runtime-facing surfaces:
 
 The background service worker coordinates message routing, storage access, and privileged handlers.
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+graph TB
+    subgraph Surfaces["User-Facing Surfaces"]
+        Popup["Popup\n8 screens\nFooter nav"]
+        Sidepanel["Sidepanel\n4 tabs: Roost, Chickens,\nCoops, Nest"]
+    end
+
+    subgraph Runtime["Background Runtime"]
+        SW["Service Worker"]
+        Handlers["12 Handler Modules\ncapture, review, coop,\nagent, archive, receiver..."]
+        Offscreen["Offscreen Document\nSync + Agent work"]
+    end
+
+    subgraph AgentLayer["Agent Harness"]
+        Runner["Agent Runner"]
+        Skills["16 Skills\nvia SKILL.md"]
+        Inference["Inference Cascade\nWebLLM / transformers.js\n/ heuristics"]
+    end
+
+    Popup -->|"chrome.runtime\nmessages"| SW
+    Sidepanel -->|"chrome.runtime\nmessages"| SW
+    SW --> Handlers
+    SW --> Offscreen
+    Offscreen --> Runner
+    Runner --> Skills
+    Runner --> Inference
+    Handlers -->|"Dexie + Yjs"| Storage[(Local Storage)]
+```
+
 ### Popup
 
 The popup is a self-contained multi-screen application orchestrated by the `usePopupOrchestration` hook.

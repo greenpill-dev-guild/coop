@@ -1,6 +1,7 @@
 ---
 name: watch-tests
 description: Run unit tests and report failures with context. Use standalone or with /loop (e.g. `/loop 3m /watch-tests`).
+disable-model-invocation: true
 argument-hint: "[package-filter] [duration|count]"
 user-invocable: true
 allowed-tools: Bash, Read, Glob, Grep

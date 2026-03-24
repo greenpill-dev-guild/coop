@@ -40,6 +40,7 @@ export interface DraftCardProps {
   inferenceState: InferenceBridgeState | null;
   runtimeConfig: DashboardResponse['runtimeConfig'];
   coops: CoopSharedState[];
+  onShareToFeed?: () => void;
 }
 
 export function DraftCard({
@@ -48,6 +49,7 @@ export function DraftCard({
   inferenceState,
   runtimeConfig,
   coops,
+  onShareToFeed,
 }: DraftCardProps) {
   const value = draftEditor.draftValue(draft);
 
@@ -270,7 +272,12 @@ export function DraftCard({
           Open source
         </a>
         {value.sources[0]?.url ? (
-          <ShareMenu url={value.sources[0].url} title={value.title} summary={value.summary} />
+          <ShareMenu
+            url={value.sources[0].url}
+            title={value.title}
+            summary={value.summary}
+            onShareToFeed={onShareToFeed}
+          />
         ) : null}
       </div>
     </article>
@@ -355,6 +362,7 @@ export interface ArtifactCardProps {
   activeCoop: CoopSharedState | undefined;
   archiveArtifact: (artifactId: string) => Promise<void>;
   toggleArtifactArchiveWorthiness: (artifactId: string, flagged: boolean) => Promise<void>;
+  onShareToFeed?: () => void;
 }
 
 export function ArtifactCard({
@@ -363,6 +371,7 @@ export function ArtifactCard({
   activeCoop,
   archiveArtifact,
   toggleArtifactArchiveWorthiness,
+  onShareToFeed,
 }: ArtifactCardProps) {
   const latestReceipt =
     [...archiveReceipts].find((receipt) =>
@@ -427,6 +436,7 @@ export function ArtifactCard({
             url={artifact.sources[0].url}
             title={artifact.title}
             summary={artifact.summary}
+            onShareToFeed={onShareToFeed}
           />
         ) : null}
       </div>

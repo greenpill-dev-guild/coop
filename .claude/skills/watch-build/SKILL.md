@@ -1,6 +1,7 @@
 ---
 name: watch-build
 description: Build all packages and report errors. Use standalone or with /loop (e.g. `/loop 5m /watch-build`).
+disable-model-invocation: true
 argument-hint: "[duration|count]"
 user-invocable: true
 allowed-tools: Bash, Read, Glob, Grep

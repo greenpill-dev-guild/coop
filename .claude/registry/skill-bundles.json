@@ -3,7 +3,7 @@
     "extension-change": {
       "entrypoint": "/plan",
       "default_mode": "interactive",
-      "skills": ["react", "tailwindcss", "frontend-design", "testing", "ui-compliance"],
+      "skills": ["react", "testing", "ui-compliance"],
       "user_facing": true
     },
     "shared-module-change": {
@@ -21,19 +21,19 @@
     "app-change": {
       "entrypoint": "/plan",
       "default_mode": "interactive",
-      "skills": ["react", "tailwindcss", "frontend-design", "testing", "ui-compliance"],
+      "skills": ["react", "testing", "ui-compliance"],
       "user_facing": true
     },
     "cross-package-change": {
       "entrypoint": "/review --mode verify_only --scope cross-package",
       "default_mode": "verify_only",
-      "skills": ["review", "cross-package-verify", "testing"],
+      "skills": ["review", "testing"],
       "user_facing": false
     },
     "incident-hotfix": {
       "entrypoint": "/debug --mode incident_hotfix",
       "default_mode": "apply_fixes",
-      "skills": ["debug", "tdd-bugfix", "testing"],
+      "skills": ["debug", "testing"],
       "user_facing": false
     }
   }

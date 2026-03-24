@@ -1,6 +1,7 @@
 ---
 name: guard
 description: Run lint + test + build checks and report regressions. Use standalone for a one-shot check, or with /loop for continuous monitoring (e.g. `/loop 5m /guard`).
+disable-model-invocation: true
 argument-hint: "[--fix] [duration|count]"
 user-invocable: true
 allowed-tools: Bash, Read, Glob, Grep

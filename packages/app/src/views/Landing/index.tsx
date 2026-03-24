@@ -630,7 +630,7 @@ export function App({
   const [setupInput, setSetupInput] = useState<SetupInsightsInput>(() => initialDraft.setupInput);
   const [transcripts, setTranscripts] = useState<TranscriptMap>(() => initialDraft.transcripts);
   const [audience, setAudience] = useState<AudienceId>(() => initialDraft.audience);
-  const [openCardId, setOpenCardId] = useState<TranscriptKey | null>(() => initialDraft.openCardId);
+  const [openCardId, setOpenCardId] = useState<TranscriptKey | null>(null);
   const [sharedNotes, setSharedNotes] = useState(() => initialDraft.sharedNotes);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [recordingLens, setRecordingLens] = useState<TranscriptKey | null>(null);

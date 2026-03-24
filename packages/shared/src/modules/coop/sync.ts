@@ -10,6 +10,7 @@ import {
   artifactSchema,
   coopSharedStateSchema,
 } from '../../contracts/schema';
+import { createId, hashText } from '../../utils';
 import type { BlobRelayTransport } from '../blob/channel';
 import {
   type BlobRelayMessage,
@@ -17,11 +18,11 @@ import {
   decodeBlobRelayMessage,
   encodeBlobRelayMessage,
 } from '../blob/relay';
-import { createId, hashText } from '../../utils';
 
 // --- Minimal varuint framing (avoids lib0 dependency in shared package) ---
 
-function writeVarUint(num: number): Uint8Array {
+function writeVarUint(input: number): Uint8Array {
+  let num = input;
   const bytes: number[] = [];
   while (num > 127) {
     bytes.push((num & 0x7f) | 0x80);
@@ -94,10 +95,22 @@ const sharedKeys = [
   'memberCommitments',
 ] as const;
 
+/**
+ * Derives a deterministic sync room ID from a coop ID and room secret.
+ * @param coopId - The coop's unique identifier
+ * @param roomSecret - The room's secret used for derivation
+ * @returns A room ID string in the format `coop-room-{hash}`
+ */
 export function deriveSyncRoomId(coopId: string, roomSecret: string) {
   return `coop-room-${hashText(`${coopId}:${roomSecret}`).slice(2, 18)}`;
 }
 
+/**
+ * Creates a new sync room configuration with fresh room and invite signing secrets.
+ * @param coopId - The coop's unique identifier
+ * @param signalingUrls - WebRTC signaling server URLs (defaults to production signaling)
+ * @returns A SyncRoomConfig with generated secrets and derived room ID
+ */
 export function createSyncRoomConfig(
   coopId: string,
   signalingUrls = defaultSignalingUrls,
@@ -113,6 +126,11 @@ export function createSyncRoomConfig(
   };
 }
 
+/**
+ * Strips the invite signing secret from a sync room config for safe inclusion in invite codes.
+ * @param room - The full sync room configuration
+ * @returns A bootstrap-safe subset of the room config (no invite signing secret)
+ */
 export function toSyncRoomBootstrap(room: SyncRoomConfig): SyncRoomBootstrap {
   return {
     coopId: room.coopId,
@@ -122,6 +140,13 @@ export function toSyncRoomBootstrap(room: SyncRoomConfig): SyncRoomBootstrap {
   };
 }
 
+/**
+ * Creates a temporary sync room config from bootstrap data for a joining member.
+ * Uses placeholder secrets until the full config is received via sync.
+ * @param input - Bootstrap sync room data from the invite code
+ * @param inviteId - The invite code ID used for placeholder secret derivation
+ * @returns A SyncRoomConfig with bootstrap-prefixed placeholder secrets
+ */
 export function createBootstrapSyncRoomConfig(
   input: SyncRoomBootstrap,
   inviteId: string,
@@ -135,18 +160,33 @@ export function createBootstrapSyncRoomConfig(
   };
 }
 
+/**
+ * Checks whether a sync room config is a temporary bootstrap config (pre-sync completion).
+ * @param room - The sync room configuration to check
+ * @returns True if the config has placeholder bootstrap secrets
+ */
 export function isBootstrapSyncRoomConfig(room: SyncRoomConfig) {
   return (
     room.roomSecret.startsWith('bootstrap:') || room.inviteSigningSecret.startsWith('bootstrap:')
   );
 }
 
+/**
+ * Creates a new Yjs document initialized with the given coop shared state.
+ * @param state - The coop shared state to write into the document
+ * @returns A new Y.Doc populated with the coop state
+ */
 export function createCoopDoc(state: CoopSharedState) {
   const doc = new Y.Doc();
   writeCoopState(doc, state);
   return doc;
 }
 
+/**
+ * Writes a complete coop shared state into a Yjs document, updating legacy, v1, and v2 artifact formats.
+ * @param doc - The Yjs document to write into
+ * @param state - The coop shared state to serialize
+ */
 export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   const root = doc.getMap<string>(ROOT_KEY);
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
@@ -189,6 +229,12 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   });
 }
 
+/**
+ * Reads and validates the coop shared state from a Yjs document.
+ * Prefers v2 per-field artifact format, falls back to v1 per-artifact JSON, then legacy array.
+ * @param doc - The Yjs document to read from
+ * @returns The parsed and validated coop shared state
+ */
 export function readCoopState(doc: Y.Doc): CoopSharedState {
   const root = doc.getMap<string>(ROOT_KEY);
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
@@ -237,6 +283,12 @@ export function readCoopState(doc: Y.Doc): CoopSharedState {
   return coopSharedStateSchema.parse(raw);
 }
 
+/**
+ * Reads the current coop state from a Yjs doc, applies an updater function, and writes back.
+ * @param doc - The Yjs document to read from and write to
+ * @param updater - Function that receives the current state and returns the next state
+ * @returns The updated coop shared state
+ */
 export function updateCoopState(
   doc: Y.Doc,
   updater: (current: CoopSharedState) => CoopSharedState,
@@ -247,10 +299,20 @@ export function updateCoopState(
   return next;
 }
 
+/**
+ * Encodes a Yjs document as a Uint8Array state update for persistence.
+ * @param doc - The Yjs document to encode
+ * @returns Binary state update suitable for storage in Dexie
+ */
 export function encodeCoopDoc(doc: Y.Doc) {
   return Y.encodeStateAsUpdate(doc);
 }
 
+/**
+ * Creates a new Yjs document and optionally applies a stored state update.
+ * @param update - Optional binary state update to apply (e.g., from Dexie storage)
+ * @returns A Y.Doc, either empty or hydrated from the update
+ */
 export function hydrateCoopDoc(update?: Uint8Array) {
   const doc = new Y.Doc();
   if (update) {
@@ -259,6 +321,15 @@ export function hydrateCoopDoc(update?: Uint8Array) {
   return doc;
 }
 
+/**
+ * Connects IndexedDB persistence, WebRTC peer sync, and WebSocket sync providers to a Yjs document.
+ * Returns a no-op bundle in non-browser environments (SSR-safe).
+ * @param doc - The Yjs document to connect providers to
+ * @param room - Sync room configuration with room ID, secrets, and signaling URLs
+ * @param iceServers - Optional ICE servers for WebRTC (defaults to production TURN servers)
+ * @param websocketSyncUrl - Optional WebSocket sync URL (defaults to production)
+ * @returns Object with roomId, provider references, and a disconnect() cleanup function
+ */
 export function connectSyncProviders(
   doc: Y.Doc,
   room: SyncRoomConfig,
@@ -402,6 +473,12 @@ export interface SyncTransportHealth {
   websocketConnected: boolean;
 }
 
+/**
+ * Produces a health summary of the sync transport layer (signaling, peers, WebSocket).
+ * @param webrtc - Optional WebRTC provider with room and signaling connection info
+ * @param websocket - Optional WebSocket provider with connection status
+ * @returns A SyncTransportHealth object with connection counts, peer counts, and error status
+ */
 export function summarizeSyncTransportHealth(
   webrtc?: Pick<WebrtcProvider, 'room' | 'signalingUrls' | 'signalingConns'>,
   websocket?: Pick<WebsocketProvider, 'wsconnected'>,
@@ -537,6 +614,16 @@ export interface CompactionResult {
 /**
  * Identify artifacts beyond the horizon and remove them from the live Yjs doc.
  * Callers should archive the returned IDs before calling this.
+ */
+/**
+ * Identifies artifacts beyond the retention horizon and removes them from the live Yjs doc.
+ * Callers should archive the returned IDs before calling this.
+ * @param input - Compaction parameters
+ * @param input.doc - The Yjs document to compact
+ * @param input.state - Current coop shared state
+ * @param input.maxLiveArtifacts - Maximum artifacts to keep live (default: 200)
+ * @param input.maxAgeDays - Maximum artifact age in days (default: 90)
+ * @returns Object with IDs of archived artifacts and the remaining count
  */
 export function compactCoopArtifacts(input: {
   doc: Y.Doc;

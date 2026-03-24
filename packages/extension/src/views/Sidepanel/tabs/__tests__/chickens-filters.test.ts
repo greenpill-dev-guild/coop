@@ -157,6 +157,52 @@ describe('applyChickensFilters', () => {
     expect(result.drafts[0].id).toBe('d-march');
   });
 
+  it('filters drafts by past year', () => {
+    const thisYearDraft = makeDraft({ id: 'd-recent', createdAt: '2025-06-15T12:00:00.000Z' });
+    const oldDraft = makeDraft({ id: 'd-old', createdAt: '2025-01-01T12:00:00.000Z' });
+    const filters: ChickensFilterState = {
+      status: 'all',
+      timeRange: 'year',
+      category: 'all',
+    };
+
+    const result = applyChickensFilters({
+      drafts: [thisYearDraft, oldDraft],
+      candidates: [],
+      filters,
+      now: NOW,
+    });
+
+    expect(result.drafts).toHaveLength(1);
+    expect(result.drafts[0].id).toBe('d-recent');
+  });
+
+  it('filters candidates by past year', () => {
+    const recentCandidate = makeCandidate({
+      id: 'c-recent',
+      capturedAt: '2025-10-01T12:00:00.000Z',
+    });
+    const oldCandidate = makeCandidate({
+      id: 'c-old',
+      capturedAt: '2024-12-01T12:00:00.000Z',
+    });
+    const filters: ChickensFilterState = {
+      status: 'all',
+      timeRange: 'year',
+      category: 'all',
+    };
+
+    const result = applyChickensFilters({
+      drafts: [],
+      candidates: [recentCandidate, oldCandidate],
+      filters,
+      now: NOW,
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].id).toBe('c-recent');
+  });
+
   // --- Category ---
 
   it('filters drafts by category', () => {

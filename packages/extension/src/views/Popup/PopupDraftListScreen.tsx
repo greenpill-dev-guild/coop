@@ -1,6 +1,7 @@
 import type { ReviewDraft } from '@coop/shared';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
+import { ShareMenu } from './ShareMenu';
 import type { PopupDraftListItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
@@ -64,6 +65,9 @@ export function PopupDraftListScreen(props: {
                       Mark Ready
                     </button>
                   )}
+                  {draft.sourceUrl ? (
+                    <ShareMenu url={draft.sourceUrl} title={draft.title} summary={draft.summary} />
+                  ) : null}
                 </div>
               </li>
             ))}

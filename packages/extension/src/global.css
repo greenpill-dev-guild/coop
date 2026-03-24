@@ -56,6 +56,7 @@ img {
   grid-template-rows: auto 1fr auto;
   height: 100vh;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .panel-header,
@@ -174,10 +175,38 @@ img {
 }
 
 .coop-card-button {
-  max-height: 160px;
-  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 1rem;
+}
+
+.coop-card__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.coop-card__name {
+  font-size: 0.95rem;
+}
+
+.coop-card__stat-line {
+  font-size: 0.82rem;
+  color: var(--coop-brown-soft);
+  line-height: 1.4;
+}
+
+.coop-card__meta-line {
+  font-size: 0.75rem;
+  color: var(--coop-brown-soft);
+  opacity: 0.7;
+  line-height: 1.4;
 }
 
 .panel-card,
@@ -459,6 +488,7 @@ button:disabled {
 }
 
 .nest-sub-tabs button {
+  position: relative;
   border-radius: var(--coop-radius-pill);
   border: 1px solid var(--coop-line);
   padding: 0.55rem 0.75rem;
@@ -480,19 +510,18 @@ button:disabled {
 }
 
 .nest-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.2rem;
-  height: 1.2rem;
-  padding: 0 0.3rem;
-  border-radius: 999px;
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  font-size: 0.6rem;
+  border-radius: var(--coop-radius-pill);
   background: var(--coop-orange);
   color: white;
-  font-size: 0.68rem;
-  font-weight: 700;
-  margin-left: 0.3rem;
-  vertical-align: middle;
+  display: grid;
+  place-items: center;
 }
 
 .nest-quick-actions {
@@ -622,6 +651,106 @@ button:disabled {
   background: var(--coop-green, #5a7d10);
 }
 
+/* ---- Shared button styles (mirrors popup-icon-button for sidepanel) ---- */
+
+.popup-icon-button {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--coop-radius-icon);
+  border: 1px solid var(--coop-active-border);
+  background: var(--coop-active-bg);
+  display: grid;
+  place-items: center;
+  color: var(--coop-text);
+  flex-shrink: 0;
+  transition: background-color 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow
+    180ms ease;
+}
+
+.popup-icon-button.is-active {
+  border-color: var(--coop-active-border);
+  background: var(--coop-active-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--coop-active-border) 32%, transparent);
+}
+
+.popup-icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.popup-theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--coop-radius-icon);
+  border: 1px solid var(--coop-active-border);
+  background: var(--coop-active-bg);
+  color: var(--coop-text);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: background-color 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.popup-theme-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.popup-theme-option__icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Shared subheader / filter pills (mirrors popup-subheader for sidepanel) ---- */
+
+.popup-subheader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.popup-subheader::-webkit-scrollbar {
+  display: none;
+}
+
+.popup-subheader__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--coop-border);
+  border-radius: var(--coop-radius-pill);
+  background: var(--coop-field);
+  color: var(--coop-text-soft);
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.popup-subheader__tag.is-active {
+  border-color: var(--coop-active-border);
+  background: var(--coop-active-bg);
+  color: var(--coop-text);
+}
+
+.popup-subheader__tag--interactive {
+  cursor: pointer;
+}
+
+.popup-subheader__tag strong {
+  font-weight: 700;
+}
+
 /* ---- Sidepanel compact header ---- */
 
 .sidepanel-header {
@@ -646,26 +775,62 @@ button:disabled {
   gap: 0.5rem;
 }
 
-.sidepanel-header__action {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--coop-radius-icon);
-  border: 1px solid var(--coop-line);
-  background: var(--coop-surface-elevated);
-  color: var(--coop-brown);
-  display: grid;
-  place-items: center;
-  transition: background-color 180ms ease, border-color 180ms ease;
+.sidepanel-header__actions .popup-icon-button,
+.sidepanel-header__actions .popup-theme-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--coop-radius-sm);
 }
 
-.sidepanel-header__action:hover {
-  background: rgba(90, 125, 16, 0.08);
-  border-color: rgba(90, 125, 16, 0.24);
+.sidepanel-header__actions .popup-icon-button .popup-theme-option__icon {
+  width: 15px;
+  height: 15px;
 }
 
-.sidepanel-header__action:focus-visible {
-  outline: 2px solid rgba(90, 125, 16, 0.32);
-  outline-offset: 2px;
+/* ---- Sidepanel subheader — unified sticky wrapper ---- */
+
+.sidepanel-subheader {
+  position: sticky;
+  top: -0.5rem; /* cancel .sidepanel-content padding-top */
+  z-index: var(--coop-z-sticky, 1);
+  background: color-mix(in srgb, var(--coop-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  /* bleed into sidepanel-content padding so we span full width */
+  margin: -0.5rem -0.75rem 0;
+  padding: 0.5rem 0.75rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--coop-line);
+}
+
+/* ---- Sidepanel action row (icon buttons in tab subheaders) ---- */
+
+.sidepanel-action-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 36px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidepanel-action-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sidepanel-action-row .popup-icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--coop-radius-sm);
+}
+
+.sidepanel-action-row .popup-icon-button--primary {
+  background: var(--coop-brown);
+  color: white;
+  border-color: var(--coop-brown);
 }
 
 /* ---- Sidepanel scrollable content ---- */
@@ -748,59 +913,7 @@ button:disabled {
   font-weight: 700;
 }
 
-/* ---- Chickens tab actions ---- */
-
-.chickens-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.chickens-roundup-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.chickens-icon-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* ---- Tab coop selector ---- */
-
-.tab-coop-selector {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.tab-coop-selector__label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--coop-brown);
-  padding: 0.35rem 0.75rem;
-}
-
-.tab-coop-selector__pill {
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--coop-radius-pill);
-  border: 1px solid var(--coop-line);
-  background: var(--coop-surface-elevated);
-  color: var(--coop-brown-soft);
-  font-size: 0.82rem;
-  font-weight: 600;
-  transition: background-color 180ms ease, color 180ms ease;
-}
-
-.tab-coop-selector__pill.is-active {
-  background: var(--coop-brown);
-  color: white;
-  border-color: transparent;
-}
+/* ---- Chickens tab actions (consolidated into SidepanelSubheader) ---- */
 
 /* ---- Chickens tab filter ---- */
 
@@ -819,6 +932,8 @@ button:disabled {
   color: var(--coop-brown-soft);
   font-size: 0.76rem;
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -843,6 +958,8 @@ button:disabled {
   color: var(--coop-brown-soft);
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: background-color var(--coop-ease), border-color var(--coop-ease);
 }
@@ -1094,4 +1211,58 @@ button:disabled {
   color: var(--coop-green);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* ---------- Shared Tooltip ---------- */
+
+.coop-tooltip {
+  position: relative;
+  min-width: 0;
+}
+
+.coop-tooltip__bubble {
+  position: absolute;
+  z-index: var(--coop-z-sticky);
+  width: max-content;
+  max-width: min(220px, calc(100% - 16px));
+  border-radius: var(--coop-radius-icon);
+  border: 1px solid var(--coop-border);
+  background: color-mix(in srgb, var(--coop-panel) 96%, #000000 4%);
+  color: var(--coop-text);
+  box-shadow: 0 12px 24px rgba(17, 11, 8, 0.18);
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.coop-tooltip__bubble.is-open {
+  opacity: 1;
+}
+
+.coop-tooltip__bubble--above {
+  transform: translateY(4px);
+}
+
+.coop-tooltip__bubble--above.is-open {
+  transform: translateY(0);
+}
+
+.coop-tooltip__bubble--below {
+  transform: translateY(-4px);
+}
+
+.coop-tooltip__bubble--below.is-open {
+  transform: translateY(0);
+}
+
+.coop-tooltip-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--coop-z-tooltip);
 }

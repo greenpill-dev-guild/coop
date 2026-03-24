@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import type {
+  CaptureMode,
+  CoopSharedState,
+  CoopSpaceType,
+  ReceiverCapture,
+  ReceiverPairingRecord,
+} from '@coop/shared';
 import {
-  type CaptureMode,
-  type CoopSharedState,
-  type CoopSpaceType,
-  type ReceiverCapture,
-  type ReceiverPairingRecord,
   formatCoopSpaceTypeLabel,
   getCoopChainLabel,
-  getReceiverPairingStatus,
+  type getReceiverPairingStatus,
 } from '@coop/shared';
+import { useState } from 'react';
 import type { InferenceBridgeState } from '../../../runtime/inference-bridge';
 import type { AgentDashboardResponse, DashboardResponse } from '../../../runtime/messages';
+import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
+import { Tooltip } from '../../shared/Tooltip';
+import { SidepanelSubheader } from '../SidepanelSubheader';
 import { getAddressExplorerUrl, truncateAddress } from '../helpers';
 import type { useCoopForm } from '../hooks/useCoopForm';
 import type { useDraftEditor } from '../hooks/useDraftEditor';
@@ -21,7 +26,6 @@ import { NestArchiveSection, NestArchiveWizardSection } from './NestArchiveSecti
 import { NestInviteSection } from './NestInviteSection';
 import { NestReceiverSection } from './NestReceiverSection';
 import { NestSettingsSection } from './NestSettingsSection';
-import { TabCoopSelector } from '../TabCoopSelector';
 
 // ---------------------------------------------------------------------------
 // Shared hook return types
@@ -155,76 +159,132 @@ export function NestTab(props: NestTabProps) {
     props.dashboard?.operator?.policyActionQueue?.filter((b) => b.status === 'proposed').length ??
     0;
 
+  // Build coop filter tags
+  const coopTags: PopupSubheaderTag[] = allCoops.map((c) => ({
+    id: c.profile.id,
+    label: c.profile.name,
+    active: c.profile.id === (activeCoop?.profile.id ?? allCoops[0]?.profile.id),
+    onClick: () => selectActiveCoop(c.profile.id),
+  }));
+
   return (
     <section className="stack">
-      <TabCoopSelector allCoops={allCoops} activeCoop={activeCoop} onSelect={selectActiveCoop} />
+      {coopTags.length > 0 || activeCoop ? (
+        <SidepanelSubheader>
+          {coopTags.length > 0 ? (
+            <PopupSubheader ariaLabel="Filter by coop" tags={coopTags} />
+          ) : null}
+
+          {activeCoop ? (
+            <div className="sidepanel-action-row">
+              <Tooltip content="Refresh">
+                {({ targetProps }) => (
+                  <button
+                    {...targetProps}
+                    className="popup-icon-button"
+                    aria-label="Refresh"
+                    onClick={() => void props.loadDashboard()}
+                    type="button"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 2v6h-6" />
+                      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                      <path d="M3 22v-6h6" />
+                      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                    </svg>
+                  </button>
+                )}
+              </Tooltip>
+              {nestSubTab === 'members' ? (
+                <Tooltip content="Invite member">
+                  {({ targetProps }) => (
+                    <button
+                      {...targetProps}
+                      className="popup-icon-button"
+                      aria-label="Invite member"
+                      onClick={() => props.createInvite('member')}
+                      type="button"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="19" y1="8" x2="19" y2="14" />
+                        <line x1="22" y1="11" x2="16" y2="11" />
+                      </svg>
+                    </button>
+                  )}
+                </Tooltip>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* --- Sub-tab pill bar (only with active coop) --- */}
+          {activeCoop ? (
+            <nav className="nest-sub-tabs" aria-label="Nest sections">
+              <button
+                className={nestSubTab === 'members' ? 'is-active' : ''}
+                onClick={() => setNestSubTab('members')}
+                type="button"
+              >
+                Members
+                {receiverIntakeCount > 0 ? (
+                  <span className="nest-badge">
+                    {receiverIntakeCount > 99 ? '99+' : receiverIntakeCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                className={nestSubTab === 'agent' ? 'is-active' : ''}
+                onClick={() => setNestSubTab('agent')}
+                type="button"
+              >
+                Agent
+                {pendingActionCount > 0 ? (
+                  <span className="nest-badge">
+                    {pendingActionCount > 99 ? '99+' : pendingActionCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                className={nestSubTab === 'settings' ? 'is-active' : ''}
+                onClick={() => setNestSubTab('settings')}
+                type="button"
+              >
+                Settings
+              </button>
+            </nav>
+          ) : null}
+        </SidepanelSubheader>
+      ) : null}
 
       {/* --- Coop Creation / Join (only when no active coop) --- */}
       {!activeCoop ? <NestCreationForm coopForm={coopForm} /> : null}
 
-      {/* --- Quick Actions (only with active coop) --- */}
-      {activeCoop ? (
-        <div className="nest-quick-actions">
-          <button
-            className="secondary-button"
-            onClick={() => void props.loadDashboard()}
-            type="button"
-          >
-            Refresh coop
-          </button>
-          <button className="secondary-button" onClick={props.archiveLatestArtifact} type="button">
-            Save latest find
-          </button>
-          <button
-            className="secondary-button"
-            onClick={() => props.createInvite('member')}
-            type="button"
-          >
-            Invite
-          </button>
-          {receiverIntakeCount > 0 ? (
-            <p className="helper-text">
-              {receiverIntakeCount} pocket find{receiverIntakeCount !== 1 ? 's' : ''} waiting
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* --- Sub-tab pill bar (only with active coop) --- */}
-      {activeCoop ? (
-        <nav className="nest-sub-tabs" aria-label="Nest sections">
-          <button
-            className={nestSubTab === 'members' ? 'is-active' : ''}
-            onClick={() => setNestSubTab('members')}
-            type="button"
-          >
-            Members
-            {receiverIntakeCount > 0 ? (
-              <span className="nest-badge">
-                {receiverIntakeCount > 99 ? '99+' : receiverIntakeCount}
-              </span>
-            ) : null}
-          </button>
-          <button
-            className={nestSubTab === 'agent' ? 'is-active' : ''}
-            onClick={() => setNestSubTab('agent')}
-            type="button"
-          >
-            Agent
-            {pendingActionCount > 0 ? (
-              <span className="nest-badge">
-                {pendingActionCount > 99 ? '99+' : pendingActionCount}
-              </span>
-            ) : null}
-          </button>
-          <button
-            className={nestSubTab === 'settings' ? 'is-active' : ''}
-            onClick={() => setNestSubTab('settings')}
-            type="button"
-          >
-            Settings
-          </button>
-        </nav>
+      {/* Quick info: receiver intake count */}
+      {activeCoop && receiverIntakeCount > 0 ? (
+        <p className="helper-text">
+          {receiverIntakeCount} pocket find{receiverIntakeCount !== 1 ? 's' : ''} waiting
+        </p>
       ) : null}
 
       {/* ================================================================= */}
@@ -324,14 +384,18 @@ export function NestTab(props: NestTabProps) {
                       >
                         {stealthMetaAddress}
                       </code>
-                      <button
-                        className="btn-sm"
-                        onClick={() => navigator.clipboard.writeText(stealthMetaAddress)}
-                        title="Copy stealth address"
-                        type="button"
-                      >
-                        Copy
-                      </button>
+                      <Tooltip content="Copy stealth address">
+                        {({ targetProps }) => (
+                          <button
+                            {...targetProps}
+                            className="btn-sm"
+                            onClick={() => navigator.clipboard.writeText(stealthMetaAddress)}
+                            type="button"
+                          >
+                            Copy
+                          </button>
+                        )}
+                      </Tooltip>
                     </div>
                   </div>
                 </details>

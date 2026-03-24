@@ -247,13 +247,20 @@ export function PopupHomeScreen(props: {
     el.style.height = `${Math.max(46, Math.min(el.scrollHeight, 92))}px`;
   }, []);
 
+  // noteText is intentionally included: autoResize is stable but must re-fire when content changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: noteText triggers resize recalculation
   useEffect(() => {
     autoResize();
   }, [noteText, autoResize]);
 
   return (
-    <section className="popup-screen popup-screen--home-aggregate">
-      <PopupSubheader ariaLabel="Home status" equalWidth tags={statusItems} />
+    <section className="popup-screen popup-screen--fill">
+      <PopupSubheader
+        ariaLabel="Home status"
+        equalWidth
+        tags={statusItems}
+        tooltipPlacement="below"
+      />
 
       <ChickenYard items={yardItems} />
 

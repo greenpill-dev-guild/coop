@@ -1,6 +1,7 @@
 ---
 name: debug
 description: Debugging & Troubleshooting - systematic root cause investigation with hypothesis testing and evidence collection. Use when the user reports a bug, encounters an error, sees unexpected behavior, or says 'debug this' or 'investigate this issue'.
+context: fork
 argument-hint: "[error-description]"
 version: "1.0.0"
 status: active
@@ -35,6 +36,19 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 
 ---
 
+## Scope Confirmation
+
+When the input is ambiguous (no specific file paths, multiple possible interpretations), echo back scope before investigating:
+
+```
+Debug scope: [symptom described]
+Likely package: [shared | extension | app | unclear]
+Mode: [standard | incident_hotfix | tdd_bugfix]
+Starting with: Phase 0 sanity check
+
+Proceed? [y/n]
+```
+
 ## Safety Rules
 
 - Non-destructive recovery only
@@ -50,6 +64,21 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 ---
 
 ## Part 1: Root Cause Investigation
+
+### Phase 0: 90-Second Sanity Check (ALWAYS DO FIRST)
+
+Before any deep investigation, rule out the simple causes that waste entire sessions:
+
+| Priority | Check | Command | Time |
+|----------|-------|---------|------|
+| 1 | **Stale build / cache** | `rm -rf dist .docusaurus node_modules/.vite && bun build` | 45s |
+| 2 | **Missing import** | Verify the module/component is actually imported where it's used | 15s |
+| 3 | **Wrong file** | Confirm you're editing the file that's actually rendered (check Vite aliases, barrel re-exports) | 15s |
+| 4 | **Env var stale** | Env vars bake at build time — did you rebuild after changing `.env.local`? | 15s |
+
+If any of these fix the issue, **stop here**. Do not investigate further. Report the simple cause.
+
+Only proceed to Phase 1 if all sanity checks pass.
 
 ### Phase 1: Gather Evidence
 
@@ -279,6 +308,23 @@ After debugging provide:
 
 ### Next Step
 - `DONE`, `NEEDS_INPUT`, or `ESCALATE`
+
+## TDD Bugfix Mode (`/debug --mode tdd_bugfix`)
+
+Deterministic test-first bugfix loop. Use when reproducing and fixing a known bug.
+
+Required sequence:
+1. **Reproduce** with a failing test (RED)
+2. **Explain** root cause in one concise statement
+3. **Fix** with minimal code change (GREEN)
+4. **Verify** reproduction test passes
+5. **Regression** — run broader suite: `bun run test && bun lint && bun build`
+6. **Report** with severity mapping (Critical/High → must-fix, Medium → should-fix, Low → nice-to-have)
+
+Anti-patterns for TDD bugfix:
+- Implementing without first reproducing in tests
+- Mixing unrelated refactors into bugfix commits
+- Skipping regression coverage after the initial fix passes
 
 ## Anti-Patterns
 

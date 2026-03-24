@@ -66,6 +66,7 @@ export function toDraftItems(input: {
       ...draft,
       coopIds,
       coopLabel: formatCoopLabel(draft.suggestedTargetCoopIds, coopLabels),
+      sourceUrl: draft.sources[0]?.url,
     };
   });
 }

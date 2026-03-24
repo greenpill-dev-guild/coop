@@ -4,6 +4,8 @@ import {
   canManageInvites,
   getComputedInviteStatus,
 } from '@coop/shared';
+import { useEffect, useRef, useState } from 'react';
+import { Tooltip } from '../../shared/Tooltip';
 import type { useCoopForm } from '../hooks/useCoopForm';
 
 // ---------------------------------------------------------------------------
@@ -31,9 +33,24 @@ export function NestInviteSection({
   activeCoop,
   currentMemberId,
 }: NestInviteSectionProps) {
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(copyTimerRef.current), []);
   const invites = activeCoop?.invites ?? [];
   const canManage =
     currentMemberId && activeCoop ? canManageInvites(activeCoop, currentMemberId) : false;
+
+  const handleCopyInviteCode = async () => {
+    if (!inviteResult) return;
+    try {
+      await navigator.clipboard.writeText(inviteResult.code);
+      setCopied(true);
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may fail if document is not focused
+    }
+  };
 
   return (
     <>
@@ -65,6 +82,18 @@ export function NestInviteSection({
             <div className="field-grid">
               <label htmlFor="invite-code">Fresh invite code</label>
               <textarea id="invite-code" readOnly value={inviteResult.code} />
+              <Tooltip content="Copy invite code">
+                {({ targetProps }) => (
+                  <button
+                    {...targetProps}
+                    className="btn-sm"
+                    onClick={() => void handleCopyInviteCode()}
+                    type="button"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                )}
+              </Tooltip>
             </div>
           ) : null}
           <form className="form-grid" onSubmit={coopForm.joinCoopAction}>

@@ -220,22 +220,22 @@ describe('SidepanelApp', () => {
     expect(footerNav).toHaveAttribute('data-show-nest', 'false');
   });
 
-  it('renders the header with brand, pair, theme toggle, profile, and close buttons', () => {
+  it('renders the header with brand, pair, profile, theme, and close buttons', () => {
     render(<SidepanelApp />);
 
     expect(screen.getByAltText('Coop')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pair a Device' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Toggle Theme' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close Panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open popup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /change theme/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close sidepanel' })).toBeInTheDocument();
   });
 
-  it('toggles theme when the theme button is clicked', async () => {
+  it('cycles theme when the theme button is clicked', async () => {
     const user = userEvent.setup();
 
     render(<SidepanelApp />);
 
-    const themeButton = screen.getByRole('button', { name: 'Toggle Theme' });
+    const themeButton = screen.getByRole('button', { name: /change theme/i });
     await user.click(themeButton);
 
     expect(chrome.storage.local.set).toHaveBeenCalledWith({
@@ -249,7 +249,7 @@ describe('SidepanelApp', () => {
 
     render(<SidepanelApp />);
 
-    await user.click(screen.getByRole('button', { name: 'Close Panel' }));
+    await user.click(screen.getByRole('button', { name: 'Close sidepanel' }));
 
     expect(closeSpy).toHaveBeenCalled();
     closeSpy.mockRestore();

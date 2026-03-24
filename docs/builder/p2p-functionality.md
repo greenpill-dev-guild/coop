@@ -20,6 +20,25 @@ The current sync layer combines:
 - blob relay for binary asset transport (photos, audio, files) via WebRTC data channels, running alongside but separate from CRDT sync
 - an outbox pattern for offline-first publish reliability with automatic retry
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+sequenceDiagram
+    participant Member as Member Browser
+    participant Dexie as Dexie (Local)
+    participant Yjs as Yjs Doc
+    participant Signal as Signaling Relay
+    participant Peer as Peer Browser
+    participant Archive as Filecoin
+
+    Member->>Dexie: Capture → local draft
+    Member->>Dexie: Review → approved
+    Member->>Yjs: Publish → shared state
+    Yjs->>Signal: Announce via signaling
+    Signal->>Peer: Peer discovery
+    Yjs->>Peer: WebRTC sync
+    Member->>Archive: Archive with receipt
+```
+
 ## What Syncs And What Does Not
 
 Shared coop state syncs across peers. Local draft and intake state does not become shared just

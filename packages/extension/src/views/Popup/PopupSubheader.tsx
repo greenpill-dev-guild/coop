@@ -1,4 +1,4 @@
-import { PopupTooltip } from './PopupTooltip';
+import { Tooltip } from '../shared/Tooltip';
 
 export interface PopupSubheaderTag {
   id: string;
@@ -20,12 +20,14 @@ export function PopupSubheader(props: {
   tags: PopupSubheaderTag[];
   /** When true, tags share equal width across the container */
   equalWidth?: boolean;
+  /** Preferred tooltip placement for tags with detail text */
+  tooltipPlacement?: 'above' | 'below';
 }) {
-  const { ariaLabel, tags, equalWidth } = props;
+  const { ariaLabel, tags, equalWidth, tooltipPlacement } = props;
   const containerClass = `popup-subheader${equalWidth ? ' popup-subheader--equal' : ''}`;
 
   return (
-    <div aria-label={ariaLabel} className={containerClass} role="group">
+    <fieldset aria-label={ariaLabel} className={containerClass}>
       {tags.map((tag) => {
         const toneClass = tag.tone ? ` popup-subheader__tag--${tag.tone}` : '';
         const activeClass = tag.active ? ' is-active' : '';
@@ -34,7 +36,7 @@ export function PopupSubheader(props: {
 
         if (tag.detail) {
           return (
-            <PopupTooltip content={tag.detail} key={tag.id}>
+            <Tooltip content={tag.detail} key={tag.id} placement={tooltipPlacement}>
               {({ targetProps }) => (
                 <button
                   {...targetProps}
@@ -48,7 +50,7 @@ export function PopupSubheader(props: {
                   {tag.value ? <span>{tag.value}</span> : null}
                 </button>
               )}
-            </PopupTooltip>
+            </Tooltip>
           );
         }
 
@@ -73,6 +75,6 @@ export function PopupSubheader(props: {
           </span>
         );
       })}
-    </div>
+    </fieldset>
   );
 }

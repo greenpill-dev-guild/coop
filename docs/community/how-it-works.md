@@ -8,6 +8,15 @@ slug: /how-it-works
 Coop is built around one practical loop: gather context, make sense of it locally, review it with
 humans, and then share only what should become part of a group's memory.
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%
+flowchart LR
+    Capture["Capture\nTabs, audio, photos,\nfiles, links"] --> Refine["Refine\nLocal AI analysis\nin the browser"]
+    Refine --> Review["Review\nHuman triage\nin the Roost"]
+    Review --> Share["Share\nPublish to Feed,\nsync to peers,\narchive"]
+    Share -.->|"new context"| Capture
+```
+
 ## 1. Capture
 
 Capture starts from the places communities already work:

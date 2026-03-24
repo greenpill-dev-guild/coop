@@ -118,13 +118,16 @@ export function useCoopTheme() {
     }
   }, [loading, resolvedTheme]);
 
-  const toggleTheme = () => {
-    const next: ThemePreference = resolvedTheme === 'light' ? 'dark' : 'light';
+  const setTheme = (next: ThemePreference) => {
     setPreference(next);
     if (hasChromeStorage()) {
       void chrome.storage.local.set({ [THEME_STORAGE_KEY]: next });
     }
   };
 
-  return { loading, resolvedTheme, preference, toggleTheme };
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
+  };
+
+  return { loading, resolvedTheme, preference, toggleTheme, setTheme };
 }

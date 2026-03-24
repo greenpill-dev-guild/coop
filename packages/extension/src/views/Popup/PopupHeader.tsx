@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Tooltip } from '../shared/Tooltip';
 import { PopupThemeToggle } from './PopupThemePicker';
-import { PopupTooltip } from './PopupTooltip';
 import type { PopupThemePreference } from './popup-types';
 
 function ProfileIcon() {
@@ -103,16 +103,21 @@ export function PopupHeader(props: {
       <div className="popup-header__main">
         <div className="popup-header__title-row">
           {onBack ? (
-            <button
-              aria-label="Go back"
-              className="popup-icon-button"
-              onClick={onBack}
-              type="button"
-            >
-              <span aria-hidden="true">&larr;</span>
-            </button>
+            <Tooltip content="Go back">
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label="Go back"
+                  className="popup-icon-button"
+                  onClick={onBack}
+                  type="button"
+                >
+                  <span aria-hidden="true">&larr;</span>
+                </button>
+              )}
+            </Tooltip>
           ) : (
-            <PopupTooltip content={brandTooltip}>
+            <Tooltip content={brandTooltip}>
               {({ targetProps }) => (
                 <button
                   {...targetProps}
@@ -124,7 +129,7 @@ export function PopupHeader(props: {
                   <img alt="" className="popup-mark__image" src="/icons/icon-32.png" />
                 </button>
               )}
-            </PopupTooltip>
+            </Tooltip>
           )}
           <div className="popup-header__copy">
             <strong>{title}</strong>
@@ -134,7 +139,7 @@ export function PopupHeader(props: {
         <div className="popup-header__meta">
           {showPlusButton ? (
             <div ref={popoverRef} style={{ position: 'relative' }}>
-              <PopupTooltip align="end" content="Create or join">
+              <Tooltip align="end" content="Create or join">
                 {({ targetProps }) => (
                   <button
                     {...targetProps}
@@ -150,7 +155,7 @@ export function PopupHeader(props: {
                     </span>
                   </button>
                 )}
-              </PopupTooltip>
+              </Tooltip>
               {popoverOpen ? (
                 <div className="popup-create-popover" role="menu">
                   {onCreateCoop ? (
@@ -184,7 +189,7 @@ export function PopupHeader(props: {
             </div>
           ) : null}
           {onOpenProfile ? (
-            <PopupTooltip align="end" content="Open profile">
+            <Tooltip align="end" content="Open profile">
               {({ targetProps }) => (
                 <button
                   {...targetProps}
@@ -197,10 +202,11 @@ export function PopupHeader(props: {
                   <ProfileIcon />
                 </button>
               )}
-            </PopupTooltip>
+            </Tooltip>
           ) : null}
+          <PopupThemeToggle onSetTheme={onSetTheme} themePreference={themePreference} />
           {onToggleWorkspace ? (
-            <PopupTooltip align="end" content={workspaceTooltip}>
+            <Tooltip align="end" content={workspaceTooltip}>
               {({ targetProps }) => (
                 <button
                   {...targetProps}
@@ -213,9 +219,8 @@ export function PopupHeader(props: {
                   <WorkspaceIcon />
                 </button>
               )}
-            </PopupTooltip>
+            </Tooltip>
           ) : null}
-          <PopupThemeToggle onSetTheme={onSetTheme} themePreference={themePreference} />
         </div>
       </div>
     </header>

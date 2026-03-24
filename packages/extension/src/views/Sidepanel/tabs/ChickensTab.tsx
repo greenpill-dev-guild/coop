@@ -2,6 +2,9 @@ import type { ReviewDraft, TabCandidate } from '@coop/shared';
 import { useMemo, useState } from 'react';
 import type { InferenceBridgeState } from '../../../runtime/inference-bridge';
 import type { DashboardResponse } from '../../../runtime/messages';
+import { ShareMenu } from '../../Popup/ShareMenu';
+import { Tooltip } from '../../shared/Tooltip';
+import { SidepanelSubheader } from '../SidepanelSubheader';
 import { DraftCard, SkeletonCards } from '../cards';
 import type { useDraftEditor } from '../hooks/useDraftEditor';
 import type { useTabCapture } from '../hooks/useTabCapture';
@@ -116,6 +119,7 @@ function DomainGroupSection({ group }: { group: DomainGroup }) {
               <a className="source-link" href={candidate.url} rel="noreferrer" target="_blank">
                 {candidate.url}
               </a>
+              <ShareMenu url={candidate.url} title={candidate.title} />
             </li>
           ))}
         </ul>
@@ -146,6 +150,7 @@ const TIME_OPTIONS = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'Past week' },
   { value: 'month', label: 'Past month' },
+  { value: 'year', label: 'Past year' },
 ];
 
 function formatCategoryLabel(value: string) {
@@ -220,70 +225,81 @@ export function ChickensTab({
 
   return (
     <section className="stack">
-      <div className="chickens-actions">
-        <button
-          className="primary-button chickens-roundup-btn"
-          onClick={tabCapture.runManualCapture}
-          type="button"
-        >
-          <RoundUpIcon /> Round Up
-        </button>
-        <div className="chickens-icon-actions">
-          <button
-            className="sidepanel-header__action"
-            onClick={tabCapture.runActiveTabCapture}
-            type="button"
-            aria-label="Capture Tab"
-            title="Capture Tab"
-          >
-            <CaptureTabIcon />
-          </button>
-          <button
-            className="sidepanel-header__action"
-            onClick={tabCapture.captureVisibleScreenshotAction}
-            type="button"
-            aria-label="Screenshot"
-            title="Screenshot"
-          >
-            <ScreenshotIcon />
-          </button>
-        </div>
-      </div>
-
-      <div className="chickens-filter-row" aria-label="Filters">
-        <FilterPopover
-          label="Status"
-          options={STATUS_OPTIONS}
-          value={filters.status}
-          defaultValue="all"
-          onChange={(v) => updateFilter('status', v as ChickensStatus)}
-        />
-        <FilterPopover
-          label="Time"
-          options={TIME_OPTIONS}
-          value={filters.timeRange}
-          defaultValue="all"
-          onChange={(v) => updateFilter('timeRange', v as TimeRange)}
-        />
-        {categoryOptions.length > 1 && (
+      <SidepanelSubheader>
+        <div className="sidepanel-action-row">
+          <Tooltip content="Round Up">
+            {({ targetProps }) => (
+              <button
+                {...targetProps}
+                className="popup-icon-button popup-icon-button--primary"
+                aria-label="Round Up"
+                onClick={tabCapture.runManualCapture}
+                type="button"
+              >
+                <RoundUpIcon />
+              </button>
+            )}
+          </Tooltip>
+          <Tooltip content="Capture Tab">
+            {({ targetProps }) => (
+              <button
+                {...targetProps}
+                className="popup-icon-button"
+                aria-label="Capture Tab"
+                onClick={tabCapture.runActiveTabCapture}
+                type="button"
+              >
+                <CaptureTabIcon />
+              </button>
+            )}
+          </Tooltip>
+          <Tooltip content="Screenshot">
+            {({ targetProps }) => (
+              <button
+                {...targetProps}
+                className="popup-icon-button"
+                aria-label="Screenshot"
+                onClick={tabCapture.captureVisibleScreenshotAction}
+                type="button"
+              >
+                <ScreenshotIcon />
+              </button>
+            )}
+          </Tooltip>
           <FilterPopover
-            label="Category"
-            options={categoryOptions}
-            value={filters.category}
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={filters.status}
             defaultValue="all"
-            onChange={(v) => updateFilter('category', v)}
+            onChange={(v) => updateFilter('status', v as ChickensStatus)}
           />
-        )}
-        {hasActiveFilter && (
-          <button
-            className="chickens-filter-clear"
-            onClick={() => setFilters({ status: 'all', timeRange: 'all', category: 'all' })}
-            type="button"
-          >
-            Clear
-          </button>
-        )}
-      </div>
+          <FilterPopover
+            label="Time"
+            options={TIME_OPTIONS}
+            value={filters.timeRange}
+            defaultValue="all"
+            onChange={(v) => updateFilter('timeRange', v as TimeRange)}
+          />
+          {categoryOptions.length > 1 && (
+            <FilterPopover
+              label="Category"
+              options={categoryOptions}
+              value={filters.category}
+              defaultValue="all"
+              onChange={(v) => updateFilter('category', v)}
+            />
+          )}
+          {hasActiveFilter && (
+            <button
+              className="chickens-filter-clear"
+              onClick={() => setFilters({ status: 'all', timeRange: 'all', category: 'all' })}
+              type="button"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </SidepanelSubheader>
 
       {!dashboard ? (
         <SkeletonCards count={3} label="Loading chickens" />

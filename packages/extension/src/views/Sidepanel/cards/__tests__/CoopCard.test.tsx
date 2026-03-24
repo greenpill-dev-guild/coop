@@ -155,7 +155,7 @@ function renderCard(overrides: Partial<CoopCardProps> = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — compact inline layout
 // ---------------------------------------------------------------------------
 
 describe('CoopCard', () => {
@@ -165,27 +165,31 @@ describe('CoopCard', () => {
 
   // --- Name display ---
 
-  it('renders the coop name as an h3', () => {
+  it('renders the coop name as bold text', () => {
     renderCard();
-    const heading = screen.getByRole('heading', { level: 3 });
-    expect(heading).toHaveTextContent('Test Coop');
+    const name = document.querySelector('.coop-card__name');
+    expect(name).not.toBeNull();
+    expect(name?.textContent).toBe('Test Coop');
   });
 
-  // --- Badge row ---
+  // --- Inline stats ---
 
-  it('displays space type label badge', () => {
+  it('displays space type label in meta line', () => {
     renderCard();
-    expect(screen.getByText('Community')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('Community');
   });
 
-  it('displays chain label badge', () => {
+  it('displays chain label in meta line', () => {
     renderCard();
-    expect(screen.getByText('Sepolia')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('Sepolia');
   });
 
-  it('displays member count badge', () => {
+  it('displays member count as inline text', () => {
     renderCard();
-    expect(screen.getByText('2 members')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('2 members');
   });
 
   it('shows singular member count when only 1 member', () => {
@@ -203,57 +207,36 @@ describe('CoopCard', () => {
       ],
     });
     renderCard({ coop });
-    expect(screen.getByText('1 member')).toBeInTheDocument();
+    expect(screen.getByRole('button').textContent).toContain('1 member');
   });
 
-  // --- Stats strip ---
+  // --- Stat lines ---
 
-  it('displays shared finds count', () => {
+  it('displays shared finds count inline', () => {
     renderCard();
-    const label = screen.getByText('Shared finds');
-    expect(label).toBeInTheDocument();
-    // The count lives as a sibling <strong> inside the same summary-card div
-    const card = label.closest('.summary-card');
-    expect(card).not.toBeNull();
-    const strong = card?.querySelector('strong');
-    expect(strong?.textContent).toBe('1');
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('1 shared');
   });
 
-  it('displays archive receipts count', () => {
+  it('displays saved count inline', () => {
     renderCard();
-    expect(screen.getByText('Saved')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('1 saved');
   });
 
-  it('displays pending drafts count', () => {
+  it('displays pending drafts count inline', () => {
     renderCard();
-    expect(screen.getByText('Drafts')).toBeInTheDocument();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('1 draft');
   });
 
-  // --- Role badge ---
+  // --- Last activity (relative time) ---
 
-  it('shows creator role badge for the current member', () => {
-    renderCard({ currentMemberId: 'member-1' });
-    expect(screen.getByText('creator')).toBeInTheDocument();
-  });
-
-  it('shows member role badge for a regular member', () => {
-    renderCard({ currentMemberId: 'member-2' });
-    expect(screen.getByText('member')).toBeInTheDocument();
-  });
-
-  it('does not show a role badge when currentMemberId is undefined', () => {
-    renderCard({ currentMemberId: undefined });
-    expect(screen.queryByText('creator')).not.toBeInTheDocument();
-    expect(screen.queryByText('member')).not.toBeInTheDocument();
-  });
-
-  // --- Last activity ---
-
-  it('displays the last activity timestamp', () => {
+  it('displays relative time for last activity', () => {
     renderCard();
-    // The latest timestamp should be from the archive receipt (2026-03-10T08:00:00.000Z)
-    const card = screen.getByRole('button');
-    expect(card.textContent).toContain('Last activity');
+    const button = screen.getByRole('button');
+    // The meta line should contain a relative time value (e.g. "14d")
+    expect(button.textContent).toMatch(/\d+[dhm]/);
   });
 
   // --- Click interaction ---
@@ -288,14 +271,24 @@ describe('CoopCard', () => {
   it('handles coop with no artifacts', () => {
     const coop = createMockCoop({ artifacts: [] });
     renderCard({ coop });
-    // All stat counts should be 0
-    const statValues = screen.getAllByText('0');
-    expect(statValues.length).toBeGreaterThanOrEqual(2);
+    const text = screen.getByRole('button').textContent ?? '';
+    expect(text).toContain('0 shared');
+    expect(text).toContain('0 drafts');
   });
 
   it('handles coop with no archive receipts', () => {
     const coop = createMockCoop({ archiveReceipts: [] });
     renderCard({ coop });
-    expect(screen.getByText('Saved')).toBeInTheDocument();
+    const text = screen.getByRole('button').textContent ?? '';
+    expect(text).toContain('0 saved');
+  });
+
+  // --- Chevron ---
+
+  it('renders a chevron SVG in the name row', () => {
+    renderCard();
+    const nameRow = document.querySelector('.coop-card__name-row');
+    expect(nameRow).not.toBeNull();
+    expect(nameRow?.querySelector('svg')).not.toBeNull();
   });
 });

@@ -90,6 +90,7 @@ import {
   AGENT_MAX_CONSECUTIVE_FAILURES,
   AGENT_QUALITY_STALL_THRESHOLD,
   AGENT_SETTING_KEYS,
+  AGENT_STUCK_STATE_TIMEOUT_MS,
   type AgentCycleRequest,
   type AgentCycleState,
   computeQualityTrend,
@@ -1773,15 +1774,25 @@ async function runObservationPlan(observation: AgentObservation): Promise<AgentC
 export async function runAgentCycle(options: { force?: boolean; reason?: string } = {}) {
   const cycleState = await getCycleState();
   if (cycleState.running) {
-    return {
-      processedObservationIds: [],
-      createdPlanIds: [],
-      createdDraftIds: [],
-      completedSkillRunIds: [],
-      autoExecutedActionCount: 0,
-      errors: [],
-      skillRunMetrics: [],
-    } satisfies AgentCycleResult;
+    const stale =
+      cycleState.lastStartedAt &&
+      Date.now() - new Date(cycleState.lastStartedAt).getTime() > AGENT_STUCK_STATE_TIMEOUT_MS;
+    if (stale) {
+      console.warn(
+        `[agent-runner] Stuck-state recovery: cycle has been running since ${cycleState.lastStartedAt}, resetting.`,
+      );
+      await setCycleState({ running: false });
+    } else {
+      return {
+        processedObservationIds: [],
+        createdPlanIds: [],
+        createdDraftIds: [],
+        completedSkillRunIds: [],
+        autoExecutedActionCount: 0,
+        errors: [],
+        skillRunMetrics: [],
+      } satisfies AgentCycleResult;
+    }
   }
 
   const [request, pendingObservations] = await Promise.all([

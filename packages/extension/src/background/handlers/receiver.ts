@@ -1,23 +1,28 @@
 import {
+  type InviteCode,
   type InviteType,
   type ReceiverCapture,
   type ReviewDraft,
   addInviteToState,
-  revokeInviteCode,
+  applyAddInviteToDoc,
+  applyRevokeInviteToDoc,
   assertReceiverSyncEnvelope,
   buildReceiverPairingDeepLink,
   createReceiverDraftSeed,
   createReceiverPairingPayload,
   deleteReviewDraft,
+  encodeCoopDoc,
   encodeReceiverPairingPayload,
   generateInviteCode,
   getAuthSession,
   getReceiverCapture,
   getReviewDraft,
+  hydrateCoopDoc,
   listReceiverPairings,
   nowIso,
   receiverSyncAssetToBlob,
   resolveDraftTargetCoopIdsForUi,
+  revokeInviteCode,
   saveReceiverCapture,
   saveReviewDraft,
   setActiveReceiverPairing,
@@ -48,6 +53,28 @@ import {
   requestAgentCycle,
   syncHighConfidenceDraftObservations,
 } from './agent';
+
+/**
+ * Persist an invite mutation into the Yjs doc record stored in Dexie.
+ *
+ * This ensures the CRDT history includes the invite change so that when the
+ * sidepanel (or any peer) hydrates the doc it merges cleanly. Without this,
+ * the Dexie state is updated but the Yjs doc only gets overwritten on the
+ * next full saveCoopState() call, losing CRDT-level granularity.
+ */
+async function persistInviteToYjsDoc(coopId: string, mutation: (doc: import('yjs').Doc) => void) {
+  const record = await db.coopDocs.get(coopId);
+  if (!record) return; // No persisted doc yet — saveState() will create one
+
+  const doc = hydrateCoopDoc(record.encodedState);
+  mutation(doc);
+  await db.coopDocs.put({
+    ...record,
+    encodedState: encodeCoopDoc(doc),
+    updatedAt: nowIso(),
+  });
+  doc.destroy();
+}
 
 function isIdempotentReceiverReplay(
   existing: Awaited<ReturnType<typeof getReceiverCapture>>,
@@ -149,26 +176,21 @@ export async function handleCreateInvite(
   if (!coop) {
     return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
   }
-  const invite = addInviteToState(
-    coop,
-    generateInviteCode({
-      state: coop,
-      createdBy: message.payload.createdBy,
-      type: message.payload.inviteType as InviteType,
-    }),
-  );
-  await saveState(invite);
+  const newInvite = generateInviteCode({
+    state: coop,
+    createdBy: message.payload.createdBy,
+    type: message.payload.inviteType as InviteType,
+  });
+  const nextState = addInviteToState(coop, newInvite);
+  await saveState(nextState);
+  await persistInviteToYjsDoc(coop.profile.id, (doc) => applyAddInviteToDoc(doc, newInvite));
   await refreshBadge();
   return {
     ok: true,
-    data: invite.invites[invite.invites.length - 1],
+    data: nextState.invites[nextState.invites.length - 1],
   } satisfies RuntimeActionResponse;
 }
 
-// TODO: Use applyRevokeInviteToDoc to mutate the live Yjs doc directly so
-// revocation propagates to peers even when the sidepanel is closed. Currently
-// follows the same Dexie-first pattern as handleCreateInvite — the sidepanel's
-// useSyncBindings reconciles on next render cycle via loadDashboard().
 export async function handleRevokeInvite(
   message: Extract<RuntimeRequest, { type: 'revoke-invite' }>,
 ) {
@@ -184,6 +206,9 @@ export async function handleRevokeInvite(
       revokedBy: message.payload.revokedBy,
     });
     await saveState(nextState);
+    await persistInviteToYjsDoc(coop.profile.id, (doc) =>
+      applyRevokeInviteToDoc(doc, message.payload.inviteId, message.payload.revokedBy),
+    );
     await refreshBadge();
     return { ok: true, data: null } satisfies RuntimeActionResponse;
   } catch (err) {

@@ -6,6 +6,7 @@ import type {
   StealthKeyPairRecord,
 } from '../../contracts/schema';
 import { base64ToBytes, bytesToBase64, nowIso } from '../../utils';
+import { clearDerivedKeyCache, clearWrappingSecretCache } from './db';
 import type { CoopDexie, LocalSetting } from './db';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -480,6 +481,8 @@ export async function importCryptoKeyBundle(
   // Restore wrapping secret
   if (bundle.wrappingSecret) {
     await db.settings.put({ key: WRAPPING_SECRET_KEY, value: bundle.wrappingSecret });
+    clearWrappingSecretCache(db.name);
+    clearDerivedKeyCache();
     imported.wrappingSecret = 1;
   }
 

@@ -27,8 +27,31 @@ Systematic codebase analysis: quality audit, dead code detection, architectural 
 |---------|--------|
 | `/audit` | Full codebase audit |
 | `/audit [package]` | Targeted package audit |
+| `/audit --team` | Parallel team audit (worktree-isolated agents) |
 | Before refactoring | Identify tech debt |
 | Periodic assessment | Codebase health check |
+
+## Scope Confirmation (REQUIRED)
+
+Before starting analysis, echo back the scope to the user:
+
+```
+Audit scope: [package or "full codebase"]
+Mode: [single-agent | team]
+Focus: [general health | specific concern if mentioned]
+Previous audit: [date or "none found"]
+
+Proceed? [y/n]
+```
+
+This prevents misunderstood requests — the #1 source of wasted audit sessions.
+
+## Stale State Warning
+
+**IMPORTANT**: Audit findings can be invalidated by concurrent changes. Mitigations:
+- In **team mode**, use `isolation: worktree` for each auditor agent. A clean snapshot eliminates stale-state false positives.
+- In **single-agent mode**, re-read every flagged file in Part 5 before reporting. If the file has changed since you first read it, re-evaluate the finding.
+- **Never report a finding from cached reads** — always verify against current file state.
 
 ## Progress Tracking (REQUIRED)
 

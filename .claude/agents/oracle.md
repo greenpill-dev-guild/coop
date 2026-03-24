@@ -14,6 +14,7 @@ disallowedTools:
   - Edit
 permissionMode: plan
 memory: project
+effort: max
 maxTurns: 30
 ---
 
@@ -38,6 +39,8 @@ Key documentation to consult:
 - `docs/testing-and-validation.md` — Validation suites
 
 Key domains: Yjs/CRDTs, Safe/ERC-4337, Storacha/Filecoin, MV3 extension APIs, passkey/WebAuthn.
+
+Update your agent memory as you discover codepaths, patterns, library locations, and key architectural decisions. This builds up institutional knowledge across conversations.
 
 ## Output Contract
 

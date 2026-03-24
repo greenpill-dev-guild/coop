@@ -2,10 +2,12 @@ import {
   type CoopSharedState,
   type ReceiverCapture,
   type TabCandidate,
+  addOutboxEntry,
   buildReadablePageExtract,
   canonicalizeUrl,
   compressImage,
   createId,
+  createOutboxEntry,
   createReceiverCapture,
   findExistingExtractByTextHash,
   findRecentCandidateByUrlHash,
@@ -181,6 +183,22 @@ export async function runCaptureForTabs(
       extractIds: newExtractIds,
       eligibleCoopIds: coops.map((coop) => coop.profile.id),
     });
+
+    // Track each capture observation per coop in the outbox for sync confirmation (best-effort)
+    const outboxEntries = coops.flatMap((coop) =>
+      newExtractIds.map((extractId) =>
+        addOutboxEntry(
+          db,
+          createOutboxEntry({
+            coopId: coop.profile.id,
+            type: 'state-update',
+            entityKey: extractId,
+          }),
+        ).catch((err) => console.warn('[outbox] failed to track entry:', err)),
+      ),
+    );
+    await Promise.all(outboxEntries);
+
     if (options.drainAgent && newExtractIds.length > 0) {
       await drainAgentCycles({
         reason: 'capture-complete',

@@ -115,7 +115,7 @@ function extractRemoteExecutableUrls(contents: string) {
         matches.push(parsed.href);
       }
     } catch {
-      continue;
+      // URL parse failed — skip this match
     }
   }
 

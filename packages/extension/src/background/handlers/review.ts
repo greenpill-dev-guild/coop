@@ -1,7 +1,9 @@
 import {
   type CoopSharedState,
   type ReviewDraft,
+  addOutboxEntry,
   createAgentMemory,
+  createOutboxEntry,
   deleteReviewDraft,
   getAuthSession,
   getReviewDraft,
@@ -86,6 +88,21 @@ export async function publishDraftWithContext(input: {
     await saveState(state);
   }
   await deleteReviewDraft(db, validation.draft.id);
+
+  // Track each published artifact in the outbox for sync confirmation (best-effort)
+  await Promise.all(
+    artifacts.map((artifact) =>
+      addOutboxEntry(
+        db,
+        createOutboxEntry({
+          coopId: artifact.targetCoopId,
+          type: 'artifact-publish',
+          entityKey: artifact.id,
+        }),
+      ).catch((err) => console.warn('[outbox] failed to track entry:', err)),
+    ),
+  );
+
   if (validation.draft.provenance.type === 'tab') {
     for (const coopId of validation.targetActors.map((target) => target.coopId)) {
       const routing = await getTabRoutingByExtractAndCoop(db, validation.draft.extractId, coopId);

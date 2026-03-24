@@ -14,9 +14,9 @@ function useNavbarItems(): NavbarItemConfig[] {
 function NavbarItems({ items }: { items: NavbarItemConfig[] }) {
   return (
     <>
-      {items.map((item, index) => (
+      {items.map((item) => (
         <ErrorCauseBoundary
-          key={index}
+          key={item.label ?? item.to ?? item.href}
           onError={(error) =>
             new Error(
               `A theme navbar item failed to render.

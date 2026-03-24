@@ -252,9 +252,9 @@ for (const module of [modules.validator, modules.fallback]) {
     }
   } catch (error) {
     console.log(
-      `[probe:session-key-live] ERC-7579 module install skipped — Safe lacks 7579 adapter. ` +
-        `This is expected for standard Safe v1.4.1. On-chain session execution requires ` +
-        `deploying the Safe with erc7579LaunchpadAddress.`,
+      '[probe:session-key-live] ERC-7579 module install skipped — Safe lacks 7579 adapter. ' +
+        'This is expected for standard Safe v1.4.1. On-chain session execution requires ' +
+        'deploying the Safe with erc7579LaunchpadAddress.',
     );
     moduleInstallSuccess = false;
     break;

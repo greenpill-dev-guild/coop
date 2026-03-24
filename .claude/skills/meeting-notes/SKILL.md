@@ -1,6 +1,7 @@
 ---
 name: meeting-notes
 description: Use when the user pastes a meeting transcript or notes and wants actionable items extracted as GitHub issues
+disable-model-invocation: true
 argument-hint: "[paste transcript or provide file path]"
 version: "1.0.0"
 status: active
