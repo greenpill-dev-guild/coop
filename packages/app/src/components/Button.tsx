@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 type ButtonProps = {
   variant: 'primary' | 'secondary';
   size?: 'default' | 'small';
+  disabled?: boolean;
   children: ReactNode;
   onClick?: () => void;
   type?: 'button' | 'submit';
@@ -12,6 +13,7 @@ type ButtonProps = {
 export function Button({
   variant,
   size = 'default',
+  disabled,
   children,
   onClick,
   type = 'button',
@@ -27,7 +29,7 @@ export function Button({
     .join(' ');
 
   return (
-    <button className={classes} onClick={onClick} type={type}>
+    <button className={classes} onClick={onClick} type={type} disabled={disabled}>
       {children}
     </button>
   );

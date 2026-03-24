@@ -1648,9 +1648,12 @@ pre {
 .nest-card,
 .footer-card {
   border: 1px solid var(--coop-line);
+  border-top: 1px solid color-mix(in srgb, var(--coop-green) 22%, transparent);
   border-radius: var(--coop-radius-card-xl);
   background: rgba(255, 252, 249, 0.8);
-  box-shadow: var(--coop-shadow);
+  box-shadow:
+    0 2px 6px rgba(79, 46, 31, 0.06),
+    0 16px 40px rgba(79, 46, 31, 0.1);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
@@ -1713,7 +1716,11 @@ pre {
   border-radius: var(--coop-radius-pill);
   padding: 0.9rem 1.2rem;
   border: 1px solid transparent;
-  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+  transition:
+    transform var(--coop-ease),
+    box-shadow var(--coop-ease),
+    background var(--coop-ease),
+    border-color var(--coop-ease);
   text-decoration: none;
   cursor: pointer;
 }
@@ -1725,18 +1732,29 @@ pre {
 .button:disabled {
   cursor: not-allowed;
   transform: none;
-  opacity: 0.55;
+  opacity: 0.45;
+  filter: grayscale(0.4);
+  pointer-events: none;
 }
 
 .button-primary {
-  background: var(--coop-brown);
+  background: linear-gradient(180deg, var(--coop-brown-soft) 0%, var(--coop-brown) 100%);
   color: white;
+  box-shadow: 0 2px 6px rgba(79, 46, 31, 0.22);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button-primary:not(:disabled):hover {
+    box-shadow: 0 4px 12px rgba(79, 46, 31, 0.3);
+  }
 }
 
 .button-secondary {
   background: rgba(255, 255, 255, 0.68);
   border-color: var(--coop-line);
   color: var(--coop-brown);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .button-small {
@@ -2689,6 +2707,10 @@ html.has-receiver {
 
 .receiver-card {
   padding: 1.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--coop-orange) 18%, transparent);
+  box-shadow:
+    0 1px 4px rgba(79, 46, 31, 0.06),
+    0 8px 24px rgba(79, 46, 31, 0.08);
 }
 
 .receiver-form {
@@ -2836,6 +2858,7 @@ html.has-receiver {
 .sync-pill {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   width: fit-content;
   border-radius: var(--coop-radius-pill);
   padding: 0.34rem 0.74rem;
@@ -2858,6 +2881,17 @@ html.has-receiver {
   color: #9f5a00;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .sync-pill.is-queued {
+    animation: sync-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .sync-pill.is-synced {
   background: var(--coop-green-16);
   color: var(--coop-green);
@@ -2873,16 +2907,40 @@ button.sync-pill {
   cursor: pointer;
 }
 
+.sync-pill svg {
+  flex-shrink: 0;
+}
+
 .sync-pill-popover {
   margin: 0;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--coop-line);
   border-radius: var(--coop-radius-chip);
   background: rgba(255, 252, 249, 0.96);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   font-size: 0.75rem;
   color: var(--coop-brown-soft);
   box-shadow: var(--coop-shadow-sm);
+  opacity: 0;
+  transition: opacity var(--coop-ease);
+}
+
+.sync-pill-popover:popover-open {
+  opacity: 1;
+}
+
+.sync-pill-popover-arrow {
+  position: absolute;
+  top: -5px;
+  left: 1rem;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border: 1px solid var(--coop-line);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
 }
 
 .sync-pill-popover::backdrop {
@@ -2962,18 +3020,26 @@ audio {
   }
 }
 
+/* ── Card entrance ── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .card-enter {
+    animation: landing-rise-in 340ms ease both;
+  }
+}
+
 /* ── Skeleton loading ── */
 
 .skeleton {
   border-radius: var(--coop-radius-card);
   background: linear-gradient(
     90deg,
-    var(--coop-brown-6) 25%,
-    var(--coop-brown-12) 50%,
-    var(--coop-brown-6) 75%
+    rgba(252, 245, 239, 0.6) 25%,
+    rgba(255, 252, 249, 0.9) 50%,
+    rgba(252, 245, 239, 0.6) 75%
   );
   background-size: 200% 100%;
-  animation: skeleton-pulse 1.5s ease infinite;
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
 }
 
 .skeleton-card {
@@ -2992,8 +3058,15 @@ audio {
   border-radius: var(--coop-radius-xs);
 }
 
+.skeleton-text + .skeleton-text {
+  margin-top: 0.5rem;
+}
+
 @keyframes skeleton-pulse {
-  to {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
     background-position: -200% 0;
   }
 }
@@ -3001,7 +3074,7 @@ audio {
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
-    background: var(--coop-brown-8);
+    background: var(--coop-brown-6);
   }
 }
 
@@ -3210,7 +3283,8 @@ audio {
 
 .button:active {
   filter: brightness(0.92);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(79, 46, 31, 0.12);
+  transform: translateY(0);
 }
 
 .nest-item-card:active {
@@ -3827,5 +3901,15 @@ audio {
 
   .sync-pill-popover {
     background: rgba(30, 24, 20, 0.96);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(42, 32, 27, 0.6) 25%,
+      rgba(52, 40, 34, 0.8) 50%,
+      rgba(42, 32, 27, 0.6) 75%
+    );
+    background-size: 200% 100%;
   }
 }
