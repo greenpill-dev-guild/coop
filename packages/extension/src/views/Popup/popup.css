@@ -109,6 +109,13 @@ button:focus-visible,
   -ms-overflow-style: none;
 }
 
+.popup-tooltip-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--coop-z-tooltip);
+}
+
 .popup-toast-layer {
   position: absolute;
   top: 58px;
@@ -170,7 +177,7 @@ button:focus-visible,
   gap: 4px;
 }
 
-.popup-header__meta .coop-tooltip {
+.popup-header__meta .popup-tooltip {
   display: inline-flex;
 }
 
@@ -243,6 +250,51 @@ button:focus-visible,
   font-size: 0.76rem;
 }
 
+.popup-tooltip {
+  position: relative;
+  min-width: 0;
+}
+
+.popup-tooltip__bubble {
+  position: absolute;
+  z-index: var(--coop-z-sticky);
+  width: max-content;
+  max-width: min(220px, calc(100% - 16px));
+  border-radius: var(--coop-radius-icon);
+  border: 1px solid var(--coop-border);
+  background: color-mix(in srgb, var(--coop-panel) 96%, #000000 4%);
+  color: var(--coop-text);
+  box-shadow: 0 12px 24px rgba(17, 11, 8, 0.18);
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.popup-tooltip__bubble.is-open {
+  opacity: 1;
+}
+
+.popup-tooltip__bubble--above {
+  transform: translateY(4px);
+}
+
+.popup-tooltip__bubble--above.is-open {
+  transform: translateY(0);
+}
+
+.popup-tooltip__bubble--below {
+  transform: translateY(-4px);
+}
+
+.popup-tooltip__bubble--below.is-open {
+  transform: translateY(0);
+}
+
 .popup-screen {
   display: grid;
   gap: 12px;
@@ -253,7 +305,6 @@ button:focus-visible,
 .popup-screen--fill {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-height: 100%;
 }
 
@@ -266,6 +317,13 @@ button:focus-visible,
 .popup-screen--home {
   min-height: 100%;
   grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.popup-screen--home-aggregate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
 }
 
 .popup-screen--onboarding {
@@ -331,11 +389,8 @@ button:focus-visible,
   align-items: center;
   gap: 6px;
   height: 36px;
-  min-height: 36px;
-  max-height: 36px;
   flex-shrink: 0;
   overflow-x: auto;
-  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -344,12 +399,13 @@ button:focus-visible,
   display: none;
 }
 
-.popup-subheader--equal > * {
-  flex: 1;
-  min-width: 0;
+.popup-subheader--equal {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow-x: visible;
 }
 
-.popup-subheader--equal .coop-tooltip {
+.popup-subheader--equal .popup-tooltip {
   display: flex;
   min-width: 0;
 }
@@ -364,15 +420,13 @@ button:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 26px;
   border: 1px solid var(--coop-border);
   border-radius: var(--coop-radius-pill);
   background: var(--coop-field);
   color: var(--coop-text-soft);
-  padding: 0 10px;
+  padding: 5px 10px;
   font-size: 0.76rem;
   font-weight: 700;
-  line-height: 1;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
@@ -404,14 +458,6 @@ button:focus-visible,
 
 .popup-subheader__tag strong {
   font-weight: 700;
-}
-
-/* Fieldset border reset — these wrap <fieldset> elements whose default border became visible */
-.popup-choice-group,
-.popup-subheader {
-  border: none;
-  padding: 0;
-  margin: 0;
 }
 
 /* Legacy choice group — used in profile settings */
@@ -894,11 +940,11 @@ button:focus-visible,
   height: 20px;
 }
 
-.popup-stat-grid > .coop-tooltip {
+.popup-stat-grid > .popup-tooltip {
   min-width: 0;
 }
 
-.popup-stat-grid > .coop-tooltip .popup-stat {
+.popup-stat-grid > .popup-tooltip .popup-stat {
   height: 100%;
 }
 
@@ -1329,8 +1375,8 @@ button:focus-visible,
 
 .popup-dialog__header {
   display: grid;
-  gap: 8px;
-  padding: 10px 10px 8px;
+  gap: 10px;
+  padding: 12px 12px 10px;
   border-bottom: 1px solid var(--coop-border);
 }
 
@@ -1359,14 +1405,14 @@ button:focus-visible,
   overflow-y: auto;
   display: grid;
   gap: 10px;
-  padding: 10px;
+  padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--coop-scrollbar) transparent;
 }
 
 .popup-dialog__section {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .popup-dialog__section strong {
@@ -1421,7 +1467,7 @@ button:focus-visible,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 8px 12px 12px;
   border-top: 1px solid var(--coop-border);
   gap: var(--coop-space-sm);
 }
@@ -1755,6 +1801,137 @@ body::-webkit-scrollbar,
   color: var(--coop-text-soft);
   font-size: 0.82rem;
   opacity: 0.7;
+}
+
+/* ── Chicken yard entry animation ── */
+
+@keyframes chicken-enter {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.popup-yard__chicken {
+  animation: chicken-enter 400ms ease-out both;
+}
+
+/* ── List item entry animation ── */
+
+@keyframes list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-draft-row,
+.popup-activity-row {
+  animation: list-item-enter 250ms ease-out both;
+}
+
+/* ── Recording UI ── */
+
+.popup-recording {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.popup-recording__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.popup-recording__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--coop-red, #e53935);
+  animation: recording-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.popup-recording__timer {
+  font-variant-numeric: tabular-nums;
+  color: var(--coop-text-primary, inherit);
+}
+
+.popup-recording__hint {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.popup-recording__actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.popup-recording__actions .popup-primary-action {
+  flex: 1;
+}
+
+.popup-recording__actions .popup-handoff-button {
+  flex: 0 0 auto;
+}
+
+/* Red accent for cancel recording button */
+.popup-handoff-button[data-accent="red"] {
+  background: rgba(229, 57, 53, 0.12);
+  color: #e53935;
+  border-color: rgba(229, 57, 53, 0.18);
+}
+
+.popup-handoff-button[data-accent="red"]:hover {
+  background: rgba(229, 57, 53, 0.2);
+  border-color: rgba(229, 57, 53, 0.35);
+}
+
+[data-theme="dark"] .popup-handoff-button[data-accent="red"] {
+  background: rgba(239, 83, 80, 0.16);
+  color: #ef5350;
+  border-color: rgba(239, 83, 80, 0.25);
+}
+
+/* Disabled state for handoff buttons */
+.popup-handoff-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.popup-handoff-button:disabled:hover {
+  transform: none;
+  border-color: var(--coop-border);
 }
 
 @media (prefers-reduced-motion: reduce) {

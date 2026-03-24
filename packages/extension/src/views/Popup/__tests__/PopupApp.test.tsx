@@ -195,7 +195,7 @@ function makeDashboard(overrides: Record<string, unknown> = {}) {
 describe('PopupApp', () => {
   beforeEach(() => {
     mockSendRuntimeMessage.mockReset();
-    mockPlayCoopSound.mockReset();
+    mockPlayCoopSound.mockReset().mockResolvedValue(undefined);
     mockPlayRandomChickenSound.mockReset();
 
     Object.defineProperty(window, 'matchMedia', {
@@ -383,7 +383,7 @@ describe('PopupApp', () => {
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Fresh note' } });
     await user.click(screen.getByRole('button', { name: 'Save note' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Note hatched into your roost.');
     expect(screen.getByRole('button', { name: 'Audio' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Files' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Social' })).not.toBeInTheDocument();
@@ -404,7 +404,7 @@ describe('PopupApp', () => {
 
     // Save via button
     await user.click(screen.getByRole('button', { name: 'Save note' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Note saved locally.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Note hatched into your roost.');
   });
 
   it('triggers the random chicken sound from the header mark', async () => {
@@ -548,7 +548,7 @@ describe('PopupApp', () => {
     const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
     const chickensFooterTab = chickensTabButtons.find((btn) =>
       btn.classList.contains('popup-footer-nav__button'),
-    ) as HTMLElement;
+    )!;
     await user.click(chickensFooterTab);
 
     expect(await screen.findByText('River restoration lead')).toBeInTheDocument();
@@ -603,7 +603,7 @@ describe('PopupApp', () => {
     const chickensTabButtons = screen.getAllByRole('button', { name: /Chickens/i });
     const chickensFooterTab = chickensTabButtons.find((btn) =>
       btn.classList.contains('popup-footer-nav__button'),
-    ) as HTMLElement;
+    )!;
     await user.click(chickensFooterTab);
     await user.click(await screen.findByRole('button', { name: 'Delta Field Coop' }));
     await user.click(screen.getByRole('button', { name: 'Review' }));

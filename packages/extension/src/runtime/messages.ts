@@ -197,6 +197,30 @@ export type RuntimeRequest =
   | { type: 'manual-capture' }
   | { type: 'capture-active-tab' }
   | { type: 'capture-visible-screenshot' }
+  | {
+      type: 'capture-file';
+      payload: {
+        fileName: string;
+        mimeType: string;
+        dataBase64: string;
+        byteSize: number;
+      };
+    }
+  | {
+      type: 'create-note-draft';
+      payload: {
+        text: string;
+      };
+    }
+  | {
+      type: 'capture-audio';
+      payload: {
+        dataBase64: string;
+        mimeType: string;
+        durationSeconds: number;
+        fileName: string;
+      };
+    }
   | { type: 'clear-sensitive-local-data' }
   | { type: 'get-ui-preferences' }
   | { type: 'set-ui-preferences'; payload: UiPreferences }

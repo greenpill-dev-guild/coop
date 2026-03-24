@@ -28,6 +28,8 @@ import type {
 import { usePersistedPopupState } from './usePersistedPopupState';
 import { usePopupDashboard } from './usePopupDashboard';
 import { usePopupNavigation } from './usePopupNavigation';
+import type { PopupRecordingState } from './usePopupRecording';
+import { usePopupRecording } from './usePopupRecording';
 import { usePopupTheme } from './usePopupTheme';
 
 type PopupSidepanelApi = typeof chrome.sidePanel & {
@@ -88,6 +90,7 @@ export interface PopupOrchestrationState {
   createSubmitting: boolean;
   joinSubmitting: boolean;
   draftSaving: boolean;
+  isCapturing: boolean;
 
   // Toast message
   message: string;
@@ -105,7 +108,7 @@ export interface PopupOrchestrationState {
   handleShareSelectedDraft: () => Promise<void>;
   handleMarkDraftReady: (draft: ReviewDraft) => Promise<void>;
   handleShareDraft: (draft: ReviewDraft) => Promise<void>;
-  handleSaveNote: () => void;
+  handleSaveNote: () => Promise<void>;
   handlePasteNote: () => Promise<void>;
   dismissFeedArtifact: (artifactId: string) => void;
   openCreateFlow: () => void;
@@ -123,6 +126,9 @@ export interface PopupOrchestrationState {
 
   // Capture actions
   captureActions: ReturnType<typeof useCaptureActions>;
+
+  // Recording
+  recording: PopupRecordingState;
 
   // Profile
   accountLabel: string;
@@ -197,7 +203,22 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     loadDashboard,
     afterManualCapture: () => navigation.navigate('drafts'),
     afterActiveTabCapture: () => navigation.navigate('drafts'),
+    soundPreferences: dashboard?.soundPreferences,
   });
+
+  const recording = usePopupRecording({
+    captureAudioBlob: captureActions.captureAudioBlob,
+    setMessage,
+  });
+
+  // Show partial save message from a previous recording session
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only run when partialSaveMessage changes
+  useEffect(() => {
+    if (recording.partialSaveMessage) {
+      setMessage(recording.partialSaveMessage);
+      recording.clearPartialSaveMessage();
+    }
+  }, [recording.partialSaveMessage]);
 
   const coopActions = useCoopActions({
     setMessage,
@@ -653,13 +674,12 @@ export function usePopupOrchestration(): PopupOrchestrationState {
 
   // ── Note handlers ──
 
-  function handleSaveNote() {
-    homeNote.setState((current) => ({
-      ...current,
-      text: noteDraftText,
-      updatedAt: new Date().toISOString(),
-    }));
-    setMessage(noteDraftText.trim() ? 'Note saved locally.' : 'Note cleared.');
+  async function handleSaveNote() {
+    const success = await captureActions.createNoteDraft(noteDraftText);
+    if (success) {
+      setNoteDraftText('');
+      homeNote.setState({ text: '' });
+    }
   }
 
   async function handlePasteNote() {
@@ -750,29 +770,6 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     const draftCount = dashboard ? visibleDrafts.length : (snapshot?.draftCount ?? 0);
     const lastCaptureAt = dashboard?.summary?.lastCaptureAt ?? snapshot?.lastCaptureAt;
 
-    // Chickens tone: empty roost or getting crowded
-    const chickenTone: 'ok' | 'warning' =
-      draftCount === 0 ? 'warning' : draftCount >= 10 ? 'warning' : 'ok';
-    const chickenDetail =
-      draftCount === 0
-        ? 'Your roost is empty — capture some tabs to get started.'
-        : draftCount >= 10
-          ? `${draftCount} drafts piling up — time to review or share.`
-          : `${draftCount} draft${draftCount === 1 ? '' : 's'} in your roost.`;
-
-    // Roundup tone: never captured or stale (>24h)
-    const captureElapsed = lastCaptureAt
-      ? Date.now() - new Date(lastCaptureAt).getTime()
-      : undefined;
-    const roundupTone: 'ok' | 'warning' =
-      captureElapsed === undefined ? 'warning' : captureElapsed > 86_400_000 ? 'warning' : 'ok';
-    const roundupDetail =
-      captureElapsed === undefined
-        ? 'No captures yet — try rounding up some tabs.'
-        : captureElapsed > 86_400_000
-          ? "It's been a while — round up your loose chickens."
-          : 'Last roundup was recent. Looking good!';
-
     return [
       {
         id: 'sync',
@@ -785,15 +782,13 @@ export function usePopupOrchestration(): PopupOrchestrationState {
         id: 'drafts',
         label: 'Chickens',
         value: String(draftCount),
-        tone: chickenTone,
-        detail: chickenDetail,
+        tone: 'ok' as const,
       },
       {
         id: 'roundup',
         label: 'Roundup',
         value: formatRelativeTime(lastCaptureAt),
-        tone: roundupTone,
-        detail: roundupDetail,
+        tone: 'ok' as const,
       },
     ];
   }, [
@@ -890,6 +885,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     createSubmitting,
     joinSubmitting,
     draftSaving,
+    isCapturing: captureActions.isCapturing,
     message,
     showProfileAction,
     showWorkspaceAction,
@@ -917,6 +913,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     updateSound,
     playBrandSound,
     captureActions,
+    recording,
     accountLabel,
     profileCoops,
     onCopyInviteCode,

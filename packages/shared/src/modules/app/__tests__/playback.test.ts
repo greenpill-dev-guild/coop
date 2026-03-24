@@ -128,13 +128,14 @@ describe('shared playback module', () => {
     expect(createdContexts).toHaveLength(0);
   }, 30_000);
 
-  it('exports soundFileMap with all five events', async () => {
+  it('exports soundFileMap with all six events', async () => {
     const { soundFileMap } = await import('../playback');
     expect(Object.keys(soundFileMap)).toEqual([
       'coop-created',
       'artifact-published',
       'review-digest-ready',
       'action-awaiting-review',
+      'capture-complete',
       'sound-test',
     ]);
     for (const entry of Object.values(soundFileMap)) {

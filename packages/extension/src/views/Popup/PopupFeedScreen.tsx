@@ -1,4 +1,3 @@
-import { Tooltip } from '../shared/Tooltip';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
 import type { PopupFeedArtifactItem } from './popup-types';
@@ -25,8 +24,8 @@ export function PopupFeedScreen(props: {
       <div className="popup-list-grow">
         {artifacts.length > 0 ? (
           <ul className="popup-list-reset popup-activity-list popup-activity-list--stretch">
-            {artifacts.map((artifact) => (
-              <li key={artifact.id}>
+            {artifacts.map((artifact, index) => (
+              <li key={artifact.id} style={{ animationDelay: `${index * 40}ms` }}>
                 <button
                   className="popup-activity-row popup-activity-row--button"
                   onClick={() => onOpenArtifact(artifact.id)}
@@ -45,19 +44,14 @@ export function PopupFeedScreen(props: {
                     </span>
                   </div>
                 </button>
-                <Tooltip content="Dismiss">
-                  {({ targetProps }) => (
-                    <button
-                      {...targetProps}
-                      className="popup-feed-dismiss"
-                      onClick={() => onDismissArtifact(artifact.id)}
-                      type="button"
-                      aria-label="Dismiss"
-                    >
-                      &times;
-                    </button>
-                  )}
-                </Tooltip>
+                <button
+                  className="popup-feed-dismiss"
+                  onClick={() => onDismissArtifact(artifact.id)}
+                  type="button"
+                  aria-label="Dismiss"
+                >
+                  &times;
+                </button>
               </li>
             ))}
           </ul>

@@ -20,13 +20,13 @@ function makeDraft(overrides: Partial<PopupDraftListItem> = {}): PopupDraftListI
 describe('PopupDraftListScreen', () => {
   afterEach(cleanup);
 
-  it('renders a ShareMenu trigger (share-menu class) for each draft row with a sourceUrl', () => {
+  it('renders Share button for ready drafts and Mark Ready for candidate drafts', () => {
     const drafts = [
-      makeDraft({ id: 'draft-1', sourceUrl: 'https://example.com/a' }),
-      makeDraft({ id: 'draft-2', sourceUrl: 'https://example.com/b' }),
+      makeDraft({ id: 'draft-1', workflowStage: 'ready' }),
+      makeDraft({ id: 'draft-2', workflowStage: 'candidate' }),
     ];
 
-    const { container } = render(
+    render(
       <PopupDraftListScreen
         drafts={drafts}
         filterTags={[]}
@@ -37,17 +37,14 @@ describe('PopupDraftListScreen', () => {
       />,
     );
 
-    // ShareMenu renders a container with class "share-menu"
-    const shareMenus = container.querySelectorAll('.share-menu');
-    expect(shareMenus.length).toBe(2);
+    expect(screen.getByText('Share')).toBeDefined();
+    expect(screen.getByText('Mark Ready')).toBeDefined();
   });
 
-  it('does not render a ShareMenu for drafts without a sourceUrl', () => {
-    const drafts = [makeDraft({ id: 'draft-no-url', sourceUrl: undefined })];
-
-    const { container } = render(
+  it('shows empty state with Roundup button when no drafts', () => {
+    render(
       <PopupDraftListScreen
-        drafts={drafts}
+        drafts={[]}
         filterTags={[]}
         onOpenDraft={vi.fn()}
         onMarkReady={vi.fn()}
@@ -56,7 +53,7 @@ describe('PopupDraftListScreen', () => {
       />,
     );
 
-    const shareMenus = container.querySelectorAll('.share-menu');
-    expect(shareMenus.length).toBe(0);
+    expect(screen.getByText('No chickens here yet.')).toBeDefined();
+    expect(screen.getByText('Roundup Chickens')).toBeDefined();
   });
 });

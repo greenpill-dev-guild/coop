@@ -65,6 +65,12 @@ export function selectAggregateVisibleDrafts(dashboard: DashboardResponse | null
 
   const memberContexts = selectAllMemberContexts(dashboard);
 
+  // When no member contexts resolve (e.g. no passkey auth), show all drafts
+  // since there is no privacy boundary to enforce.
+  if (memberContexts.length === 0) {
+    return dashboard.drafts;
+  }
+
   return dashboard.drafts.filter((draft) => {
     if (draft.provenance.type !== 'receiver') {
       return true;

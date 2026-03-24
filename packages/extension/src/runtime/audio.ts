@@ -12,6 +12,7 @@ const soundFiles: Record<SoundEvent, { src: string; volume: number }> = {
   'artifact-published': { src: '/audio/coop-soft-cluck.wav', volume: 0.62 },
   'review-digest-ready': { src: '/audio/coop-soft-cluck.wav', volume: 0.64 },
   'action-awaiting-review': { src: '/audio/coop-rooster-call.wav', volume: 0.68 },
+  'capture-complete': { src: '/audio/coop-soft-cluck.wav', volume: 0.55 },
   'sound-test': { src: '/audio/coop-squeaky-test.wav', volume: 0.68 },
 };
 

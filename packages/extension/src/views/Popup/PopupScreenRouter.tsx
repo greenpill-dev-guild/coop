@@ -58,6 +58,7 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
             ...state.resolveDraftValue(draft),
           }))}
           filterTags={state.draftFilterTags}
+          isCapturing={state.isCapturing}
           onMarkReady={state.handleMarkDraftReady}
           onOpenDraft={state.navigation.openDraft}
           onRoundUp={() => void state.captureActions.runManualCapture()}
@@ -126,15 +127,20 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
   return (
     <ErrorBoundary>
       <PopupHomeScreen
+        elapsedSeconds={state.recording.elapsedSeconds}
+        isCapturing={state.isCapturing}
+        isRecording={state.recording.isRecording}
         noteText={state.noteDraftText}
+        onCancelRecording={state.recording.cancelRecording}
         onCaptureTab={() => void state.captureActions.runActiveTabCapture()}
         onChangeNote={state.setNoteDraftText}
-        onOpenAudio={() => void state.openWorkspace({ targetCoopId: state.workspaceTargetCoopId })}
-        onOpenFiles={() => void state.openWorkspace({ targetCoopId: state.workspaceTargetCoopId })}
+        onFileSelected={(file: File) => void state.captureActions.captureFile(file)}
         onPaste={() => void state.handlePasteNote()}
         onRoundUp={() => void state.captureActions.runManualCapture()}
-        onSaveNote={state.handleSaveNote}
+        onSaveNote={() => void state.handleSaveNote()}
         onScreenshot={() => void state.captureActions.captureVisibleScreenshot()}
+        onStartRecording={() => void state.recording.startRecording()}
+        onStopRecording={state.recording.stopRecording}
         statusItems={state.homeStatusItems}
         yardItems={state.yardItems}
       />

@@ -1,7 +1,6 @@
 import type { ReviewDraft } from '@coop/shared';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
-import { ShareMenu } from './ShareMenu';
 import type { PopupDraftListItem } from './popup-types';
 
 function formatCategoryLabel(value: string) {
@@ -18,8 +17,9 @@ export function PopupDraftListScreen(props: {
   onMarkReady: (draft: ReviewDraft) => void | Promise<void>;
   onShare: (draft: ReviewDraft) => void | Promise<void>;
   onRoundUp: () => void;
+  isCapturing?: boolean;
 }) {
-  const { drafts, filterTags, onOpenDraft, onMarkReady, onShare, onRoundUp } = props;
+  const { drafts, filterTags, onOpenDraft, onMarkReady, onShare, onRoundUp, isCapturing } = props;
 
   return (
     <section className="popup-screen popup-screen--fill">
@@ -28,8 +28,12 @@ export function PopupDraftListScreen(props: {
       <div className="popup-list-grow">
         {drafts.length > 0 ? (
           <ul className="popup-list-reset popup-draft-list popup-activity-list--stretch">
-            {drafts.map((draft) => (
-              <li className="popup-draft-row" key={draft.id}>
+            {drafts.map((draft, index) => (
+              <li
+                className="popup-draft-row"
+                key={draft.id}
+                style={{ animationDelay: `${index * 40}ms` }}
+              >
                 <div className="popup-draft-row__copy">
                   <strong>{draft.title}</strong>
                   <span>{draft.summary}</span>
@@ -65,9 +69,6 @@ export function PopupDraftListScreen(props: {
                       Mark Ready
                     </button>
                   )}
-                  {draft.sourceUrl ? (
-                    <ShareMenu url={draft.sourceUrl} title={draft.title} summary={draft.summary} />
-                  ) : null}
                 </div>
               </li>
             ))}
@@ -76,7 +77,12 @@ export function PopupDraftListScreen(props: {
           <div className="popup-empty-state popup-empty-state--illustrated popup-empty-state--centered">
             <PopupOnboardingHero variant="empty-meadow" />
             <p>No chickens here yet.</p>
-            <button className="popup-primary-action" onClick={onRoundUp} type="button">
+            <button
+              className="popup-primary-action"
+              disabled={isCapturing}
+              onClick={onRoundUp}
+              type="button"
+            >
               Roundup Chickens
             </button>
           </div>

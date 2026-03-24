@@ -200,6 +200,7 @@ function ChickenYard({
               top: `${pos.y}%`,
               width: item.type === 'artifact' ? chickenSize * 0.75 : chickenSize,
               height: item.type === 'artifact' ? chickenSize * 0.75 : chickenSize,
+              animationDelay: `${i * 60}ms`,
             }}
           >
             {item.type === 'draft' ? <ChickenIcon flip={pos.flip} /> : <ChickIcon />}
@@ -222,8 +223,13 @@ export function PopupHomeScreen(props: {
   onRoundUp: () => void;
   onCaptureTab: () => void;
   onScreenshot: () => void;
-  onOpenAudio: () => void;
-  onOpenFiles: () => void;
+  onFileSelected: (file: File) => void;
+  isCapturing: boolean;
+  isRecording: boolean;
+  elapsedSeconds: number;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  onCancelRecording: () => void;
 }) {
   const {
     statusItems,
@@ -235,11 +241,19 @@ export function PopupHomeScreen(props: {
     onRoundUp,
     onCaptureTab,
     onScreenshot,
-    onOpenAudio,
-    onOpenFiles,
+    onFileSelected,
+    isCapturing,
+    isRecording,
+    elapsedSeconds,
+    onStartRecording,
+    onStopRecording,
+    onCancelRecording,
   } = props;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const busy = isCapturing || isRecording;
+
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -247,71 +261,106 @@ export function PopupHomeScreen(props: {
     el.style.height = `${Math.max(46, Math.min(el.scrollHeight, 92))}px`;
   }, []);
 
-  // noteText is intentionally included: autoResize is stable but must re-fire when content changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: noteText triggers resize recalculation
   useEffect(() => {
     autoResize();
   }, [noteText, autoResize]);
 
   return (
-    <section className="popup-screen popup-screen--fill">
-      <PopupSubheader
-        ariaLabel="Home status"
-        equalWidth
-        tags={statusItems}
-        tooltipPlacement="below"
-      />
+    <section className="popup-screen popup-screen--home-aggregate">
+      <PopupSubheader ariaLabel="Home status" equalWidth tags={statusItems} />
 
       <ChickenYard items={yardItems} />
 
-      <button className="popup-primary-action" onClick={onRoundUp} type="button">
+      <button className="popup-primary-action" disabled={busy} onClick={onRoundUp} type="button">
         Roundup Chickens
       </button>
 
-      <div className="popup-action-grid" aria-label="Quick actions">
-        <button
-          className="popup-handoff-button"
-          data-accent="blue"
-          onClick={onCaptureTab}
-          type="button"
-        >
-          <CaptureTabIcon />
-          <span>Capture Tab</span>
-        </button>
-        <button
-          className="popup-handoff-button"
-          data-accent="purple"
-          onClick={onScreenshot}
-          type="button"
-        >
-          <ScreenshotIcon />
-          <span>Screenshot</span>
-        </button>
-        <button
-          className="popup-handoff-button"
-          data-accent="green"
-          onClick={onOpenAudio}
-          type="button"
-        >
-          <MicrophoneIcon />
-          <span>Audio</span>
-        </button>
-        <button
-          className="popup-handoff-button"
-          data-accent="orange"
-          onClick={onOpenFiles}
-          type="button"
-        >
-          <DocumentIcon />
-          <span>Files</span>
-        </button>
-      </div>
+      {isRecording ? (
+        <div className="popup-recording" aria-label="Recording audio">
+          <div className="popup-recording__status">
+            <span className="popup-recording__dot" />
+            <span className="popup-recording__timer">
+              {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:
+              {String(elapsedSeconds % 60).padStart(2, '0')}
+              {' / 00:30'}
+            </span>
+          </div>
+          <p className="popup-recording__hint">Keep popup open while recording</p>
+          <div className="popup-recording__actions">
+            <button className="popup-primary-action" onClick={onStopRecording} type="button">
+              Save Voice Note
+            </button>
+            <button
+              className="popup-handoff-button"
+              data-accent="red"
+              onClick={onCancelRecording}
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="popup-action-grid" aria-label="Quick actions">
+          <button
+            className="popup-handoff-button"
+            data-accent="blue"
+            disabled={busy}
+            onClick={onCaptureTab}
+            type="button"
+          >
+            <CaptureTabIcon />
+            <span>Capture Tab</span>
+          </button>
+          <button
+            className="popup-handoff-button"
+            data-accent="purple"
+            disabled={busy}
+            onClick={onScreenshot}
+            type="button"
+          >
+            <ScreenshotIcon />
+            <span>Screenshot</span>
+          </button>
+          <button
+            className="popup-handoff-button"
+            data-accent="green"
+            disabled={busy}
+            onClick={onStartRecording}
+            type="button"
+          >
+            <MicrophoneIcon />
+            <span>Audio</span>
+          </button>
+          <button
+            className="popup-handoff-button"
+            data-accent="orange"
+            disabled={busy}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <DocumentIcon />
+            <span>Files</span>
+          </button>
+          <input
+            type="file"
+            hidden
+            ref={fileInputRef}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) onFileSelected(file);
+            }}
+          />
+        </div>
+      )}
 
       <div className="popup-note-bar">
         <div className="popup-note-bar__field">
           <textarea
             aria-label="Note"
             className="popup-note-bar__input"
+            disabled={busy}
             onChange={(event) => {
               onChangeNote(event.target.value);
               autoResize();
@@ -330,6 +379,7 @@ export function PopupHomeScreen(props: {
           <button
             aria-label="Paste"
             className="popup-note-bar__paste"
+            disabled={busy}
             onClick={onPaste}
             type="button"
           >
@@ -339,7 +389,7 @@ export function PopupHomeScreen(props: {
         <button
           aria-label="Save note"
           className="popup-note-bar__save"
-          disabled={!noteText.trim()}
+          disabled={!noteText.trim() || busy}
           onClick={onSaveNote}
           type="button"
         >

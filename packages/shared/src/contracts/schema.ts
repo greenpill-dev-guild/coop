@@ -65,6 +65,7 @@ export const soundEventSchema = z.enum([
   'artifact-published',
   'review-digest-ready',
   'action-awaiting-review',
+  'capture-complete',
   'sound-test',
 ]);
 export const coopChainKeySchema = z.enum(['arbitrum', 'sepolia']);

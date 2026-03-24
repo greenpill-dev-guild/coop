@@ -8,6 +8,7 @@ export const soundFileMap: Record<SoundEvent, { fileName: string; volume: number
   'artifact-published': { fileName: 'coop-soft-cluck.mp3', volume: 0.62 },
   'review-digest-ready': { fileName: 'coop-soft-cluck.mp3', volume: 0.64 },
   'action-awaiting-review': { fileName: 'coop-rooster-call.mp3', volume: 0.68 },
+  'capture-complete': { fileName: 'coop-soft-cluck.mp3', volume: 0.55 },
   'sound-test': { fileName: 'coop-squeaky-test.mp3', volume: 0.68 },
 };
 

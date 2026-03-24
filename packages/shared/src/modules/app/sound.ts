@@ -23,6 +23,7 @@ export function shouldPlaySound(
     'artifact-published',
     'review-digest-ready',
     'action-awaiting-review',
+    'capture-complete',
     'sound-test',
   ].includes(event);
 }
@@ -51,6 +52,11 @@ export function soundPattern(event: SoundEvent): ToneStep[] {
         { frequency: 349, durationMs: 120, gain: 0.06, type: 'square' },
         { frequency: 415, durationMs: 120, gain: 0.06, type: 'square' },
         { frequency: 523, durationMs: 180, gain: 0.08, type: 'triangle' },
+      ];
+    case 'capture-complete':
+      return [
+        { frequency: 523, durationMs: 100, gain: 0.25, type: 'sine' },
+        { frequency: 659, durationMs: 120, gain: 0.2, type: 'sine' },
       ];
     case 'sound-test':
       return [

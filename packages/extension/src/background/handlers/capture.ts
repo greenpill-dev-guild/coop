@@ -2,23 +2,28 @@ import {
   type CoopSharedState,
   type ReceiverCapture,
   type TabCandidate,
-  addOutboxEntry,
   buildReadablePageExtract,
   canonicalizeUrl,
   compressImage,
   createId,
-  createOutboxEntry,
   createReceiverCapture,
+  createReceiverDraftSeed,
   findExistingExtractByTextHash,
   findRecentCandidateByUrlHash,
   getAuthSession,
   hashText,
   isDomainExcluded,
+  isWhisperSupported,
   listPageExtracts,
   nowIso,
+  resolveDraftTargetCoopIdsForUi,
+  saveCoopBlob,
   savePageExtract,
   saveReceiverCapture,
+  saveReviewDraft,
   saveTabCandidate,
+  transcribeAudio,
+  updateReceiverCapture,
 } from '@coop/shared';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import {
@@ -183,22 +188,6 @@ export async function runCaptureForTabs(
       extractIds: newExtractIds,
       eligibleCoopIds: coops.map((coop) => coop.profile.id),
     });
-
-    // Track each capture observation per coop in the outbox for sync confirmation (best-effort)
-    const outboxEntries = coops.flatMap((coop) =>
-      newExtractIds.map((extractId) =>
-        addOutboxEntry(
-          db,
-          createOutboxEntry({
-            coopId: coop.profile.id,
-            type: 'state-update',
-            entityKey: extractId,
-          }),
-        ).catch((err) => console.warn('[outbox] failed to track entry:', err)),
-      ),
-    );
-    await Promise.all(outboxEntries);
-
     if (options.drainAgent && newExtractIds.length > 0) {
       await drainAgentCycles({
         reason: 'capture-complete',
@@ -451,4 +440,176 @@ export async function openCoopSidepanel() {
 
   await chrome.sidePanel.open({ windowId: tab.windowId });
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Popup capture handlers (file, note, audio)
+// ---------------------------------------------------------------------------
+
+const FILE_SIZE_LIMIT = 10 * 1024 * 1024; // 10 MB
+const AUDIO_SIZE_LIMIT = 25 * 1024 * 1024; // 25 MB
+
+export async function captureFile(payload: {
+  fileName: string;
+  mimeType: string;
+  dataBase64: string;
+  byteSize: number;
+}): Promise<ReceiverCapture> {
+  if (payload.byteSize > FILE_SIZE_LIMIT) {
+    throw new Error('File exceeds the 10 MB size limit.');
+  }
+
+  const bytes = Uint8Array.from(atob(payload.dataBase64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: payload.mimeType });
+
+  const timestamp = nowIso();
+  const coops = await getCoops();
+  const authSession = await getAuthSession(db);
+  const activeContext = await getActiveReviewContextForSession(coops, authSession);
+  const activeCoop = coops.find((coop) => coop.profile.id === activeContext.activeCoopId);
+  const activeMember = resolveReceiverPairingMember(activeCoop, authSession);
+
+  const capture = {
+    ...createReceiverCapture({
+      deviceId: extensionCaptureDeviceId,
+      kind: 'file',
+      blob,
+      fileName: payload.fileName,
+      createdAt: timestamp,
+    }),
+    coopId: activeCoop?.profile.id,
+    coopDisplayName: activeCoop?.profile.name,
+    memberId: activeMember?.id,
+    memberDisplayName: activeMember?.displayName,
+    updatedAt: timestamp,
+  } satisfies ReceiverCapture;
+
+  await saveReceiverCapture(db, capture, blob);
+  await refreshBadge();
+  return capture;
+}
+
+export async function createNoteDraft(payload: { text: string }) {
+  if (!payload.text.trim()) {
+    throw new Error('Note text cannot be empty.');
+  }
+
+  const blob = new Blob([payload.text], { type: 'text/plain' });
+  const timestamp = nowIso();
+  const coops = await getCoops();
+  const authSession = await getAuthSession(db);
+  const activeContext = await getActiveReviewContextForSession(coops, authSession);
+  const activeCoop = coops.find((coop) => coop.profile.id === activeContext.activeCoopId);
+  const activeMember = resolveReceiverPairingMember(activeCoop, authSession);
+
+  const capture = {
+    ...createReceiverCapture({
+      deviceId: extensionCaptureDeviceId,
+      kind: 'link',
+      blob,
+      title: payload.text.slice(0, 100),
+      note: payload.text,
+      createdAt: timestamp,
+    }),
+    coopId: activeCoop?.profile.id,
+    coopDisplayName: activeCoop?.profile.name,
+    memberId: activeMember?.id,
+    memberDisplayName: activeMember?.displayName,
+    updatedAt: timestamp,
+  } satisfies ReceiverCapture;
+
+  await saveReceiverCapture(db, capture, blob);
+
+  const availableCoopIds = coops.map((state) => state.profile.id);
+  const preferredCoopId = activeContext.activeCoopId ?? capture.coopId;
+  const preferredCoop = coops.find((state) => state.profile.id === preferredCoopId);
+  const draft = createReceiverDraftSeed({
+    capture,
+    availableCoopIds,
+    preferredCoopId,
+    preferredCoopLabel: preferredCoop?.profile.name,
+    workflowStage: 'candidate',
+  });
+
+  await saveReviewDraft(db, draft);
+  await updateReceiverCapture(db, capture.id, {
+    linkedDraftId: draft.id,
+    updatedAt: nowIso(),
+  });
+  await refreshBadge();
+  return draft;
+}
+
+export async function captureAudio(payload: {
+  dataBase64: string;
+  mimeType: string;
+  durationSeconds: number;
+  fileName: string;
+}): Promise<ReceiverCapture> {
+  // Estimate decoded size from base64 length to fail fast without allocating
+  const estimatedBytes = Math.ceil((payload.dataBase64.length * 3) / 4);
+  if (estimatedBytes > AUDIO_SIZE_LIMIT) {
+    throw new Error('Audio recording exceeds the 25 MB size limit.');
+  }
+
+  const bytes = Uint8Array.from(atob(payload.dataBase64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: payload.mimeType });
+
+  const timestamp = nowIso();
+  const coops = await getCoops();
+  const authSession = await getAuthSession(db);
+  const activeContext = await getActiveReviewContextForSession(coops, authSession);
+  const activeCoop = coops.find((coop) => coop.profile.id === activeContext.activeCoopId);
+  const activeMember = resolveReceiverPairingMember(activeCoop, authSession);
+
+  const capture = {
+    ...createReceiverCapture({
+      deviceId: extensionCaptureDeviceId,
+      kind: 'audio',
+      blob,
+      title: 'Voice note',
+      fileName: payload.fileName,
+      createdAt: timestamp,
+    }),
+    coopId: activeCoop?.profile.id,
+    coopDisplayName: activeCoop?.profile.name,
+    memberId: activeMember?.id,
+    memberDisplayName: activeMember?.displayName,
+    updatedAt: timestamp,
+  } satisfies ReceiverCapture;
+
+  await saveReceiverCapture(db, capture, blob);
+  await refreshBadge();
+
+  // Fire-and-forget background Whisper transcription
+  void (async () => {
+    try {
+      const supported = await isWhisperSupported();
+      if (!supported) return;
+      const result = await transcribeAudio({ audioBlob: blob });
+      if (!result.text.trim()) return;
+      const transcriptBytes = new TextEncoder().encode(JSON.stringify(result));
+      const blobId = createId('blob');
+      const now = nowIso();
+      await saveCoopBlob(
+        db,
+        {
+          blobId,
+          sourceEntityId: capture.id,
+          coopId: capture.coopId ?? '',
+          mimeType: 'application/json',
+          byteSize: transcriptBytes.length,
+          kind: 'audio-transcript',
+          origin: 'self',
+          createdAt: now,
+          accessedAt: now,
+        },
+        transcriptBytes,
+      );
+    } catch (err) {
+      console.warn('[captureAudio] Background transcription failed:', err);
+    }
+  })();
+
+  return capture;
 }

@@ -121,7 +121,10 @@ import {
 // ---- Handlers ----
 import {
   captureActiveTab,
+  captureAudio,
+  captureFile,
   captureVisibleScreenshot,
+  createNoteDraft,
   handleTabRemoved,
   openCoopSidepanel,
   registerContextMenus,
@@ -387,6 +390,45 @@ chrome.runtime.onMessage.addListener((message: RuntimeRequest, sender, sendRespo
           sendResponse({
             ok: false,
             error: error instanceof Error ? error.message : 'Screenshot capture failed.',
+          } satisfies RuntimeActionResponse);
+        }
+        return;
+      case 'capture-file':
+        try {
+          sendResponse({
+            ok: true,
+            data: await captureFile(message.payload),
+          } satisfies RuntimeActionResponse<ReceiverCapture>);
+        } catch (error) {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'File capture failed.',
+          } satisfies RuntimeActionResponse);
+        }
+        return;
+      case 'create-note-draft':
+        try {
+          sendResponse({
+            ok: true,
+            data: await createNoteDraft(message.payload),
+          } satisfies RuntimeActionResponse);
+        } catch (error) {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'Note creation failed.',
+          } satisfies RuntimeActionResponse);
+        }
+        return;
+      case 'capture-audio':
+        try {
+          sendResponse({
+            ok: true,
+            data: await captureAudio(message.payload),
+          } satisfies RuntimeActionResponse<ReceiverCapture>);
+        } catch (error) {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'Audio capture failed.',
           } satisfies RuntimeActionResponse);
         }
         return;
