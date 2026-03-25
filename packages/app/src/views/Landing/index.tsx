@@ -180,49 +180,67 @@ const partnerMarks = [
   'Green Goods',
 ];
 
+// All chickens drift rightward as user scrolls, clearing the left side for hero copy
+// and "How it works" content. 5 keyframes with alternating y/rotate create a grazing bob.
 const storyFlightPaths: Record<
   JourneyChicken['id'],
   Array<{ x: string; y: string; rotate: number; scale?: number }>
 > = {
   tabs: [
-    { x: '8vw', y: '-2vh', rotate: -10, scale: 1.02 },
-    { x: '14vw', y: '-5vh', rotate: -4, scale: 0.96 },
-    { x: '10vw', y: '-8vh', rotate: 0, scale: 0.88 },
+    { x: '2vw', y: '1vh', rotate: -4, scale: 1.0 },
+    { x: '8vw', y: '-2vh', rotate: 3, scale: 0.98 },
+    { x: '14vw', y: '1vh', rotate: -2, scale: 0.96 },
+    { x: '20vw', y: '-3vh', rotate: 2, scale: 0.93 },
+    { x: '26vw', y: '-6vh', rotate: 0, scale: 0.9 },
   ],
   notes: [
-    { x: '7vw', y: '2vh', rotate: 8, scale: 1.01 },
-    { x: '12vw', y: '-1vh', rotate: 4, scale: 0.95 },
-    { x: '8vw', y: '-6vh', rotate: 0, scale: 0.88 },
+    { x: '3vw', y: '-1vh', rotate: 5, scale: 1.0 },
+    { x: '9vw', y: '2vh', rotate: -3, scale: 0.97 },
+    { x: '15vw', y: '-1vh', rotate: 2, scale: 0.95 },
+    { x: '19vw', y: '1vh', rotate: -1, scale: 0.92 },
+    { x: '24vw', y: '-4vh', rotate: 0, scale: 0.88 },
   ],
   ideas: [
-    { x: '-7vw', y: '2vh', rotate: -8, scale: 1.01 },
-    { x: '-4vw', y: '-1vh', rotate: -2, scale: 0.95 },
-    { x: '6vw', y: '-6vh', rotate: 0, scale: 0.88 },
+    { x: '-2vw', y: '2vh', rotate: -6, scale: 1.0 },
+    { x: '4vw', y: '-1vh', rotate: 4, scale: 0.98 },
+    { x: '10vw', y: '2vh', rotate: -2, scale: 0.96 },
+    { x: '16vw', y: '-1vh', rotate: 1, scale: 0.93 },
+    { x: '22vw', y: '-5vh', rotate: 0, scale: 0.9 },
   ],
   signals: [
-    { x: '-8vw', y: '-2vh', rotate: 10, scale: 1.02 },
-    { x: '-4vw', y: '-5vh', rotate: 4, scale: 0.96 },
-    { x: '8vw', y: '-8vh', rotate: 0, scale: 0.88 },
+    { x: '-3vw', y: '-1vh', rotate: 6, scale: 1.0 },
+    { x: '3vw', y: '2vh', rotate: -4, scale: 0.97 },
+    { x: '9vw', y: '-1vh', rotate: 3, scale: 0.95 },
+    { x: '15vw', y: '1vh', rotate: -1, scale: 0.92 },
+    { x: '20vw', y: '-6vh', rotate: 0, scale: 0.88 },
   ],
   links: [
-    { x: '5vw', y: '-1vh', rotate: -6, scale: 1.0 },
-    { x: '10vw', y: '-4vh', rotate: -2, scale: 0.93 },
-    { x: '7vw', y: '-7vh', rotate: 0, scale: 0.85 },
+    { x: '1vw', y: '1vh', rotate: -3, scale: 1.0 },
+    { x: '6vw', y: '-2vh', rotate: 2, scale: 0.96 },
+    { x: '12vw', y: '1vh', rotate: -1, scale: 0.93 },
+    { x: '17vw', y: '-2vh', rotate: 1, scale: 0.9 },
+    { x: '22vw', y: '-5vh', rotate: 0, scale: 0.86 },
   ],
   drafts: [
-    { x: '4vw', y: '1vh', rotate: 5, scale: 1.0 },
-    { x: '8vw', y: '-2vh', rotate: 2, scale: 0.92 },
-    { x: '9vw', y: '-5vh', rotate: 0, scale: 0.84 },
+    { x: '2vw', y: '-1vh', rotate: 4, scale: 1.0 },
+    { x: '7vw', y: '1vh', rotate: -2, scale: 0.95 },
+    { x: '11vw', y: '-1vh', rotate: 2, scale: 0.92 },
+    { x: '16vw', y: '1vh', rotate: -1, scale: 0.88 },
+    { x: '19vw', y: '-4vh', rotate: 0, scale: 0.84 },
   ],
   threads: [
-    { x: '-5vw', y: '-1vh', rotate: 6, scale: 1.0 },
-    { x: '-2vw', y: '-4vh', rotate: 2, scale: 0.93 },
-    { x: '7vw', y: '-7vh', rotate: 0, scale: 0.85 },
+    { x: '-1vw', y: '2vh', rotate: -5, scale: 1.0 },
+    { x: '5vw', y: '-1vh', rotate: 3, scale: 0.96 },
+    { x: '11vw', y: '2vh', rotate: -2, scale: 0.93 },
+    { x: '17vw', y: '-1vh', rotate: 1, scale: 0.9 },
+    { x: '24vw', y: '-5vh', rotate: 0, scale: 0.86 },
   ],
   clips: [
-    { x: '-4vw', y: '1vh', rotate: -5, scale: 1.0 },
-    { x: '-1vw', y: '-2vh', rotate: -1, scale: 0.92 },
-    { x: '9vw', y: '-5vh', rotate: 0, scale: 0.84 },
+    { x: '-2vw', y: '-1vh', rotate: 3, scale: 1.0 },
+    { x: '4vw', y: '2vh', rotate: -3, scale: 0.95 },
+    { x: '9vw', y: '-1vh', rotate: 1, scale: 0.92 },
+    { x: '14vw', y: '1vh', rotate: -1, scale: 0.88 },
+    { x: '18vw', y: '-4vh', rotate: 0, scale: 0.84 },
   ],
 };
 
@@ -290,6 +308,17 @@ const arrivalFlightPaths: Record<
     { x: '-18vw', y: '-5vh', rotate: 1, scale: 0.34, opacity: 0.32 },
     { x: '-22vw', y: '-6vh', rotate: 0, scale: 0.12, opacity: 0 },
   ],
+};
+
+const chickenThoughts: Record<JourneyChicken['id'], string> = {
+  tabs: 'Open browser tabs',
+  notes: 'Meeting notes & memos',
+  ideas: 'Sparks worth exploring',
+  signals: 'Trends & opportunities',
+  links: 'Saved references',
+  drafts: 'Work in progress',
+  threads: 'Conversation fragments',
+  clips: 'Audio & video moments',
 };
 
 const STAR_COUNT = 10;
@@ -606,8 +635,6 @@ export function App({
   const storyHillMidRef = useRef<HTMLDivElement | null>(null);
   const storyHillFrontRef = useRef<HTMLDivElement | null>(null);
   const storyPathRef = useRef<HTMLDivElement | null>(null);
-  const storyCoopRef = useRef<HTMLDivElement | null>(null);
-
   const arrivalGlowLeftRef = useRef<HTMLDivElement | null>(null);
   const arrivalGlowRightRef = useRef<HTMLDivElement | null>(null);
   const arrivalCloudRef = useRef<HTMLDivElement | null>(null);
@@ -650,7 +677,7 @@ export function App({
   const [setupInput, setSetupInput] = useState<SetupInsightsInput>(() => initialDraft.setupInput);
   const [transcripts, setTranscripts] = useState<TranscriptMap>(() => initialDraft.transcripts);
   const [audience, setAudience] = useState<AudienceId>(() => initialDraft.audience);
-  const [openCardId, setOpenCardId] = useState<TranscriptKey | null>(null);
+  const [openCardId, setOpenCardId] = useState<TranscriptKey | null>(() => initialDraft.openCardId);
   const [sharedNotes, setSharedNotes] = useState(() => initialDraft.sharedNotes);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [recordingLens, setRecordingLens] = useState<TranscriptKey | null>(null);
@@ -804,16 +831,6 @@ export function App({
             howItWorksRef.current?.querySelectorAll<HTMLElement>('.how-works-card') ?? [],
           );
 
-          const storyCoopParts = {
-            roof: storyCoopRef.current?.querySelector('.coop-roof') ?? null,
-            body: storyCoopRef.current?.querySelector('.coop-body') ?? null,
-            frames: Array.from(
-              storyCoopRef.current?.querySelectorAll(
-                '.coop-window, .coop-door, .coop-slat, .coop-trim',
-              ) ?? [],
-            ),
-          };
-
           const arrivalCoopParts = {
             roof: arrivalCoopRef.current?.querySelector('.coop-roof') ?? null,
             body: arrivalCoopRef.current?.querySelector('.coop-body') ?? null,
@@ -826,13 +843,9 @@ export function App({
 
           gsap.set(storyChickens, { transformOrigin: '50% 50%' });
           gsap.set(arrivalChickens, { transformOrigin: '50% 50%', opacity: 0.94 });
-          gsap.set(compact([storyCoopParts.roof, storyCoopParts.body]), {
-            transformOrigin: '50% 100%',
-          });
           gsap.set(compact([arrivalCoopParts.roof, arrivalCoopParts.body]), {
             transformOrigin: '50% 100%',
           });
-          gsap.set(storyCoopParts.frames, { transformOrigin: '50% 50%' });
           gsap.set(arrivalCoopParts.frames, { transformOrigin: '50% 50%' });
           gsap.set(howItWorksCards, { transformOrigin: '50% 50%' });
 
@@ -890,24 +903,6 @@ export function App({
               { scaleX: 0.82, scaleY: 0.94, rotate: -10, opacity: 0.3 },
               { scaleX: 1.12, scaleY: 1.08, rotate: -4, opacity: 0.78 },
               0.12,
-            )
-            .fromTo(
-              storyCoopParts.body,
-              { y: 80, scale: 0.72, autoAlpha: 0.18 },
-              { y: 0, scale: 1, autoAlpha: 0.98 },
-              0.22,
-            )
-            .fromTo(
-              storyCoopParts.roof,
-              { y: -70, scaleX: 0.84, autoAlpha: 0 },
-              { y: 0, scaleX: 1, autoAlpha: 1 },
-              0.34,
-            )
-            .fromTo(
-              storyCoopParts.frames,
-              { y: 18, autoAlpha: 0 },
-              { y: 0, autoAlpha: 1, stagger: 0.04 },
-              0.44,
             )
             .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -32 }, 0.5)
             .fromTo(howItWorksRef.current, { autoAlpha: 0.55 }, { autoAlpha: 1 }, 0.38)
@@ -1055,7 +1050,18 @@ export function App({
             );
           arrivalTimeline
             .fromTo(arrivalStarsRef.current, { opacity: 0 }, { opacity: 0.35 }, 0.3)
-            .fromTo(arrivalCoopGlowRef.current, { opacity: 0 }, { opacity: 1 }, 0.35)
+            // Warm halo fades in as coop rises
+            .fromTo(
+              '.scene-coop-halo',
+              { opacity: 0, scale: 0.6 },
+              { opacity: 1, scale: 1.1 },
+              0.18,
+            )
+            // Door glow flickers on before chickens arrive — cinematic "coming home"
+            .fromTo(arrivalCoopGlowRef.current, { opacity: 0 }, { opacity: 0.3 }, 0.25)
+            .to(arrivalCoopGlowRef.current, { opacity: 0.15 }, 0.3)
+            .to(arrivalCoopGlowRef.current, { opacity: 0.5 }, 0.38)
+            .to(arrivalCoopGlowRef.current, { opacity: 1 }, 0.55)
             .to(arrivalCloudRef.current, { opacity: 0.25 }, 0.15);
 
           // Stagger chicken arrivals — each starts slightly later for a natural procession
@@ -1390,7 +1396,7 @@ export function App({
                 : 'journey-scene journey-scene-story'
             }
           >
-            <div className="journey-scene-inner">
+            <div className="journey-scene-bg">
               <div className="scene-sky-overlay scene-sky-sunset" ref={storySkyOverlayRef} />
               <div className="scene-glow scene-glow-left" ref={storyGlowLeftRef} />
               <div className="scene-glow scene-glow-right" ref={storyGlowRightRef} />
@@ -1403,22 +1409,18 @@ export function App({
               <div className="scene-hill scene-hill-mid" ref={storyHillMidRef} />
               <div className="scene-hill scene-hill-front" ref={storyHillFrontRef} />
               <div className="scene-path" ref={storyPathRef} />
-
-              <div className="scene-coop story-scene-coop" ref={storyCoopRef}>
-                <CoopIllustration />
-              </div>
-
+            </div>
+            <div className="journey-scene-inner">
               {journeyChickens.map((chicken) => (
                 <div
                   className={`scene-chicken scene-chicken-${chicken.id}`}
                   key={chicken.id}
                   ref={setStoryChickenRef(chicken.id)}
                 >
-                  <ChickenSprite
-                    label={chicken.label}
-                    showLabel={false}
-                    variant={chicken.variant}
-                  />
+                  <div className="thought-bubble" aria-hidden="true">
+                    {chickenThoughts[chicken.id]}
+                  </div>
+                  <ChickenSprite label={chicken.label} showLabel={true} variant={chicken.variant} />
                 </div>
               ))}
             </div>
@@ -1737,7 +1739,7 @@ export function App({
                 : 'journey-scene journey-scene-arrival'
             }
           >
-            <div className="journey-scene-inner">
+            <div className="journey-scene-bg">
               <div className="scene-stars" ref={arrivalStarsRef}>
                 {Array.from({ length: STAR_COUNT }, (_, i) => (
                   <span className="scene-star" key={`star-${i}`} style={starStyle(i)} />
@@ -1751,8 +1753,10 @@ export function App({
               <div className="scene-hill scene-hill-mid" ref={arrivalHillMidRef} />
               <div className="scene-hill scene-hill-front" ref={arrivalHillFrontRef} />
               <div className="scene-path scene-path-arrival" ref={arrivalPathRef} />
-
+            </div>
+            <div className="journey-scene-inner">
               <div className="scene-coop arrival-scene-coop" ref={arrivalCoopRef}>
+                <div className="scene-coop-halo" />
                 <CoopIllustration />
                 <div className="scene-coop-glow" ref={arrivalCoopGlowRef}>
                   <div className="scene-coop-glow-window" />
@@ -1784,6 +1788,15 @@ export function App({
           </div>
 
           <div className="journey-panels">
+            <article className="journey-panel why-build-panel">
+              <div className="why-build-copy nest-card story-card story-card-center">
+                <h2>Why we build</h2>
+                <p className="lede">
+                  Scattered knowledge becomes shared action when the right group has a clear place
+                  to work from.
+                </p>
+              </div>
+            </article>
             <div className="arrival-scroll-spacer" aria-hidden="true" />
           </div>
         </section>

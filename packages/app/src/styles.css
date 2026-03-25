@@ -180,6 +180,13 @@ pre {
   background: linear-gradient(180deg, rgba(200, 120, 50, 0.08), rgba(60, 30, 14, 0.25));
 }
 
+.journey-scene-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .journey-scene-inner {
   position: relative;
   width: min(1280px, calc(100% - 1.5rem));
@@ -188,9 +195,14 @@ pre {
   contain: layout style;
 }
 
+/* Panels sit above the scene but pass pointer events through so
+   chickens in .journey-scene-inner can receive hover.
+   Any new interactive content added to .journey-panels must opt back
+   in with pointer-events: auto on the specific card/element. */
 .journey-panels {
   position: relative;
   z-index: 1;
+  pointer-events: none;
 }
 
 .journey-panel {
@@ -201,6 +213,14 @@ pre {
   padding: 5.5rem 0 4.5rem;
   display: flex;
   align-items: center;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events on actual content cards within panels */
+.hero-copy,
+.how-works-shell,
+.why-build-copy {
+  pointer-events: auto;
 }
 
 .journey-panel-right {
@@ -1340,6 +1360,18 @@ pre {
   box-shadow: 0 0 20px rgba(255, 200, 80, 0.25);
 }
 
+/* ── Coop halo glow (dramatic reveal) ── */
+
+.scene-coop-halo {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 80, 0.25), rgba(255, 180, 60, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* ── Arrival scene dusk overrides ── */
 
 .journey-scene-arrival .scene-glow-left {
@@ -1407,12 +1439,6 @@ pre {
 .scene-coop {
   z-index: 2;
   width: min(25rem, 38vw);
-}
-
-.story-scene-coop {
-  right: 11%;
-  bottom: 14%;
-  width: min(22rem, 34vw);
 }
 
 .arrival-scene-coop {
@@ -1516,6 +1542,75 @@ pre {
   display: grid;
   justify-items: center;
   gap: 0.45rem;
+}
+
+/* Re-enable pointer events on story chickens for hover interactivity */
+.journey-scene-story .scene-chicken {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Hide labels by default in story scene — reveal on hover */
+.journey-scene-story .scene-chicken-label {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.journey-scene-story .scene-chicken:hover .scene-chicken-label {
+  opacity: 1;
+}
+
+/* ── Cloud thought bubble ── */
+
+.thought-bubble {
+  position: absolute;
+  bottom: calc(100% + 1.2rem);
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  padding: 0.45rem 0.7rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 2px 8px rgba(79, 46, 31, 0.1),
+    inset 0 -1px 2px rgba(79, 46, 31, 0.04);
+  font-size: 0.75rem;
+  color: var(--coop-brown);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease, transform 250ms ease;
+  z-index: 10;
+}
+
+/* Trailing thought circles (comic-style dots descending from bubble) */
+.thought-bubble::before {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 18%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 4px rgba(79, 46, 31, 0.08);
+}
+
+.thought-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -14px;
+  left: 12%;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 3px rgba(79, 46, 31, 0.06);
+}
+
+/* Reveal on hover */
+.scene-chicken:hover .thought-bubble {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
 
 .chicken-young {
@@ -2191,7 +2286,6 @@ pre {
     margin-left: 0;
   }
 
-  .story-scene-coop,
   .arrival-scene-coop {
     right: auto;
     left: 50%;
@@ -2362,40 +2456,36 @@ pre {
     opacity: 0.7;
   }
 
-  .journey-scene-story.is-static .story-scene-coop {
-    opacity: 1;
-  }
-
   .journey-scene-story.is-static .scene-chicken-tabs {
-    transform: translate(28vw, -7vh) rotate(-4deg) scale(0.92);
+    transform: translate(26vw, -6vh) rotate(0deg) scale(0.9);
   }
 
   .journey-scene-story.is-static .scene-chicken-notes {
-    transform: translate(22vw, -3vh) rotate(2deg) scale(0.92);
+    transform: translate(24vw, -4vh) rotate(0deg) scale(0.88);
   }
 
   .journey-scene-story.is-static .scene-chicken-ideas {
-    transform: translate(-22vw, -3vh) rotate(3deg) scale(0.92);
+    transform: translate(22vw, -5vh) rotate(0deg) scale(0.9);
   }
 
   .journey-scene-story.is-static .scene-chicken-signals {
-    transform: translate(-28vw, -7vh) rotate(0deg) scale(0.92);
+    transform: translate(20vw, -6vh) rotate(0deg) scale(0.88);
   }
 
   .journey-scene-story.is-static .scene-chicken-links {
-    transform: translate(22vw, -6vh) rotate(-2deg) scale(0.88);
+    transform: translate(22vw, -5vh) rotate(0deg) scale(0.86);
   }
 
   .journey-scene-story.is-static .scene-chicken-drafts {
-    transform: translate(16vw, -5vh) rotate(0deg) scale(0.86);
+    transform: translate(19vw, -4vh) rotate(0deg) scale(0.84);
   }
 
   .journey-scene-story.is-static .scene-chicken-threads {
-    transform: translate(-22vw, -6vh) rotate(0deg) scale(0.88);
+    transform: translate(24vw, -5vh) rotate(0deg) scale(0.86);
   }
 
   .journey-scene-story.is-static .scene-chicken-clips {
-    transform: translate(-16vw, -5vh) rotate(0deg) scale(0.86);
+    transform: translate(18vw, -4vh) rotate(0deg) scale(0.84);
   }
 
   .journey-scene-arrival.is-static .scene-chicken-arrival {
