@@ -628,6 +628,7 @@ export async function handleSetCoopArchiveConfig(
   await setCoopArchiveSecrets(db, payload.coopId, {
     ...payload.secrets,
     coopId: payload.coopId,
+    proofs: payload.secrets.proofs ?? [],
   });
   return { ok: true } satisfies RuntimeActionResponse;
 }

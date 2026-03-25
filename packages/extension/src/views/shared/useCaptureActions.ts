@@ -24,7 +24,7 @@ export function useCaptureActions(deps: {
 
   function playCaptureSound() {
     if (soundPreferences) {
-      void playCoopSound('artifact-published', soundPreferences).catch(() => {});
+      void playCoopSound('capture-complete', soundPreferences).catch(() => {});
     }
   }
 

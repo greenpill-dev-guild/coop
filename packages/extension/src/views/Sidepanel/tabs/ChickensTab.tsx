@@ -323,14 +323,14 @@ export function ChickensTab({
                     <li className="draft-card" key={artifact.id}>
                       <strong>{artifact.title}</strong>
                       <div className="meta-text">{artifact.category}</div>
-                      {artifact.origin?.sourceUrls?.[0] ? (
+                      {artifact.sources[0]?.url ? (
                         <a
                           className="source-link"
-                          href={artifact.origin.sourceUrls[0]}
+                          href={artifact.sources[0].url}
                           rel="noreferrer"
                           target="_blank"
                         >
-                          {artifact.origin.sourceUrls[0]}
+                          {artifact.sources[0].url}
                         </a>
                       ) : null}
                     </li>

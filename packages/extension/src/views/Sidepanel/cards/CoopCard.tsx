@@ -27,7 +27,7 @@ function resolveLastActivity(coop: CoopSharedState): string | null {
   const timestamps: string[] = [];
 
   for (const artifact of coop.artifacts) {
-    timestamps.push(artifact.updatedAt ?? artifact.createdAt);
+    timestamps.push(artifact.createdAt);
   }
   for (const receipt of coop.archiveReceipts) {
     timestamps.push(receipt.uploadedAt);

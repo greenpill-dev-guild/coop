@@ -639,4 +639,58 @@ describe('agent handlers', () => {
       expect(insightCalls).toHaveLength(0);
     });
   });
+
+  describe('emitAudioTranscriptObservation', () => {
+    it('returns null for empty transcript text', async () => {
+      const { emitAudioTranscriptObservation } = await import('../agent');
+      const result = await emitAudioTranscriptObservation({
+        captureId: 'cap-1',
+        transcriptText: '   ',
+        durationSeconds: 5,
+      });
+      expect(result).toBeNull();
+      expect(mockSaveAgentObservation).not.toHaveBeenCalled();
+    });
+
+    it('emits observation with correct shape for valid transcript', async () => {
+      mockFindByFingerprint.mockResolvedValueOnce(undefined);
+      const { emitAudioTranscriptObservation } = await import('../agent');
+      const result = await emitAudioTranscriptObservation({
+        captureId: 'cap-1',
+        coopId: 'coop-1',
+        transcriptText: 'Maria mentioned the EPA grant requires a 20% local match',
+        durationSeconds: 12,
+      });
+
+      expect(result).toBeDefined();
+      expect(mockCreateObservation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trigger: 'audio-transcript-ready',
+          captureId: 'cap-1',
+          coopId: 'coop-1',
+          payload: expect.objectContaining({
+            transcriptText: 'Maria mentioned the EPA grant requires a 20% local match',
+            durationSeconds: 12,
+          }),
+        }),
+      );
+      expect(mockSaveAgentObservation).toHaveBeenCalled();
+    });
+
+    it('truncates long transcripts in the summary', async () => {
+      mockFindByFingerprint.mockResolvedValueOnce(undefined);
+      const { emitAudioTranscriptObservation } = await import('../agent');
+      const longText = 'A'.repeat(300);
+      await emitAudioTranscriptObservation({
+        captureId: 'cap-2',
+        transcriptText: longText,
+      });
+
+      expect(mockCreateObservation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          summary: expect.stringContaining('…'),
+        }),
+      );
+    });
+  });
 });

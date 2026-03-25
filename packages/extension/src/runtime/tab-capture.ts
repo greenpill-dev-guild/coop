@@ -27,6 +27,6 @@ export function extractPageSnapshot(source: Document = document): CaptureSnapsho
   };
 }
 
-export function isSupportedUrl(url?: string) {
+export function isSupportedUrl(url?: string): url is string {
   return Boolean(url?.startsWith('http://') || url?.startsWith('https://'));
 }

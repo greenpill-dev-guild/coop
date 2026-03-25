@@ -464,6 +464,8 @@ export const agentObservationTriggerSchema = z.enum([
   'erc8004-registration-due',
   'erc8004-feedback-due',
   'stale-draft',
+  'audio-transcript-ready',
+  'safe-add-owner-requested',
 ]);
 
 export const agentObservationStatusSchema = z.enum([

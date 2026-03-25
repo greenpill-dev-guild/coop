@@ -1,4 +1,5 @@
 import {
+  type ReviewDraft,
   type UiPreferences,
   createPermitLogEntry,
   defaultSoundPreferences,
@@ -252,7 +253,7 @@ export function describeActionIndicator(
 
 // ---- Badge / Summary ----
 
-export async function buildSummary(): Promise<RuntimeSummary> {
+export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts: ReviewDraft[] }> {
   const [
     drafts,
     coops,
@@ -313,7 +314,7 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     pendingOutboxCount: outboxCount,
   });
 
-  return {
+  const summary: RuntimeSummary = {
     iconState,
     iconLabel: extensionIconStateLabel(iconState),
     pendingDrafts: visibleDrafts.length,
@@ -337,23 +338,18 @@ export async function buildSummary(): Promise<RuntimeSummary> {
     activeCoopId: activeContext.activeCoopId,
     pendingOutboxCount: outboxCount,
   };
+  return { summary, drafts };
 }
 
 export async function writePopupSnapshot(
   summary: RuntimeSummary,
   coops: Array<{ profile: { id: string; name: string }; artifacts: unknown[] }>,
+  drafts: ReviewDraft[],
 ) {
-  // Fetch the 3 most recent draft titles for instant Chickens tab preview
-  const recentDraftTitles: string[] = [];
-  try {
-    const drafts = await listReviewDrafts(db);
-    const sorted = [...drafts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    for (const draft of sorted.slice(0, 3)) {
-      recentDraftTitles.push(draft.title);
-    }
-  } catch {
-    // Non-critical — snapshot works without previews
-  }
+  const recentDraftTitles = drafts
+    .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 3)
+    .map((d) => d.title);
 
   const snapshot: PopupSnapshot = {
     hasCoops: coops.length > 0,
@@ -387,7 +383,7 @@ export async function reconcileOutboxEntries() {
 
 export async function refreshBadge() {
   await reconcileOutboxEntries();
-  const [summary, coops] = await Promise.all([buildSummary(), getCoops()]);
+  const [{ summary, drafts }, coops] = await Promise.all([buildSummary(), getCoops()]);
   const indicator = describeActionIndicator(summary);
   await chrome.action.setIcon({ path: extensionIconPaths(summary.iconState) });
   await chrome.action.setBadgeText({ text: indicator.badgeText });
@@ -395,7 +391,7 @@ export async function refreshBadge() {
   await chrome.action.setTitle({
     title: indicator.title,
   });
-  void writePopupSnapshot(summary, coops);
+  void writePopupSnapshot(summary, coops, drafts);
   void notifyDashboardUpdated();
 }
 
@@ -407,7 +403,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     drafts,
     candidates,
     tabRoutings,
-    summary,
+    summaryResult,
     soundPreferences,
     resolvedUiPreferences,
     authSession,
@@ -429,6 +425,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     listReceiverCaptures(db),
     db.captureRuns.orderBy('capturedAt').reverse().limit(5).toArray(),
   ]);
+  const { summary } = summaryResult;
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
   const orderedDrafts = drafts;
   const visibleDrafts = filterVisibleReviewDrafts(

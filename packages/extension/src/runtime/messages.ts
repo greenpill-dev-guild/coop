@@ -69,6 +69,7 @@ export interface RuntimeSummary {
   localEnhancement: string;
   localInferenceOptIn: boolean;
   activeCoopId?: string;
+  pendingOutboxCount: number;
 }
 
 export interface PopupSidepanelState {
@@ -89,6 +90,7 @@ export interface PopupSnapshot {
   draftCount: number;
   artifactCount: number;
   lastCaptureAt?: string;
+  recentDraftTitles: string[];
   cachedAt: string;
 }
 

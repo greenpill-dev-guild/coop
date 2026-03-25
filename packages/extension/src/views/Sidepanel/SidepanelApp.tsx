@@ -141,7 +141,7 @@ export function SidepanelApp() {
             (dashboard?.operator.policyActionQueue?.filter(
               (b) => b.status === 'proposed' || b.status === 'approved',
             ).length ?? 0) +
-            (agentDashboard?.plans?.filter((p) => p.status === 'proposed').length ?? 0),
+            (agentDashboard?.plans?.filter((p) => p.status === 'pending').length ?? 0),
         }}
       />
     </div>

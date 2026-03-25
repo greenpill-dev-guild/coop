@@ -50,7 +50,11 @@ import {
 } from '../context';
 import { refreshBadge } from '../dashboard';
 import { getActiveReviewContextForSession } from '../operator';
-import { drainAgentCycles, emitRoundupBatchObservation } from './agent';
+import {
+  drainAgentCycles,
+  emitAudioTranscriptObservation,
+  emitRoundupBatchObservation,
+} from './agent';
 
 export async function collectCandidate(
   tab: chrome.tabs.Tab,
@@ -606,6 +610,23 @@ export async function captureAudio(payload: {
         },
         transcriptBytes,
       );
+
+      // Feed transcript into the agent observation pipeline (non-blocking)
+      await emitAudioTranscriptObservation({
+        captureId: capture.id,
+        coopId: capture.coopId,
+        transcriptText: result.text,
+        durationSeconds: result.duration,
+      });
+
+      // Notify the user that transcription completed (independent of observation)
+      await notifyExtensionEvent({
+        eventKind: 'transcript-ready',
+        entityId: capture.id,
+        state: 'completed',
+        title: 'Voice note transcribed',
+        message: `"${result.text.slice(0, 80)}${result.text.length > 80 ? '…' : ''}"`,
+      });
     } catch (err) {
       console.warn('[captureAudio] Background transcription failed:', err);
     }
