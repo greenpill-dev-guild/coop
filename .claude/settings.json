@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '%s\\n' 'Coop Claude Code' '  /plan /debug /review /audit /meeting-notes' '  Agents: oracle | cracked-coder | code-reviewer | migration | triage'",
+            "command": "printf '%s\\n' 'Coop Claude Code' '  /plan /debug /review /audit /monitor' '  Agents: oracle | cracked-coder | code-reviewer | migration | triage'",
             "once": true
           }
         ]

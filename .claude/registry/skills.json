@@ -33,6 +33,14 @@
       "dependencies": []
     },
     {
+      "name": "monitor",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["/monitor", "quality gate", "watch tests", "watch build", "guard"],
+      "dependencies": []
+    },
+    {
       "name": "autonomous-review",
       "status": "active",
       "listed_in_index": true,
@@ -55,6 +63,14 @@
       "default_mode": "interactive",
       "triggers": ["bugfix with TDD", "test-first fix"],
       "dependencies": ["debug", "testing"]
+    },
+    {
+      "name": "commit",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["commit this", "organize commits"],
+      "dependencies": []
     },
     {
       "name": "testing",
@@ -97,67 +113,11 @@
       "dependencies": []
     },
     {
-      "name": "vite",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["build config", "bundle", "env vars", "plugins"],
-      "dependencies": []
-    },
-    {
       "name": "security",
       "status": "active",
       "listed_in_index": true,
       "default_mode": "passive",
       "triggers": ["security audit", "vulnerability", "XSS", "key exposure"],
-      "dependencies": []
-    },
-    {
-      "name": "migration",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["migration", "upgrade", "breaking change"],
-      "dependencies": ["testing"]
-    },
-    {
-      "name": "git-workflow",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["branch", "commit", "merge conflict", "release"],
-      "dependencies": []
-    },
-    {
-      "name": "ci-cd",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["CI", "GitHub Actions", "pipeline", "workflow"],
-      "dependencies": []
-    },
-    {
-      "name": "dependency-management",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["dependency", "lockfile", "bun install", "upgrade package"],
-      "dependencies": []
-    },
-    {
-      "name": "frontend-design",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["design UI", "build page", "frontend", "visual design"],
-      "dependencies": ["tailwindcss"]
-    },
-    {
-      "name": "tailwindcss",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["TailwindCSS", "design tokens", "dark mode"],
       "dependencies": []
     },
     {
@@ -177,33 +137,20 @@
       "dependencies": []
     },
     {
-      "name": "biome",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "passive",
-      "triggers": ["format", "Biome", "import sorting"],
-      "dependencies": []
-    },
-    {
       "name": "performance",
       "status": "active",
       "listed_in_index": true,
       "default_mode": "passive",
       "triggers": ["performance", "bundle size", "profiling", "memory leak"],
       "dependencies": []
-    },
-    {
-      "name": "meeting-notes",
-      "status": "active",
-      "listed_in_index": true,
-      "default_mode": "interactive",
-      "triggers": ["meeting notes", "transcript", "extract issues"],
-      "dependencies": []
     }
   ],
   "aliases": {
     "offline": "data-layer",
     "storage": "data-layer",
-    "local-first": "data-layer"
+    "local-first": "data-layer",
+    "guard": "monitor",
+    "watch-tests": "monitor",
+    "watch-build": "monitor"
   }
 }

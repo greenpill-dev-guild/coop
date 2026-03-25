@@ -1,6 +1,6 @@
 {
   "source": ".claude/skills/*/SKILL.md",
-  "canonical_commands": ["plan", "debug", "review", "audit"],
+  "canonical_commands": ["plan", "debug", "review", "audit", "monitor"],
   "commands": [
     {
       "name": "plan",
@@ -33,11 +33,22 @@
       "intent": "Dead code detection and architectural anti-pattern analysis",
       "entry_file": ".claude/skills/audit/SKILL.md",
       "owned_skills": ["audit"]
+    },
+    {
+      "name": "monitor",
+      "status": "active",
+      "default_mode": "interactive",
+      "intent": "Quality gate and regression monitor — one-shot or continuous with /loop",
+      "entry_file": ".claude/skills/monitor/SKILL.md",
+      "owned_skills": ["monitor"]
     }
   ],
   "aliases": {
     "cross-package-verify": "/review --mode verify_only --scope cross-package",
     "autonomous review": "/review --mode apply_fixes",
-    "tdd bugfix": "/debug --mode tdd_bugfix"
+    "tdd bugfix": "/debug --mode tdd_bugfix",
+    "guard": "/monitor",
+    "watch-tests": "/monitor --tests",
+    "watch-build": "/monitor --build"
   }
 }

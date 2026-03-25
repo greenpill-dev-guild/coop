@@ -83,6 +83,20 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 **Error Handling**: Never swallow errors. Surface failures to the user.
 
+**Vite Build Rules**:
+- App config: `packages/app/vite.config.ts`, Extension config: `packages/extension/vite.config.ts`
+- All env vars require `VITE_` prefix for frontend access (`import.meta.env.VITE_*`)
+- Env vars are baked at build time — rebuild after `.env.local` changes
+- Preserve React Compiler and extension build config unless explicitly asked to change
+- Never introduce package-level `.env` files or overlapping resolve aliases
+
+**Dependency Rules**:
+- Internal deps use `workspace:*` (never `workspace:^`)
+- `bun.lockb` is binary — never manually merge, always regenerate: `git checkout --theirs bun.lockb && bun install`
+- Pin exact versions: viem, permissionless, react, dexie, yjs (breaking changes between minors)
+- Use ranges for dev deps: vitest `^`, typescript `~`, @types/* `^`
+- Install in the correct package, never root for package-specific needs
+
 **Brand Metaphors**: Tabs = "Loose Chickens", review queue = "Roost", shared feed = "Coop Feed", creating a coop = "Launching the Coop", success sound = "Rooster Call".
 
 **Build and Verify**: After making changes, choose the appropriate verification tier and verify the result before reporting the task is done. Never tell the user a change is ready without verifying first. UI/CSS changes are invisible until the Vite build runs and the extension or app is reloaded.
