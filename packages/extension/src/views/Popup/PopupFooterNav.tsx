@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { PopupFooterTab } from './popup-types';
 
 function HomeIcon() {

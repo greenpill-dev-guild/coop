@@ -1,4 +1,4 @@
-import { type PropsWithChildren, useEffect } from 'react';
+import { type JSX, type PropsWithChildren, useEffect } from 'react';
 import type { PopupResolvedTheme } from './popup-types';
 
 export function PopupShell({

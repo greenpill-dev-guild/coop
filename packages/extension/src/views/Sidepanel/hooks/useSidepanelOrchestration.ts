@@ -1,4 +1,5 @@
 import type {
+  CaptureMode,
   DelegatedActionClass,
   GreenGoodsAssessmentRequest,
   GreenGoodsWorkApprovalRequest,
@@ -154,7 +155,7 @@ export interface SidepanelOrchestration {
   updateCoopProfile: (patch: {
     name?: string;
     purpose?: string;
-    captureMode?: string;
+    captureMode?: CaptureMode;
   }) => Promise<void>;
   handleLeaveCoop: () => Promise<void>;
   exportSnapshot: (format: 'json' | 'text') => Promise<void>;
@@ -316,7 +317,7 @@ export function useSidepanelOrchestration(
   async function updateCoopProfile(patch: {
     name?: string;
     purpose?: string;
-    captureMode?: string;
+    captureMode?: CaptureMode;
   }) {
     if (!activeCoop) return;
     const response = await sendRuntimeMessage({

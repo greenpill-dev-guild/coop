@@ -1,4 +1,7 @@
 import {
+  type CoopSharedState,
+  type GreenGoodsGardenState,
+  type PasskeyCredential,
   createGreenGoodsImpactReportOutput,
   createGreenGoodsWorkSubmissionOutput,
   createLocalMemberSignerBinding,
@@ -56,7 +59,7 @@ async function requireAuthenticatedMemberContext(input: { coopId: string; member
 
   return {
     ok: true as const,
-    authSession,
+    authSession: authSession as typeof authSession & { passkey: PasskeyCredential },
     coop,
     authenticatedMember,
   };
@@ -132,10 +135,14 @@ async function requireLocalMemberGreenGoodsContext(
     };
   }
 
+  const coopWithGreenGoods = coop as typeof coop & {
+    greenGoods: GreenGoodsGardenState & { gardenAddress: Address };
+  };
+
   return {
     ok: true as const,
     authSession,
-    coop,
+    coop: coopWithGreenGoods,
     authenticatedMember,
     localBinding,
     memberAccount: resolveMemberAccountForLocalBinding({
@@ -385,7 +392,7 @@ export async function handleSubmitGreenGoodsImpactReport(
       usedAt: activityAt,
       lastError: undefined,
     });
-    await saveState(nextState);
+    await saveState(nextState as CoopSharedState);
 
     return {
       ok: true,
@@ -461,7 +468,7 @@ export async function handleSubmitGreenGoodsWorkSubmission(
       usedAt: activityAt,
       lastError: undefined,
     });
-    await saveState(nextState);
+    await saveState(nextState as CoopSharedState);
 
     return {
       ok: true,

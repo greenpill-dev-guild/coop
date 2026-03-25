@@ -3,6 +3,7 @@ import {
   type CaptureMode,
   type CoopSharedState,
   type CoopSpaceType,
+  type OnchainState,
   type SoundPreferences,
   createPasskeySession,
   getCoopSpacePreset,
@@ -63,7 +64,7 @@ export function useCoopForm(deps: {
   }
 
   async function resolveOnchainState(coopSeed: string) {
-    const response = await sendRuntimeMessage({
+    const response = await sendRuntimeMessage<OnchainState>({
       type: 'resolve-onchain-state',
       payload: { coopSeed },
     });

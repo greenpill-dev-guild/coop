@@ -34,7 +34,7 @@ export function NestInviteSection({
   currentMemberId,
 }: NestInviteSectionProps) {
   const [copied, setCopied] = useState(false);
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(copyTimerRef.current), []);
   const invites = activeCoop?.invites ?? [];
   const canManage =

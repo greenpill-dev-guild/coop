@@ -1,5 +1,6 @@
 import {
   type AuthSession,
+  type OnchainState,
   type SoundPreferences,
   createPasskeySession,
   sessionToMember,
@@ -59,7 +60,7 @@ export function useCoopActions(deps: {
   }
 
   async function resolveOnchainState(coopSeed: string) {
-    const response = await sendRuntimeMessage({
+    const response = await sendRuntimeMessage<OnchainState>({
       type: 'resolve-onchain-state',
       payload: { coopSeed },
     });
