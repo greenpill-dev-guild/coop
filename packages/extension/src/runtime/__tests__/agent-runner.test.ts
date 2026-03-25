@@ -321,6 +321,7 @@ vi.mock('../agent-registry', () => ({
 
 vi.mock('../messages', () => ({
   notifyDashboardUpdated: vi.fn().mockResolvedValue(undefined),
+  notifyAgentEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 // --- Import module under test after all mocks ---
