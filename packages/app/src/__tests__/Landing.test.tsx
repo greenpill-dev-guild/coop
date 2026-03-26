@@ -64,19 +64,38 @@ describe('landing page', () => {
   });
 
   it('renders the simplified landing structure and footer links', () => {
-    render(<App />);
+    const { container } = render(<App />);
 
     expect(screen.getByRole('heading', { name: /no more chickens loose/i })).toBeInTheDocument();
     expect(screen.getByText(/^No more$/)).toBeInTheDocument();
     expect(screen.getByText(/^chickens loose\.$/)).toBeInTheDocument();
     expect(screen.getByText(/turning knowledge into opportunity/i)).toBeInTheDocument();
+    expect(container.querySelector('.hero-signal-cluster')).not.toBeNull();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^curate your coop$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^why we build$/i })).toBeInTheDocument();
     expect(screen.getByText(/your data stays yours/i)).toBeInTheDocument();
+    expect(container.querySelectorAll('.how-works-index')).toHaveLength(4);
+    expect(container.querySelector('.why-build-intro')).not.toBeNull();
+    expect(container.querySelector('.why-build-proof')).not.toBeNull();
     expect(screen.queryByText(/^get started$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /reset ritual/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /github/i })).toBeInTheDocument();
+  });
+
+  it('updates the ritual shell audience state when a different audience is selected', () => {
+    const { container } = render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
+
+    expect(container.querySelector('.ritual-game-shell')).toHaveAttribute(
+      'data-audience',
+      'family',
+    );
+    expect(screen.getByRole('button', { name: /^family$/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('renders the dev tunnel badge when tunnel state is provided', async () => {

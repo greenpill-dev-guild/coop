@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { archiveWorthinessSchema } from './schema-agent';
 import { membershipProofSchema } from './schema-crypto';
 import {

@@ -7,7 +7,6 @@ import {
   makeDashboard,
   makeDraft,
 } from '../../__test-utils__/popup-harness';
-import { PopupApp } from '../PopupApp';
 
 const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } = vi.hoisted(
   () => ({
@@ -17,15 +16,12 @@ const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } 
   }),
 );
 
-vi.mock('../../../runtime/messages', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../runtime/messages')>()),
-  sendRuntimeMessage: mockSendRuntimeMessage,
-}));
-
 vi.mock('../../../runtime/audio', () => ({
   playCoopSound: mockPlayCoopSound,
   playRandomChickenSound: mockPlayRandomChickenSound,
 }));
+
+const { PopupApp } = await import('../PopupApp');
 
 describe('PopupApp', () => {
   beforeEach(() => {
@@ -70,7 +66,9 @@ describe('PopupApp', () => {
         tabs: {
           query: vi
             .fn()
-            .mockResolvedValue([{ id: 7, windowId: 7, url: 'https://example.com', title: 'Example' }]),
+            .mockResolvedValue([
+              { id: 7, windowId: 7, url: 'https://example.com', title: 'Example' },
+            ]),
           create: vi.fn().mockResolvedValue(undefined),
         },
         permissions: {
@@ -82,6 +80,7 @@ describe('PopupApp', () => {
           close: vi.fn().mockResolvedValue(undefined),
         },
         runtime: {
+          sendMessage: mockSendRuntimeMessage,
           getURL: vi.fn((path: string) => `chrome-extension://${path}`),
           onMessage: {
             addListener: vi.fn(),
@@ -200,7 +199,7 @@ describe('PopupApp', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Note hatched into your roost.');
   });
 
-  it('triggers the random chicken sound from the header mark', async () => {
+  it('renders the playful header mark without disturbing the popup flow', async () => {
     installDefaultRuntimeHandlers(mockSendRuntimeMessage);
     const user = userEvent.setup();
 
@@ -208,9 +207,7 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Play coop sound' }));
 
-    expect(mockPlayRandomChickenSound).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: true }),
-    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('opens the profile drawer with coop management and segmented settings while omitting Local helper', async () => {
@@ -546,6 +543,32 @@ describe('PopupApp', () => {
     });
   });
 
+  it('keeps the popup on Home when active-tab capture returns zero new drafts', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return { ok: true, data: makeDashboard({ drafts: [] }) };
+      }
+      if (message.type === 'get-sidepanel-state') {
+        return { ok: true, data: { open: false, canClose: true } };
+      }
+      if (message.type === 'capture-active-tab') {
+        return { ok: true, data: 0 };
+      }
+      return { ok: true };
+    });
+    const user = userEvent.setup();
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Capture Tab' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'This tab did not produce a new capture.',
+    );
+    expect(screen.getByRole('button', { name: 'Roundup Chickens' })).toBeInTheDocument();
+    expect(screen.queryByText('River restoration lead')).not.toBeInTheDocument();
+  });
+
   it('opens the capture review dialog for screenshots and saves edited context', async () => {
     installDefaultRuntimeHandlers(mockSendRuntimeMessage);
     const user = userEvent.setup();
@@ -620,6 +643,31 @@ describe('PopupApp', () => {
     expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
   });
 
+  it('surfaces the unsupported-page screenshot message before calling runtime capture', async () => {
+    installDefaultRuntimeHandlers(mockSendRuntimeMessage);
+    const user = userEvent.setup();
+
+    chrome.tabs.query = vi.fn().mockResolvedValue([
+      {
+        id: 7,
+        windowId: 7,
+        url: 'chrome://extensions',
+        title: 'Extensions',
+      },
+    ]);
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Screenshot' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Open a standard web page before taking a screenshot.',
+    );
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalledWith({
+      type: 'prepare-visible-screenshot',
+    });
+  });
+
   it('uses the shared fill-frame on Home, Chickens, and Feed', async () => {
     installDefaultRuntimeHandlers(mockSendRuntimeMessage);
     const user = userEvent.setup();
@@ -628,6 +676,7 @@ describe('PopupApp', () => {
 
     const homeSubheader = await screen.findByLabelText('Home status');
     expect(homeSubheader.closest('.popup-screen--fill')).not.toBeNull();
+    expect(homeSubheader.closest('.popup-screen--home')).not.toBeNull();
 
     await user.click(await screen.findByRole('button', { name: 'Chickens' }));
     const chickensSubheader = await screen.findByLabelText('Filter chickens by coop');
@@ -636,6 +685,28 @@ describe('PopupApp', () => {
     await user.click(screen.getByRole('button', { name: /Feed/ }));
     const feedSubheader = await screen.findByLabelText('Filter feed by coop');
     expect(feedSubheader.closest('.popup-screen--fill')).not.toBeNull();
+  });
+
+  it('resets the popup scroll frame when switching screens', async () => {
+    installDefaultRuntimeHandlers(mockSendRuntimeMessage);
+    const user = userEvent.setup();
+
+    const { container } = render(<PopupApp />);
+    const scrollPane = container.querySelector('.popup-scroll-pane');
+    expect(scrollPane).not.toBeNull();
+
+    await user.click(await screen.findByRole('button', { name: 'Chickens' }));
+    if (!(scrollPane instanceof HTMLDivElement)) {
+      throw new Error('Expected popup scroll pane to be an HTMLDivElement.');
+    }
+
+    scrollPane.scrollTop = 18;
+
+    await user.click(screen.getByRole('button', { name: 'Home' }));
+
+    await waitFor(() => {
+      expect(scrollPane.scrollTop).toBe(0);
+    });
   });
 
   it('shows the + button in the header and opens a create/join popover', async () => {

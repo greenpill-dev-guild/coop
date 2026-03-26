@@ -34,8 +34,9 @@ export function usePopupRecording(deps: {
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
-  const cleanup = useCallback((nextStatus: PopupRecordingStatus = 'idle') => {
+  const clearTimers = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -44,17 +45,26 @@ export function usePopupRecording(deps: {
       clearTimeout(maxTimerRef.current);
       maxTimerRef.current = null;
     }
-    if (streamRef.current) {
-      for (const track of streamRef.current.getTracks()) {
-        track.stop();
-      }
-      streamRef.current = null;
-    }
-    recorderRef.current = null;
-    chunksRef.current = [];
-    setStatus(nextStatus);
-    setElapsedSeconds(0);
   }, []);
+
+  const cleanup = useCallback(
+    (nextStatus: PopupRecordingStatus = 'idle') => {
+      clearTimers();
+      if (streamRef.current) {
+        for (const track of streamRef.current.getTracks()) {
+          track.stop();
+        }
+        streamRef.current = null;
+      }
+      recorderRef.current = null;
+      chunksRef.current = [];
+      if (mountedRef.current) {
+        setStatus(nextStatus);
+        setElapsedSeconds(0);
+      }
+    },
+    [clearTimers],
+  );
 
   const startRecording = useCallback(async () => {
     if (recorderRef.current) return;
@@ -189,6 +199,13 @@ export function usePopupRecording(deps: {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
         const duration = Math.round((Date.now() - startTimeRef.current) / 1000);
@@ -198,12 +215,14 @@ export function usePopupRecording(deps: {
             `Partial voice note saved (${duration}s).`,
           );
         }
+        clearTimers();
         commitRef.current = 'emergency-save';
         recorderRef.current.stop();
+        return;
       }
       cleanup();
     };
-  }, [cleanup]);
+  }, [cleanup, clearTimers]);
 
   const clearPartialSaveMessage = useCallback(() => setPartialSaveMessage(null), []);
 

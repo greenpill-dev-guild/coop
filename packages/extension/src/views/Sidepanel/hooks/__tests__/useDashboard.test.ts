@@ -160,6 +160,44 @@ describe('useDashboard', () => {
     expect(sendMessageMock).toHaveBeenCalledWith({ type: 'get-agent-dashboard' });
   });
 
+  it('keeps sync summary labels and tones from the dashboard payload', async () => {
+    sendMessageMock.mockImplementation((msg: { type: string }) => {
+      switch (msg.type) {
+        case 'get-dashboard':
+          return Promise.resolve(
+            makeDashboardResponse({
+              summary: {
+                ...makeDashboardResponse().data.summary,
+                syncState:
+                  'No signaling server connection. Shared sync is currently limited to this browser profile.',
+                syncLabel: 'Local',
+                syncDetail:
+                  'No signaling server connection. Shared sync is currently limited to this browser profile.',
+                syncTone: 'warning',
+              },
+            }),
+          );
+        case 'get-agent-dashboard':
+          return Promise.resolve(makeAgentDashboardResponse());
+        case 'get-action-policies':
+          return Promise.resolve(makePoliciesResponse());
+        default:
+          return Promise.resolve({ ok: false, error: 'Unknown' });
+      }
+    });
+
+    const { result } = renderHook(() => useDashboard());
+
+    await waitFor(() => {
+      expect(result.current.dashboard?.summary.syncLabel).toBe('Local');
+    });
+
+    expect(result.current.dashboard?.summary.syncTone).toBe('warning');
+    expect(result.current.dashboard?.summary.syncDetail).toContain(
+      'Shared sync is currently limited to this browser profile.',
+    );
+  });
+
   it('registers a chrome.runtime.onMessage listener on mount', async () => {
     const { result } = renderHook(() => useDashboard());
 
@@ -257,5 +295,28 @@ describe('useDashboard', () => {
     });
 
     expect(sendMessageMock).toHaveBeenCalledWith({ type: 'get-dashboard' });
+  });
+
+  it('captures dashboard load failures in message state', async () => {
+    sendMessageMock.mockImplementation((msg: { type: string }) => {
+      switch (msg.type) {
+        case 'get-dashboard':
+          return Promise.resolve({ ok: false, error: 'Dashboard unavailable.' });
+        case 'get-agent-dashboard':
+          return Promise.resolve(makeAgentDashboardResponse());
+        case 'get-action-policies':
+          return Promise.resolve(makePoliciesResponse());
+        default:
+          return Promise.resolve({ ok: false, error: 'Unknown' });
+      }
+    });
+
+    const { result } = renderHook(() => useDashboard());
+
+    await waitFor(() => {
+      expect(result.current.message).toBe('Dashboard unavailable.');
+    });
+
+    expect(result.current.dashboard).toBeNull();
   });
 });

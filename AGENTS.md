@@ -10,7 +10,7 @@ For full details, see [`CLAUDE.md`](./CLAUDE.md).
 bun install                  # Install dependencies
 bun dev                      # Start app + extension (concurrent)
 bun dev:app                  # Start app only
-bun dev:extension            # Start extension only (watch build)
+bun dev:extension            # Start extension only (WXT dev + Chromium)
 bun dev:api                  # Start API server (signaling + routes)
 bun format && bun lint       # Format (Biome) and lint workspace
 bun run test                 # Run all unit tests (vitest)

@@ -10,7 +10,7 @@ import { loadRootEnv, repoRoot } from './load-root-env';
 
 loadRootEnv();
 
-const extensionDistDir = path.join(repoRoot, 'packages/extension/dist');
+const extensionDistDir = path.join(repoRoot, 'packages/extension/.output/chrome-mv3');
 const manifestPath = path.join(extensionDistDir, 'manifest.json');
 const requiredDocPaths = [
   'docs/community/privacy-policy.md',
@@ -95,8 +95,9 @@ function isExactOriginPattern(match: string) {
 
 function getReceiverBridgeMatches(manifest: DistManifest) {
   return (
-    manifest.content_scripts?.find((entry) => entry.js?.includes('receiver-bridge.js'))?.matches ??
-    []
+    manifest.content_scripts?.find((entry) =>
+      entry.js?.some((scriptPath) => scriptPath.includes('receiver-bridge')),
+    )?.matches ?? []
   )
     .slice()
     .sort();
@@ -143,14 +144,14 @@ async function main() {
   if (!fs.existsSync(extensionDistDir)) {
     fail(
       errors,
-      'Missing packages/extension/dist. Run `bun run --filter @coop/extension build` first.',
+      'Missing packages/extension/.output/chrome-mv3. Run `cd packages/extension && bun run build` first.',
     );
   }
 
   if (!fs.existsSync(manifestPath)) {
     fail(
       errors,
-      'Missing packages/extension/dist/manifest.json. Run a fresh extension build first.',
+      'Missing packages/extension/.output/chrome-mv3/manifest.json. Run a fresh extension build first.',
     );
   }
 

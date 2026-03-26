@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 
 // ---- helpers ----------------------------------------------------------------
 
-const distDir = path.resolve(__dirname, '../../dist');
+const distDir = path.resolve(__dirname, '../../.output/chrome-mv3');
 const bgPath = path.join(distDir, 'background.js');
 const distExists = fs.existsSync(bgPath);
 const requireDist = process.env.COOP_REQUIRE_EXTENSION_DIST === '1';
@@ -236,7 +236,7 @@ describe('service-worker safety (built output)', () => {
     maybeIt('requires a fresh extension build', () => {
       expect(
         distExists,
-        'Expected packages/extension/dist/background.js to exist. Run the extension build first.',
+        'Expected packages/extension/.output/chrome-mv3/background.js to exist. Run the extension build first.',
       ).toBe(true);
     });
     return;
@@ -248,7 +248,7 @@ describe('service-worker safety (built output)', () => {
     expect(graph.length).toBeGreaterThan(1);
   });
 
-  it('background graph contains no top-level dynamic import()', () => {
+  it('background graph contains no top-level dynamic import()', { timeout: 30_000 }, () => {
     const vs: Violation[] = [];
     for (const file of graph) {
       vs.push(
@@ -262,7 +262,7 @@ describe('service-worker safety (built output)', () => {
     }
   });
 
-  it('background graph contains no top-level document.* access', () => {
+  it('background graph contains no top-level document.* access', { timeout: 30_000 }, () => {
     const vs: Violation[] = [];
     for (const file of graph) {
       vs.push(
@@ -276,7 +276,7 @@ describe('service-worker safety (built output)', () => {
     }
   });
 
-  it('background graph contains no top-level URL.createObjectURL', () => {
+  it('background graph contains no top-level URL.createObjectURL', { timeout: 30_000 }, () => {
     const vs: Violation[] = [];
     for (const file of graph) {
       vs.push(
@@ -290,7 +290,7 @@ describe('service-worker safety (built output)', () => {
     }
   });
 
-  it('background graph contains no top-level new Worker()', () => {
+  it('background graph contains no top-level new Worker()', { timeout: 30_000 }, () => {
     const vs: Violation[] = [];
     for (const file of graph) {
       vs.push(

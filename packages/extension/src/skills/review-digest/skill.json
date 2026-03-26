@@ -18,6 +18,9 @@
   "approvalMode": "advisory",
   "timeoutMs": 45000,
   "maxTokens": 700,
+  "qualityProfile": "synthesis-v1",
+  "qualityThreshold": 0.72,
+  "maxEvaluatorRetries": 1,
   "depends": [],
   "provides": ["drafts"]
 }

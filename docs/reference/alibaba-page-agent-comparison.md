@@ -219,7 +219,7 @@ This is especially useful for grant portals, governance dashboards, and admin to
 
 Coop already has a bridge-like pattern in the receiver flow:
 
-- `packages/extension/public/receiver-bridge.js`
+- `packages/extension/entrypoints/receiver-bridge.content.ts`
 - `packages/app/src/hooks/useReceiverSync.ts`
 
 That suggests a path toward a more general embedded bridge.

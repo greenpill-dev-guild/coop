@@ -108,6 +108,28 @@ describe('operator console', () => {
     expect(screen.getByText(/live archive upload completed and receipt stored/i)).toBeVisible();
   });
 
+  it('shows practice and off mode labels when live paths are not enabled', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <OperatorConsole
+        {...baseProps}
+        anchorActive={false}
+        archiveMode="mock"
+        onchainMode="mock"
+        sessionMode="off"
+        liveArchiveAvailable={false}
+        liveOnchainAvailable={false}
+        refreshableReceiptCount={0}
+      />,
+    );
+
+    await expandSection(user, 'Trusted Nest Controls');
+    expect(screen.getAllByText('Practice').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Off')).toBeVisible();
+    expect(screen.getByRole('button', { name: /refresh saved proof/i })).toBeDisabled();
+  });
+
   it('renders Green Goods request controls for a linked garden and queues GAP admin sync', async () => {
     const user = userEvent.setup();
     const onQueueGreenGoodsGapAdminSync = vi.fn();

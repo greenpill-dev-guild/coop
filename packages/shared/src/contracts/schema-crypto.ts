@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 
 export const signatureValidationResultSchema = z.object({
   isValid: z.boolean(),

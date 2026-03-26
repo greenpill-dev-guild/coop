@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 
 export const syncRoomConfigSchema = z.object({
   coopId: z.string().min(1),

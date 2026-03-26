@@ -37,7 +37,7 @@ Then in Chrome:
 1. Open `chrome://extensions`.
 2. Turn on `Developer mode`.
 3. Click `Load unpacked`.
-4. Select `packages/extension/dist`.
+4. Select `packages/extension/.output/chrome-mv3`.
 5. Reload after each rebuild.
 
 ## Local Extension + Production Receiver PWA
@@ -61,7 +61,7 @@ Build:
 
 ```bash
 bun run --filter @coop/extension build
-cd packages/extension/dist
+cd packages/extension/.output/chrome-mv3
 zip -r ../coop-extension.zip .
 ```
 

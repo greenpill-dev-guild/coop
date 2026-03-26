@@ -11,23 +11,13 @@ bun install
 name = "Dev"
 icon = "run"
 command = '''
-bun install
 bun dev
-'''
-
-[[actions]]
-name = "Test"
-icon = "tool"
-command = '''
-bun install
-bun run test
 '''
 
 [[actions]]
 name = "Run App"
 icon = "tool"
 command = '''
-bun install
 bun dev:app
 '''
 
@@ -35,47 +25,68 @@ bun dev:app
 name = "Run Extension"
 icon = "tool"
 command = '''
-bun install
 bun dev:extension
+'''
+
+[[actions]]
+name = "Run API"
+icon = "tool"
+command = '''
+bun dev:api
+'''
+
+[[actions]]
+name = "Run Docs"
+icon = "tool"
+command = '''
+bun dev:docs
+'''
+
+[[actions]]
+name = "Validate: Quick"
+icon = "tool"
+command = '''
+bun run validate quick
+'''
+
+[[actions]]
+name = "Test"
+icon = "tool"
+command = '''
+bun run test
 '''
 
 [[actions]]
 name = "Build"
 icon = "tool"
 command = '''
-bun install
 bun build
 '''
 
 [[actions]]
-name = "Lint"
+name = "Validate: Smoke"
 icon = "tool"
 command = '''
-bun install
-bun format
-bun lint
-'''
-
-[[actions]]
-name = "Test: Smoke"
-icon = "tool"
-command = '''
-bun install
 bun run validate smoke
 '''
 
 [[actions]]
-name = "Test: Core"
+name = "Validate: Core Loop"
 icon = "tool"
 command = '''
-bun install
 bun run validate core-loop
 '''
 
 [[actions]]
-name = "Run: Signal"
+name = "Validate: Receiver Slice"
 icon = "tool"
 command = '''
-bun install
-bun dev:api
+bun run validate receiver-slice
+'''
+
+[[actions]]
+name = "Validate: Full"
+icon = "tool"
+command = '''
+bun run validate full
 '''

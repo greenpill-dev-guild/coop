@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { capabilityStateSchema, coopChainKeySchema, fvmChainKeySchema } from './schema-enums';
 
 export const legacyOnchainChainKeyMap = {

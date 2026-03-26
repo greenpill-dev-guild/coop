@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { receiverCaptureSchema, receiverSyncEnvelopeSchema } from '../../contracts/schema';
 
 export const RECEIVER_BRIDGE_APP_SOURCE = 'coop-receiver-app';

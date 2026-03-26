@@ -13,14 +13,14 @@ const chainKey = process.env.COOP_ONCHAIN_PROBE_CHAIN === 'arbitrum' ? 'arbitrum
 
 if (!pimlicoApiKey || !probePrivateKey) {
   console.log(
-    '[probe:onchain-live] Skipping live Safe probe. Set VITE_PIMLICO_API_KEY and COOP_ONCHAIN_PROBE_PRIVATE_KEY to run a real deployment on Ethereum Sepolia.',
+    '[probe:onchain-live] Skipping live Safe probe. Set VITE_PIMLICO_API_KEY and COOP_ONCHAIN_PROBE_PRIVATE_KEY to run the shared-wallet deployment rehearsal that backs the extension "Live shared-wallet work" state.',
   );
   process.exit(0);
 }
 
 const owner = privateKeyToAccount(probePrivateKey);
 console.log(
-  `[probe:onchain-live] Deploying a probe Safe on ${getCoopChainLabel(chainKey)} with ${owner.address}.`,
+  `[probe:onchain-live] Phase 1/1: deploying the coop shared wallet boundary on ${getCoopChainLabel(chainKey)} with ${owner.address}.`,
 );
 
 const state = await deployCoopSafeAccount({
@@ -36,3 +36,6 @@ console.log(`[probe:onchain-live] Safe address: ${state.safeAddress}`);
 if (state.deploymentTxHash) {
   console.log(`[probe:onchain-live] Deployment transaction: ${state.deploymentTxHash}`);
 }
+console.log(
+  '[probe:onchain-live] Capability proved: the extension can surface a live shared wallet address and deployment receipt for this environment.',
+);

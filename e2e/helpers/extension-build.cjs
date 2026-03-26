@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..', '..');
-const extensionDir = path.join(rootDir, 'packages/extension/dist');
+const extensionDir = path.join(rootDir, 'packages/extension/.output/chrome-mv3');
 const buildCacheDir = path.join(
   os.tmpdir(),
   'coop-e2e-extension-build',
@@ -17,10 +17,11 @@ const buildLockTimeoutMs = 5 * 60 * 1000;
 const buildPollIntervalMs = 250;
 const extensionBuildInputs = [
   path.join(rootDir, 'packages/extension/src'),
+  path.join(rootDir, 'packages/extension/entrypoints'),
   path.join(rootDir, 'packages/extension/public'),
   path.join(rootDir, 'packages/extension/package.json'),
   path.join(rootDir, 'packages/extension/tsconfig.json'),
-  path.join(rootDir, 'packages/extension/vite.config.ts'),
+  path.join(rootDir, 'packages/extension/wxt.config.ts'),
   path.join(rootDir, 'packages/shared/src'),
   path.join(rootDir, 'packages/shared/package.json'),
   path.join(rootDir, 'bun.lock'),
@@ -59,6 +60,7 @@ function buildSignature(env) {
   return JSON.stringify({
     archiveMode: env.VITE_COOP_ARCHIVE_MODE,
     onchainMode: env.VITE_COOP_ONCHAIN_MODE,
+    receiverAppUrl: env.VITE_COOP_RECEIVER_APP_URL,
     signalingUrls: env.VITE_COOP_SIGNALING_URLS,
   });
 }
@@ -178,8 +180,8 @@ function ensureExtensionBuilt(env = process.env) {
 
   try {
     if (!hasMatchingBuild(signature, minBuiltAtMs)) {
-      execSync('bun run --filter @coop/extension build', {
-        cwd: rootDir,
+      execSync('bun run build', {
+        cwd: path.join(rootDir, 'packages/extension'),
         stdio: 'inherit',
         env: buildEnv,
       });

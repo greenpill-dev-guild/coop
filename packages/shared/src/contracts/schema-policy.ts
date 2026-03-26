@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { coopChainKeySchema } from './schema-enums';
 
 export const privilegedActionTypeSchema = z.enum([

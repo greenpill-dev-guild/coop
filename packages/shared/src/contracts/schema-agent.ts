@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { artifactCategorySchema, ritualLensSchema } from './schema-enums';
 import { policyActionClassSchema } from './schema-policy';
 
@@ -48,6 +48,8 @@ export const skillRuntimeSchema = z.enum(['extension-offscreen', 'extension-side
 export const skillModelSchema = z.enum(['heuristic', 'transformers', 'webllm', 'hybrid']);
 
 export const skillApprovalModeSchema = z.enum(['advisory', 'proposal', 'auto-run-eligible']);
+
+export const skillQualityProfileSchema = z.enum(['synthesis-v1', 'publish-readiness-v1']);
 
 export const skillToolSchema = z.enum([
   'read-observation-context',
@@ -146,6 +148,32 @@ export const memoryInsightOutputSchema = z.object({
   insights: z.array(memoryInsightOutputItemSchema).default([]),
 });
 
+export const agentPlanStepEvaluationContractSchema = z.object({
+  rubricId: skillQualityProfileSchema,
+  threshold: z.number().min(0).max(1),
+  maxRetries: z.number().int().min(0),
+});
+
+export const skillEvaluationCriterionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  weight: z.number().min(0).max(1),
+  score: z.number().min(0).max(1),
+  passed: z.boolean(),
+  reason: z.string().min(1).optional(),
+});
+
+export const skillEvaluationAttemptSchema = z.object({
+  attempt: z.number().int().positive(),
+  rubricId: skillQualityProfileSchema,
+  score: z.number().min(0).max(1),
+  threshold: z.number().min(0).max(1),
+  passed: z.boolean(),
+  critiqueSummary: z.string().min(1),
+  criteria: z.array(skillEvaluationCriterionSchema).default([]),
+  evaluatedAt: z.string().datetime(),
+});
+
 export const agentPlanStepSchema = z.object({
   id: z.string().min(1),
   skillId: z.string().min(1),
@@ -156,6 +184,7 @@ export const agentPlanStepSchema = z.object({
   finishedAt: z.string().datetime().optional(),
   outputRef: z.string().min(1).optional(),
   error: z.string().min(1).optional(),
+  evaluationContract: agentPlanStepEvaluationContractSchema.optional(),
 });
 
 export const agentObservationSchema = z.object({
@@ -297,6 +326,9 @@ export const skillManifestSchema = z.object({
   skipWhen: z.string().optional(),
   provides: z.array(z.string()).default([]),
   maxTokens: z.number().int().positive().optional(),
+  qualityProfile: skillQualityProfileSchema.optional(),
+  qualityThreshold: z.number().min(0).max(1).optional(),
+  maxEvaluatorRetries: z.number().int().min(0).optional(),
 });
 
 export const skillRunSchema = z.object({
@@ -314,6 +346,7 @@ export const skillRunSchema = z.object({
   output: z.record(z.any()).optional(),
   notes: z.string().optional(),
   error: z.string().optional(),
+  evaluationAttempts: z.array(skillEvaluationAttemptSchema).optional(),
 });
 
 export const knowledgeSkillSchema = z.object({
@@ -419,6 +452,7 @@ export type AgentProvider = z.infer<typeof agentProviderSchema>;
 export type SkillRuntime = z.infer<typeof skillRuntimeSchema>;
 export type SkillModel = z.infer<typeof skillModelSchema>;
 export type SkillApprovalMode = z.infer<typeof skillApprovalModeSchema>;
+export type SkillQualityProfile = z.infer<typeof skillQualityProfileSchema>;
 export type SkillTool = z.infer<typeof skillToolSchema>;
 export type SkillRunStatus = z.infer<typeof skillRunStatusSchema>;
 export type SkillOutputSchemaRef = z.infer<typeof skillOutputSchemaRefSchema>;
@@ -427,6 +461,11 @@ export type TabRouting = z.infer<typeof tabRoutingSchema>;
 export type TabRouterOutput = z.infer<typeof tabRouterOutputSchema>;
 export type MemoryInsightOutput = z.infer<typeof memoryInsightOutputSchema>;
 export type ActionProposal = z.infer<typeof actionProposalSchema>;
+export type AgentPlanStepEvaluationContract = z.infer<
+  typeof agentPlanStepEvaluationContractSchema
+>;
+export type SkillEvaluationCriterion = z.infer<typeof skillEvaluationCriterionSchema>;
+export type SkillEvaluationAttempt = z.infer<typeof skillEvaluationAttemptSchema>;
 export type AgentPlanStep = z.infer<typeof agentPlanStepSchema>;
 export type AgentPlan = z.infer<typeof agentPlanSchema>;
 export type OpportunityCandidate = z.infer<typeof opportunityCandidateSchema>;

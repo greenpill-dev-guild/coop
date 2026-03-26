@@ -1,7 +1,7 @@
 import type { ArtifactCategory } from '@coop/shared';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { PopupRecordingStatus } from './hooks/usePopupRecording';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
+import type { PopupRecordingStatus } from './hooks/usePopupRecording';
 
 export interface YardItem {
   id: string;
@@ -267,11 +267,12 @@ export function PopupHomeScreen(props: {
   }, []);
 
   useEffect(() => {
+    void noteText;
     autoResize();
-  }, [autoResize]);
+  }, [noteText, autoResize]);
 
   return (
-    <section className="popup-screen popup-screen--fill popup-screen--home-aggregate">
+    <section className="popup-screen popup-screen--fill popup-screen--home popup-screen--home-aggregate">
       <PopupSubheader ariaLabel="Home status" equalWidth tags={statusItems} />
 
       <div className="popup-screen--home-body">
@@ -309,14 +310,14 @@ export function PopupHomeScreen(props: {
         ) : (
           <>
             {audioStatus === 'requesting-permission' ? (
-              <div className="popup-audio-permission popup-audio-permission--pending" role="status">
+              <div className="popup-audio-permission popup-audio-permission--pending" aria-live="polite">
                 <strong>Requesting microphone access</strong>
                 <p>Allow microphone access to record a voice note here in the popup.</p>
               </div>
             ) : null}
 
             {audioStatus === 'denied' ? (
-              <div className="popup-audio-permission" role="status">
+              <div className="popup-audio-permission" aria-live="polite">
                 <strong>Microphone access needed</strong>
                 <p>{audioPermissionMessage ?? 'Allow microphone access to record a voice note.'}</p>
                 <button className="popup-secondary-action" onClick={onStartRecording} type="button">

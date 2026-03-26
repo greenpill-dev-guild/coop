@@ -159,6 +159,80 @@ describe('receiver sync docs', () => {
     expect(result.issues[0].captureId).toBe('bad-schema');
     expect(result.issues[0].reason).toBeTruthy();
   });
+
+  it('merges envelopes created on two docs after reconnecting', () => {
+    const seed = createReceiverSyncDoc();
+    const seedUpdate = Y.encodeStateAsUpdate(seed);
+    const left = new Y.Doc();
+    const right = new Y.Doc();
+    const pairing = createTestPairing();
+    const first = createTestEnvelope(pairing, {
+      createdAt: '2026-03-11T18:08:00.000Z',
+      fileName: 'first.txt',
+    });
+    const second = createTestEnvelope(pairing, {
+      createdAt: '2026-03-11T18:12:00.000Z',
+      fileName: 'second.txt',
+    });
+
+    Y.applyUpdate(left, seedUpdate);
+    Y.applyUpdate(right, seedUpdate);
+
+    upsertReceiverSyncEnvelope(left, first);
+    upsertReceiverSyncEnvelope(right, {
+      ...second,
+      capture: {
+        ...second.capture,
+        id: 'capture-2',
+      },
+      asset: {
+        ...second.asset,
+        captureId: 'capture-2',
+      },
+    });
+
+    Y.applyUpdate(left, Y.encodeStateAsUpdate(right));
+    Y.applyUpdate(right, Y.encodeStateAsUpdate(left));
+
+    expect(listReceiverSyncEnvelopes(left).map((envelope) => envelope.capture.id)).toEqual([
+      first.capture.id,
+      'capture-2',
+    ]);
+  });
+
+  it('keeps valid replicated envelopes readable when a peer contributes malformed JSON', () => {
+    const seed = createReceiverSyncDoc();
+    const seedUpdate = Y.encodeStateAsUpdate(seed);
+    const healthy = new Y.Doc();
+    const degradedPeer = new Y.Doc();
+    const pairing = createTestPairing();
+    const envelope = createTestEnvelope(pairing);
+
+    Y.applyUpdate(healthy, seedUpdate);
+    Y.applyUpdate(degradedPeer, seedUpdate);
+
+    const captureMap = degradedPeer.getMap<Y.Map<string>>('receiver-sync').get('captures');
+
+    if (!(captureMap instanceof Y.Map)) {
+      throw new Error('Expected captures map');
+    }
+
+    upsertReceiverSyncEnvelope(healthy, envelope);
+    degradedPeer.transact(() => {
+      captureMap.set('capture-corrupt', '{"capture":');
+    });
+
+    Y.applyUpdate(healthy, Y.encodeStateAsUpdate(degradedPeer));
+
+    const result = readReceiverSyncEnvelopes(healthy);
+    expect(result.envelopes).toHaveLength(1);
+    expect(result.envelopes[0]?.capture.id).toBe(envelope.capture.id);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        captureId: 'capture-corrupt',
+      }),
+    ]);
+  });
 });
 
 describe('patchReceiverSyncEnvelope', () => {

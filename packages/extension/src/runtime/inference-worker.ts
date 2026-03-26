@@ -42,6 +42,7 @@ let currentStatus: StatusResponse = { type: 'status', status: 'idle' };
 // cooperative cancellation — the model checks the flag between generation steps.
 let stoppingCriteria: { interrupt(): void; reset(): void } | null = null;
 let stoppingCriteriaList: { criteria: unknown[] } | null = null;
+let inferenceWorkerStarted = false;
 
 async function ensureModel() {
   if (pipeline) return;
@@ -177,30 +178,38 @@ async function handleRefine(id: string, prompt: string, maxTokens: number) {
   }
 }
 
-self.onmessage = (event: MessageEvent<InferenceWorkerRequest>) => {
-  const msg = event.data;
-
-  switch (msg.type) {
-    case 'init':
-      ensureModel().catch((e) => {
-        self.postMessage({ type: 'status', status: 'failed', error: String(e) });
-      });
-      break;
-
-    case 'refine':
-      handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch((e) => {
-        self.postMessage({ type: 'refine-error', id: msg.id, error: String(e) });
-      });
-      break;
-
-    case 'cancel':
-      // InterruptableStoppingCriteria cooperatively stops generation
-      // between decode steps — the next token check will bail out.
-      stoppingCriteria?.interrupt();
-      break;
-
-    case 'status':
-      self.postMessage(currentStatus);
-      break;
+export function startInferenceWorker() {
+  if (inferenceWorkerStarted) {
+    return;
   }
-};
+
+  inferenceWorkerStarted = true;
+
+  self.onmessage = (event: MessageEvent<InferenceWorkerRequest>) => {
+    const msg = event.data;
+
+    switch (msg.type) {
+      case 'init':
+        ensureModel().catch((e) => {
+          self.postMessage({ type: 'status', status: 'failed', error: String(e) });
+        });
+        break;
+
+      case 'refine':
+        handleRefine(msg.id, msg.prompt, msg.maxTokens ?? DEFAULT_MAX_TOKENS).catch((e) => {
+          self.postMessage({ type: 'refine-error', id: msg.id, error: String(e) });
+        });
+        break;
+
+      case 'cancel':
+        // InterruptableStoppingCriteria cooperatively stops generation
+        // between decode steps — the next token check will bail out.
+        stoppingCriteria?.interrupt();
+        break;
+
+      case 'status':
+        self.postMessage(currentStatus);
+        break;
+    }
+  };
+}

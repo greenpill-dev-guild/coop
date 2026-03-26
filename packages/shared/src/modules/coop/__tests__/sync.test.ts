@@ -373,6 +373,85 @@ describe('updateCoopState', () => {
   });
 });
 
+describe('sync merge resilience', () => {
+  function makeArtifact() {
+    return {
+      id: 'artifact-1',
+      originId: 'origin-1',
+      targetCoopId: 'coop-1',
+      title: 'Baseline artifact',
+      summary: 'A shared artifact used to exercise Yjs merge behavior.',
+      sources: [{ label: 'Receiver', url: 'https://example.org', domain: 'example.org' }],
+      tags: ['baseline'],
+      category: 'resource' as const,
+      whyItMatters: 'Merge behavior should preserve both peers’ field edits.',
+      suggestedNextStep: 'Review the merged artifact.',
+      createdBy: 'member-1',
+      createdAt: '2026-03-20T00:00:00.000Z',
+      reviewStatus: 'published' as const,
+      archiveStatus: 'not-archived' as const,
+      archiveReceiptIds: [],
+      attachments: [],
+    };
+  }
+
+  it('merges concurrent artifact edits after two docs reconnect', () => {
+    const created = createTestCoopState();
+    const baseState = {
+      ...created.state,
+      artifacts: [makeArtifact()],
+    };
+    const seedUpdate = encodeCoopDoc(createCoopDoc(baseState));
+    const left = hydrateCoopDoc(seedUpdate);
+    const right = hydrateCoopDoc(seedUpdate);
+    const leftArtifacts = left.getMap<Y.Map<string>>('coop-artifacts-v2').get('artifact-1');
+    const rightArtifacts = right.getMap<Y.Map<string>>('coop-artifacts-v2').get('artifact-1');
+
+    if (!(leftArtifacts instanceof Y.Map) || !(rightArtifacts instanceof Y.Map)) {
+      throw new Error('Expected artifact field maps in both docs.');
+    }
+
+    left.transact(() => {
+      leftArtifacts.set('title', JSON.stringify('Reconnected artifact title'));
+    });
+    right.transact(() => {
+      rightArtifacts.set('tags', JSON.stringify(['baseline', 'resilient-sync']));
+    });
+
+    Y.applyUpdate(left, Y.encodeStateAsUpdate(right));
+    Y.applyUpdate(right, Y.encodeStateAsUpdate(left));
+
+    const merged = readCoopState(left).artifacts[0];
+    expect(merged?.title).toBe('Reconnected artifact title');
+    expect(merged?.tags).toEqual(['baseline', 'resilient-sync']);
+  });
+
+  it('keeps valid artifacts readable when a malformed replicated artifact entry appears', () => {
+    const created = createTestCoopState();
+    const baseState = {
+      ...created.state,
+      artifacts: [makeArtifact()],
+    };
+    const healthy = createCoopDoc(baseState);
+    const degradedPeer = hydrateCoopDoc(encodeCoopDoc(healthy));
+    const corruptedArtifacts = degradedPeer.getMap<Y.Map<string>>('coop-artifacts-v2');
+    const brokenFieldMap = new Y.Map<string>();
+
+    brokenFieldMap.set('id', JSON.stringify('artifact-corrupt'));
+    brokenFieldMap.set('title', '{"broken"');
+
+    degradedPeer.transact(() => {
+      corruptedArtifacts.set('artifact-corrupt', brokenFieldMap);
+    });
+
+    Y.applyUpdate(healthy, Y.encodeStateAsUpdate(degradedPeer));
+
+    const nextState = readCoopState(healthy);
+    expect(nextState.artifacts).toHaveLength(1);
+    expect(nextState.artifacts[0]?.id).toBe('artifact-1');
+  });
+});
+
 describe('toSyncRoomBootstrap', () => {
   it('extracts the peer sync room credentials needed by invited members', () => {
     const room = createSyncRoomConfig('coop-bootstrap-test');

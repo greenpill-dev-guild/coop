@@ -4,6 +4,7 @@ import type {
   AgentObservationTrigger,
   AgentPlan,
   AgentPlanStep,
+  AgentPlanStepEvaluationContract,
   AgentProvider,
   ArtifactCategory,
   CapitalFormationBriefOutput,
@@ -13,6 +14,7 @@ import type {
   ReviewDigestOutput,
   ReviewDraft,
   SkillManifest,
+  SkillEvaluationAttempt,
   SkillOutputSchemaRef,
   SkillRun,
 } from '../../contracts/schema';
@@ -21,6 +23,7 @@ import {
   agentObservationSchema,
   agentPlanSchema,
   agentPlanStepSchema,
+  skillEvaluationAttemptSchema,
   capitalFormationBriefOutputSchema,
   ecosystemEntityExtractorOutputSchema,
   erc8004FeedbackOutputSchema,
@@ -147,6 +150,7 @@ export function createAgentPlanStep(input: {
   provider: AgentProvider;
   summary: string;
   startedAt?: string;
+  evaluationContract?: AgentPlanStepEvaluationContract;
 }): AgentPlanStep {
   return agentPlanStepSchema.parse({
     id: createId('agent-step'),
@@ -155,6 +159,7 @@ export function createAgentPlanStep(input: {
     status: 'pending',
     summary: input.summary,
     startedAt: input.startedAt,
+    evaluationContract: input.evaluationContract,
   });
 }
 
@@ -285,6 +290,17 @@ export function createSkillRun(input: {
     startedAt: input.startedAt ?? nowIso(),
     outputSchemaRef: input.skill.outputSchemaRef,
     notes: input.notes,
+    evaluationAttempts: [],
+  });
+}
+
+export function appendSkillRunEvaluationAttempt(run: SkillRun, attempt: SkillEvaluationAttempt) {
+  return skillRunSchema.parse({
+    ...run,
+    evaluationAttempts: [
+      ...(run.evaluationAttempts ?? []),
+      skillEvaluationAttemptSchema.parse(attempt),
+    ],
   });
 }
 

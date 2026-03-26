@@ -31,7 +31,7 @@ Chrome:
 1. Open `chrome://extensions`.
 2. Turn on `Developer mode`.
 3. Click `Load unpacked`.
-4. Select `packages/extension/dist`.
+4. Select `packages/extension/.output/chrome-mv3`.
 
 Two-person flow:
 

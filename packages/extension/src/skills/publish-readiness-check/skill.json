@@ -13,6 +13,9 @@
   "approvalMode": "proposal",
   "timeoutMs": 30000,
   "maxTokens": 420,
+  "qualityProfile": "publish-readiness-v1",
+  "qualityThreshold": 0.8,
+  "maxEvaluatorRetries": 1,
   "depends": [],
   "skipWhen": "no-draft",
   "provides": ["readiness"]

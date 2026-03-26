@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with this repository.
 bun install                  # Install dependencies
 bun dev                      # Start app + extension (concurrent)
 bun dev:app                  # Start app only
-bun dev:extension            # Start extension only (watch build)
+bun dev:extension            # Start extension only (WXT dev + Chromium)
 bun dev:api                  # Start API server (signaling + routes)
 bun format && bun lint       # Format (Biome) and lint workspace
 bun run test                 # Run all unit tests (vitest)
@@ -84,7 +84,7 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 **Error Handling**: Never swallow errors. Surface failures to the user.
 
 **Vite Build Rules**:
-- App config: `packages/app/vite.config.ts`, Extension config: `packages/extension/vite.config.ts`
+- App config: `packages/app/vite.config.ts`, Extension config: `packages/extension/wxt.config.ts`
 - All env vars require `VITE_` prefix for frontend access (`import.meta.env.VITE_*`)
 - Env vars are baked at build time — rebuild after `.env.local` changes
 - Preserve React Compiler and extension build config unless explicitly asked to change

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildPimlicoRpcUrl,
   createMockOnchainState,
@@ -7,9 +7,12 @@ import {
 } from '../../onchain/onchain';
 import {
   authSessionToLocalIdentity,
+  createWebAuthnCredentialGetFn,
   createPasskeySession,
   derivePasskeyAddress,
+  resolvePasskeyRpId,
   restorePasskeyAccount,
+  setWebAuthnCredentialGetFnOverride,
   sessionToMember,
 } from '../auth';
 
@@ -61,7 +64,56 @@ vi.mock('viem', async (importOriginal) => {
   };
 });
 
+afterEach(() => {
+  setWebAuthnCredentialGetFnOverride(null);
+  vi.unstubAllGlobals();
+});
+
 describe('auth and onchain helpers', () => {
+  it('resolves the RP ID from the extension runtime when no hostname is available', () => {
+    vi.stubGlobal('location', { hostname: '' });
+    vi.stubGlobal('chrome', { runtime: { id: 'coop-extension-id' } });
+
+    expect(resolvePasskeyRpId()).toBe('coop-extension-id');
+  });
+
+  it('honors a getFn override for passkey account restoration helpers', async () => {
+    const getFnOverride = vi.fn(async () => ({
+      id: 'override-credential',
+      type: 'public-key',
+      rawId: new Uint8Array(),
+      response: {} as AuthenticatorAssertionResponse,
+      clientExtensionResults: () => ({}),
+    }));
+
+    setWebAuthnCredentialGetFnOverride(getFnOverride);
+
+    const getFn = createWebAuthnCredentialGetFn();
+    if (!getFn) {
+      throw new Error('Expected WebAuthn getFn override to be installed.');
+    }
+    await getFn({
+      publicKey: { challenge: new Uint8Array([1]) },
+    } as Parameters<typeof getFn>[0]);
+
+    expect(getFnOverride).toHaveBeenCalledTimes(1);
+    setWebAuthnCredentialGetFnOverride(null);
+  });
+
+  it('throws a clear error when WebAuthn credential retrieval is unavailable', async () => {
+    vi.stubGlobal('navigator', {});
+    setWebAuthnCredentialGetFnOverride(null);
+
+    const getFn = createWebAuthnCredentialGetFn();
+    if (!getFn) {
+      throw new Error('Expected WebAuthn getFn helper to be defined.');
+    }
+
+    await expect(getFn({ publicKey: { challenge: new Uint8Array([1]) } } as Parameters<
+      typeof getFn
+    >[0])).rejects.toThrow('WebAuthn credential retrieval is unavailable in this runtime.');
+  });
+
   it('derives a stable local sender address from passkey material', () => {
     const address = derivePasskeyAddress({
       id: 'credential-1',

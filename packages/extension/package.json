@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
+    "prepare": "bunx --bun wxt prepare",
+    "dev": "sh -lc 'mkdir -p .wxt/chrome-data && bunx --bun wxt -b chrome --mv3'",
     "dev:catalog": "vite dev --config vite.catalog.config.ts",
-    "build": "vite build"
+    "build": "bunx --bun wxt build -b chrome --mv3"
   },
   "dependencies": {
     "@coop/shared": "workspace:*",
@@ -16,5 +17,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "viem": "^2.25.0"
+  },
+  "devDependencies": {
+    "@wxt-dev/module-react": "^1.2.2",
+    "wxt": "^0.20.20"
   }
 }

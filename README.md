@@ -85,7 +85,7 @@ ERC-4337 (account abstraction), ERC-1271 (signature validation), EIP-712 (typed 
 bun install              # Install dependencies
 bun dev                  # Start app + extension concurrently
 bun dev:app              # Start app only
-bun dev:extension        # Start extension only (watch build)
+bun dev:extension        # Start extension only (WXT dev + Chromium)
 bun dev:api              # Start API server
 bun run test             # Run unit tests (vitest)
 bun run test:e2e         # Run Playwright E2E tests

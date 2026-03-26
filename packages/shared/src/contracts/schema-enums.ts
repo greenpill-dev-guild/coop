@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 
 export const authModeSchema = z.enum(['passkey', 'wallet', 'embedded']);
 export const memberRoleSchema = z.enum(['creator', 'trusted', 'member']);

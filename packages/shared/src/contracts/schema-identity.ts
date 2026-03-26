@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 import { authModeSchema, memberRoleSchema } from './schema-enums';
 
 export const memberSchema = z.object({

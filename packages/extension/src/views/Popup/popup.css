@@ -325,10 +325,9 @@ button:focus-visible,
 
 .popup-screen--home-body {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   align-content: start;
   min-height: 0;
-  padding-top: 8px;
 }
 
 .popup-screen--onboarding {
@@ -394,6 +393,10 @@ button:focus-visible,
   align-items: center;
   gap: 6px;
   height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -407,6 +410,7 @@ button:focus-visible,
 .popup-subheader--equal {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  align-items: center;
   overflow-x: visible;
 }
 

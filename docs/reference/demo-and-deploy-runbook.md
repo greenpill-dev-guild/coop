@@ -52,7 +52,7 @@ Expected surfaces:
 - App / receiver PWA: `http://127.0.0.1:3001` (local) or `https://local.coop.town` (tunnel)
 - Signaling: `ws://127.0.0.1:4444` (local) or `wss://dev-api.coop.town` (tunnel)
 - Production fallback signaling: `wss://api.coop.town` (always available)
-- Extension bundle: `packages/extension/dist`
+- Extension bundle: `packages/extension/.output/chrome-mv3`
 
 The extension is built with both local and production signaling URLs. If the local API is down,
 it falls back to production automatically.
@@ -61,7 +61,7 @@ To run services individually instead of `bun dev`:
 
 ```bash
 bun run dev:app        # port 3001
-bun run dev:extension  # watch build
+bun run dev:extension  # WXT dev + Chromium
 bun run dev:api        # port 4444
 ```
 
@@ -72,7 +72,7 @@ Each developer should:
 1. Open `chrome://extensions`.
 2. Turn on `Developer mode`.
 3. Click `Load unpacked`.
-4. Select `packages/extension/dist`.
+4. Select `packages/extension/.output/chrome-mv3`.
 5. Reload the extension after each rebuild.
 6. Pin the extension and open the sidepanel.
 
@@ -108,7 +108,7 @@ Notes:
 ### Demo Flow
 
 1. Both developers run `bun run dev:extension`.
-2. Both load the unpacked extension from `packages/extension/dist`.
+2. Both load the unpacked extension from `packages/extension/.output/chrome-mv3`.
 3. Dev A creates or opens the coop locally in the extension.
 4. Dev A generates a receiver pairing.
 5. Dev B opens `https://coop.town/pair`.
@@ -136,7 +136,7 @@ This is the release target.
 - Launch order:
   1. `Unlisted`
   2. `Public`
-- Build from `packages/extension/dist`.
+- Build from `packages/extension/.output/chrome-mv3`.
 - Zip the contents of `dist` at the archive root before upload.
 
 ### Signaling
@@ -276,7 +276,7 @@ Use this before demos and before production launch.
 ### Extension To Chrome Web Store
 
 1. Run `bun run --filter @coop/extension build`.
-2. Zip the contents of `packages/extension/dist`.
+2. Zip the contents of `packages/extension/.output/chrome-mv3`.
 3. Upload to the Chrome Web Store dashboard.
 4. Start as `Unlisted`.
 5. Add clear reviewer notes for:

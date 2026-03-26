@@ -54,6 +54,10 @@ const suites: Record<string, Suite> = {
     description: 'Mobile landing-page Playwright checks.',
     steps: [{ label: 'e2e:app:mobile', command: ['bun', 'run', 'test:e2e:app:mobile'] }],
   },
+  'e2e:popup': {
+    description: 'Focused popup browser smoke coverage for popup capture and review flows.',
+    steps: [{ label: 'e2e:popup', command: ['bun', 'run', 'test:e2e:popup'] }],
+  },
   'e2e:extension': {
     description: 'Two-profile extension core-loop Playwright flow in mock onchain/archive mode.',
     steps: [
@@ -92,6 +96,35 @@ const suites: Record<string, Suite> = {
       },
     ],
   },
+  'e2e:sync': {
+    description:
+      'Focused extension sync browser coverage for popup sync resilience and degraded-state recovery.',
+    steps: [{ label: 'e2e:sync', command: ['bun', 'run', 'test:e2e:sync'] }],
+  },
+  'unit:popup-actions': {
+    description:
+      'Popup action matrix coverage for popup flows, capture preflight, and popup-specific state transitions.',
+    steps: [{ label: 'unit:popup-actions', command: ['bun', 'run', 'test:unit:popup-actions'] }],
+  },
+  'unit:sidepanel-actions': {
+    description:
+      'Sidepanel action persistence coverage for refreshed dashboard state, shell wiring, and dashboard hook behavior.',
+    steps: [
+      { label: 'unit:sidepanel-actions', command: ['bun', 'run', 'test:unit:sidepanel-actions'] },
+    ],
+  },
+  'unit:sync-hardening': {
+    description:
+      'Deterministic sync coverage for shared transport health, receiver replication, popup sync semantics, and dashboard hook summaries.',
+    steps: [
+      { label: 'unit:sync-hardening', command: ['bun', 'run', 'test:unit:sync-hardening'] },
+    ],
+  },
+  'unit:onchain-ui': {
+    description:
+      'Mock-path onchain coverage for extension-side passkey helpers, operator console states, and sidepanel member-account/session actions.',
+    steps: [{ label: 'unit:onchain-ui', command: ['bun', 'run', 'test:unit:onchain-ui'] }],
+  },
   'unit:onchain-config': {
     description:
       'Targeted Vitest coverage for onchain schema normalization, chain config resolution, and Pimlico/Safe helpers.',
@@ -121,9 +154,23 @@ const suites: Record<string, Suite> = {
     description: 'Fastest useful validation: typecheck + lint (~15s). No build or tests.',
     includes: ['typecheck', 'lint'],
   },
+  'popup-slice': {
+    description: 'Popup validation slice: popup action unit coverage plus popup browser smoke coverage.',
+    includes: ['unit:popup-actions', 'e2e:popup'],
+  },
   smoke: {
     description: 'Fast confidence pass for shared logic and package builds.',
     includes: ['unit', 'build'],
+  },
+  'sync-hardening': {
+    description:
+      'Sync hardening validation: targeted sync unit coverage plus browser sync rehearsal.',
+    includes: ['unit:sync-hardening', 'e2e:sync'],
+  },
+  'onchain-ui': {
+    description:
+      'Onchain UI validation: targeted mock-path onchain extension coverage without live RPC dependencies.',
+    includes: ['unit:onchain-ui'],
   },
   landing: {
     description: 'Landing-page validation on desktop and mobile.',

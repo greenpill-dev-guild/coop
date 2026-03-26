@@ -4,9 +4,12 @@
 # Model defaults
 model = "gpt-5.4"
 
-# Sandbox: allow workspace writes, no network (local-first project)
+# Sandbox: keep work inside the repo by default; approval covers anything broader.
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
+
+[sandbox_workspace_write]
+network_access = true
 
 # AGENTS.md is primary; fall back to CLAUDE.md for additional context
 project_doc_fallback_filenames = ["CLAUDE.md"]
@@ -21,6 +24,8 @@ multi_agent = true
 [profiles.review]
 model = "gpt-5.4"
 model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+approval_policy = "never"
 
 [profiles.quick]
 model = "gpt-4.1-mini"
@@ -29,11 +34,17 @@ model_reasoning_effort = "low"
 [profiles.research]
 model = "gpt-5.4"
 model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+approval_policy = "never"
 
 [profiles.triage]
 model = "gpt-4.1-mini"
 model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+approval_policy = "never"
 
 [profiles.migrate]
 model = "gpt-5.4"
 model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"

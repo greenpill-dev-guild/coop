@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PopupPendingCapture } from '../../Popup/popup-types';
-import { useCaptureActions } from '../useCaptureActions';
 
 const { mockSendRuntimeMessage, mockPlayCoopSound } = vi.hoisted(() => ({
   mockSendRuntimeMessage: vi.fn(),
@@ -16,6 +15,8 @@ vi.mock('../../../runtime/audio', () => ({
   playCoopSound: mockPlayCoopSound,
 }));
 
+const { useCaptureActions } = await import('../useCaptureActions');
+
 const soundPrefs = { enabled: true, reducedMotion: false, reducedSound: false };
 
 function installChromeMocks(overrides: Record<string, unknown> = {}) {
@@ -24,6 +25,9 @@ function installChromeMocks(overrides: Record<string, unknown> = {}) {
     value: {
       tabs: {
         query: vi.fn().mockResolvedValue([{ id: 7, windowId: 1, url: 'https://example.com' }]),
+      },
+      runtime: {
+        sendMessage: mockSendRuntimeMessage,
       },
       permissions: {
         contains: vi.fn().mockResolvedValue(true),
@@ -106,19 +110,19 @@ describe('useCaptureActions', () => {
       expect(setMessage).toHaveBeenCalledWith('Rounded up 5 tabs.');
       expect(loadDashboard).toHaveBeenCalled();
       expect(afterManualCapture).toHaveBeenCalled();
-      expect(mockPlayCoopSound).toHaveBeenCalledWith('capture-complete', soundPrefs);
     });
 
     it('stays put when roundup finds no eligible tabs', async () => {
       mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: 0 });
 
-      const { result, setMessage, afterManualCapture } = renderCaptureActions();
+      const { result, setMessage, loadDashboard, afterManualCapture } = renderCaptureActions();
 
       await act(async () => {
         await result.current.runManualCapture();
       });
 
       expect(setMessage).toHaveBeenCalledWith('No eligible tabs were captured.');
+      expect(loadDashboard).toHaveBeenCalled();
       expect(afterManualCapture).not.toHaveBeenCalled();
     });
 
@@ -306,6 +310,48 @@ describe('useCaptureActions', () => {
       expect(screenshotCapture.previewUrl!).toContain('data:image/png;base64,');
     });
 
+    it('surfaces precise runtime screenshot errors without creating a pending capture', async () => {
+      mockSendRuntimeMessage.mockResolvedValue({
+        ok: false,
+        error: "Either the '<all_urls>' or 'activeTab' permission is required.",
+      });
+
+      const { result, setMessage } = renderCaptureActions();
+
+      let pendingCapture: PopupPendingCapture | null | undefined = undefined;
+      await act(async () => {
+        pendingCapture = await result.current.prepareVisibleScreenshot();
+      });
+
+      expect(pendingCapture).toBeNull();
+      expect(setMessage).toHaveBeenCalledWith(
+        "Either the '<all_urls>' or 'activeTab' permission is required.",
+      );
+    });
+
+    it('surfaces unsupported-page screenshot messaging before the runtime call', async () => {
+      installChromeMocks({
+        tabs: {
+          query: vi
+            .fn()
+            .mockResolvedValue([{ id: 7, windowId: 1, url: 'chrome://settings', title: 'Settings' }]),
+        },
+      });
+
+      const { result, setMessage } = renderCaptureActions();
+
+      let pendingCapture: PopupPendingCapture | null | undefined = undefined;
+      await act(async () => {
+        pendingCapture = await result.current.prepareVisibleScreenshot();
+      });
+
+      expect(pendingCapture).toBeNull();
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled();
+      expect(setMessage).toHaveBeenCalledWith(
+        'Open a standard web page before taking a screenshot.',
+      );
+    });
+
     it('uses the updated capture-tab success message', async () => {
       mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: 1 });
 
@@ -317,6 +363,67 @@ describe('useCaptureActions', () => {
 
       expect(setMessage).toHaveBeenCalledWith('Tab captured.');
       expect(afterActiveTabCapture).toHaveBeenCalled();
+    });
+
+    it('does not request broad host access for active-tab capture', async () => {
+      const permissions = {
+        contains: vi.fn().mockResolvedValue(false),
+        request: vi.fn().mockResolvedValue(false),
+      };
+      installChromeMocks({ permissions });
+      mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: 1 });
+
+      const { result } = renderCaptureActions();
+
+      await act(async () => {
+        await result.current.runActiveTabCapture();
+      });
+
+      expect(permissions.contains).not.toHaveBeenCalled();
+      expect(permissions.request).not.toHaveBeenCalled();
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({ type: 'capture-active-tab' });
+    });
+
+    it('reloads the dashboard but does not navigate when capture-tab returns zero results', async () => {
+      mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: 0 });
+
+      const { result, setMessage, loadDashboard, afterActiveTabCapture } = renderCaptureActions();
+
+      await act(async () => {
+        await result.current.runActiveTabCapture();
+      });
+
+      expect(setMessage).toHaveBeenCalledWith('This tab did not produce a new capture.');
+      expect(loadDashboard).toHaveBeenCalled();
+      expect(afterActiveTabCapture).not.toHaveBeenCalled();
+    });
+
+    it('ignores repeated capture attempts while a roundup is already in flight', async () => {
+      let resolveCapture: ((value: unknown) => void) | undefined;
+      mockSendRuntimeMessage.mockReturnValue(
+        new Promise((resolve) => {
+          resolveCapture = resolve;
+        }),
+      );
+
+      const { result } = renderCaptureActions();
+
+      let capturePromise: Promise<void>;
+      await act(async () => {
+        capturePromise = result.current.runManualCapture();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await result.current.runManualCapture();
+      });
+
+      expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveCapture?.({ ok: true, data: 1 });
+        await capturePromise!;
+      });
     });
   });
 });

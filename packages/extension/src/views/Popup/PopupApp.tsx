@@ -91,6 +91,7 @@ export function PopupApp() {
       header={header}
       message={state.message}
       overlay={captureOverlay ?? artifactOverlay ?? blockingOverlay}
+      screenKey={state.currentScreen}
       theme={state.theme.resolvedTheme}
     >
       <PopupScreenRouter state={state} />

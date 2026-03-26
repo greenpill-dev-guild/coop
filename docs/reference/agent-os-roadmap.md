@@ -299,7 +299,7 @@ Each item is its own Y.Map entry. Concurrent edits to different items merge clea
 4. Add `wasm/` to `manifest.json` `web_accessible_resources`
 5. Update `inference-worker.ts:63` with the same pattern
 
-**Files:** `packages/extension/src/runtime/agent-models.ts:161`, `packages/extension/src/runtime/inference-worker.ts:63`, `packages/extension/vite.config.ts`, `packages/extension/public/manifest.json`
+**Files:** `packages/extension/src/runtime/agent-models.ts:161`, `packages/extension/src/runtime/inference-worker.ts:63`, `packages/extension/wxt.config.ts`
 
 #### Phase 1C: Event-Driven Scheduling
 

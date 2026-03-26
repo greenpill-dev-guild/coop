@@ -178,6 +178,10 @@ function parseValidatedOutput<T>(schemaRef: SkillOutputSchemaRef, raw: string) {
   return validateSkillOutput<T>(schemaRef, JSON.parse(repairJson(extractJsonBlock(raw))));
 }
 
+function parseValidatedJson<T>(validate: (value: unknown) => T, raw: string) {
+  return validate(JSON.parse(repairJson(extractJsonBlock(raw))));
+}
+
 async function ensureTransformersPipeline() {
   if (transformersPipelinePromise) {
     return transformersPipelinePromise;
@@ -387,6 +391,40 @@ async function runTransformers<T>(input: {
   };
 }
 
+async function runTransformersStructured<T>(input: {
+  prompt: string;
+  validate: (value: unknown) => T;
+  maxTokens?: number;
+  retryContext?: string;
+}) {
+  const start = Date.now();
+  const pipeline = await ensureTransformersPipeline();
+  const promptWithRetry = input.retryContext
+    ? `${input.prompt}\n\n${input.retryContext}`
+    : input.prompt;
+  const result = await pipeline([{ role: 'user', content: promptWithRetry }], {
+    max_new_tokens: input.maxTokens ?? 512,
+    temperature: 0.2,
+    do_sample: false,
+    return_full_text: false,
+  });
+  const output =
+    Array.isArray(result) && result[0]?.generated_text
+      ? typeof result[0].generated_text === 'string'
+        ? result[0].generated_text
+        : Array.isArray(result[0].generated_text)
+          ? (result[0].generated_text[result[0].generated_text.length - 1]?.content ?? '')
+          : ''
+      : '';
+
+  return {
+    provider: 'transformers' as const,
+    model: TRANSFORMERS_MODEL_ID,
+    output: parseValidatedJson(input.validate, output),
+    durationMs: Date.now() - start,
+  };
+}
+
 async function runWebLlm<T>(input: {
   system: string;
   prompt: string;
@@ -411,6 +449,34 @@ async function runWebLlm<T>(input: {
     provider: result.provider,
     model: result.model,
     output: parseValidatedOutput<T>(input.schemaRef, result.output),
+    durationMs: result.durationMs,
+  };
+}
+
+async function runWebLlmStructured<T>(input: {
+  system: string;
+  prompt: string;
+  validate: (value: unknown) => T;
+  maxTokens?: number;
+  retryContext?: string;
+}) {
+  const promptWithRetry = input.retryContext
+    ? `${input.prompt}\n\n${input.retryContext}`
+    : input.prompt;
+  const result = await withTimeout(
+    webLlmBridge.complete({
+      system: input.system,
+      prompt: promptWithRetry,
+      temperature: 0.2,
+      maxTokens: input.maxTokens ?? 700,
+    }),
+    AGENT_SKILL_TIMEOUT_MS,
+    'WebLLM completion',
+  );
+  return {
+    provider: result.provider,
+    model: result.model,
+    output: parseValidatedJson(input.validate, result.output),
     durationMs: result.durationMs,
   };
 }
@@ -511,6 +577,88 @@ export async function completeSkillOutput<T>(input: {
       return await runTransformers<T>({
         prompt: `${input.system}\n\n${input.prompt}`,
         schemaRef: input.schemaRef,
+        maxTokens: input.maxTokens,
+      });
+    } catch {
+      return fallback();
+    }
+  }
+
+  return fallback();
+}
+
+export async function completeStructuredOutput<T>(input: {
+  preferredProvider: AgentProvider;
+  system: string;
+  prompt: string;
+  maxTokens?: number;
+  validate: (value: unknown) => T;
+  fallback: () => T;
+}): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
+  const fallback = () => ({
+    provider: 'heuristic' as const,
+    model: undefined,
+    output: input.fallback(),
+    durationMs: 0,
+  });
+
+  try {
+    if (input.preferredProvider === 'webllm') {
+      try {
+        return await runWebLlmStructured<T>({
+          system: input.system,
+          prompt: input.prompt,
+          validate: input.validate,
+          maxTokens: input.maxTokens,
+        });
+      } catch (firstError) {
+        if (firstError instanceof Error && /timed out/i.test(firstError.message)) {
+          throw firstError;
+        }
+        try {
+          return await runWebLlmStructured<T>({
+            system: input.system,
+            prompt: input.prompt,
+            validate: input.validate,
+            maxTokens: input.maxTokens,
+            retryContext: formatRetryContext(firstError),
+          });
+        } catch {
+          // Both attempts failed — fall through to next provider
+        }
+      }
+    }
+
+    if (input.preferredProvider === 'transformers') {
+      try {
+        return await runTransformersStructured<T>({
+          prompt: `${input.system}\n\n${input.prompt}`,
+          validate: input.validate,
+          maxTokens: input.maxTokens,
+        });
+      } catch (firstError) {
+        try {
+          return await runTransformersStructured<T>({
+            prompt: `${input.system}\n\n${input.prompt}`,
+            validate: input.validate,
+            maxTokens: input.maxTokens,
+            retryContext: formatRetryContext(firstError),
+          });
+        } catch {
+          // Both attempts failed — fall through to heuristic
+        }
+      }
+      return fallback();
+    }
+  } catch {
+    // Fall through to the next provider or heuristic fallback.
+  }
+
+  if (input.preferredProvider === 'webllm') {
+    try {
+      return await runTransformersStructured<T>({
+        prompt: `${input.system}\n\n${input.prompt}`,
+        validate: input.validate,
         maxTokens: input.maxTokens,
       });
     } catch {

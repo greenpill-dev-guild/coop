@@ -261,14 +261,26 @@ test('landing page renders the refreshed narrative', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /^why we build$/i })).toBeVisible();
   await expect(page.getByText(/your data stays yours/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /reset ritual/i })).toBeVisible();
-  await expect(page.getByText('Afolabi Aiyeloja')).toBeVisible();
-  await expect(page.getByText('Greenpill Dev Guild')).toBeVisible();
+  await expect(page.locator('.hero-signal-cluster')).toBeVisible();
+  await expect(page.locator('.how-works-index')).toHaveCount(4);
+
+  const firstSignalOpacity = await page
+    .locator('.journey-scene-story .scene-chicken-label')
+    .first()
+    .evaluate((node) => {
+      return Number.parseFloat(window.getComputedStyle(node).opacity);
+    });
+  expect(firstSignalOpacity).toBeGreaterThan(0.2);
 
   const logoBox = await page.locator('.hero-logo').boundingBox();
   if (!logoBox) {
     throw new Error('Hero logo did not render for bounding box check.');
   }
   expect(logoBox.x).toBeLessThan(140);
+
+  await page.locator('#why-build').scrollIntoViewIfNeeded();
+  await expect(page.getByText('Afolabi Aiyeloja')).toBeVisible();
+  await expect(page.getByText('Greenpill Dev Guild')).toBeVisible();
 
   await page.getByRole('button', { name: /collective intelligence/i }).click();
   await expect(page.getByRole('dialog', { name: /collective intelligence/i })).toBeVisible();

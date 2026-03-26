@@ -12,7 +12,7 @@ Date: March 20, 2026
 1. Set `VITE_COOP_RECEIVER_APP_URL` to the exact production HTTPS receiver origin for the release candidate.
 2. Run `bun run validate:store-readiness`.
 3. Run `bun run validate:production-readiness` for the full release candidate.
-4. Confirm the extension zip is created from `packages/extension/dist` with files at the archive root.
+4. Confirm the extension zip is created from `packages/extension/.output/chrome-mv3` with files at the archive root.
 
 ## Manual Verification
 
@@ -34,6 +34,6 @@ Date: March 20, 2026
 
 1. Confirm executable runtime assets are packaged with the extension and no remote `.js`, `.mjs`, or `.wasm` URLs appear in the built output.
 2. Confirm host permissions stay on the exact receiver origin allowlist.
-3. Confirm hidden junk files such as `.DS_Store` are absent from `packages/extension/dist`.
+3. Confirm hidden junk files such as `.DS_Store` are absent from `packages/extension/.output/chrome-mv3`.
 4. Confirm sensitive local browsing payloads can be cleared from the UI.
 5. Confirm the release notes mention that remote knowledge-skill import is quarantined from the shipped build.

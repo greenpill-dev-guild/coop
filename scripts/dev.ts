@@ -14,6 +14,7 @@ const LOCAL_HOST = '127.0.0.1';
 const DEFAULT_APP_PORT = 3001;
 const DEFAULT_API_PORT = 4444;
 const DEFAULT_DOCS_PORT = 3003;
+const EXTENSION_OUTPUT_DIR = path.join(repoRoot, 'packages/extension/.output/chrome-mv3');
 const DEV_STATE_DIR = path.join(repoRoot, 'packages/app/public/__coop_dev__');
 const DEV_STATE_PATH = path.join(DEV_STATE_DIR, 'state.json');
 
@@ -84,6 +85,7 @@ function pipeOutput(
   label: string,
   stream: NodeJS.ReadableStream | null,
   writer: NodeJS.WriteStream,
+  onLine?: (line: string) => void,
 ) {
   if (!stream) {
     return;
@@ -91,6 +93,7 @@ function pipeOutput(
 
   const rl = readline.createInterface({ input: stream });
   rl.on('line', (line) => {
+    onLine?.(line);
     writer.write(`${formatLog(label, line)}\n`);
   });
 }
@@ -101,6 +104,7 @@ function spawnManagedProcess(
   options: {
     env?: NodeJS.ProcessEnv;
     allowExit?: boolean;
+    onLine?: (line: string) => void;
   } = {},
 ): ManagedProcess {
   const child = spawn(command[0], command.slice(1), {
@@ -109,8 +113,8 @@ function spawnManagedProcess(
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  pipeOutput(label, child.stdout, process.stdout);
-  pipeOutput(label, child.stderr, process.stderr);
+  pipeOutput(label, child.stdout, process.stdout, options.onLine);
+  pipeOutput(label, child.stderr, process.stderr, options.onLine);
 
   return {
     label,
@@ -175,6 +179,47 @@ async function waitForHttpReady(url: string, timeoutMs: number) {
   }
 
   throw new Error(`Timed out waiting for ${url} to return an HTTP response.`);
+}
+
+function createWaiter(description: string, timeoutMs: number) {
+  let settled = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let resolvePromise!: () => void;
+  let rejectPromise!: (error: Error) => void;
+
+  const promise = new Promise<void>((resolve, reject) => {
+    resolvePromise = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      resolve();
+    };
+
+    rejectPromise = (error: Error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      reject(error);
+    };
+  });
+
+  timeout = setTimeout(() => {
+    rejectPromise(new Error(`Timed out waiting for ${description}.`));
+  }, timeoutMs);
+
+  return {
+    promise,
+    resolve: resolvePromise,
+    reject: rejectPromise,
+  };
 }
 
 async function isPortAvailable(host: string, port: number) {
@@ -396,7 +441,7 @@ async function main() {
           reason: 'Disabled with COOP_DEV_DOCS=off.',
         },
     extension: {
-      distPath: path.join(repoRoot, 'packages/extension/dist'),
+      distPath: EXTENSION_OUTPUT_DIR,
       mode: 'watch',
       receiverAppUrl: appLocalUrl,
       signalingUrls: [`ws://${LOCAL_HOST}:${apiPort}`, 'wss://api.coop.town'],
@@ -633,23 +678,34 @@ async function main() {
     }
   }
 
-  const extensionProcess = spawnManagedProcess(
-    'extension',
-    ['bun', 'run', '--filter', '@coop/extension', 'dev'],
-    {
-      env: {
-        ...process.env,
-        VITE_COOP_RECEIVER_APP_URL: state.extension.receiverAppUrl,
-        VITE_COOP_SIGNALING_URLS: state.extension.signalingUrls.join(','),
-      },
-    },
-  );
-  trackManagedProcess(extensionProcess);
+  const extensionReady = createWaiter('the extension watcher to finish its initial WXT build', 240_000);
 
-  extensionProcess.child.on('spawn', () => {
-    state.extension.status = 'ready';
-    writeDevState(state);
+  const extensionProcess = spawnManagedProcess('extension', ['bun', 'run', 'dev:extension'], {
+    env: {
+      ...process.env,
+      VITE_COOP_RECEIVER_APP_URL: state.extension.receiverAppUrl,
+      VITE_COOP_SIGNALING_URLS: state.extension.signalingUrls.join(','),
+    },
+    onLine: (line) => {
+      if (/✔ Built extension in/.test(line)) {
+        extensionReady.resolve();
+        return;
+      }
+
+      if (/✖ Command failed/.test(line) || /error:\s+script "dev"/i.test(line)) {
+        extensionReady.reject(new Error(`Extension dev failed before readiness: ${line}`));
+      }
+    },
   });
+  trackManagedProcess(extensionProcess);
+  extensionProcess.child.once('exit', (code, signal) => {
+    extensionReady.reject(
+      new Error(`Extension dev exited before readiness (code=${code ?? 'null'} signal=${signal ?? 'null'}).`),
+    );
+  });
+  await extensionReady.promise;
+  state.extension.status = 'ready';
+  writeDevState(state);
 
   heartbeat.current = setInterval(() => {
     writeDevState(state);

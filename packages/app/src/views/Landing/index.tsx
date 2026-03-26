@@ -1,6 +1,6 @@
 import type { SetupInsightsInput } from '@coop/shared';
 import { getRitualLenses } from '@coop/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import type { DevEnvironmentState } from '../../dev-environment';
 import { ChickenSprite, CoopIllustration } from './landing-animations';
@@ -20,6 +20,7 @@ import {
   defaultTranscriptStatus,
   emptyLandingTranscripts,
   getLensProgress,
+  heroSignalFragments,
   howItWorksCards,
   initialsForName,
   journeyChickens,
@@ -253,6 +254,21 @@ export function App({
           const howItWorksCardElements = Array.from(
             howItWorksRef.current?.querySelectorAll<HTMLElement>('.how-works-card') ?? [],
           );
+          const storySignalLabels = Array.from(
+            scope.querySelectorAll<HTMLElement>('.journey-scene-story .scene-chicken-label'),
+          );
+          const heroSignalCluster =
+            scope.querySelector<HTMLDivElement>('.hero-signal-cluster') ?? null;
+          const heroSignalFragmentElements = Array.from(
+            scope.querySelectorAll<HTMLElement>('.hero-signal-fragment'),
+          );
+          const whyBuildCard =
+            arrivalJourneyRef.current?.querySelector<HTMLDivElement>('.why-build-copy') ?? null;
+          const whyBuildProof =
+            whyBuildCard?.querySelector<HTMLDivElement>('.why-build-proof') ?? null;
+          const whyBuildGroups = Array.from(
+            whyBuildCard?.querySelectorAll<HTMLElement>('.why-build-group') ?? [],
+          );
 
           const arrivalCoopParts = {
             roof: arrivalCoopRef.current?.querySelector('.coop-roof') ?? null,
@@ -332,20 +348,38 @@ export function App({
               { scaleX: 1.12, scaleY: 1.08, rotate: -4, opacity: 0.78 },
               0.12,
             )
-            .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0.08, y: -24 }, 0.44)
+            .fromTo(
+              storySignalLabels,
+              { autoAlpha: 0.34, y: 8, filter: 'blur(3px)' },
+              { autoAlpha: 0.74, y: 0, filter: 'blur(0px)', stagger: 0.02 },
+              0.08,
+            )
+            .fromTo(
+              heroSignalCluster,
+              { autoAlpha: 0.8, y: 8, scale: 0.995 },
+              { autoAlpha: 1, y: 0, scale: 1 },
+              0.12,
+            )
+            .fromTo(
+              heroSignalFragmentElements,
+              { autoAlpha: 0.72, y: 10, filter: 'blur(0.5px)' },
+              { autoAlpha: 1, y: 0, filter: 'blur(0px)', stagger: 0.05 },
+              0.16,
+            )
+            .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0.12, y: -18 }, 0.42)
             .fromTo(
               howItWorksRef.current,
-              { autoAlpha: 0.18, y: 32, scale: 0.97 },
+              { autoAlpha: 0.12, y: 28, scale: 0.975 },
               { autoAlpha: 1, y: 0, scale: 1 },
-              0.26,
+              0.24,
             )
-            .fromTo(howItWorksHeading, { autoAlpha: 0.48, y: 22 }, { autoAlpha: 1, y: 0 }, 0.32)
+            .fromTo(howItWorksHeading, { autoAlpha: 0.42, y: 20 }, { autoAlpha: 1, y: 0 }, 0.29)
             .fromTo(
               howItWorksCardElements,
               {
-                autoAlpha: 0.22,
-                y: 24,
-                scale: 0.975,
+                autoAlpha: 0.18,
+                y: 22,
+                scale: 0.98,
               },
               {
                 autoAlpha: 1,
@@ -353,7 +387,7 @@ export function App({
                 scale: 1,
                 stagger: 0.08,
               },
-              0.36,
+              0.34,
             );
 
           storyTimeline
@@ -422,6 +456,19 @@ export function App({
 
           arrivalTimeline
             .fromTo(
+              whyBuildCard,
+              { autoAlpha: 0.78, y: 38, scale: 0.985 },
+              { autoAlpha: 1, y: -8, scale: 1 },
+              0.12,
+            )
+            .fromTo(whyBuildProof, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0 }, 0.5)
+            .fromTo(
+              whyBuildGroups,
+              { autoAlpha: 0, y: 20 },
+              { autoAlpha: 1, y: 0, stagger: 0.08 },
+              0.54,
+            )
+            .fromTo(
               arrivalGlowLeftRef.current,
               { x: '-10vw', y: '3vh', scale: 0.9 },
               { x: '6vw', y: '-4vh', scale: 1.04 },
@@ -447,54 +494,54 @@ export function App({
               arrivalCoopParts.body,
               { y: 110, scale: 0.74, autoAlpha: 0.22 },
               { y: 0, scale: 1, autoAlpha: 1 },
-              0.12,
+              0.08,
             )
             .fromTo(
               arrivalCoopParts.roof,
               { y: -86, scaleX: 0.78, autoAlpha: 0 },
               { y: 0, scaleX: 1, autoAlpha: 1 },
-              0.22,
+              0.16,
             )
             .fromTo(
               arrivalCoopParts.frames,
               { y: 18, autoAlpha: 0 },
               { y: 0, autoAlpha: 1, stagger: 0.04 },
-              0.3,
+              0.22,
             )
             .fromTo(
               arrivalInsideFlockRef.current,
               { autoAlpha: 0, y: 18, scale: 0.94 },
               { autoAlpha: 1, y: 0, scale: 1 },
-              0.62,
+              0.54,
             )
             .fromTo(
               insideBirds,
               { autoAlpha: 0, y: 18, scale: 0.82 },
               { autoAlpha: 1, y: 0, scale: 1, stagger: 0.04 },
-              0.66,
+              0.58,
             );
           arrivalTimeline
-            .fromTo(arrivalNightSkyRef.current, { opacity: 0 }, { opacity: 0.82 }, 0.46)
-            .fromTo(arrivalStarsRef.current, { opacity: 0 }, { opacity: 0.78 }, 0.56)
+            .fromTo(arrivalNightSkyRef.current, { opacity: 0 }, { opacity: 0.82 }, 0.4)
+            .fromTo(arrivalStarsRef.current, { opacity: 0 }, { opacity: 0.78 }, 0.5)
             .fromTo(
               arrivalMoonRef.current,
               { opacity: 0, y: 24, scale: 0.82 },
               { opacity: 0.96, y: 0, scale: 1, ease: scrubEase },
-              0.66,
+              0.62,
             )
             // Warm halo fades in as coop rises
             .fromTo(
               '.scene-coop-halo',
               { opacity: 0, scale: 0.6 },
               { opacity: 1, scale: 1.1 },
-              0.18,
+              0.16,
             )
             // Door glow flickers on before chickens arrive — cinematic "coming home"
             .fromTo(arrivalCoopGlowRef.current, { opacity: 0 }, { opacity: 0.3 }, 0.25)
             .to(arrivalCoopGlowRef.current, { opacity: 0.15 }, 0.3)
-            .to(arrivalCoopGlowRef.current, { opacity: 0.5 }, 0.38)
-            .to(arrivalCoopGlowRef.current, { opacity: 1 }, 0.52)
-            .to(arrivalCloudRef.current, { opacity: 0.14 }, 0.42);
+            .to(arrivalCoopGlowRef.current, { opacity: 0.5 }, 0.34)
+            .to(arrivalCoopGlowRef.current, { opacity: 1 }, 0.48)
+            .to(arrivalCloudRef.current, { opacity: 0.14 }, 0.38);
 
           // Stagger chicken arrivals — each starts slightly later for a natural procession
           for (let i = 0; i < journeyChickens.length; i++) {
@@ -532,7 +579,7 @@ export function App({
               y: '-=2vh',
               duration: 0.1,
             },
-            0.54,
+            0.48,
           );
         }, scope);
 
@@ -854,6 +901,14 @@ export function App({
     }
 
     const isDone = openCardProgress.status === 'ready';
+    const isLeftColumn = openCardIndex % 2 === 0;
+    const isTopRow = openCardIndex < 2;
+    const stageStyle = {
+      '--flashcard-pickup-x': isLeftColumn ? '-2.35rem' : '2.35rem',
+      '--flashcard-pickup-y': isTopRow ? '-1.1rem' : '1.1rem',
+      '--flashcard-pickup-tilt': isLeftColumn ? '-2deg' : '2deg',
+      '--flashcard-pickup-settle-tilt': isLeftColumn ? '0.35deg' : '-0.35deg',
+    } as CSSProperties;
 
     return (
       <dialog
@@ -862,6 +917,7 @@ export function App({
         className={`flashcard-stage flashcard-${openCardLens.id}${isDone ? ' is-done' : ''}`}
         id={`flashcard-panel-${openCardLens.id}`}
         open
+        style={stageStyle}
       >
         <div className="flashcard-stage-header">
           <div className="flashcard-front-meta">
@@ -882,14 +938,12 @@ export function App({
         </div>
 
         <div className="flashcard-stage-copy">
-          <div>
-            <p className="flashcard-stage-label">{openCardLens.title}</p>
-            <h3 className="flashcard-question">{openCardLens.transcriptPrompt}</h3>
-          </div>
+          <p className="flashcard-stage-label">{openCardLens.title}</p>
+          <h3 className="flashcard-question">{openCardLens.transcriptPrompt}</h3>
           <p className="flashcard-detail">{openCardLens.detail}</p>
         </div>
 
-        <div className="ritual-transcript-header">
+        <div className="flashcard-stage-actions">
           <button
             className={
               recordingLens === openCardLens.id
@@ -913,9 +967,10 @@ export function App({
           </output>
         ) : null}
 
-        <label className="ritual-field">
-          <span>{openCardLens.title} notes</span>
+        <label className="ritual-field flashcard-notes-field">
+          <span className="sr-only">{openCardLens.title} notes</span>
           <textarea
+            aria-label={`${openCardLens.title} notes`}
             onChange={(event) => updateTranscript(openCardLens.id, event.target.value)}
             placeholder="Paste notes or let live transcript fill this in."
             ref={setFlashcardNotesRef(openCardLens.id)}
@@ -923,29 +978,36 @@ export function App({
           />
         </label>
 
-        <button
-          className={isDone ? 'flashcard-complete-btn is-done' : 'flashcard-complete-btn'}
-          onClick={() => {
-            if (!isDone) {
-              updateField(
-                openCardMapping.currentKey,
-                setupInput[openCardMapping.currentKey] || 'Captured',
-              );
-              updateField(
-                openCardMapping.painKey,
-                setupInput[openCardMapping.painKey] || 'Captured',
-              );
-              updateField(
-                openCardMapping.improveKey,
-                setupInput[openCardMapping.improveKey] || 'Captured',
-              );
-            }
-            toggleCard(openCardLens.id);
-          }}
-          type="button"
-        >
-          {isDone ? '\u2713 Complete' : 'Mark complete'}
-        </button>
+        <div className="flashcard-stage-footer">
+          <p className="flashcard-stage-footnote">
+            {isDone
+              ? 'This lens is already ready to carry into the packet.'
+              : 'Capture the signal, then mark this card complete.'}
+          </p>
+          <button
+            className={isDone ? 'flashcard-complete-btn is-done' : 'flashcard-complete-btn'}
+            onClick={() => {
+              if (!isDone) {
+                updateField(
+                  openCardMapping.currentKey,
+                  setupInput[openCardMapping.currentKey] || 'Captured',
+                );
+                updateField(
+                  openCardMapping.painKey,
+                  setupInput[openCardMapping.painKey] || 'Captured',
+                );
+                updateField(
+                  openCardMapping.improveKey,
+                  setupInput[openCardMapping.improveKey] || 'Captured',
+                );
+              }
+              toggleCard(openCardLens.id);
+            }}
+            type="button"
+          >
+            {isDone ? '\u2713 Complete' : 'Mark complete'}
+          </button>
+        </div>
       </dialog>
     );
   }
@@ -1023,7 +1085,30 @@ export function App({
                   </p>
                 </div>
 
-                <div aria-hidden="true" className="hero-stage" />
+                <div aria-hidden="true" className="hero-stage">
+                  <div className="hero-signal-cluster">
+                    <span className="hero-signal-trace hero-signal-trace-a" />
+                    <span className="hero-signal-trace hero-signal-trace-b" />
+                    <span className="hero-signal-trace hero-signal-trace-c" />
+                    {heroSignalFragments.map((fragment) => (
+                      <span
+                        className={`hero-signal-fragment hero-signal-fragment-${fragment.tone}`}
+                        key={fragment.id}
+                        style={
+                          {
+                            '--hero-signal-x': fragment.x,
+                            '--hero-signal-y': fragment.y,
+                            '--hero-signal-rotate': fragment.rotate,
+                            '--hero-signal-width': fragment.width,
+                          } as CSSProperties
+                        }
+                      >
+                        <span className="hero-signal-kicker">{fragment.kicker}</span>
+                        <span className="hero-signal-text">{fragment.text}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
                 <div
                   className={`hero-scroll-hint${heroScrollHintOpacity < 0.04 ? ' is-hidden' : ''}`}
@@ -1062,9 +1147,12 @@ export function App({
                 </div>
 
                 <div className="how-works-grid">
-                  {howItWorksCards.map((card) => (
+                  {howItWorksCards.map((card, index) => (
                     <article className="how-works-card nest-card" key={card.title}>
-                      <div>
+                      <span aria-hidden="true" className="how-works-index">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className="how-works-card-copy">
                         <h3>{card.title}</h3>
                         <p>{card.detail}</p>
                       </div>
@@ -1333,11 +1421,13 @@ export function App({
           <div className="journey-panels">
             <article className="journey-panel why-build-panel">
               <div className="why-build-copy nest-card story-card">
-                <h2>Why we build</h2>
-                <p className="lede">
-                  Scattered knowledge becomes shared action when the right group has a clear place
-                  to work from.
-                </p>
+                <div className="why-build-intro">
+                  <h2>Why we build</h2>
+                  <p className="lede">
+                    Scattered knowledge becomes shared action when the right group has a clear place
+                    to work from.
+                  </p>
+                </div>
 
                 <div className="why-build-proof">
                   <div className="why-build-group">

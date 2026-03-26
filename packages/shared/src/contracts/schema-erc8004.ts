@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import z from 'zod';
 
 export const erc8004AgentStateSchema = z.object({
   enabled: z.boolean().default(false),

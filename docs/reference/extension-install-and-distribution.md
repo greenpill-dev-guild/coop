@@ -44,7 +44,7 @@ Then in Chrome:
 1. Open `chrome://extensions`.
 2. Turn on `Developer mode`.
 3. Click `Load unpacked`.
-4. Select `packages/extension/dist`.
+4. Select `packages/extension/.output/chrome-mv3`.
 5. Reload the extension after each rebuild.
 
 ## Local Extension + Production PWA
@@ -66,14 +66,14 @@ build time so the extension can inject on the configured production PWA origin.
 For trusted testers outside the Chrome Web Store:
 
 1. Build the extension.
-2. Zip the contents of `packages/extension/dist`.
+2. Zip the contents of `packages/extension/.output/chrome-mv3`.
 3. Share the archive plus manual install instructions.
 
 Commands:
 
 ```bash
 bun run --filter @coop/extension build
-cd packages/extension/dist
+cd packages/extension/.output/chrome-mv3
 zip -r ../coop-extension.zip .
 ```
 
@@ -98,7 +98,7 @@ Release checklist:
 1. Set `VITE_COOP_RECEIVER_APP_URL` to the exact production HTTPS receiver origin for the release candidate.
 2. Run `bun run validate:store-readiness`.
 3. Run `bun run validate:production-readiness`.
-4. Build `packages/extension/dist`.
+4. Build `packages/extension/.output/chrome-mv3`.
 5. Record the first-run local-AI network trace for reviewer notes.
 6. Zip the extension with files at the archive root.
 7. Upload to the Chrome Web Store dashboard.

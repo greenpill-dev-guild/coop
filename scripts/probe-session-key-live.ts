@@ -37,7 +37,7 @@ const chainKey = process.env.COOP_SESSION_PROBE_CHAIN === 'arbitrum' ? 'arbitrum
 
 if (!pimlicoApiKey || !probePrivateKey) {
   console.log(
-    '[probe:session-key-live] Skipping Smart Session probe. Set VITE_PIMLICO_API_KEY and COOP_SESSION_PROBE_PRIVATE_KEY to run a live Sepolia/Arbitrum session-key rehearsal.',
+    '[probe:session-key-live] Skipping Smart Session probe. Set VITE_PIMLICO_API_KEY and COOP_SESSION_PROBE_PRIVATE_KEY to run the garden-pass rehearsal that backs the extension session-capability UI.',
   );
   process.exit(0);
 }
@@ -55,7 +55,7 @@ const pimlicoClient = createPimlicoClient({
 });
 
 console.log(
-  `[probe:session-key-live] Deploying probe Safe on ${chainConfig.label} for ${owner.address}.`,
+  `[probe:session-key-live] Phase 1/2: deploying probe Safe on ${chainConfig.label} for ${owner.address}.`,
 );
 
 const onchainState = await deployCoopSafeAccount({
@@ -116,6 +116,10 @@ capability = {
   ...capability,
   permissionId: buildSmartSession({ capability }).permissionId,
 };
+
+console.log(
+  '[probe:session-key-live] Phase 1/2: validating local garden-pass rules before any live user operation.',
+);
 
 // --- Phase 1: Validate session capability state machine (pure functions) ---
 
@@ -204,6 +208,9 @@ if (revokedValidation.ok || revokedValidation.rejectType !== 'revoked') {
   throw new Error('Revoked session key still passed local validation.');
 }
 console.log('[probe:session-key-live] Revoked capability rejected locally.');
+console.log(
+  '[probe:session-key-live] Capability proved: the extension can label a garden pass as locally valid, rejected, or revoked before send.',
+);
 
 // --- Phase 2: On-chain ERC-7579 module installation ---
 // Safe v1.4.1 deployed by deployCoopSafeAccount does not include the ERC-7579
@@ -369,9 +376,15 @@ if (moduleInstallSuccess) {
     throw new Error('Smart Session still appears enabled after revoke.');
   }
   console.log('[probe:session-key-live] Smart Session revoked successfully.');
+  console.log(
+    '[probe:session-key-live] Capability proved: the garden-pass UI can map to a full live enable -> execute -> revoke rehearsal when the Safe has ERC-7579 support.',
+  );
 } else {
   console.log(
     '[probe:session-key-live] Phase 1 passed (Safe deployment + state machine validation). ' +
       'Phase 2 skipped (on-chain session execution requires ERC-7579-enabled Safe).',
+  );
+  console.log(
+    '[probe:session-key-live] Current limitation: without ERC-7579 on the deployed Safe, the rehearsal proves local validation only and should be treated as a release-time clarity check, not full live execution coverage.',
   );
 }

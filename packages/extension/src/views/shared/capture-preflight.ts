@@ -4,6 +4,15 @@ function isStandardWebUrl(url?: string): url is string {
   return Boolean(url?.startsWith('http://') || url?.startsWith('https://'));
 }
 
+function toOriginPattern(url: string) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.hostname}/*`;
+  } catch {
+    return null;
+  }
+}
+
 async function queryActiveTab() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -13,21 +22,36 @@ async function queryActiveTab() {
   }
 }
 
-async function ensureStandardHostAccess() {
+async function ensureStandardHostAccess(urls: string[] = []) {
   if (!chrome.permissions?.contains || !chrome.permissions?.request) {
     return { ok: true } as const;
   }
 
-  const hasAccess = await chrome.permissions.contains({
-    origins: [...STANDARD_HOST_ORIGINS],
-  });
-  if (hasAccess) {
+  const originPatterns = Array.from(
+    new Set(urls.map((url) => toOriginPattern(url)).filter((value) => value !== null)),
+  );
+
+  if (originPatterns.length === 0) {
+    return { ok: true } as const;
+  }
+
+  const missingOrigins: string[] = [];
+  for (const origin of originPatterns) {
+    const hasAccess = await chrome.permissions.contains({
+      origins: [origin],
+    });
+    if (!hasAccess) {
+      missingOrigins.push(origin);
+    }
+  }
+
+  if (missingOrigins.length === 0) {
     return { ok: true } as const;
   }
 
   try {
     const granted = await chrome.permissions.request({
-      origins: [...STANDARD_HOST_ORIGINS],
+      origins: missingOrigins,
     });
     return granted
       ? ({ ok: true } as const)
@@ -62,7 +86,7 @@ export async function preflightManualCapture() {
     } as const;
   }
 
-  return ensureStandardHostAccess();
+  return ensureStandardHostAccess(supportedTabs.flatMap((tab) => (tab.url ? [tab.url] : [])));
 }
 
 export async function preflightActiveTabCapture() {
@@ -74,10 +98,10 @@ export async function preflightActiveTabCapture() {
     } as const;
   }
 
-  const access = await ensureStandardHostAccess();
-  return access.ok
-    ? ({ ok: true, tab } as const)
-    : ({ ok: false, error: access.error } as const);
+  // Active-tab capture is user initiated from the popup/command surface and can
+  // rely on the temporary activeTab grant. Reserve the broader host-permission
+  // prompt for roundup flows that inspect arbitrary tabs.
+  return { ok: true, tab } as const;
 }
 
 export async function preflightScreenshotCapture() {
@@ -99,4 +123,4 @@ export async function preflightScreenshotCapture() {
   return { ok: true, tab } as const;
 }
 
-export { isStandardWebUrl, STANDARD_HOST_ORIGINS };
+export { isStandardWebUrl, STANDARD_HOST_ORIGINS, toOriginPattern };

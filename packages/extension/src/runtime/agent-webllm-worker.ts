@@ -1,9 +1,18 @@
 let handler: { onmessage(event: MessageEvent): void } | null = null;
+let agentWebLlmWorkerStarted = false;
 
-self.onmessage = async (event: MessageEvent) => {
-  if (!handler) {
-    const { WebWorkerMLCEngineHandler } = await import('@mlc-ai/web-llm');
-    handler = new WebWorkerMLCEngineHandler();
+export function startAgentWebLlmWorker() {
+  if (agentWebLlmWorkerStarted) {
+    return;
   }
-  handler.onmessage(event);
-};
+
+  agentWebLlmWorkerStarted = true;
+
+  self.onmessage = async (event: MessageEvent) => {
+    if (!handler) {
+      const { WebWorkerMLCEngineHandler } = await import('@mlc-ai/web-llm');
+      handler = new WebWorkerMLCEngineHandler();
+    }
+    handler.onmessage(event);
+  };
+}

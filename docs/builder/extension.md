@@ -101,7 +101,7 @@ The extension also owns the user-facing state cues:
 
 The reference install doc describes three practical paths:
 
-- local developer install from `packages/extension/dist`
+- local developer install from `packages/extension/.output/chrome-mv3`
 - trusted early-access distribution outside the Chrome Web Store
 - Chrome Web Store rollout once the extension is ready for broader release
 
