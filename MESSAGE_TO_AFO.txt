@@ -1,0 +1,97 @@
+Hi Afo,
+
+Quick update from today's testing session. I know this is a lot, but the short version is: **the extension has critical stability issues that need immediate attention before any feature work.**
+
+## 🎯 Testing Approach & Highlights
+
+**What I did:**
+- Systematic flow-based testing starting with extension basics
+- Planned to test: Flow 1 (Extension) → Flow 2 (Coop Creation) → Flows 3-6 → PWA → Docs
+- Adapted with workarounds when hit blockers
+- Documented everything in detail for you
+
+**What I accomplished:**
+✅ Successfully merged all your latest UI polish branches (4 feature branches with all the animation and polish work)  
+✅ Fixed 5 setup issues (mise, esbuild, port conflicts, match patterns)  
+✅ **Successfully created a coop** (Flow 2 complete despite warnings)  
+✅ Documented 14 issues with full reproduction steps
+
+**Where I got blocked:**
+🚨 **Extension FREEZES completely when trying to capture a tab** (Issue #12)  
+- This is basic core functionality - can't proceed to Flows 3-6  
+- Happens consistently, not intermittent  
+- Extension becomes unresponsive, requires manual reload
+
+## 🚨 The Critical Issues (Read This)
+
+**P0 - STOP feature work, fix these first:**
+
+1. **Issue #12: Extension freezes during tab capture**
+   - Attempted to add/capture a tab → extension immediately frozen
+   - Can't click any buttons, completely unresponsive
+   - **This blocks all downstream testing**
+
+2. **Issue #11: Agent-runner stuck-state (RECURRING)**
+   - Happened **3 times** in a single testing session
+   - Error: `[agent-runner] Stuck-state recovery: cycle has been running since... resetting`
+   - Likely related to the freeze - agent background cycles interfering with UI
+   - **Pattern:** Load → agent warning → freeze → reload → repeat
+
+3. **Issue #13: WebSocket connection failures**
+   - Error: `WebSocket is already in CLOSING or CLOSED state`
+   - Extension requires manual reload multiple times per session
+   - Not normal extension behavior
+
+**All 3 issues likely stem from Agent Harness v2** (your recent merge) - background cycles, WebSocket management, resource cleanup.
+
+**Also noted:**
+- Issue #7: WebAuthn algorithm warnings (functional but appearing repeatedly)
+- 6 UI/UX issues (#6, #8, #9, #10, #14) - valuable feedback once stable
+
+## 🔧 Technical Fix I Applied
+
+Fixed **Issue #5** - Chrome match pattern error that prevented extension from loading:
+- File: `packages/extension/src/build/receiver-matches.ts`
+- Changed: `${url.origin}/*` → `${url.protocol}//${url.hostname}/*`
+- (Removed port from match pattern - Chrome doesn't allow ports in match patterns)
+
+## 📊 Key User Feedback
+
+**Terminology confusion:**
+> "What ARE chickens? (tabs? drafts? knowledge pieces?) What are signals? What makes something stale?"  
+**No tooltips, no onboarding, no glossary.**
+
+**UI issues:**
+> "Can't click on chickens in the yard. Buttons overflowing. Can't tell what's clickable vs what's just stats."
+
+**Coop creation feedback:**
+> "Make lenses customizable - select relevant ones, library of lenses, map inputs/outputs, maybe call them 'workflows'"
+
+## 📋 Single Link to Full Report
+
+**Comprehensive Testing Report (1,600+ lines):**  
+https://github.com/regen-coordination/coop/blob/luiz/release-0.0-sync/TESTING_SESSION_2026-03-29.md
+
+**Branch:** `luiz/release-0.0-sync`  
+**Latest commits:** Testing reports and match pattern fix
+
+## 🎯 My Recommendation
+
+**STOP all feature work immediately.**
+
+1. **Focus entirely on stability fixes** (Issues #11, #12, #13)
+2. **Agent Harness v2 needs debugging** - background cycles getting stuck
+3. **Fix resource cleanup** - WebSocket connections, event listeners
+4. Once stable, the UI/UX feedback (#6, #8, #9, #10, #14) is valuable for polish
+
+**The product is not testable in current state.** Basic functionality breaks the entire extension. This needs to be priority #1.
+
+Let me know when you've had a chance to look at Issues #11-13 and I can resume testing the remaining flows (peer sync, receiver pairing, capture→publish, archive).
+
+Happy to jump on a call to walk through any of this or help debug.
+
+Luiz
+
+---
+
+**P.S.** - I have the app and API servers still running if you want to test the PWA side separately from the extension issues. The receiver at port 3001 might be more stable since it's separate from the extension's agent system.
