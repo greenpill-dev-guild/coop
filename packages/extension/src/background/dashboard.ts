@@ -54,6 +54,7 @@ import {
   configuredReceiverAppUrl,
   configuredSessionMode,
   configuredSignalingUrls,
+  configuredWebsocketSyncUrl,
   db,
   getCoops,
   getLocalSetting,
@@ -730,6 +731,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
       privacyMode: configuredPrivacyMode,
       receiverAppUrl: configuredReceiverAppUrl,
       signalingUrls: configuredSignalingUrls,
+      websocketSyncUrl: configuredWebsocketSyncUrl,
     },
     operator: {
       anchorCapability: operator.anchorCapability,

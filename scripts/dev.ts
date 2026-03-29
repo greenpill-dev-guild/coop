@@ -42,6 +42,7 @@ type DevState = {
     mode: 'watch';
     receiverAppUrl: string;
     signalingUrls: string[];
+    websocketSyncUrl?: string;
     status: ServiceStatus;
   };
   tunnel: {
@@ -444,6 +445,7 @@ async function main() {
       mode: 'watch',
       receiverAppUrl: appLocalUrl,
       signalingUrls: [`ws://${LOCAL_HOST}:${apiPort}`, 'wss://api.coop.town'],
+      websocketSyncUrl: `ws://${LOCAL_HOST}:${apiPort}/yws`,
       status: 'starting',
     },
     tunnel: {
@@ -615,6 +617,7 @@ async function main() {
 
       // Dev tunnel first, production fallback
       state.extension.signalingUrls = [state.api.websocketUrl, 'wss://api.coop.town'];
+      state.extension.websocketSyncUrl = `${state.api.websocketUrl}/yws`;
       state.tunnel.status = 'ready';
       writeDevState(state);
     } catch (error) {
@@ -660,6 +663,7 @@ async function main() {
       state.extension.receiverAppUrl = state.app.publicUrl;
       // Quick tunnel first, production fallback
       state.extension.signalingUrls = [state.api.websocketUrl, 'wss://api.coop.town'];
+      state.extension.websocketSyncUrl = `${state.api.websocketUrl}/yws`;
       writeDevState(state);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -687,6 +691,7 @@ async function main() {
       ...process.env,
       VITE_COOP_RECEIVER_APP_URL: state.extension.receiverAppUrl,
       VITE_COOP_SIGNALING_URLS: state.extension.signalingUrls.join(','),
+      VITE_COOP_WEBSOCKET_SYNC_URL: state.extension.websocketSyncUrl ?? '',
     },
     onLine: (line) => {
       if (/✔ Built extension in/.test(line)) {

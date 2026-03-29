@@ -27,8 +27,9 @@ type SyncBinding = {
 export function useSyncBindings(deps: {
   coops: CoopSharedState[] | undefined;
   loadDashboard: () => Promise<void>;
+  websocketSyncUrl?: string;
 }) {
-  const { coops, loadDashboard } = deps;
+  const { coops, loadDashboard, websocketSyncUrl } = deps;
   const syncBindings = useRef<Map<string, SyncBinding>>(new Map());
 
   // Cleanup all sync bindings on unmount.
@@ -63,7 +64,7 @@ export function useSyncBindings(deps: {
           username: import.meta.env.VITE_COOP_TURN_USERNAME,
           credential: import.meta.env.VITE_COOP_TURN_CREDENTIAL,
         });
-        const providers = connectSyncProviders(doc, coop.syncRoom, iceServers);
+        const providers = connectSyncProviders(doc, coop.syncRoom, iceServers, websocketSyncUrl);
         const binding: SyncBinding = {
           doc,
           lastHash: nextHash,

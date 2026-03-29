@@ -177,6 +177,7 @@ export interface DashboardResponse {
     privacyMode: 'off' | 'on';
     receiverAppUrl: string;
     signalingUrls: string[];
+    websocketSyncUrl?: string;
   };
   operator: {
     anchorCapability: AnchorCapability | null;

@@ -227,6 +227,7 @@ export function useSidepanelOrchestration(
   useSyncBindings({
     coops: dashboard?.coops,
     loadDashboard,
+    websocketSyncUrl: runtimeConfig.websocketSyncUrl,
   });
 
   // --- Inference bridge lifecycle ---

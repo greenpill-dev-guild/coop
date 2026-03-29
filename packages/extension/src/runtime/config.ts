@@ -32,6 +32,11 @@ export function resolveConfiguredProviderMode(raw?: string): ProviderMode {
 
 export { parseSignalingUrls as parseConfiguredSignalingUrls } from '@coop/shared';
 
+export function resolveConfiguredWebsocketSyncUrl(raw?: string) {
+  if (!raw || raw.trim().length === 0) return undefined;
+  return raw.trim();
+}
+
 export function resolveArchiveGatewayUrl(raw?: string) {
   return raw ?? 'https://storacha.link';
 }

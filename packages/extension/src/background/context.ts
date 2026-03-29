@@ -169,6 +169,11 @@ export const configuredPrivacyMode = resolveConfiguredPrivacyMode(
 );
 export const configuredSignalingUrls =
   parseConfiguredSignalingUrls(import.meta.env.VITE_COOP_SIGNALING_URLS) ?? defaultSignalingUrls;
+export const configuredWebsocketSyncUrl: string | undefined =
+  typeof import.meta.env.VITE_COOP_WEBSOCKET_SYNC_URL === 'string' &&
+  import.meta.env.VITE_COOP_WEBSOCKET_SYNC_URL.length > 0
+    ? import.meta.env.VITE_COOP_WEBSOCKET_SYNC_URL
+    : undefined;
 export const configuredPimlicoApiKey =
   typeof import.meta.env.VITE_PIMLICO_API_KEY === 'string' &&
   import.meta.env.VITE_PIMLICO_API_KEY.length > 0

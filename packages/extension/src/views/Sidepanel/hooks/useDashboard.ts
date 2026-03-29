@@ -31,6 +31,7 @@ import {
   resolveConfiguredPrivacyMode,
   resolveConfiguredProviderMode,
   resolveConfiguredSessionMode,
+  resolveConfiguredWebsocketSyncUrl,
   resolveReceiverAppUrl,
 } from '../../../runtime/config';
 import {
@@ -62,6 +63,9 @@ const configuredPrivacyMode = resolveConfiguredPrivacyMode(import.meta.env.VITE_
 const configuredSignalingUrls =
   parseConfiguredSignalingUrls(import.meta.env.VITE_COOP_SIGNALING_URLS) ?? defaultSignalingUrls;
 const configuredReceiverAppUrl = resolveReceiverAppUrl(import.meta.env.VITE_COOP_RECEIVER_APP_URL);
+const configuredWebsocketSyncUrl = resolveConfiguredWebsocketSyncUrl(
+  import.meta.env.VITE_COOP_WEBSOCKET_SYNC_URL,
+);
 
 export function useDashboard() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
@@ -83,6 +87,7 @@ export function useDashboard() {
         privacyMode: configuredPrivacyMode,
         receiverAppUrl: configuredReceiverAppUrl,
         signalingUrls: configuredSignalingUrls,
+        websocketSyncUrl: configuredWebsocketSyncUrl,
       },
     [dashboard],
   );
