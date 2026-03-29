@@ -33,6 +33,17 @@ export type DevEnvironmentState = {
   };
 };
 
+export async function loadDevEnvironmentState(fetchImpl: typeof fetch = fetch) {
+  const response = await fetchImpl(DEV_STATE_PATH, {
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Dev state request failed (${response.status}).`);
+  }
+
+  return (await response.json()) as DevEnvironmentState;
+}
+
 export function isLocalHostname(hostname: string) {
   return (
     hostname === 'localhost' ||

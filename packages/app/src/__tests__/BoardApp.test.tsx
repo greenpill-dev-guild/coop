@@ -8,10 +8,11 @@ import {
   recordArchiveReceipt,
   withArchiveWorthiness,
 } from '@coop/shared';
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RootApp, resetReceiverDb } from '../app';
+import { resetReceiverDb } from '../app';
 import { bootstrapCoopBoardHandoff } from '../board-handoff';
+import { renderRootApp } from './root-app-test-utils';
 
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
@@ -181,9 +182,7 @@ describe('board app routes', () => {
   it('renders the empty state when no board snapshot is available', async () => {
     window.history.pushState({}, '', '/board/nonexistent-coop');
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     expect(
       await screen.findByRole('heading', { name: 'The board needs a coop snapshot' }),
@@ -204,9 +203,7 @@ describe('board app routes', () => {
     const snapshot = buildBoardSnapshot();
     window.history.pushState({}, '', `/board/${snapshot.coopId}`);
 
-    await act(async () => {
-      render(<RootApp initialBoardSnapshot={snapshot} />);
-    });
+    await renderRootApp({ initialBoardSnapshot: snapshot });
 
     expect(await screen.findByRole('heading', { name: 'Board Coop' })).toBeVisible();
     const shareButton = screen.getByRole('button', { name: 'Share snapshot' });
@@ -226,9 +223,7 @@ describe('board app routes', () => {
       value: { writeText: writeTextMock },
     });
 
-    await act(async () => {
-      render(<RootApp initialBoardSnapshot={snapshot} />);
-    });
+    await renderRootApp({ initialBoardSnapshot: snapshot });
 
     const shareButton = await screen.findByRole('button', { name: 'Share snapshot' });
     await act(async () => {
@@ -243,9 +238,7 @@ describe('board app routes', () => {
     const snapshot = buildBoardSnapshot();
     window.history.pushState({}, '', `/board/${snapshot.coopId}`);
 
-    await act(async () => {
-      render(<RootApp initialBoardSnapshot={snapshot} />);
-    });
+    await renderRootApp({ initialBoardSnapshot: snapshot });
 
     expect(await screen.findByRole('heading', { name: 'Board Coop' })).toBeVisible();
     expect(screen.getByText(/saved proof trail/i)).toBeVisible();

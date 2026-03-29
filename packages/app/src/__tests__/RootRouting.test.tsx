@@ -4,9 +4,10 @@ import {
   toReceiverPairingRecord,
   upsertReceiverPairing,
 } from '@coop/shared';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RootApp, receiverDb, resetReceiverDb, resolveRootDestination, resolveRoute } from '../app';
+import { receiverDb, resetReceiverDb, resolveRootDestination, resolveRoute } from '../app';
+import { renderRootApp } from './root-app-test-utils';
 
 function stubSurface({
   userAgent,
@@ -101,9 +102,7 @@ describe('root routing bootstrap', () => {
   });
 
   it('redirects desktop root visits to landing', async () => {
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/landing');
@@ -113,7 +112,9 @@ describe('root routing bootstrap', () => {
         name: /no more chickens loose/i,
       }),
     ).toBeVisible();
-    expect(document.title).toBe('Coop | Turn knowledge into opportunity');
+    await waitFor(() => {
+      expect(document.title).toBe('Coop | Turn knowledge into opportunity');
+    });
   });
 
   it('redirects mobile root visits without a pairing to mate', async () => {
@@ -124,15 +125,15 @@ describe('root routing bootstrap', () => {
       maxTouchPoints: 5,
     });
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/pair');
     });
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
-    expect(document.title).toBe('Coop Mate');
+    await waitFor(() => {
+      expect(document.title).toBe('Coop Mate');
+    });
   });
 
   it('redirects mobile root visits with an active pairing to hatch', async () => {
@@ -143,15 +144,15 @@ describe('root routing bootstrap', () => {
     });
     await seedActivePairing();
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/receiver');
     });
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
-    expect(document.title).toBe('Coop Hatch');
+    await waitFor(() => {
+      expect(document.title).toBe('Coop Hatch');
+    });
   });
 
   it('treats standalone launches like app entry and sends unpaired devices to mate', async () => {
@@ -162,9 +163,7 @@ describe('root routing bootstrap', () => {
       innerWidth: 1024,
     });
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/pair');
@@ -181,9 +180,7 @@ describe('root routing bootstrap', () => {
     });
     window.history.pushState({}, '', '/inbox');
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Roost$/i })).toBeVisible();
     expect(window.location.pathname).toBe('/inbox');
@@ -198,9 +195,7 @@ describe('root routing bootstrap', () => {
     });
     window.history.pushState({}, '', '/receiver');
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
     expect(screen.getByRole('heading', { name: /keep coop one tap away/i })).toBeVisible();

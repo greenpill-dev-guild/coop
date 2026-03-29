@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RootApp, resetReceiverDb } from '../app';
+import { resetReceiverDb } from '../app';
+import { renderRootApp } from './root-app-test-utils';
 
 class FakeBarcodeDetector {
   detect() {
@@ -63,11 +64,9 @@ describe('QR scanner overlay a11y', () => {
   });
 
   it('renders the QR scanner as a native dialog element when open', async () => {
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
-    const scanButton = screen.getByRole('button', { name: /scan qr/i });
+    const scanButton = await screen.findByRole('button', { name: /scan qr/i });
     await act(async () => {
       scanButton.click();
     });
@@ -78,20 +77,18 @@ describe('QR scanner overlay a11y', () => {
   });
 
   it('does not render a dialog when scanner is closed', async () => {
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
+
+    await screen.findByRole('button', { name: /scan qr/i });
 
     expect(screen.queryByRole('dialog', { name: /qr code scanner/i })).not.toBeInTheDocument();
   });
 
   it('closes the scanner when Escape is pressed', async () => {
     const user = userEvent.setup();
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
-    const scanButton = screen.getByRole('button', { name: /scan qr/i });
+    const scanButton = await screen.findByRole('button', { name: /scan qr/i });
     await act(async () => {
       scanButton.click();
     });

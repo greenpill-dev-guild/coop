@@ -12,13 +12,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DevTunnelBadge } from './components/DevTunnelBadge';
 import { Skeleton } from './components/Skeleton';
 import {
-  DEV_STATE_PATH,
   type DevEnvironmentState,
   getDevAccessTokenFromUrl,
   getStoredDevAccessToken,
   hasValidDevAccess,
   isDevAccessRequired,
   isLocalHostname,
+  loadDevEnvironmentState,
   rememberDevAccessToken,
   stripDevAccessToken,
 } from './dev-environment';
@@ -266,15 +266,19 @@ function DevAccessGate({
   );
 }
 
+type RootAppProps = {
+  initialPairingInput?: string | null;
+  initialBoardSnapshot?: CoopBoardSnapshot | null;
+  initialShareInput?: ReceiverShareHandoff | null;
+  devEnvironmentEnabled?: boolean;
+};
+
 export function RootApp({
   initialPairingInput,
   initialBoardSnapshot,
   initialShareInput,
-}: {
-  initialPairingInput?: string | null;
-  initialBoardSnapshot?: CoopBoardSnapshot | null;
-  initialShareInput?: ReceiverShareHandoff | null;
-} = {}) {
+  devEnvironmentEnabled = import.meta.env.DEV,
+}: RootAppProps = {}) {
   const appSurfaceRef = useRef(detectAppSurface(globalThis));
   const appSurface = appSurfaceRef.current;
   const browserUxCapabilities = detectBrowserUxCapabilities(globalThis);
@@ -288,7 +292,7 @@ export function RootApp({
   const [devEnvironment, setDevEnvironment] = useState<DevEnvironmentState | null>(null);
   const [devEnvironmentStatus, setDevEnvironmentStatus] = useState<
     'disabled' | 'loading' | 'ready'
-  >(() => (import.meta.env.DEV ? 'loading' : 'disabled'));
+  >(() => (devEnvironmentEnabled ? 'loading' : 'disabled'));
   const [devAccessToken, setDevAccessToken] = useState<string | null>(() =>
     getStoredDevAccessToken(),
   );
@@ -505,7 +509,7 @@ export function RootApp({
   }, [route]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) {
+    if (!devEnvironmentEnabled) {
       return undefined;
     }
 
@@ -513,14 +517,7 @@ export function RootApp({
 
     const loadDevEnvironment = async () => {
       try {
-        const response = await fetch(DEV_STATE_PATH, {
-          cache: 'no-store',
-        });
-        if (!response.ok) {
-          throw new Error(`Dev state request failed (${response.status}).`);
-        }
-
-        const next = (await response.json()) as DevEnvironmentState;
+        const next = await loadDevEnvironmentState();
         if (!cancelled) {
           setDevEnvironment(next);
           setDevEnvironmentStatus('ready');
@@ -542,7 +539,7 @@ export function RootApp({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [devEnvironmentEnabled]);
 
   useEffect(() => {
     void refreshLocalState();

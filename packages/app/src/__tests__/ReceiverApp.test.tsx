@@ -4,12 +4,13 @@ import {
   createReceiverPairingPayload,
   encodeReceiverPairingPayload,
 } from '@coop/shared';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RootApp, resetReceiverDb } from '../app';
+import { resetReceiverDb } from '../app';
 import { bootstrapReceiverPairingHandoff } from '../pairing-handoff';
 import { bootstrapReceiverShareHandoff } from '../share-handoff';
+import { renderRootApp } from './root-app-test-utils';
 
 describe('receiver app routes', () => {
   const createObjectUrl = vi.fn(() => 'blob:receiver-preview');
@@ -35,16 +36,14 @@ describe('receiver app routes', () => {
   });
 
   it('renders the receiver shell with audio-first and local-first actions', async () => {
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
     expect(screen.getByRole('navigation', { name: /receiver navigation/i })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Mate' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Hatch' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /start recording/i })).toBeVisible();
+    expect(await screen.findByRole('button', { name: /start recording/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /take photo/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /attach file/i })).toBeVisible();
     expect(screen.getAllByText(/not paired/i).length).toBeGreaterThan(0);
@@ -63,13 +62,11 @@ describe('receiver app routes', () => {
 
     window.history.pushState({}, '', '/pair');
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
 
-    fireEvent.change(screen.getByLabelText(/nest code or coop link/i), {
+    fireEvent.change(await screen.findByLabelText(/nest code or coop link/i), {
       target: { value: pairingCode },
     });
     await user.click(screen.getByRole('button', { name: /check nest code/i }));
@@ -117,9 +114,7 @@ describe('receiver app routes', () => {
     expect(window.location.hash).toBe('');
     expect(handoff).toBeTruthy();
 
-    await act(async () => {
-      render(<RootApp initialPairingInput={handoff} />);
-    });
+    await renderRootApp({ initialPairingInput: handoff });
 
     expect(await screen.findByRole('button', { name: /join this coop/i })).toBeVisible();
     expect(await screen.findByText(/canopy coop/i)).toBeVisible();
@@ -138,9 +133,7 @@ describe('receiver app routes', () => {
 
     const handoff = bootstrapReceiverPairingHandoff(window);
 
-    await act(async () => {
-      render(<RootApp initialPairingInput={handoff} />);
-    });
+    await renderRootApp({ initialPairingInput: handoff });
 
     expect(await screen.findByRole('button', { name: /join this coop/i })).toBeVisible();
     expect(screen.getByText(/protocol coop/i)).toBeVisible();
@@ -149,11 +142,9 @@ describe('receiver app routes', () => {
   it('stores a local file capture and shows it in the inbox', async () => {
     const user = userEvent.setup();
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
-    const fileInput = screen.getByLabelText('Attach file');
+    const fileInput = await screen.findByLabelText('Attach file');
     const file = new File(['receiver capture from test'], 'field-note.txt', {
       type: 'text/plain',
     });
@@ -191,9 +182,7 @@ describe('receiver app routes', () => {
 
     const handoff = bootstrapReceiverShareHandoff(window);
 
-    await act(async () => {
-      render(<RootApp initialShareInput={handoff} />);
-    });
+    await renderRootApp({ initialShareInput: handoff });
 
     expect(
       (await screen.findAllByText('Shared Grant', {}, { timeout: 10_000 })).length,
@@ -217,11 +206,9 @@ describe('receiver app routes', () => {
     const user = userEvent.setup();
     window.history.pushState({}, '', '/pair');
 
-    await act(async () => {
-      render(<RootApp />);
-    });
+    await renderRootApp();
 
-    await user.click(screen.getByRole('button', { name: /scan qr/i }));
+    await user.click(await screen.findByRole('button', { name: /scan qr/i }));
 
     expect(await screen.findByText(/qr scanning is not supported/i)).toBeVisible();
   });

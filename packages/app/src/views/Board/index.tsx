@@ -16,7 +16,7 @@ import {
   Position,
   ReactFlow,
 } from '@xyflow/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isSafeExternalUrl } from '../../url-safety';
 import '@xyflow/react/dist/style.css';
 
@@ -131,22 +131,42 @@ export function BoardView({
   snapshot,
 }: { coopId: string; snapshot: CoopBoardSnapshot | null }) {
   const [shareLabel, setShareLabel] = useState('Share snapshot');
+  const shareResetTimerRef = useRef<number | null>(null);
+
+  const scheduleShareLabelReset = useCallback(() => {
+    if (shareResetTimerRef.current !== null) {
+      window.clearTimeout(shareResetTimerRef.current);
+    }
+
+    shareResetTimerRef.current = window.setTimeout(() => {
+      shareResetTimerRef.current = null;
+      setShareLabel('Share snapshot');
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shareResetTimerRef.current !== null) {
+        window.clearTimeout(shareResetTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleShareSnapshot = useCallback(async () => {
     if (!navigator.clipboard?.writeText) {
       setShareLabel('Clipboard unavailable');
-      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+      scheduleShareLabelReset();
       return;
     }
     try {
       await navigator.clipboard.writeText(window.location.href);
       setShareLabel('Copied!');
-      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+      scheduleShareLabelReset();
     } catch {
       setShareLabel('Copy failed');
-      setTimeout(() => setShareLabel('Share snapshot'), 2000);
+      scheduleShareLabelReset();
     }
-  }, []);
+  }, [scheduleShareLabelReset]);
 
   const invalidSnapshot = snapshot ? snapshot.coopId !== coopId : false;
   const board = useMemo(
