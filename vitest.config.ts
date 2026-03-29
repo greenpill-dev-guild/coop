@@ -35,8 +35,8 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./vitest.setup.ts'],
     fileParallelism: coverageEnabled ? false : undefined,
-    testTimeout: coverageEnabled ? 20_000 : undefined,
-    hookTimeout: coverageEnabled ? 20_000 : undefined,
+    testTimeout: coverageEnabled ? 20_000 : 10_000,
+    hookTimeout: coverageEnabled ? 20_000 : 10_000,
     include: [
       'packages/app/src/**/*.test.{ts,tsx}',
       'packages/extension/src/**/*.test.{ts,tsx}',

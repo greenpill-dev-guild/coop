@@ -159,7 +159,7 @@ export default defineConfig({
   browser: 'chrome',
   targetBrowsers: ['chrome'],
   manifestVersion: 3,
-  outDir: '.output',
+  outDir: 'dist',
   outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
   alias: {
     '@coop/shared': path.resolve(extensionRoot, '../shared/src/index.ts'),
