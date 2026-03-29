@@ -75,7 +75,8 @@ export function resolveReceiverBridgeMatches(rawReceiverAppUrl?: string) {
   }
 
   const url = parseReceiverAppUrl(rawReceiverAppUrl);
-  const exactOriginMatch = `${url.origin}/*`;
+  // Chrome extension match patterns cannot include ports, so use hostname only
+  const exactOriginMatch = `${url.protocol}//${url.hostname}/*`;
   if (isLocalReceiverHostname(url.hostname)) {
     return [...new Set([...localReceiverBridgeMatches, exactOriginMatch])].sort();
   }
