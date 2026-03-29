@@ -66,6 +66,7 @@ export async function persistReceiverCapture(
   capture: ReceiverCapture,
   blob?: Blob | null,
 ) {
+  const hasBlobInput = blob !== null && blob !== undefined;
   const blobBytes =
     blob && blob.size > 0
       ? typeof blob.arrayBuffer === 'function'
@@ -97,12 +98,21 @@ export async function persistReceiverCapture(
       await db.encryptedLocalPayloads.put(capturePayload);
       if (blobPayload) {
         await db.encryptedLocalPayloads.put(blobPayload);
+        await db.receiverBlobs.delete(capture.id);
+      } else if (hasBlobInput) {
+        await db.encryptedLocalPayloads.delete(
+          buildEncryptedLocalPayloadId('receiver-blob', capture.id),
+        );
+        await db.receiverBlobs.put({
+          captureId: capture.id,
+          blob,
+        });
       } else {
         await db.encryptedLocalPayloads.delete(
           buildEncryptedLocalPayloadId('receiver-blob', capture.id),
         );
+        await db.receiverBlobs.delete(capture.id);
       }
-      await db.receiverBlobs.delete(capture.id);
     },
   );
 }

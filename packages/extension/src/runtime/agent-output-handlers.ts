@@ -316,7 +316,7 @@ const skillOutputHandlers: Partial<Record<SkillOutputSchemaRef, SkillOutputHandl
     });
     await input.saveReviewDraft(draft);
 
-    const createdDraftIds = [draft.id];
+    const createdDraftIds: string[] = [];
     pushCreatedDraft({
       context: input.context,
       draftId: draft.id,
@@ -432,7 +432,7 @@ const skillOutputHandlers: Partial<Record<SkillOutputSchemaRef, SkillOutputHandl
       } satisfies ReviewDraft;
       await input.saveReviewDraft(nextDraft);
 
-      createdDraftIds = [nextDraft.id];
+      createdDraftIds = [];
       pushCreatedDraft({
         context: input.context,
         draftId: nextDraft.id,

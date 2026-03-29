@@ -23,9 +23,11 @@ export async function loadTransformers(): Promise<{ pipeline: any }> {
  * Returns true if `@huggingface/transformers` can be imported in this
  * environment.
  */
-export async function canLoadTransformers(): Promise<boolean> {
+export async function canLoadTransformers(
+  load: typeof loadTransformers = loadTransformers,
+): Promise<boolean> {
   try {
-    await loadTransformers();
+    await load();
     return true;
   } catch {
     return false;
