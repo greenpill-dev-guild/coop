@@ -4035,22 +4035,6 @@ html.has-receiver {
   border-left-color: var(--coop-mist);
 }
 
-.nest-item-card.accent-audio {
-  border-left-color: var(--coop-orange);
-}
-
-.nest-item-card.accent-photo {
-  border-left-color: var(--coop-green);
-}
-
-.nest-item-card.accent-file {
-  border-left-color: var(--coop-brown-soft);
-}
-
-.nest-item-card.accent-link {
-  border-left-color: #e8d5b0;
-}
-
 .nest-item-card.is-newborn {
   animation: hatch-in 560ms ease both;
 }
@@ -4196,6 +4180,18 @@ html.has-receiver {
   line-height: 1.5;
   color: var(--coop-brown-soft);
   margin: 0;
+}
+
+.nest-item-chick--photo {
+  background: var(--coop-green-14);
+}
+
+.nest-item-chick--file {
+  background: var(--coop-brown-12);
+}
+
+.nest-item-chick--link {
+  background: var(--coop-brown-8);
 }
 
 .nest-item-chick--photo {

@@ -188,6 +188,16 @@ export async function resetReceiverDb() {
   );
 }
 
+function BootLoaderDots() {
+  return (
+    <div className="boot-loader" aria-hidden="true">
+      <span className="boot-loader-dot" />
+      <span className="boot-loader-dot" />
+      <span className="boot-loader-dot" />
+    </div>
+  );
+}
+
 function RootBootstrapSplash() {
   return (
     <div className="boot-shell">
@@ -199,6 +209,7 @@ function RootBootstrapSplash() {
           Coop is checking this device so it can drop you into pairing or capture without showing
           the landing page first.
         </p>
+        <BootLoaderDots />
       </div>
     </div>
   );
@@ -206,7 +217,7 @@ function RootBootstrapSplash() {
 
 function DevTunnelPreparingScreen() {
   return (
-    <div className="boot-shell">
+    <div className="boot-shell boot-shell--dev">
       <div className="boot-card">
         <img className="boot-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
         <p className="eyebrow">Dev Tunnel</p>
@@ -215,6 +226,7 @@ function DevTunnelPreparingScreen() {
           Coop is waiting for the local dev tunnel and access token before exposing the receiver on
           this public URL.
         </p>
+        <BootLoaderDots />
       </div>
     </div>
   );
@@ -232,7 +244,7 @@ function DevAccessGate({
   onSubmit: () => void;
 }) {
   return (
-    <div className="boot-shell">
+    <div className="boot-shell boot-shell--dev">
       <div className="boot-card">
         <img className="boot-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
         <p className="eyebrow">Dev Tunnel</p>
@@ -257,8 +269,12 @@ function DevAccessGate({
             }}
           />
         </label>
-        {error ? <p className="receiver-error">{error}</p> : null}
-        <button className="button-primary" type="button" onClick={onSubmit}>
+        {error ? (
+          <p className="receiver-error" key={error}>
+            {error}
+          </p>
+        ) : null}
+        <button className="button button-primary" type="button" onClick={onSubmit}>
           Open receiver
         </button>
       </div>
