@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ShareMenu, type ShareMenuProps } from '../ShareMenu';
@@ -139,22 +139,25 @@ describe('ShareMenu', () => {
 
   it('closes the menu after an action is performed', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    mockClipboard();
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      mockClipboard();
 
-    render(<ShareMenu {...makeDefaultProps()} />);
+      render(<ShareMenu {...makeDefaultProps()} />);
 
-    await user.click(screen.getByRole('button', { name: /share/i }));
-    await user.click(screen.getByRole('menuitem', { name: /copy link/i }));
+      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(screen.getByRole('menuitem', { name: /copy link/i }));
 
-    // Advance past the "Copied!" confirmation timeout
-    vi.advanceTimersByTime(2000);
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
 
-    await waitFor(() => {
-      expect(screen.queryByRole('menuitem', { name: /copy link/i })).not.toBeInTheDocument();
-    });
-
-    vi.useRealTimers();
+      await waitFor(() => {
+        expect(screen.queryByRole('menuitem', { name: /copy link/i })).not.toBeInTheDocument();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows a brief "Copied!" confirmation after copying', async () => {

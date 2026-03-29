@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { playRandomChickenSound } from '../../runtime/audio';
 import {
   type BackgroundNotification,
   type SidepanelIntent,
@@ -10,6 +11,7 @@ import { NotificationBanner } from '../shared/NotificationBanner';
 import { Tooltip } from '../shared/Tooltip';
 import { useCoopTheme } from '../shared/useCoopTheme';
 import { SidepanelTabRouter } from './SidepanelTabRouter';
+import { SidepanelWelcomeView } from './SidepanelWelcomeView';
 import { SidepanelFooterNav } from './TabStrip';
 import { useSidepanelOrchestration } from './hooks/useSidepanelOrchestration';
 import type { SidepanelTab } from './sidepanel-tabs';
@@ -17,30 +19,31 @@ import type { SidepanelTab } from './sidepanel-tabs';
 function PairDeviceIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 20 20" width="16" height="16">
-      <rect x="5" y="2" width="10" height="16" rx="2" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M10 14h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Phone */}
+      <rect x="2" y="4" width="7" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M5.5 13h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Laptop */}
+      <rect x="11" y="6" width="7" height="8" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M10 14h9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      {/* Connection arc */}
       <path
-        d="M16 7l3 3-3 3"
+        d="M7 5c2-3 5-3 7 0"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.2"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeDasharray="1.5 1.5"
       />
-      <path d="M12 10h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ProfileIcon() {
+function PopupWindowIcon() {
   return (
     <svg aria-hidden="true" className="popup-theme-option__icon" fill="none" viewBox="0 0 20 20">
-      <circle cx="10" cy="7.1" r="3" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M4.8 16c.7-2.4 2.4-3.7 5.2-3.7s4.5 1.3 5.2 3.7"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.4"
-      />
+      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3 7h14" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="5.5" cy="5" r="0.7" fill="currentColor" />
+      <circle cx="7.5" cy="5" r="0.7" fill="currentColor" />
     </svg>
   );
 }
@@ -69,15 +72,29 @@ export function SidepanelApp() {
     activeCoop,
     agentDashboard,
     hasTrustedNodeAccess,
+    soundPreferences,
     message,
     agentDelta,
     clearAgentDelta,
   } = orchestration;
 
+  const brandRef = useRef<HTMLButtonElement>(null);
+
+  function handleBrandClick() {
+    void playRandomChickenSound(soundPreferences);
+    const el = brandRef.current;
+    if (el) {
+      el.classList.remove('is-wiggling');
+      void el.offsetWidth; // force reflow to restart animation
+      el.classList.add('is-wiggling');
+    }
+  }
+
   const applySidepanelIntent = useCallback(
     async (intent: SidepanelIntent) => {
-      if (intent.coopId && intent.coopId !== orchestration.dashboard?.activeCoopId) {
-        await orchestration.selectActiveCoop(intent.coopId);
+      const targetCoopId = intent.coopId ?? orchestration.dashboard?.coops?.[0]?.profile.id;
+      if (targetCoopId && targetCoopId !== orchestration.dashboard?.activeCoopId) {
+        await orchestration.selectActiveCoop(targetCoopId);
       }
       setPanelTab(intent.tab);
       if (intent.segment) {
@@ -92,14 +109,7 @@ export function SidepanelApp() {
   );
 
   useEffect(() => {
-    if (!activeCoop) {
-      if (panelTab !== 'nest') {
-        setPanelTab('nest');
-      }
-      return;
-    }
-
-    if (panelTab === 'nest' && !hasTrustedNodeAccess) {
+    if (activeCoop && panelTab === 'nest' && !hasTrustedNodeAccess) {
       setPanelTab('coops');
     }
   }, [activeCoop, hasTrustedNodeAccess, panelTab]);
@@ -125,11 +135,23 @@ export function SidepanelApp() {
   return (
     <div className="coop-shell sidepanel-shell">
       <header className="sidepanel-header">
-        <div className="sidepanel-header__brand">
-          <img src="/branding/coop-wordmark-flat.png" alt="Coop" />
-        </div>
+        <Tooltip content="Play coop sound" placement="below">
+          {({ targetProps }) => (
+            <button
+              {...targetProps}
+              ref={brandRef}
+              className="sidepanel-header__brand"
+              onClick={handleBrandClick}
+              onAnimationEnd={() => brandRef.current?.classList.remove('is-wiggling')}
+              type="button"
+              aria-label="Play coop sound"
+            >
+              <img src="/branding/coop-wordmark-flat.png" alt="Coop" />
+            </button>
+          )}
+        </Tooltip>
         <div className="sidepanel-header__actions">
-          <Tooltip content="Pair a Device">
+          <Tooltip content="Pair a Device" placement="below">
             {({ targetProps }) => (
               <button
                 {...targetProps}
@@ -142,7 +164,7 @@ export function SidepanelApp() {
               </button>
             )}
           </Tooltip>
-          <Tooltip content="Open popup">
+          <Tooltip content="Open popup" placement="below">
             {({ targetProps }) => (
               <button
                 {...targetProps}
@@ -151,12 +173,12 @@ export function SidepanelApp() {
                 type="button"
                 aria-label="Open popup"
               >
-                <ProfileIcon />
+                <PopupWindowIcon />
               </button>
             )}
           </Tooltip>
           <PopupThemeToggle onSetTheme={setTheme} themePreference={preference} />
-          <Tooltip align="end" content="Close sidepanel">
+          <Tooltip align="end" content="Close sidepanel" placement="below">
             {({ targetProps }) => (
               <button
                 {...targetProps}
@@ -173,62 +195,73 @@ export function SidepanelApp() {
       </header>
 
       <main className="sidepanel-content">
-        {message ? <div className="panel-card helper-text">{message}</div> : null}
+        {dashboard && !activeCoop ? (
+          <SidepanelWelcomeView />
+        ) : (
+          <>
+            {message ? <div className="panel-card helper-text">{message}</div> : null}
 
-        {agentDelta?.focusIntent ? (
-          <NotificationBanner
-            id={`agent-delta-${agentDelta.emittedAt}`}
-            message={agentDelta.message}
-            actionLabel="Open"
-            onAction={() => void applySidepanelIntent(agentDelta.focusIntent as SidepanelIntent)}
-          />
-        ) : null}
+            {agentDelta?.focusIntent ? (
+              <NotificationBanner
+                id={`agent-delta-${agentDelta.emittedAt}`}
+                message={agentDelta.message}
+                actionLabel="Open"
+                onAction={() =>
+                  void applySidepanelIntent(agentDelta.focusIntent as SidepanelIntent)
+                }
+              />
+            ) : null}
 
-        {(dashboard?.summary.pendingDrafts ?? 0) > 0 && (
-          <NotificationBanner
-            id={`roundup-${dashboard?.summary.lastCaptureAt ?? 'none'}`}
-            message={`${dashboard?.summary.pendingDrafts} chicken${dashboard?.summary.pendingDrafts === 1 ? '' : 's'} waiting for review.`}
-            actionLabel="Review"
-            onAction={() => setPanelTab('chickens')}
-          />
+            {(dashboard?.summary.pendingDrafts ?? 0) > 0 && (
+              <NotificationBanner
+                id={`roundup-${dashboard?.summary.lastCaptureAt ?? 'none'}`}
+                message={`${dashboard?.summary.pendingDrafts} chicken${dashboard?.summary.pendingDrafts === 1 ? '' : 's'} waiting for review.`}
+                actionLabel="Review"
+                onAction={() => setPanelTab('chickens')}
+              />
+            )}
+
+            <SidepanelTabRouter
+              panelTab={panelTab}
+              orchestration={orchestration}
+              synthesisSegment={synthesisSegment}
+              onSelectSynthesisSegment={setSynthesisSegment}
+              focusedDraftId={focusedDraftId}
+              focusedSignalId={focusedSignalId}
+              focusedObservationId={focusedObservationId}
+              onApplySidepanelIntent={applySidepanelIntent}
+            />
+          </>
         )}
-
-        <SidepanelTabRouter
-          panelTab={panelTab}
-          orchestration={orchestration}
-          synthesisSegment={synthesisSegment}
-          onSelectSynthesisSegment={setSynthesisSegment}
-          focusedDraftId={focusedDraftId}
-          focusedSignalId={focusedSignalId}
-          focusedObservationId={focusedObservationId}
-          onApplySidepanelIntent={applySidepanelIntent}
-        />
       </main>
 
-      <SidepanelFooterNav
-        activeTab={panelTab}
-        onNavigate={setPanelTab}
-        showNestTab={hasTrustedNodeAccess}
-        badges={{
-          roost:
-            dashboard?.operator.policyActionQueue?.filter(
-              (b) =>
-                (b.status === 'proposed' || b.status === 'approved') &&
-                (b.actionClass === 'green-goods-add-gardener' ||
-                  b.actionClass === 'green-goods-remove-gardener'),
-            ).length ?? 0,
-          chickens:
-            (dashboard?.summary.pendingDrafts ?? 0) +
-            (dashboard?.summary.routedTabs ?? 0) +
-            (dashboard?.summary.staleObservationCount ?? 0),
-          coops: (dashboard?.coops ?? []).length,
-          nest:
-            (dashboard?.operator.policyActionQueue?.filter(
-              (b) => b.status === 'proposed' || b.status === 'approved',
-            ).length ?? 0) +
-            (agentDashboard?.plans?.filter((p) => p.status === 'pending').length ?? 0),
-        }}
-      />
+      {dashboard && !activeCoop ? null : (
+        <SidepanelFooterNav
+          activeTab={panelTab}
+          onNavigate={setPanelTab}
+          showNestTab={hasTrustedNodeAccess}
+          badges={{
+            roost:
+              dashboard?.operator.policyActionQueue?.filter(
+                (b) =>
+                  (b.status === 'proposed' || b.status === 'approved') &&
+                  (b.actionClass === 'green-goods-add-gardener' ||
+                    b.actionClass === 'green-goods-remove-gardener'),
+              ).length ?? 0,
+            chickens:
+              (dashboard?.summary.pendingDrafts ?? 0) +
+              (dashboard?.summary.routedTabs ?? 0) +
+              (dashboard?.summary.staleObservationCount ?? 0),
+            coops: (dashboard?.coops ?? []).length,
+            nest:
+              (dashboard?.operator.policyActionQueue?.filter(
+                (b) => b.status === 'proposed' || b.status === 'approved',
+              ).length ?? 0) +
+              (agentDashboard?.plans?.filter((p) => p.status === 'pending').length ?? 0),
+          }}
+        />
+      )}
+      <div className="coop-tooltip-layer" data-tooltip-root />
     </div>
   );
 }

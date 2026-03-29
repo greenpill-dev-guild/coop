@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tooltip } from '../shared/Tooltip';
 import { PopupThemeToggle } from './PopupThemePicker';
 import type { PopupThemePreference } from './popup-types';
@@ -62,6 +62,17 @@ export function PopupHeader(props: {
   } = props;
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const brandMarkRef = useRef<HTMLButtonElement>(null);
+
+  const handleBrandClick = useCallback(() => {
+    onBrandAction?.();
+    const el = brandMarkRef.current;
+    if (el) {
+      el.classList.remove('is-wiggling');
+      void el.offsetWidth;
+      el.classList.add('is-wiggling');
+    }
+  }, [onBrandAction]);
 
   useEffect(() => {
     if (!popoverOpen) {
@@ -121,9 +132,11 @@ export function PopupHeader(props: {
               {({ targetProps }) => (
                 <button
                   {...targetProps}
+                  ref={brandMarkRef}
                   aria-label={brandActionLabel}
                   className={`popup-mark${onBrandAction ? ' popup-mark--button' : ''}`}
-                  onClick={onBrandAction}
+                  onClick={handleBrandClick}
+                  onAnimationEnd={() => brandMarkRef.current?.classList.remove('is-wiggling')}
                   type="button"
                 >
                   <img alt="" className="popup-mark__image" src="/icons/icon-32.png" />

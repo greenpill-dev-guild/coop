@@ -18,6 +18,30 @@
   }
 }
 
+@keyframes coop-wiggle {
+  0% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-6deg);
+  }
+  30% {
+    transform: rotate(5deg);
+  }
+  45% {
+    transform: rotate(-4deg);
+  }
+  60% {
+    transform: rotate(3deg);
+  }
+  75% {
+    transform: rotate(-1deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -136,8 +160,8 @@ img {
 
 .tab-strip button.is-active,
 .primary-button {
-  background: var(--coop-brown);
-  color: white;
+  background: var(--coop-primary);
+  color: var(--coop-primary-contrast);
   border-color: transparent;
 }
 
@@ -335,6 +359,15 @@ button:disabled {
 .stack {
   display: grid;
   gap: 0.65rem;
+}
+
+.stack--tight {
+  gap: 0.35rem;
+}
+
+.synthesis-queue-card .empty-state {
+  padding: 0.5rem 0;
+  font-size: 0.82rem;
 }
 
 .badge-row {
@@ -573,8 +606,8 @@ button:disabled {
 }
 
 .nest-sub-tabs button.is-active {
-  background: var(--coop-brown);
-  color: white;
+  background: var(--coop-primary);
+  color: var(--coop-primary-contrast);
   border-color: transparent;
 }
 
@@ -838,8 +871,21 @@ button:disabled {
   z-index: var(--coop-z-sticky);
 }
 
+button.sidepanel-header__brand {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
 .sidepanel-header__brand img {
   width: 56px;
+}
+
+.sidepanel-header__brand.is-wiggling {
+  animation: coop-wiggle 400ms ease;
 }
 
 .sidepanel-header__actions {
@@ -901,9 +947,13 @@ button:disabled {
 }
 
 .sidepanel-action-row .popup-icon-button--primary {
-  background: var(--coop-brown);
-  color: white;
-  border-color: var(--coop-brown);
+  background: var(--coop-primary);
+  color: var(--coop-primary-contrast);
+  border-color: var(--coop-primary);
+}
+
+.sidepanel-action-row:has(.filter-popover__trigger[aria-expanded="true"]) {
+  overflow: visible;
 }
 
 /* ---- Sidepanel scrollable content ---- */
@@ -1137,8 +1187,8 @@ button:disabled {
   height: 1.4rem;
   padding: 0 0.35rem;
   border-radius: var(--coop-radius-pill);
-  background: var(--coop-brown);
-  color: white;
+  background: var(--coop-primary);
+  color: var(--coop-primary-contrast);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -1365,4 +1415,82 @@ button:disabled {
   inset: 0;
   pointer-events: none;
   z-index: var(--coop-z-tooltip);
+}
+
+/* ---- Sidepanel welcome view (no-coop state) ---- */
+
+.sidepanel-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  min-height: 60vh;
+}
+
+.sidepanel-welcome__mark {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--coop-radius-card, 12px);
+  box-shadow: var(--coop-shadow-sm);
+}
+
+.sidepanel-welcome__eyebrow {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--coop-pill-text);
+  font-weight: 700;
+}
+
+.sidepanel-welcome__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidepanel-welcome h1 {
+  font-size: 1.2rem;
+  color: var(--coop-text);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.sidepanel-welcome__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* ---- Illustrated empty states for sidepanel ---- */
+
+.sidepanel-empty-state--illustrated {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--coop-text-soft);
+}
+
+.sidepanel-empty-state__illustration {
+  width: 120px;
+  height: 75px;
+  color: var(--coop-text-soft);
+}
+
+.sidepanel-empty-state--illustrated p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--coop-text);
+}
+
+.sidepanel-empty-state__hint {
+  font-size: 0.82rem;
+  opacity: 0.7;
 }

@@ -186,7 +186,7 @@ describe('SidepanelApp', () => {
       value: {
         storage: {
           local: {
-            get: vi.fn().mockResolvedValue({}),
+            get: vi.fn(() => new Promise<Record<string, unknown>>(() => undefined)),
             set: vi.fn().mockResolvedValue(undefined),
             onChanged: {
               addListener: vi.fn(),

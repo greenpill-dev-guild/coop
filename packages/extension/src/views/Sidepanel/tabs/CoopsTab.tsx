@@ -167,7 +167,46 @@ export function CoopsTab({
         ) : null}
 
         {visibleCoops.length === 0 && allCoops.length === 0 ? (
-          <div className="empty-state">No coops yet.</div>
+          <div className="sidepanel-empty-state--illustrated">
+            <svg
+              className="sidepanel-empty-state__illustration"
+              viewBox="0 0 160 100"
+              fill="none"
+              aria-hidden="true"
+            >
+              <ellipse cx="80" cy="92" rx="70" ry="8" fill="currentColor" opacity="0.06" />
+              <g stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.2">
+                <path d="M30 60v30" />
+                <path d="M55 60v30" />
+                <path d="M105 60v30" />
+                <path d="M130 60v30" />
+              </g>
+              <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.15">
+                <path d="M30 68h100" />
+                <path d="M30 78h100" />
+              </g>
+              <ellipse
+                cx="80"
+                cy="82"
+                rx="18"
+                ry="7"
+                stroke="var(--coop-green, #5a7d10)"
+                strokeWidth="1.6"
+                opacity="0.35"
+              />
+              <path
+                d="M62 82c0-8 8-14 18-14s18 6 18 14"
+                stroke="var(--coop-green, #5a7d10)"
+                strokeWidth="1.6"
+                opacity="0.25"
+                fill="none"
+              />
+            </svg>
+            <p>No coops yet.</p>
+            <span className="sidepanel-empty-state__hint">
+              Create or join a coop to start collecting and sharing finds.
+            </span>
+          </div>
         ) : null}
 
         {visibleCoops.map((coop) => (

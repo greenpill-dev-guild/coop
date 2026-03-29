@@ -520,7 +520,7 @@ export function ChickensTab({
   ];
 
   return (
-    <section className="stack">
+    <section className="stack stack--tight">
       <SidepanelSubheader>
         <div className="sidepanel-action-row">
           <Tooltip content="Round Up">

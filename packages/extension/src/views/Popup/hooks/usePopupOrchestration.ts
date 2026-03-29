@@ -765,18 +765,6 @@ export function usePopupOrchestration(): PopupOrchestrationState {
           intent: { tab: 'chickens', segment: 'stale', coopId: workspaceTargetCoopId },
         }),
     },
-    {
-      id: 'drafts',
-      label: 'Drafts',
-      value: String(draftCount),
-      tone: 'ok' as const,
-      detail: lastCaptureAt ? `Last roundup ${formatRelativeTime(lastCaptureAt)}` : undefined,
-      onClick: () =>
-        void openWorkspace({
-          targetCoopId: workspaceTargetCoopId,
-          intent: { tab: 'chickens', segment: 'drafts', coopId: workspaceTargetCoopId },
-        }),
-    },
   ];
 
   const draftFilterTags = useMemo(

@@ -35,6 +35,9 @@ afterEach(() => {
 
 describe('useOnboarding', () => {
   it('returns loading=true initially while checking chrome.storage.sync', () => {
+    storageMock.sync.get.mockImplementationOnce(
+      () => new Promise<Record<string, unknown>>(() => undefined),
+    );
     const { result } = renderHook(() => useOnboarding());
     // Before the async check resolves, loading should be true
     expect(result.current.loading).toBe(true);
