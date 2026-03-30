@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { InviteShareInput } from './invite-share';
 import { buildInviteShareContent } from './invite-share';
 
@@ -47,7 +47,6 @@ export function InviteShareComposer({
 }: InviteShareComposerProps) {
   const content = buildInviteShareContent(invite);
   const [confirmStep, setConfirmStep] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const handleCopyMessage = useCallback(async () => {
     try {
@@ -109,10 +108,15 @@ export function InviteShareComposer({
       <dialog
         aria-label={content.previewTitle}
         aria-modal="true"
-        className={isPopup ? 'popup-dialog invite-composer' : 'invite-composer invite-composer--nest'}
+        className={
+          isPopup ? 'popup-dialog invite-composer' : 'invite-composer invite-composer--nest'
+        }
         open
-        ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') onClose();
+          event.stopPropagation();
+        }}
       >
         {/* Header */}
         <div className={isPopup ? 'popup-dialog__header' : 'invite-composer__header'}>
@@ -120,7 +124,11 @@ export function InviteShareComposer({
             <h2>{content.previewTitle}</h2>
             <button
               aria-label="Close"
-              className={isPopup ? 'popup-icon-button popup-dialog__close' : 'secondary-button invite-composer__close'}
+              className={
+                isPopup
+                  ? 'popup-icon-button popup-dialog__close'
+                  : 'secondary-button invite-composer__close'
+              }
               onClick={onClose}
               type="button"
             >
