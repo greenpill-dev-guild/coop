@@ -1062,7 +1062,7 @@ button.sidepanel-header__brand {
   border-radius: var(--coop-radius-pill);
   padding: 0 4px;
   background: var(--coop-orange);
-  color: #ffffff;
+  color: var(--coop-primary-contrast);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1256,7 +1256,7 @@ button.sidepanel-header__brand {
   gap: 0.3rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--coop-line);
-  border-radius: 16px;
+  border-radius: var(--coop-radius-input);
   background: var(--coop-surface-elevated);
   animation: coop-rise 320ms ease both;
 }
