@@ -267,10 +267,10 @@ Deep reference and architecture:
 - [Design Direction](docs/reference/coop-design-direction.md)
 - [Audio & Asset Ops](docs/reference/coop-audio-and-asset-ops.md)
 
-## Regen Coordination Foundation
+## Project Foundation
 
 Coop is the browser-native coordination membrane built on ideas forming across the wider
-regen-coordination work:
+community coordination work:
 
 - Local-first collaboration over server-centric products
 - Explicit shared memory instead of fragmented chat history

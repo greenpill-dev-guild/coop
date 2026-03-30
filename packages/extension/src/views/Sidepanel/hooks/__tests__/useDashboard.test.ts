@@ -27,6 +27,7 @@ vi.mock('../../../../runtime/config', () => ({
   resolveConfiguredSessionMode: () => 'passkey',
   resolveConfiguredProviderMode: () => 'auto',
   resolveConfiguredPrivacyMode: () => 'off',
+  resolveConfiguredWebsocketSyncUrl: () => 'wss://sync.test/yjs',
   resolveReceiverAppUrl: () => 'https://app.test',
   parseConfiguredSignalingUrls: () => [],
 }));
@@ -105,6 +106,7 @@ function makeDashboardResponse(overrides: Record<string, unknown> = {}) {
         privacyMode: 'off',
         receiverAppUrl: 'https://app.test',
         signalingUrls: [],
+        websocketSyncUrl: 'wss://sync.test/yjs',
       },
       operator: {
         anchorCapability: null,

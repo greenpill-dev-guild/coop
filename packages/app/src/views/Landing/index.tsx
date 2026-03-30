@@ -1493,10 +1493,10 @@ export function App({
 
       <footer className="landing-footer" id="resources">
         <div className="landing-footer-inner">
-          <span className="footer-copy">&copy; {new Date().getFullYear()} Regen Coordination</span>
+          <span className="footer-copy">&copy; {new Date().getFullYear()} Greenpill Dev Guild</span>
           <nav className="footer-links-row">
             <a
-              href="https://github.com/regen-coordination/coop"
+              href="https://github.com/greenpill-dev-guild/coop"
               target="_blank"
               rel="noopener noreferrer"
             >

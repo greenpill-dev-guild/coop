@@ -80,4 +80,4 @@ You can:
 ## Contact
 
 Questions about this policy can be directed through the Coop repository and project channels listed
-at [GitHub](https://github.com/regen-coordination/coop).
+at [GitHub](https://github.com/greenpill-dev-guild/coop).

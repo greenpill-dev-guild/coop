@@ -1303,7 +1303,7 @@ button.sidepanel-header__brand {
 }
 
 .sidepanel-banner-overlay > .notification-banner {
-  margin: 0.5rem 0.75rem;
+  margin: 0.25rem 0.75rem;
 }
 
 .sidepanel-banner-overlay:empty {
@@ -1318,7 +1318,8 @@ button.sidepanel-header__brand {
   padding: 0.5rem 0.75rem;
   border-radius: var(--coop-radius-chip);
   border: 1px solid rgba(253, 138, 1, 0.25);
-  background: rgba(253, 138, 1, 0.08);
+  background: var(--coop-cream, #fcf5ef);
+  box-shadow: 0 2px 8px rgba(79, 46, 31, 0.12);
   font-size: 0.85rem;
   color: var(--coop-brown);
   animation: coop-rise 320ms ease both;

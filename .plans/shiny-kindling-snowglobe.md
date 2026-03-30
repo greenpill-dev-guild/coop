@@ -193,10 +193,10 @@ Follow-up audit after implementing Iteration 1 changes. User tested on-device an
 - Extract team members and community labels into scene elements
 
 ### D2. Community labels as chicken labels in arrival scene
-**Problem**: Partner pills (Regen Coordination, Greenpill, etc.) are stuck in a card.
+**Problem**: Partner pills (Coop, Greenpill, etc.) are stuck in a card.
 **Changes**:
 - Use the community names as labels on specific arrival chickens
-- Map: tabs→"Regen Coordination", notes→"Greenpill", ideas→"Greenpill Dev Guild", signals→"ReFi DAO", links→"Green Goods"
+- Map: tabs→"Coop", notes→"Greenpill", ideas→"Greenpill Dev Guild", signals→"ReFi DAO", links→"Green Goods"
 - These labels appear below the chickens as they waddle toward the coop
 - Style as small pills with the partner-pill styling
 

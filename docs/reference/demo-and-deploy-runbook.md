@@ -152,7 +152,8 @@ This is the release target.
 
 - Production signaling server: `wss://api.coop.town`
 - Yjs document sync: `wss://api.coop.town/yws`
-- Deploy with `flyctl deploy -a coop` from `packages/api/`
+- Primary path: GitHub Actions deploys `packages/api` to Fly.io on `main`
+- Manual fallback: `flyctl deploy -a coop` from `packages/api/`
 - Health check: `https://api.coop.town/health`
 
 ### Staged Launch Gate

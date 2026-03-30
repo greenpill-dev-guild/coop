@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "CMD=$(cat | jq -r '.tool_input.command // empty'); if printf '%s' \"$CMD\" | grep -qE '(^|[;&|] *)git commit'; then cd /Users/afo/Code/regen-coordination/coop && bun run validate quick 2>&1 | tail -10; fi; exit 0",
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty'); if printf '%s' \"$CMD\" | grep -qE '(^|[;&|] *)git commit'; then cd /Users/afo/Code/greenpill/coop && bun run validate quick 2>&1 | tail -10; fi; exit 0",
             "statusMessage": "Pre-commit typecheck + lint..."
           }
         ]
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /Users/afo/Code/regen-coordination/coop && printf '## Session State (auto-saved %s)\\n\\n' \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > session-state.md && git diff --name-only HEAD 2>/dev/null | sed 's/^/- /' >> session-state.md && echo '\\n---\\nReview and update this file after compaction.' >> session-state.md",
+            "command": "cd /Users/afo/Code/greenpill/coop && printf '## Session State (auto-saved %s)\\n\\n' \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > session-state.md && git diff --name-only HEAD 2>/dev/null | sed 's/^/- /' >> session-state.md && echo '\\n---\\nReview and update this file after compaction.' >> session-state.md",
             "statusMessage": "Auto-saving session state..."
           }
         ]

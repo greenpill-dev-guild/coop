@@ -119,7 +119,12 @@ describe('useSyncBindings', () => {
 
     expect(buildIceServersMock).toHaveBeenCalledTimes(1);
     expect(createCoopDocMock).toHaveBeenCalledWith(coop);
-    expect(connectSyncProvidersMock).toHaveBeenCalledWith(doc, coop.syncRoom, ['ice-server']);
+    expect(connectSyncProvidersMock).toHaveBeenCalledWith(
+      doc,
+      coop.syncRoom,
+      ['ice-server'],
+      undefined,
+    );
     expect(createBlobRelayTransportMock).toHaveBeenCalledWith(providers.websocket);
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
       type: 'report-sync-health',
@@ -217,5 +222,46 @@ describe('useSyncBindings', () => {
       },
     });
     expect(loadDashboard).not.toHaveBeenCalled();
+  });
+
+  it('passes an explicit websocket sync url through to the sync providers', async () => {
+    const doc = {
+      on: vi.fn(),
+      off: vi.fn(),
+    };
+    const providers = {
+      webrtc: null,
+      websocket: null,
+      disconnect: vi.fn(),
+    };
+
+    createCoopDocMock.mockReturnValue(doc);
+    connectSyncProvidersMock.mockReturnValue(providers);
+    hashJsonMock.mockReturnValue('hash-local');
+    sendRuntimeMessageMock.mockResolvedValue({ ok: true });
+
+    renderHook(() =>
+      useSyncBindings({
+        coops: [
+          {
+            profile: { id: 'coop-1' },
+            syncRoom: { roomId: 'room-1' },
+          } as never,
+        ],
+        loadDashboard: vi.fn(async () => undefined),
+        websocketSyncUrl: 'wss://sync.coop.test/yjs',
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(connectSyncProvidersMock).toHaveBeenCalledWith(
+      doc,
+      { roomId: 'room-1' },
+      ['ice-server'],
+      'wss://sync.coop.test/yjs',
+    );
   });
 });

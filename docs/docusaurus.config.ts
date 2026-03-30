@@ -31,7 +31,7 @@ const config: Config = {
           path: '.',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/regen-coordination/coop/tree/main/docs/',
+          editUrl: 'https://github.com/greenpill-dev-guild/coop/tree/main/docs/',
           sidebarCollapsed: false,
           exclude: [
             '**/node_modules/**',
@@ -142,7 +142,7 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://github.com/regen-coordination/coop',
+          href: 'https://github.com/greenpill-dev-guild/coop',
           label: 'GitHub',
           position: 'right',
           className: 'docs-navbar-github',
@@ -181,7 +181,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/regen-coordination/coop',
+              href: 'https://github.com/greenpill-dev-guild/coop',
             },
           ],
         },
