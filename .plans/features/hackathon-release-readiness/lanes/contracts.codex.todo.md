@@ -1,22 +1,18 @@
 ---
-feature: <feature-slug>
-title: <Feature Title> contracts lane
+feature: hackathon-release-readiness
+title: Hackathon Release Readiness contracts lane
 lane: contracts
 agent: codex
 status: backlog
-source_branch: <source-branch>
-work_branch: codex/contracts/<feature-slug>
+source_branch: main
+work_branch: codex/contracts/hackathon-release-readiness
 depends_on:
   - ../spec.md
-owned_paths:
-  - packages/shared/src/modules/<replace-me>
-done_when:
-  - replace-with-concrete-symbol-or-file-evidence
 skills:
   - contracts
   - onchain
   - permissions
-updated: <YYYY-MM-DD>
+updated: 2026-03-30
 ---
 
 # Contracts Lane
@@ -24,9 +20,6 @@ updated: <YYYY-MM-DD>
 ## Objective
 
 Describe the onchain, permit, schema, or typed-intent work Codex should own.
-
-`done_when` should use concrete, searchable evidence strings that will exist under `owned_paths`
-when the lane is truly complete.
 
 ## Files
 

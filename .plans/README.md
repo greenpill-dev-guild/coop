@@ -12,6 +12,7 @@ Default queues:
 
 - Claude implementation: `bun run plans queue --agent claude --json`
 - Codex implementation: `bun run plans queue --agent codex --json`
+- Codex reconciliation preflight: `bun run plans reconcile --agent codex --automation-id codex-core-queue --json`
 - Claude docs maintenance: `bun run plans queue --agent claude --lane docs --json`
 - Codex docs maintenance: `bun run plans queue --agent codex --lane docs --json`
 - Codex QA pass 1: `bun run plans queue --agent codex --lane qa --handoff-ready --json`
@@ -72,8 +73,18 @@ bun run plans validate
 bun run plans legacy
 bun run plans queue --agent claude
 bun run plans queue --agent codex
+bun run plans reconcile --agent codex --automation-id codex-core-queue --json
 bun run plans queue --agent claude --lane docs
 bun run plans queue --agent codex --lane docs
 bun run plans queue --agent claude --lane qa --handoff-ready
 bun run plans queue --agent codex --lane qa --handoff-ready
 ```
+
+## Implementation Lane Metadata
+
+Implementation lanes (`state`, `api`, `contracts`) must include:
+
+- `owned_paths`: repo-relative files or directories that define the lane's primary code surface
+- `done_when`: concrete, searchable evidence strings that should exist under `owned_paths` once the lane is complete
+
+Automations should use `bun run plans reconcile ...` before implementation so stale `ready` lanes can be marked `done`, ambiguous ones can be blocked for review, and environment failures can surface as inbox items instead of false completion.

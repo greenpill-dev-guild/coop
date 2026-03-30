@@ -28,7 +28,8 @@ Active feature execution lives in `.plans/features/<feature-slug>/`.
   - `qa-codex.todo.md` first
   - `qa-claude.todo.md` second after `handoff/qa-claude/<feature-slug>` exists
 
-Use `bun run plans queue --agent codex` to find ready Codex work.
+Use `bun run plans reconcile --agent codex --json` to preflight ready Codex work and skip stale lanes.
+Use `bun run plans queue --agent codex` when you only need the raw queue listing.
 
 ## Domain Knowledge
 

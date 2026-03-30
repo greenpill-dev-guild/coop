@@ -8,6 +8,13 @@ source_branch: feature/agent-autonomy-onchain
 work_branch: codex/state/agent-autonomy-onchain
 depends_on:
   - ../spec.md
+owned_paths:
+  - packages/shared/src/modules/agent
+  - packages/extension/src/runtime
+  - packages/shared/src/modules/coop
+done_when:
+  - recordHumanReviewFeedback(
+  - deriveObservationTriggers(
 skills:
   - shared
   - state-logic

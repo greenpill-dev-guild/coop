@@ -8,6 +8,13 @@ source_branch: feature/filecoin-cold-storage
 work_branch: codex/state/filecoin-cold-storage
 depends_on:
   - ../spec.md
+owned_paths:
+  - packages/shared/src/modules/archive
+  - packages/extension/src/runtime
+  - packages/extension/src/views/Sidepanel
+done_when:
+  - verifyArchivedBundle(
+  - publicVerificationRoute
 skills:
   - shared
   - archive

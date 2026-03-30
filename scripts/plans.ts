@@ -1,13 +1,28 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  accessSync,
+  appendFileSync,
+  constants,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
 export const PLAN_ROOT = '.plans';
 export const FEATURE_ROOT = join(PLAN_ROOT, 'features');
 const TEMPLATE_ROOT = join(PLAN_ROOT, 'templates', 'feature');
 const TODO_SUFFIX = '.todo.md';
+const IMPLEMENTATION_LANES = new Set(['state', 'api', 'contracts']);
+const COMPLETE_PLAN_STATUSES = new Set(['done', 'archived']);
+const AUTOMATION_NOTES_HEADING = '## Automation Notes';
+const DEFAULT_VALIDATION_COMMAND = 'bun run validate smoke';
 
 type FrontmatterValue = string | string[];
 
@@ -23,6 +38,8 @@ export interface PlanEntry {
   workBranch?: string;
   skills: string[];
   dependsOn: string[];
+  ownedPaths: string[];
+  doneWhen: string[];
   handoffIn?: string;
   handoffOut?: string;
   qaOrder?: number;
@@ -49,18 +66,78 @@ interface ValidationResult {
   issues: string[];
 }
 
+export interface EnvironmentPreflight {
+  ok: boolean;
+  writable: boolean;
+  validationReady: boolean;
+  validationCommand: string;
+  issues: string[];
+}
+
+export interface DoneWhenEvidence {
+  outcome: string;
+  matched: boolean;
+  matchingPaths: string[];
+}
+
+export interface PlanAssessment {
+  classification: 'complete' | 'incomplete' | 'ambiguous';
+  missingOwnedPaths: string[];
+  inspectedFiles: string[];
+  evidence: DoneWhenEvidence[];
+}
+
+export interface InboxItem {
+  title: string;
+  summary: string;
+}
+
+export interface ReconcileInspection {
+  path: string;
+  feature: string;
+  lane: string;
+  classification: 'complete' | 'incomplete' | 'ambiguous' | 'environment_blocked';
+  statusBefore: string;
+  statusAfter: string;
+  note: string;
+  evidence?: DoneWhenEvidence[];
+  preflight?: EnvironmentPreflight;
+}
+
+export interface ReconcileResult {
+  action: 'noop' | 'implement' | 'blocked';
+  selectedPlanPath?: string;
+  selectedFeature?: string;
+  memoryPath?: string;
+  memoryCreated: boolean;
+  createdBranches: string[];
+  inspected: ReconcileInspection[];
+  inboxItem?: InboxItem;
+}
+
+interface ReconcileOptions {
+  rootDir?: string;
+  agent?: string;
+  lane?: string[];
+  automationId?: string;
+  codexHome?: string;
+  write?: boolean;
+}
+
 function walkFiles(dir: string): string[] {
   if (!existsSync(dir)) {
     return [];
   }
 
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return walkFiles(entryPath);
-    }
-    return entry.isFile() ? [entryPath] : [];
-  });
+  return readdirSync(dir, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      const entryPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return walkFiles(entryPath);
+      }
+      return entry.isFile() ? [entryPath] : [];
+    });
 }
 
 function stripQuotes(value: string): string {
@@ -147,6 +224,274 @@ function relativeRepoPath(rootDir: string, absolutePath: string): string {
   return rel || '.';
 }
 
+function isImplementationLane(lane: string): boolean {
+  return IMPLEMENTATION_LANES.has(lane);
+}
+
+function resolveDefaultLanes(agent: string | undefined, command: string): string[] | undefined {
+  if (command !== 'queue' && command !== 'reconcile') {
+    return undefined;
+  }
+  if (agent === 'claude') {
+    return ['ui'];
+  }
+  if (agent === 'codex') {
+    return ['state', 'api', 'contracts'];
+  }
+  return undefined;
+}
+
+function parsePackageScripts(rootDir: string): Record<string, string> {
+  const packageJsonPath = join(rootDir, 'package.json');
+  if (!existsSync(packageJsonPath)) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    return typeof parsed?.scripts === 'object' && parsed.scripts
+      ? (parsed.scripts as Record<string, string>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function isWritable(path: string): boolean {
+  try {
+    accessSync(path, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveOwnedFiles(
+  rootDir: string,
+  ownedPaths: string[],
+): {
+  files: string[];
+  missingOwnedPaths: string[];
+} {
+  const files = new Set<string>();
+  const missingOwnedPaths: string[] = [];
+
+  for (const ownedPath of ownedPaths) {
+    const absolutePath = resolve(rootDir, ownedPath);
+    if (!existsSync(absolutePath)) {
+      missingOwnedPaths.push(ownedPath);
+      continue;
+    }
+
+    const stats = statSync(absolutePath);
+    if (stats.isDirectory()) {
+      for (const file of walkFiles(absolutePath)) {
+        files.add(file);
+      }
+      continue;
+    }
+
+    if (stats.isFile()) {
+      files.add(absolutePath);
+    }
+  }
+
+  return {
+    files: Array.from(files),
+    missingOwnedPaths,
+  };
+}
+
+function fileContainsEvidence(rootDir: string, filePath: string, outcome: string): boolean {
+  const rel = relativeRepoPath(rootDir, filePath);
+  if (rel.includes(outcome)) {
+    return true;
+  }
+
+  try {
+    return readFileSync(filePath, 'utf8').includes(outcome);
+  } catch {
+    return false;
+  }
+}
+
+export function assessPlanCompletion(rootDir: string, plan: PlanEntry): PlanAssessment {
+  const { files, missingOwnedPaths } = resolveOwnedFiles(rootDir, plan.ownedPaths);
+  const evidence = plan.doneWhen.map((outcome) => {
+    const matchingPaths = files
+      .filter((filePath) => fileContainsEvidence(rootDir, filePath, outcome))
+      .map((filePath) => relativeRepoPath(rootDir, filePath));
+
+    return {
+      outcome,
+      matched: matchingPaths.length > 0,
+      matchingPaths,
+    } satisfies DoneWhenEvidence;
+  });
+
+  const matchedCount = evidence.filter((entry) => entry.matched).length;
+  let classification: PlanAssessment['classification'];
+
+  if (evidence.length === 0 || files.length === 0 || missingOwnedPaths.length > 0) {
+    classification = 'ambiguous';
+  } else if (matchedCount === evidence.length) {
+    classification = 'complete';
+  } else if (matchedCount === 0) {
+    classification = 'incomplete';
+  } else {
+    classification = 'ambiguous';
+  }
+
+  return {
+    classification,
+    missingOwnedPaths,
+    inspectedFiles: files.map((filePath) => relativeRepoPath(rootDir, filePath)),
+    evidence,
+  };
+}
+
+export function runEnvironmentPreflight(rootDir: string, planPath: string): EnvironmentPreflight {
+  const scripts = parsePackageScripts(rootDir);
+  const issues: string[] = [];
+  const writable = isWritable(rootDir) && isWritable(planPath);
+
+  if (!writable) {
+    issues.push('Repository or lane file is not writable.');
+  }
+
+  const bunCheck = spawnSync('bun', ['--version'], { cwd: rootDir, encoding: 'utf8' });
+  if (bunCheck.status !== 0) {
+    issues.push('Bun is not available on PATH.');
+  }
+
+  if (!scripts['validate:smoke']) {
+    issues.push('package.json is missing a validate:smoke script.');
+  }
+  if (!scripts.test) {
+    issues.push('package.json is missing a test script.');
+  }
+  if (scripts.test?.includes('vitest')) {
+    const vitestBinary = join(rootDir, 'node_modules', '.bin', 'vitest');
+    if (!existsSync(vitestBinary)) {
+      issues.push('vitest is not installed in node_modules/.bin.');
+    }
+  }
+
+  return {
+    ok: issues.length === 0,
+    writable,
+    validationReady: issues.length === 0,
+    validationCommand: DEFAULT_VALIDATION_COMMAND,
+    issues,
+  };
+}
+
+function replaceFrontmatterScalar(content: string, key: string, value: string): string {
+  const pattern = new RegExp(`(^${key}:\\s*).*$`, 'm');
+  if (pattern.test(content)) {
+    return content.replace(pattern, `$1${value}`);
+  }
+  return content.replace(/^---\n/, `---\n${key}: ${value}\n`);
+}
+
+function appendAutomationNote(content: string, note: string): string {
+  if (content.includes(`\n${AUTOMATION_NOTES_HEADING}\n`)) {
+    return `${content.trimEnd()}\n- ${note}\n`;
+  }
+
+  return `${content.trimEnd()}\n\n${AUTOMATION_NOTES_HEADING}\n\n- ${note}\n`;
+}
+
+function updatePlanStatus(planPath: string, status: string, note: string): void {
+  const today = new Date().toISOString().slice(0, 10);
+  let next = readFileSync(planPath, 'utf8');
+  next = replaceFrontmatterScalar(next, 'status', status);
+  next = replaceFrontmatterScalar(next, 'updated', today);
+  next = appendAutomationNote(next, note);
+  writeFileSync(planPath, next);
+}
+
+function resolveCodexHome(rootDir: string, explicitCodexHome?: string): string {
+  const envCodexHome = process.env.CODEX_HOME?.trim();
+  if (explicitCodexHome) {
+    return resolve(explicitCodexHome);
+  }
+  if (envCodexHome) {
+    return resolve(envCodexHome);
+  }
+  return resolve(rootDir, '.codex');
+}
+
+function ensureAutomationMemory(
+  rootDir: string,
+  automationId: string,
+  codexHome?: string,
+): { path: string; created: boolean } {
+  const baseDir = join(resolveCodexHome(rootDir, codexHome), 'automations', automationId);
+  const memoryPath = join(baseDir, 'memory.md');
+  const created = !existsSync(memoryPath);
+
+  mkdirSync(baseDir, { recursive: true });
+  if (created) {
+    writeFileSync(memoryPath, `# ${automationId} memory\n\n`);
+  }
+
+  return { path: memoryPath, created };
+}
+
+function appendMemoryLine(memoryPath: string, line: string): void {
+  appendFileSync(memoryPath, `- ${new Date().toISOString()} ${line}\n`);
+}
+
+function isFeatureImplementationComplete(plans: PlanEntry[], feature: string): boolean {
+  const implementationPlans = plans.filter(
+    (plan) => plan.feature === feature && isImplementationLane(plan.lane),
+  );
+
+  return (
+    implementationPlans.length > 0 &&
+    implementationPlans.every((plan) => COMPLETE_PLAN_STATUSES.has(plan.status))
+  );
+}
+
+function createGitBranch(
+  rootDir: string,
+  branchName: string,
+): { created: boolean; error?: string } {
+  const branchNames = getGitBranches(rootDir);
+  if (branchNames.has(branchName)) {
+    return { created: false };
+  }
+
+  const result = spawnSync('git', ['branch', branchName], {
+    cwd: rootDir,
+    encoding: 'utf8',
+  });
+
+  if (result.status !== 0) {
+    return {
+      created: false,
+      error: (result.stderr || result.stdout || 'git branch failed').trim(),
+    };
+  }
+
+  return { created: true };
+}
+
+function buildInboxItem(plan: PlanEntry, reason: 'ambiguous' | 'environment'): InboxItem {
+  if (reason === 'ambiguous') {
+    return {
+      title: `${plan.feature} ${plan.lane} lane needs review`,
+      summary: 'Mixed done_when evidence blocked stale-lane reconciliation',
+    };
+  }
+
+  return {
+    title: `${plan.feature} ${plan.lane} lane blocked`,
+    summary: 'Validation tooling is unavailable for safe reconciliation',
+  };
+}
+
 function getGitBranches(rootDir: string): Set<string> {
   const result = spawnSync(
     'git',
@@ -206,6 +551,8 @@ export function collectPlans(
       workBranch: asString(data.work_branch) || undefined,
       skills: asList(data.skills),
       dependsOn: asList(data.depends_on),
+      ownedPaths: asList(data.owned_paths),
+      doneWhen: asList(data.done_when),
       handoffIn: asString(data.handoff_in) || undefined,
       handoffOut: asString(data.handoff_out) || undefined,
       qaOrder: Number.isNaN(qaOrder) ? undefined : qaOrder,
@@ -337,6 +684,8 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
       const lane = asString(data.lane);
       const agent = asString(data.agent);
       const status = asString(data.status);
+      const ownedPaths = asList(data.owned_paths);
+      const doneWhen = asList(data.done_when);
 
       if (feature && feature !== featureSlug) {
         issues.push(`${rel}: feature "${feature}" does not match directory "${featureSlug}"`);
@@ -355,6 +704,12 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
       }
       if (agent && !basename(file).includes(agent)) {
         issues.push(`${rel}: filename should include agent "${agent}"`);
+      }
+      if (isImplementationLane(lane) && ownedPaths.length === 0) {
+        issues.push(`${rel}: implementation lane requires owned_paths`);
+      }
+      if (isImplementationLane(lane) && doneWhen.length === 0) {
+        issues.push(`${rel}: implementation lane requires done_when`);
       }
 
       for (const dependency of asList(data.depends_on)) {
@@ -424,6 +779,156 @@ export function scaffoldFeature(
   }
 
   return targetDir;
+}
+
+export function reconcileQueue(options: ReconcileOptions = {}): ReconcileResult {
+  const rootDir = resolve(options.rootDir ?? process.cwd());
+  const agent = options.agent ?? 'codex';
+  const plans = filterPlans(collectPlans(rootDir), {
+    agent,
+    lane: options.lane ?? resolveDefaultLanes(agent, 'reconcile'),
+    status: 'ready',
+    runnable: true,
+  });
+
+  let memoryPath: string | undefined;
+  let memoryCreated = false;
+  if (options.automationId) {
+    const memory = ensureAutomationMemory(rootDir, options.automationId, options.codexHome);
+    memoryPath = memory.path;
+    memoryCreated = memory.created;
+  }
+
+  const result: ReconcileResult = {
+    action: 'noop',
+    memoryPath,
+    memoryCreated,
+    createdBranches: [],
+    inspected: [],
+  };
+
+  if (plans.length === 0) {
+    if (memoryPath) {
+      appendMemoryLine(memoryPath, 'No runnable implementation lanes were available.');
+    }
+    return result;
+  }
+
+  for (const plan of plans) {
+    const preflight = runEnvironmentPreflight(rootDir, plan.path);
+    if (!preflight.ok) {
+      const note = `Blocked before reconciliation: ${preflight.issues.join(' ')}`;
+      result.action = 'blocked';
+      result.inboxItem = buildInboxItem(plan, 'environment');
+      result.inspected.push({
+        path: plan.path,
+        feature: plan.feature,
+        lane: plan.lane,
+        classification: 'environment_blocked',
+        statusBefore: plan.status,
+        statusAfter: plan.status,
+        note,
+        preflight,
+      });
+      if (memoryPath) {
+        appendMemoryLine(memoryPath, `${relativeRepoPath(rootDir, plan.path)} environment blocked`);
+      }
+      return result;
+    }
+
+    const assessment = assessPlanCompletion(rootDir, plan);
+    if (assessment.classification === 'complete') {
+      const matchedCount = assessment.evidence.filter((entry) => entry.matched).length;
+      const note = `Reconciled as done by automation; matched ${matchedCount}/${assessment.evidence.length} done_when checks under owned_paths.`;
+      result.inspected.push({
+        path: plan.path,
+        feature: plan.feature,
+        lane: plan.lane,
+        classification: 'complete',
+        statusBefore: plan.status,
+        statusAfter: options.write ? 'done' : plan.status,
+        note,
+        evidence: assessment.evidence,
+      });
+
+      if (options.write) {
+        updatePlanStatus(plan.path, 'done', note);
+        if (memoryPath) {
+          appendMemoryLine(memoryPath, `${relativeRepoPath(rootDir, plan.path)} marked done`);
+        }
+
+        const refreshedPlans = collectPlans(rootDir);
+        if (isFeatureImplementationComplete(refreshedPlans, plan.feature)) {
+          const branchName = `handoff/qa-claude/${plan.feature}`;
+          const branchResult = createGitBranch(rootDir, branchName);
+          if (branchResult.created) {
+            result.createdBranches.push(branchName);
+            if (memoryPath) {
+              appendMemoryLine(memoryPath, `Created ${branchName}`);
+            }
+          } else if (branchResult.error && memoryPath) {
+            appendMemoryLine(memoryPath, `Failed to create ${branchName}: ${branchResult.error}`);
+          }
+        }
+      }
+
+      continue;
+    }
+
+    if (assessment.classification === 'ambiguous') {
+      const note = `Marked blocked by automation; partial done_when evidence found under owned_paths.`;
+      result.action = 'blocked';
+      result.inboxItem = buildInboxItem(plan, 'ambiguous');
+      result.inspected.push({
+        path: plan.path,
+        feature: plan.feature,
+        lane: plan.lane,
+        classification: 'ambiguous',
+        statusBefore: plan.status,
+        statusAfter: options.write ? 'blocked' : plan.status,
+        note,
+        evidence: assessment.evidence,
+      });
+
+      if (options.write) {
+        updatePlanStatus(plan.path, 'blocked', note);
+      }
+      if (memoryPath) {
+        appendMemoryLine(memoryPath, `${relativeRepoPath(rootDir, plan.path)} marked blocked`);
+      }
+      return result;
+    }
+
+    const note = 'Selected for implementation after reconciliation preflight.';
+    result.action = 'implement';
+    result.selectedPlanPath = plan.path;
+    result.selectedFeature = plan.feature;
+    result.inspected.push({
+      path: plan.path,
+      feature: plan.feature,
+      lane: plan.lane,
+      classification: 'incomplete',
+      statusBefore: plan.status,
+      statusAfter: plan.status,
+      note,
+      evidence: assessment.evidence,
+    });
+    if (memoryPath) {
+      appendMemoryLine(
+        memoryPath,
+        `${relativeRepoPath(rootDir, plan.path)} selected for implementation`,
+      );
+    }
+    return result;
+  }
+
+  if (memoryPath) {
+    appendMemoryLine(
+      memoryPath,
+      'Reconciled all runnable implementation lanes without selecting new work.',
+    );
+  }
+  return result;
 }
 
 function printPlans(plans: PlanEntry[], rootDir: string): void {
@@ -554,18 +1059,45 @@ function main(): number {
     return 0;
   }
 
+  if (command === 'reconcile') {
+    const result = reconcileQueue({
+      rootDir,
+      agent: typeof options.agent === 'string' ? options.agent : 'codex',
+      lane: parseLaneOption(options.lane),
+      automationId:
+        typeof options['automation-id'] === 'string' ? options['automation-id'] : undefined,
+      codexHome: typeof options['codex-home'] === 'string' ? options['codex-home'] : undefined,
+      write: options.write === true,
+    });
+
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`action: ${result.action}`);
+      if (result.selectedPlanPath) {
+        console.log(`selected: ${relativeRepoPath(rootDir, result.selectedPlanPath)}`);
+      }
+      if (result.memoryPath) {
+        console.log(`memory: ${relativeRepoPath(rootDir, result.memoryPath)}`);
+      }
+      for (const branchName of result.createdBranches) {
+        console.log(`created_branch: ${branchName}`);
+      }
+      if (result.inboxItem) {
+        console.log(`inbox_title: ${result.inboxItem.title}`);
+        console.log(`inbox_summary: ${result.inboxItem.summary}`);
+      }
+    }
+
+    return result.action === 'blocked' ? 1 : 0;
+  }
+
   const plans = collectPlans(rootDir);
   const requestedLanes = parseLaneOption(options.lane);
-  let defaultLanes: string[] | undefined;
-  if (!requestedLanes && command === 'queue') {
-    if (options.agent === 'claude') {
-      defaultLanes = ['ui'];
-    } else if (options.agent === 'codex') {
-      defaultLanes = ['state', 'api', 'contracts'];
-    }
-  }
+  const agent = typeof options.agent === 'string' ? options.agent : undefined;
+  const defaultLanes = !requestedLanes ? resolveDefaultLanes(agent, command) : undefined;
   const filters: FilterOptions = {
-    agent: typeof options.agent === 'string' ? options.agent : undefined,
+    agent,
     lane: requestedLanes ?? defaultLanes,
     status: typeof options.status === 'string' ? options.status : undefined,
     runnable: command === 'queue' || options.runnable === true,

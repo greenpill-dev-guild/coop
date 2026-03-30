@@ -79,7 +79,7 @@ Use:
 
 Legacy flat `.plans/*.todo.md` files are tolerated for old work, but new features should not use the flat layout.
 
-Each lane file should include frontmatter so automations can filter by agent, lane, status, and handoff branch.
+Each lane file should include frontmatter so automations can filter by agent, lane, status, handoff branch, and stale-lane evidence metadata.
 
 ```markdown
 ---
@@ -92,12 +92,22 @@ source_branch: feature/receiver-shell-polish
 work_branch: codex/state/receiver-shell-polish
 depends_on:
   - ../spec.md
+owned_paths:
+  - packages/shared/src/modules/receiver
+done_when:
+  - reconcileReceiverCapture(
 skills:
   - state-logic
   - shared
 updated: 2026-03-26
 ---
 ```
+
+For implementation lanes (`state`, `api`, `contracts`):
+
+- `owned_paths` should point to the lane's primary code surface.
+- `done_when` should use concrete, searchable symbols or file names that will exist under `owned_paths` when the lane is actually complete.
+- Automations should run `bun run plans reconcile --agent codex --json` before implementing a queued Codex lane so stale `ready` work can be reconciled safely.
 
 Sequential QA uses handoff branches:
 

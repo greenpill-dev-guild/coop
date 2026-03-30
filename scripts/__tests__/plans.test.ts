@@ -7,6 +7,7 @@ import {
   collectPlans,
   filterPlans,
   parseFrontmatter,
+  reconcileQueue,
   scaffoldFeature,
   validateFeaturePlans,
 } from '../plans';
@@ -50,6 +51,20 @@ depends_on:
     expect(parsed.data.feature).toBe('test');
     expect(parsed.data.agent).toBe('codex');
     expect(parsed.data.depends_on).toEqual(['../spec.md', '../qa/qa-claude.todo.md']);
+  });
+
+  it('parses owned_paths and done_when lists', () => {
+    const parsed = parseFrontmatter(`---
+feature: test
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+---
+`);
+
+    expect(parsed.data.owned_paths).toEqual(['packages/shared/src/modules/blob']);
+    expect(parsed.data.done_when).toEqual(['resolveBlob(']);
   });
 });
 
@@ -190,5 +205,299 @@ updated: 2026-03-26
     expect(defaultCodex[0]?.lane).toBe('state');
     expect(docsCodex).toHaveLength(1);
     expect(docsCodex[0]?.lane).toBe('docs');
+  });
+
+  it('includes owned_paths and done_when in collected queue entries', () => {
+    const rootDir = makeTempDir();
+
+    write(rootDir, '.plans/features/media-sync/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/media-sync/lanes/state.codex.todo.md',
+      `---
+feature: media-sync
+title: Media sync state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/media-sync
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+updated: 2026-03-26
+---
+`,
+    );
+
+    const [plan] = collectPlans(rootDir, new Set());
+    expect(plan?.ownedPaths).toEqual(['packages/shared/src/modules/blob']);
+    expect(plan?.doneWhen).toEqual(['resolveBlob(']);
+  });
+
+  it('fails validation when implementation lanes omit stale-lane metadata', () => {
+    const rootDir = makeTempDir();
+
+    write(rootDir, '.plans/features/media-sync/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/media-sync/lanes/state.codex.todo.md',
+      `---
+feature: media-sync
+title: Media sync state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/media-sync
+updated: 2026-03-26
+---
+`,
+    );
+
+    const validation = validateFeaturePlans(rootDir);
+    expect(validation.issues).toContain(
+      '.plans/features/media-sync/lanes/state.codex.todo.md: implementation lane requires owned_paths',
+    );
+    expect(validation.issues).toContain(
+      '.plans/features/media-sync/lanes/state.codex.todo.md: implementation lane requires done_when',
+    );
+  });
+});
+
+describe('reconcileQueue', () => {
+  function writeValidationReadyProject(rootDir: string): void {
+    write(
+      rootDir,
+      'package.json',
+      JSON.stringify(
+        {
+          scripts: {
+            test: 'vitest run',
+            'validate:smoke': 'bun run validate smoke',
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    write(rootDir, 'node_modules/.bin/vitest', '#!/bin/sh\n');
+  }
+
+  it('reconciles a stale first lane and selects the next runnable lane', () => {
+    const rootDir = makeTempDir();
+    writeValidationReadyProject(rootDir);
+
+    write(rootDir, '.plans/features/a-stale/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/a-stale/lanes/state.codex.todo.md',
+      `---
+feature: a-stale
+title: A stale state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/a-stale
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+  - transcribeAudio(
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/blob/complete.ts',
+      'export function resolveBlob() {}\nexport function transcribeAudio() {}\n',
+    );
+
+    write(rootDir, '.plans/features/b-next/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/b-next/lanes/state.codex.todo.md',
+      `---
+feature: b-next
+title: B next state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/b-next
+owned_paths:
+  - packages/shared/src/modules/receiver
+done_when:
+  - receiverCaptureContract
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/receiver/pending.ts',
+      'export const untouched = true;\n',
+    );
+
+    const result = reconcileQueue({
+      rootDir,
+      agent: 'codex',
+      write: true,
+    });
+
+    expect(result.action).toBe('implement');
+    expect(result.selectedFeature).toBe('b-next');
+    expect(result.inspected[0]?.classification).toBe('complete');
+
+    const staleLane = readFileSync(
+      join(rootDir, '.plans/features/a-stale/lanes/state.codex.todo.md'),
+      'utf8',
+    );
+    expect(staleLane).toContain('status: done');
+    expect(staleLane).toContain('## Automation Notes');
+  });
+
+  it('marks ambiguous stale lanes blocked and returns an inbox item', () => {
+    const rootDir = makeTempDir();
+    writeValidationReadyProject(rootDir);
+
+    write(rootDir, '.plans/features/a-ambiguous/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/a-ambiguous/lanes/state.codex.todo.md',
+      `---
+feature: a-ambiguous
+title: Ambiguous state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/a-ambiguous
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+  - missingEvidenceSymbol
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/blob/partial.ts',
+      'export function resolveBlob() {}\n',
+    );
+
+    const result = reconcileQueue({
+      rootDir,
+      agent: 'codex',
+      write: true,
+    });
+
+    expect(result.action).toBe('blocked');
+    expect(result.inboxItem?.title).toContain('needs review');
+
+    const lane = readFileSync(
+      join(rootDir, '.plans/features/a-ambiguous/lanes/state.codex.todo.md'),
+      'utf8',
+    );
+    expect(lane).toContain('status: blocked');
+  });
+
+  it('creates missing automation memory files on first run', () => {
+    const rootDir = makeTempDir();
+    writeValidationReadyProject(rootDir);
+
+    write(rootDir, '.plans/features/a-next/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/a-next/lanes/state.codex.todo.md',
+      `---
+feature: a-next
+title: Next state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/a-next
+owned_paths:
+  - packages/shared/src/modules/receiver
+done_when:
+  - futureReceiverSymbol
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/receiver/pending.ts',
+      'export const untouched = true;\n',
+    );
+
+    const result = reconcileQueue({
+      rootDir,
+      agent: 'codex',
+      automationId: 'codex-core-queue',
+      write: true,
+    });
+
+    expect(result.memoryCreated).toBe(true);
+    expect(result.memoryPath).toBeTruthy();
+    expect(readFileSync(result.memoryPath!, 'utf8')).toContain('selected for implementation');
+  });
+
+  it('returns an inbox item when validation tooling is unavailable', () => {
+    const rootDir = makeTempDir();
+    write(
+      rootDir,
+      'package.json',
+      JSON.stringify(
+        {
+          scripts: {
+            test: 'vitest run',
+            'validate:smoke': 'bun run validate smoke',
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    write(rootDir, '.plans/features/a-blocked/spec.md', '# Spec\n');
+    write(
+      rootDir,
+      '.plans/features/a-blocked/lanes/state.codex.todo.md',
+      `---
+feature: a-blocked
+title: Blocked state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/a-blocked
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/blob/complete.ts',
+      'export function resolveBlob() {}\n',
+    );
+
+    const result = reconcileQueue({
+      rootDir,
+      agent: 'codex',
+      automationId: 'codex-core-queue',
+      write: true,
+    });
+
+    expect(result.action).toBe('blocked');
+    expect(result.inboxItem?.summary).toContain('Validation tooling');
+    const lane = readFileSync(
+      join(rootDir, '.plans/features/a-blocked/lanes/state.codex.todo.md'),
+      'utf8',
+    );
+    expect(lane).toContain('status: ready');
   });
 });

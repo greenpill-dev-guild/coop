@@ -1,22 +1,18 @@
 ---
-feature: <feature-slug>
-title: <Feature Title> state lane
+feature: hackathon-release-readiness
+title: Hackathon Release Readiness state lane
 lane: state
 agent: codex
 status: backlog
-source_branch: <source-branch>
-work_branch: codex/state/<feature-slug>
+source_branch: main
+work_branch: codex/state/hackathon-release-readiness
 depends_on:
   - ../spec.md
-owned_paths:
-  - packages/shared/src/modules/<replace-me>
-done_when:
-  - replace-with-concrete-symbol-or-file-evidence
 skills:
   - state-logic
   - shared
   - storage
-updated: <YYYY-MM-DD>
+updated: 2026-03-30
 ---
 
 # State Lane
@@ -24,9 +20,6 @@ updated: <YYYY-MM-DD>
 ## Objective
 
 Describe the shared state, runtime, storage, and orchestration changes Codex should own.
-
-`done_when` should use concrete, searchable evidence strings that will exist under `owned_paths`
-when the lane is truly complete.
 
 ## Files
 

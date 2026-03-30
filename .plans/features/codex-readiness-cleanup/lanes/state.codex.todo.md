@@ -8,6 +8,14 @@ source_branch: chore/codex-readiness-cleanup
 work_branch: codex/state/codex-readiness-cleanup
 depends_on:
   - ../spec.md
+owned_paths:
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Sidepanel/tabs/NestTab.tsx
+  - packages/shared/src/contracts/schema-agent.ts
+  - packages/shared/src/modules/agent/agent.ts
+done_when:
+  - splitUsePopupOrchestrationState(
+  - nestTabStateViewModel
 skills:
   - architecture
   - shared
