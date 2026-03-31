@@ -3,7 +3,19 @@ export interface CaptureSnapshot {
   metaDescription?: string;
   headings: string[];
   paragraphs: string[];
+  socialPreviewImageUrl?: string;
   previewImageUrl?: string;
+}
+
+function getMetaContent(source: Document, selectors: string[]) {
+  for (const selector of selectors) {
+    const value = source.querySelector(selector)?.getAttribute('content')?.trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 export function extractPageSnapshot(source: Document = document): CaptureSnapshot {
@@ -15,6 +27,12 @@ export function extractPageSnapshot(source: Document = document): CaptureSnapsho
     .map((node) => node.textContent?.trim() ?? '')
     .filter(Boolean)
     .slice(0, 12);
+  const socialPreviewImageUrl = getMetaContent(source, [
+    'meta[property="og:image:secure_url"]',
+    'meta[property="og:image"]',
+    'meta[name="twitter:image:src"]',
+    'meta[name="twitter:image"]',
+  ]);
 
   return {
     title: source.title,
@@ -22,8 +40,8 @@ export function extractPageSnapshot(source: Document = document): CaptureSnapsho
       source.querySelector('meta[name="description"]')?.getAttribute('content') ?? undefined,
     headings,
     paragraphs,
-    previewImageUrl:
-      source.querySelector('meta[property="og:image"]')?.getAttribute('content') ?? undefined,
+    socialPreviewImageUrl,
+    previewImageUrl: socialPreviewImageUrl,
   };
 }
 

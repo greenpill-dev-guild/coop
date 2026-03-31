@@ -2,6 +2,7 @@ import type { CaptureMode, CoopSharedState, CoopSpaceType } from '@coop/shared';
 import { formatCoopSpaceTypeLabel, getCoopChainLabel } from '@coop/shared';
 import { useState } from 'react';
 import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
+import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../../shared/coop-copy';
 import { Tooltip } from '../../shared/Tooltip';
 import { SidepanelSubheader } from '../SidepanelSubheader';
 import { getAddressExplorerUrl, truncateAddress } from '../helpers';
@@ -537,6 +538,7 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
                 required
                 value={coopForm.createForm.creatorDisplayName}
               />
+              <span className="helper-text">{passkeyTrustExplainer}</span>
             </div>
             <div className="field-grid">
               <label htmlFor="capture-mode">Round-up timing</label>
@@ -623,8 +625,8 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
                 </label>
                 <span className="helper-text">
                   {coopForm.selectedSpacePreset.greenGoodsRecommended
-                    ? 'Useful when this coop may route shared work into Green Goods later.'
-                    : 'Usually leave this off unless you know this coop needs a Green Goods path.'}
+                    ? `Useful when this coop may route shared work into Green Goods later. ${greenGoodsConnectLaterCopy}`
+                    : greenGoodsConnectLaterCopy}
                 </span>
               </div>
 
@@ -795,6 +797,7 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
         <p className="helper-text">
           Already have an invite? Add it here to join an existing coop from a fresh browser.
         </p>
+        <p className="helper-text">{passkeyTrustExplainer}</p>
         <form className="form-grid" onSubmit={coopForm.joinCoopAction}>
           <div className="field-grid">
             <label htmlFor="join-code">Invite code</label>

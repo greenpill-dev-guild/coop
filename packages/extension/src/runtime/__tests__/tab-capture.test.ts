@@ -6,6 +6,7 @@ describe('tab capture helpers', () => {
     document.head.innerHTML = `
       <meta name="description" content="A local-first page" />
       <meta property="og:image" content="https://example.com/cover.png" />
+      <meta name="twitter:image" content="https://example.com/twitter-cover.png" />
     `;
     document.title = 'Coop Capture';
     document.body.innerHTML = `
@@ -20,6 +21,7 @@ describe('tab capture helpers', () => {
       metaDescription: 'A local-first page',
       headings: ['Heading one', 'Heading two'],
       paragraphs: ['First paragraph.', 'Second paragraph.'],
+      socialPreviewImageUrl: 'https://example.com/cover.png',
       previewImageUrl: 'https://example.com/cover.png',
     });
   });

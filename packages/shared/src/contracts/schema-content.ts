@@ -62,6 +62,8 @@ export const sourceReferenceSchema = z.object({
   label: z.string().min(1),
   url: z.string().min(1),
   domain: z.string().min(1),
+  faviconUrl: z.string().optional(),
+  socialPreviewImageUrl: z.string().optional(),
 });
 
 export const tabCandidateSchema = z.object({
@@ -91,6 +93,8 @@ export const readablePageExtractSchema = z.object({
   leadParagraphs: z.array(z.string()).default([]),
   salientTextBlocks: z.array(z.string()).default([]),
   textHash: z.string().min(1),
+  faviconUrl: z.string().optional(),
+  socialPreviewImageUrl: z.string().optional(),
   previewImageUrl: z.string().optional(),
   createdAt: z.string().datetime(),
 });

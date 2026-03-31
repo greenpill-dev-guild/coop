@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../../shared/coop-copy';
 import {
   installDefaultRuntimeHandlers,
   makeArtifact,
@@ -128,6 +129,8 @@ describe('PopupApp', () => {
     await user.click(screen.getByRole('button', { name: 'Create a Coop' }));
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
+    expect(screen.getByText(passkeyTrustExplainer)).toBeInTheDocument();
+    expect(screen.getByText(greenGoodsConnectLaterCopy)).toBeInTheDocument();
     expect(screen.getByLabelText('Coop name')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Popup navigation' })).not.toBeInTheDocument();
   });
@@ -159,6 +162,7 @@ describe('PopupApp', () => {
     await user.click(await screen.findByRole('button', { name: 'Join with Code' }));
 
     expect(await screen.findByRole('heading', { name: 'Find your coop.' })).toBeInTheDocument();
+    expect(screen.getByText(passkeyTrustExplainer)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste invite code' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Popup navigation' })).not.toBeInTheDocument();
   });

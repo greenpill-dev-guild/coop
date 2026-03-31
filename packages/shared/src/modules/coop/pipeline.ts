@@ -31,6 +31,7 @@ export interface PageSignalInput {
   metaDescription?: string;
   headings?: string[];
   paragraphs?: string[];
+  socialPreviewImageUrl?: string;
   previewImageUrl?: string;
 }
 
@@ -200,7 +201,9 @@ export function buildReadablePageExtract(input: PageSignalInput): ReadablePageEx
     leadParagraphs,
     salientTextBlocks,
     textHash,
-    previewImageUrl: input.previewImageUrl,
+    faviconUrl: input.candidate.favicon,
+    socialPreviewImageUrl: input.socialPreviewImageUrl ?? input.previewImageUrl,
+    previewImageUrl: input.previewImageUrl ?? input.socialPreviewImageUrl,
     createdAt: nowIso(),
   };
 }
@@ -525,6 +528,8 @@ export function shapeReviewDraft(
         label: extract.cleanedTitle,
         url: extract.canonicalUrl,
         domain: extract.domain,
+        faviconUrl: extract.faviconUrl,
+        socialPreviewImageUrl: extract.socialPreviewImageUrl,
       },
     ],
     tags: interpretation.tagCandidates,

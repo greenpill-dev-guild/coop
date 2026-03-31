@@ -1,5 +1,6 @@
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import type { PopupJoinFormState } from './popup-types';
+import { passkeyTrustExplainer } from '../shared/coop-copy';
 
 export function PopupJoinCoopScreen(props: {
   form: PopupJoinFormState;
@@ -29,6 +30,7 @@ export function PopupJoinCoopScreen(props: {
       <div className="popup-copy-block">
         <span className="popup-eyebrow">Join</span>
         <h1>Find your coop.</h1>
+        <p>{passkeyTrustExplainer}</p>
       </div>
 
       <form

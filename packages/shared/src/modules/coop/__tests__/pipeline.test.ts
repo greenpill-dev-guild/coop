@@ -85,6 +85,7 @@ describe('pipeline', () => {
         canonicalUrl: 'https://example.org/watershed-grant-roundup',
         title: 'Watershed grant roundup for 2026',
         domain: 'example.org',
+        favicon: 'https://example.org/favicon.ico',
         capturedAt: new Date().toISOString(),
       },
       page: {
@@ -94,14 +95,24 @@ describe('pipeline', () => {
           'This grant roundup tracks fundable opportunities for watershed collaboratives.',
           'It includes evidence requirements, impact reporting needs, and next steps for proposals.',
         ],
+        socialPreviewImageUrl: 'https://example.org/social-preview.png',
       },
       coops: [created.state],
     });
 
     expect(pipeline.extract.cleanedTitle).toContain('Watershed grant roundup');
+    expect(pipeline.extract.faviconUrl).toBe('https://example.org/favicon.ico');
+    expect(pipeline.extract.socialPreviewImageUrl).toBe(
+      'https://example.org/social-preview.png',
+    );
+    expect(pipeline.extract.previewImageUrl).toBe('https://example.org/social-preview.png');
     expect(pipeline.drafts).toHaveLength(1);
     expect(pipeline.drafts[0]?.category).toBe('funding-lead');
     expect(pipeline.drafts[0]?.whyItMatters).toContain('River Coop');
+    expect(pipeline.drafts[0]?.sources[0]).toMatchObject({
+      faviconUrl: 'https://example.org/favicon.ico',
+      socialPreviewImageUrl: 'https://example.org/social-preview.png',
+    });
   });
 
   it('reports local enhancement availability and fallback status cleanly', () => {
