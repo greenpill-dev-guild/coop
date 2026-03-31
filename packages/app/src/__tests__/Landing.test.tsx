@@ -1,6 +1,7 @@
 import { emptySetupInsightsInput } from '@coop/shared';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { I18nProvider } from '../hooks/useI18n';
 import { App, buildLandingSetupPacket, emptyLandingTranscripts } from '../views/Landing';
 
 function installMatchMediaMock(matches = false) {
@@ -40,6 +41,14 @@ function completeCard(title: string, notes?: string) {
   fireEvent.click(screen.getByRole('button', { name: /mark complete/i }));
 }
 
+function renderApp() {
+  return render(
+    <I18nProvider>
+      <App />
+    </I18nProvider>,
+  );
+}
+
 describe('landing page', () => {
   beforeEach(() => {
     installMatchMediaMock(false);
@@ -64,7 +73,7 @@ describe('landing page', () => {
   });
 
   it('renders the simplified landing structure and footer links', () => {
-    const { container } = render(<App />);
+    const { container } = renderApp();
 
     expect(screen.getByRole('heading', { name: /no more chickens loose/i })).toBeInTheDocument();
     expect(screen.getByText(/^No more$/)).toBeInTheDocument();
@@ -83,7 +92,7 @@ describe('landing page', () => {
   });
 
   it('updates the ritual shell audience state when a different audience is selected', () => {
-    const { container } = render(<App />);
+    const { container } = renderApp();
 
     fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
 
@@ -174,7 +183,7 @@ describe('landing page', () => {
       }),
     );
 
-    render(<App />);
+    renderApp();
 
     expect(
       await screen.findByRole('heading', { name: /your setup packet is ready/i }),
@@ -206,7 +215,7 @@ describe('landing page', () => {
 
   it('restores ritual progress from localStorage after a remount', () => {
     // Default audience is community — capital lens title is "Funding & Resources"
-    const firstRender = render(<App />);
+    const firstRender = renderApp();
 
     openCard('Funding & Resources');
     fireEvent.change(screen.getByRole('textbox', { name: /funding & resources notes/i }), {
@@ -215,7 +224,7 @@ describe('landing page', () => {
 
     firstRender.unmount();
 
-    render(<App />);
+    renderApp();
 
     expect(screen.getByRole('textbox', { name: /funding & resources notes/i })).toHaveValue(
       'Grant leads from calls.',
@@ -224,7 +233,7 @@ describe('landing page', () => {
 
   it('moves focus into an opened flashcard and returns it when the card closes', () => {
     // Default audience is community — knowledge lens title is "Collective Intelligence"
-    render(<App />);
+    renderApp();
 
     const trigger = screen.getByRole('button', { name: /collective intelligence/i });
     fireEvent.click(trigger);
@@ -237,7 +246,7 @@ describe('landing page', () => {
   });
 
   it('closes the centered flashcard stage from the backdrop and Escape', () => {
-    render(<App />);
+    renderApp();
 
     openCard('Collective Intelligence');
     expect(screen.getByRole('dialog', { name: /collective intelligence/i })).toBeInTheDocument();
@@ -255,7 +264,7 @@ describe('landing page', () => {
   });
 
   it('keeps one flashcard open at a time', () => {
-    render(<App />);
+    renderApp();
 
     openCard('Collective Intelligence');
     expect(screen.getByRole('textbox', { name: /collective intelligence notes/i })).toBeVisible();
@@ -304,7 +313,7 @@ describe('landing page', () => {
       value: MockSpeechRecognition,
     });
 
-    render(<App />);
+    renderApp();
 
     // Default audience is community — knowledge lens title is "Collective Intelligence"
     openCard('Collective Intelligence');
@@ -351,7 +360,7 @@ describe('landing page', () => {
 
   it('renders a static story stage when reduced motion is preferred', () => {
     installMatchMediaMock(true);
-    const { container } = render(<App />);
+    const { container } = renderApp();
 
     expect(container.querySelector('.journey-scene-story.is-static')).not.toBeNull();
   });
