@@ -60,7 +60,8 @@ function WorkspaceIcon() {
 export function SidepanelApp() {
   const { preference, setTheme } = useCoopTheme();
   const [panelTab, setPanelTab] = useState<SidepanelTab>('roost');
-  const [synthesisSegment, setSynthesisSegment] = useState<SidepanelIntentSegment>('review');
+  const [synthesisSegment, setSynthesisSegment] =
+    useState<Extract<SidepanelIntentSegment, 'review' | 'shared' | 'summary'>>('review');
   const [focusedDraftId, setFocusedDraftId] = useState<string | undefined>();
   const [focusedSignalId, setFocusedSignalId] = useState<string | undefined>();
   const [focusedObservationId, setFocusedObservationId] = useState<string | undefined>();

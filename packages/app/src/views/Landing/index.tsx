@@ -298,7 +298,7 @@ export function App({
               trigger: storyJourneyRef.current,
               start: 'top top',
               end: 'bottom bottom',
-              scrub: 0.96,
+              scrub: 0.8,
             },
           });
 
@@ -437,7 +437,7 @@ export function App({
               trigger: arrivalJourneyRef.current,
               start: 'top top',
               end: 'bottom bottom',
-              scrub: 0.98,
+              scrub: 0.8,
             },
           });
 
@@ -1295,10 +1295,6 @@ export function App({
                         </div>
 
                         <div className="flashcard-front-bottom">
-                          <span aria-hidden="true" className="flashcard-action-mark">
-                            <span />
-                            <span />
-                          </span>
                           {isDone ? (
                             <span className="flashcard-check" aria-label="Complete">
                               &#10003;
