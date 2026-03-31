@@ -70,6 +70,24 @@ function decodeRelayFrame(data: Uint8Array): { messageType: number; payload: str
 const ROOT_KEY = 'coop';
 const ARTIFACTS_MAP_KEY = 'coop-artifacts';
 const ARTIFACTS_V2_MAP_KEY = 'coop-artifacts-v2';
+
+// v2 per-item Y.Map keys for keyed collections
+const INVITES_V2_MAP_KEY = 'coop-invites-v2';
+const ARCHIVE_RECEIPTS_V2_MAP_KEY = 'coop-archive-receipts-v2';
+const MEMBER_ACCOUNTS_V2_MAP_KEY = 'coop-member-accounts-v2';
+const MEMBER_COMMITMENTS_KEY = 'coop-member-commitments';
+const GREEN_GOODS_BINDINGS_V2_MAP_KEY = 'coop-green-goods-bindings-v2';
+
+// v2 per-field Y.Map keys for scalar objects
+const PROFILE_V2_MAP_KEY = 'coop-profile-v2';
+const SETUP_INSIGHTS_V2_MAP_KEY = 'coop-setup-insights-v2';
+const SOUL_V2_MAP_KEY = 'coop-soul-v2';
+const SYNC_ROOM_V2_MAP_KEY = 'coop-sync-room-v2';
+const ONCHAIN_STATE_V2_MAP_KEY = 'coop-onchain-state-v2';
+const ARCHIVE_CONFIG_V2_MAP_KEY = 'coop-archive-config-v2';
+const AGENT_IDENTITY_V2_MAP_KEY = 'coop-agent-identity-v2';
+const FVM_STATE_V2_MAP_KEY = 'coop-fvm-state-v2';
+
 export {
   buildIceServers,
   defaultIceServers,
@@ -85,6 +103,8 @@ const sharedKeys = [
   'members',
   'invites',
   'artifacts',
+  // reviewBoard and memoryProfile are kept in sharedKeys for backward compatibility
+  // but should be treated as projections recomputed from artifact/archive data.
   'reviewBoard',
   'archiveReceipts',
   'memoryProfile',
@@ -94,6 +114,8 @@ const sharedKeys = [
   'greenGoods',
   'archiveConfig',
   'memberCommitments',
+  'agentIdentity',
+  'fvmState',
 ] as const;
 
 /**
@@ -184,7 +206,51 @@ export function createCoopDoc(state: CoopSharedState) {
 }
 
 /**
- * Writes a complete coop shared state into a Yjs document, updating legacy, v1, and v2 artifact formats.
+ * Writes the defined fields of an object into a Y.Map, one JSON entry per field.
+ * Removes keys no longer present in the object.
+ */
+function writeObjectToYMap(yMap: Y.Map<string>, obj: Record<string, unknown>) {
+  const definedEntries = Object.entries(obj).filter(([, value]) => value !== undefined);
+  const definedKeys = new Set(definedEntries.map(([key]) => key));
+  for (const key of yMap.keys()) {
+    if (!definedKeys.has(key)) {
+      yMap.delete(key);
+    }
+  }
+  for (const [key, value] of definedEntries) {
+    yMap.set(key, JSON.stringify(value));
+  }
+}
+
+/**
+ * Writes a keyed collection (array of items with an ID field) into a v2 Y.Map-of-Y.Map.
+ * Each item is stored as a nested Y.Map with per-field entries.
+ * Removes items that are no longer in the collection.
+ */
+function writeKeyedCollectionV2<T extends Record<string, unknown>>(
+  v2Map: Y.Map<Y.Map<string>>,
+  items: T[],
+  keyFn: (item: T) => string,
+) {
+  const currentKeys = new Set(items.map(keyFn));
+  for (const key of v2Map.keys()) {
+    if (!currentKeys.has(key)) {
+      v2Map.delete(key);
+    }
+  }
+  for (const item of items) {
+    const key = keyFn(item);
+    let fieldMap = v2Map.get(key);
+    if (!fieldMap) {
+      fieldMap = new Y.Map<string>();
+      v2Map.set(key, fieldMap);
+    }
+    writeObjectToYMap(fieldMap, item as Record<string, unknown>);
+  }
+}
+
+/**
+ * Writes a complete coop shared state into a Yjs document, updating legacy, v1, and v2 formats.
  * @param doc - The Yjs document to write into
  * @param state - The coop shared state to serialize
  */
@@ -194,15 +260,15 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   const artifactsV2 = doc.getMap<Y.Map<string>>(ARTIFACTS_V2_MAP_KEY);
 
   doc.transact(() => {
+    // --- Legacy format kept for backward compat with pre-migration peers ---
     for (const key of sharedKeys) {
-      // Legacy format kept for backward compat with pre-migration peers
       root.set(key, JSON.stringify(state[key]));
     }
 
-    // v1 format: per-artifact JSON string entries
-    const currentIds = new Set(state.artifacts.map((a) => a.id));
+    // --- v1 artifacts: per-artifact JSON string entries ---
+    const currentArtifactIds = new Set(state.artifacts.map((a) => a.id));
     for (const id of artifactsMap.keys()) {
-      if (!currentIds.has(id)) {
+      if (!currentArtifactIds.has(id)) {
         artifactsMap.delete(id);
       }
     }
@@ -210,36 +276,114 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
       artifactsMap.set(artifact.id, JSON.stringify(artifact));
     }
 
-    // v2 format: per-artifact nested Y.Map with per-field entries.
-    // Two peers editing different fields of the same artifact merge cleanly.
-    for (const id of artifactsV2.keys()) {
-      if (!currentIds.has(id)) {
-        artifactsV2.delete(id);
+    // --- v2 artifacts: per-artifact nested Y.Map with per-field entries ---
+    writeKeyedCollectionV2(artifactsV2, state.artifacts, (a) => a.id);
+
+    // --- v2 invites: keyed by invite.id ---
+    const invitesV2 = doc.getMap<Y.Map<string>>(INVITES_V2_MAP_KEY);
+    writeKeyedCollectionV2(invitesV2, state.invites, (i) => i.id);
+
+    // --- v2 archiveReceipts: keyed by receipt.id ---
+    const archiveReceiptsV2 = doc.getMap<Y.Map<string>>(ARCHIVE_RECEIPTS_V2_MAP_KEY);
+    writeKeyedCollectionV2(archiveReceiptsV2, state.archiveReceipts, (r) => r.id);
+
+    // --- v2 memberAccounts: keyed by account.memberId ---
+    const memberAccountsV2 = doc.getMap<Y.Map<string>>(MEMBER_ACCOUNTS_V2_MAP_KEY);
+    writeKeyedCollectionV2(memberAccountsV2, state.memberAccounts, (a) => a.memberId);
+
+    // --- memberCommitments: Y.Array with deduplication ---
+    const commitmentsArr = doc.getArray<string>(MEMBER_COMMITMENTS_KEY);
+    const existingCommitments = new Set<string>();
+    for (let i = 0; i < commitmentsArr.length; i++) {
+      existingCommitments.add(commitmentsArr.get(i));
+    }
+    for (const commitment of state.memberCommitments) {
+      if (!existingCommitments.has(commitment)) {
+        commitmentsArr.push([commitment]);
+        existingCommitments.add(commitment);
       }
     }
-    for (const artifact of state.artifacts) {
-      let fieldMap = artifactsV2.get(artifact.id);
-      if (!fieldMap) {
-        fieldMap = new Y.Map<string>();
-        artifactsV2.set(artifact.id, fieldMap);
-      }
-      const definedEntries = Object.entries(artifact).filter(([, value]) => value !== undefined);
-      const definedKeys = new Set(definedEntries.map(([key]) => key));
-      for (const key of fieldMap.keys()) {
-        if (!definedKeys.has(key)) {
-          fieldMap.delete(key);
-        }
-      }
-      for (const [key, value] of definedEntries) {
-        fieldMap.set(key, JSON.stringify(value));
-      }
+
+    // --- v2 greenGoods.memberBindings: keyed by memberId ---
+    if (state.greenGoods?.memberBindings) {
+      const bindingsV2 = doc.getMap<Y.Map<string>>(GREEN_GOODS_BINDINGS_V2_MAP_KEY);
+      writeKeyedCollectionV2(bindingsV2, state.greenGoods.memberBindings, (b) => b.memberId);
+    }
+
+    // --- v2 scalar objects: per-field Y.Map storage ---
+    const profileV2 = doc.getMap<string>(PROFILE_V2_MAP_KEY);
+    writeObjectToYMap(profileV2, state.profile as unknown as Record<string, unknown>);
+
+    const setupInsightsV2 = doc.getMap<string>(SETUP_INSIGHTS_V2_MAP_KEY);
+    writeObjectToYMap(setupInsightsV2, state.setupInsights as unknown as Record<string, unknown>);
+
+    const soulV2 = doc.getMap<string>(SOUL_V2_MAP_KEY);
+    writeObjectToYMap(soulV2, state.soul as unknown as Record<string, unknown>);
+
+    const syncRoomV2 = doc.getMap<string>(SYNC_ROOM_V2_MAP_KEY);
+    writeObjectToYMap(syncRoomV2, state.syncRoom as unknown as Record<string, unknown>);
+
+    const onchainStateV2 = doc.getMap<string>(ONCHAIN_STATE_V2_MAP_KEY);
+    writeObjectToYMap(onchainStateV2, state.onchainState as unknown as Record<string, unknown>);
+
+    if (state.archiveConfig) {
+      const archiveConfigV2 = doc.getMap<string>(ARCHIVE_CONFIG_V2_MAP_KEY);
+      writeObjectToYMap(archiveConfigV2, state.archiveConfig as unknown as Record<string, unknown>);
+    }
+
+    if (state.agentIdentity) {
+      const agentIdentityV2 = doc.getMap<string>(AGENT_IDENTITY_V2_MAP_KEY);
+      writeObjectToYMap(agentIdentityV2, state.agentIdentity as unknown as Record<string, unknown>);
+    }
+
+    if (state.fvmState) {
+      const fvmStateV2 = doc.getMap<string>(FVM_STATE_V2_MAP_KEY);
+      writeObjectToYMap(fvmStateV2, state.fvmState as unknown as Record<string, unknown>);
     }
   });
 }
 
 /**
+ * Reads all entries from a v2 Y.Map-of-Y.Map and reconstructs an array of objects.
+ * Returns null if the map is empty (caller should fall back to legacy).
+ */
+function readKeyedCollectionV2(v2Map: Y.Map<Y.Map<string>>): unknown[] | null {
+  if (v2Map.size === 0) return null;
+  const items: unknown[] = [];
+  for (const fieldMap of v2Map.values()) {
+    try {
+      const obj: Record<string, unknown> = {};
+      for (const [key, value] of fieldMap.entries()) {
+        obj[key] = JSON.parse(value);
+      }
+      items.push(obj);
+    } catch {
+      // skip corrupted entries
+    }
+  }
+  return items;
+}
+
+/**
+ * Reads all fields from a v2 Y.Map<string> and reconstructs an object.
+ * Returns null if the map is empty (caller should fall back to legacy).
+ */
+function readScalarObjectV2(v2Map: Y.Map<string>): Record<string, unknown> | null {
+  if (v2Map.size === 0) return null;
+  const obj: Record<string, unknown> = {};
+  for (const [key, value] of v2Map.entries()) {
+    try {
+      obj[key] = JSON.parse(value);
+    } catch {
+      // skip corrupted entries
+    }
+  }
+  return obj;
+}
+
+/**
  * Reads and validates the coop shared state from a Yjs document.
- * Prefers v2 per-field artifact format, falls back to v1 per-artifact JSON, then legacy array.
+ * Prefers v2 per-field format, falls back to v1 per-item JSON, then legacy root.
  * @param doc - The Yjs document to read from
  * @returns The parsed and validated coop shared state
  */
@@ -251,21 +395,8 @@ export function readCoopState(doc: Y.Doc): CoopSharedState {
   // Read artifacts: prefer v2 (per-field) > v1 (per-artifact JSON) > legacy
   let artifacts: unknown[];
   if (artifactsV2.size > 0) {
-    // v2: each artifact is a Y.Map of field→JSON-string
-    artifacts = [];
-    for (const fieldMap of artifactsV2.values()) {
-      try {
-        const obj: Record<string, unknown> = {};
-        for (const [key, value] of fieldMap.entries()) {
-          obj[key] = JSON.parse(value);
-        }
-        artifacts.push(obj);
-      } catch {
-        // skip corrupted entries
-      }
-    }
+    artifacts = readKeyedCollectionV2(artifactsV2) ?? [];
   } else if (artifactsMap.size > 0) {
-    // v1: each artifact is a JSON string
     artifacts = [];
     for (const value of artifactsMap.values()) {
       try {
@@ -275,18 +406,80 @@ export function readCoopState(doc: Y.Doc): CoopSharedState {
       }
     }
   } else {
-    // legacy: all artifacts in a single JSON array string
     const raw = root.get('artifacts');
     artifacts = raw ? JSON.parse(raw) : [];
   }
 
+  // Read v2 keyed collections (prefer v2 > legacy root JSON)
+  const invitesV2 = doc.getMap<Y.Map<string>>(INVITES_V2_MAP_KEY);
+  const invites = readKeyedCollectionV2(invitesV2);
+
+  const archiveReceiptsV2 = doc.getMap<Y.Map<string>>(ARCHIVE_RECEIPTS_V2_MAP_KEY);
+  const archiveReceipts = readKeyedCollectionV2(archiveReceiptsV2);
+
+  const memberAccountsV2 = doc.getMap<Y.Map<string>>(MEMBER_ACCOUNTS_V2_MAP_KEY);
+  const memberAccounts = readKeyedCollectionV2(memberAccountsV2);
+
+  // Read memberCommitments from Y.Array (prefer v2 > legacy)
+  const commitmentsArr = doc.getArray<string>(MEMBER_COMMITMENTS_KEY);
+  const memberCommitments =
+    commitmentsArr.length > 0 ? [...new Set(commitmentsArr.toArray())] : undefined;
+
+  // Read v2 scalar objects (prefer v2 > legacy root JSON)
+  const profileV2 = doc.getMap<string>(PROFILE_V2_MAP_KEY);
+  const profile = readScalarObjectV2(profileV2);
+
+  const setupInsightsV2 = doc.getMap<string>(SETUP_INSIGHTS_V2_MAP_KEY);
+  const setupInsights = readScalarObjectV2(setupInsightsV2);
+
+  const soulV2 = doc.getMap<string>(SOUL_V2_MAP_KEY);
+  const soul = readScalarObjectV2(soulV2);
+
+  const syncRoomV2 = doc.getMap<string>(SYNC_ROOM_V2_MAP_KEY);
+  const syncRoom = readScalarObjectV2(syncRoomV2);
+
+  const onchainStateV2 = doc.getMap<string>(ONCHAIN_STATE_V2_MAP_KEY);
+  const onchainState = readScalarObjectV2(onchainStateV2);
+
+  const archiveConfigV2 = doc.getMap<string>(ARCHIVE_CONFIG_V2_MAP_KEY);
+  const archiveConfig = readScalarObjectV2(archiveConfigV2);
+
+  const agentIdentityV2 = doc.getMap<string>(AGENT_IDENTITY_V2_MAP_KEY);
+  const agentIdentity = readScalarObjectV2(agentIdentityV2);
+
+  const fvmStateV2 = doc.getMap<string>(FVM_STATE_V2_MAP_KEY);
+  const fvmState = readScalarObjectV2(fvmStateV2);
+
+  // Read greenGoods.memberBindings from v2 if available
+  const greenGoodsBindingsV2 = doc.getMap<Y.Map<string>>(GREEN_GOODS_BINDINGS_V2_MAP_KEY);
+  const greenGoodsBindings = readKeyedCollectionV2(greenGoodsBindingsV2);
+
+  // Build the raw object, preferring v2 for fields that have it
   const raw = Object.fromEntries(
     sharedKeys.map((key) => {
       if (key === 'artifacts') return ['artifacts', artifacts];
+      if (key === 'invites' && invites) return ['invites', invites];
+      if (key === 'archiveReceipts' && archiveReceipts) return ['archiveReceipts', archiveReceipts];
+      if (key === 'memberAccounts' && memberAccounts) return ['memberAccounts', memberAccounts];
+      if (key === 'memberCommitments' && memberCommitments)
+        return ['memberCommitments', memberCommitments];
+      if (key === 'profile' && profile) return ['profile', profile];
+      if (key === 'setupInsights' && setupInsights) return ['setupInsights', setupInsights];
+      if (key === 'soul' && soul) return ['soul', soul];
+      if (key === 'syncRoom' && syncRoom) return ['syncRoom', syncRoom];
+      if (key === 'onchainState' && onchainState) return ['onchainState', onchainState];
+      if (key === 'archiveConfig' && archiveConfig) return ['archiveConfig', archiveConfig];
+      if (key === 'agentIdentity' && agentIdentity) return ['agentIdentity', agentIdentity];
+      if (key === 'fvmState' && fvmState) return ['fvmState', fvmState];
       const value = root.get(key);
       return [key, value ? JSON.parse(value) : undefined];
     }),
   );
+
+  // Merge greenGoods.memberBindings from v2 if available
+  if (greenGoodsBindings && raw.greenGoods) {
+    (raw.greenGoods as Record<string, unknown>).memberBindings = greenGoodsBindings;
+  }
 
   return coopSharedStateSchema.parse(raw);
 }
