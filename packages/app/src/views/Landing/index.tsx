@@ -445,30 +445,30 @@ export function App({
             },
           });
 
-          // Heading card and team fade in immediately, stay visible through mid-scroll,
-          // then fade out as the coop house rises
+          // Heading card and team fade in quickly at scroll start, stay visible through mid-scroll,
+          // then fade out faster as the coop house rises
           arrivalTimeline
             .fromTo(
               whyBuildCard,
               { autoAlpha: 0, y: 12 },
-              { autoAlpha: 1, y: 0, duration: 0.04 },
+              { autoAlpha: 1, y: 0, duration: 0.02 },
               0,
             )
             .fromTo(
               whyBuildTeam,
               { autoAlpha: 0, y: 10 },
-              { autoAlpha: 1, y: 0, duration: 0.05 },
-              0.02,
+              { autoAlpha: 1, y: 0, duration: 0.03 },
+              0.01,
             )
             .fromTo(
               whyBuildTeamMembers,
               { autoAlpha: 0, scale: 0.9 },
-              { autoAlpha: 1, scale: 1, stagger: 0.02, duration: 0.05 },
-              0.04,
+              { autoAlpha: 1, scale: 1, stagger: 0.01, duration: 0.03 },
+              0.02,
             )
-            .to(whyBuildCard, { autoAlpha: 0, y: -20, scale: 0.96 }, 0.45)
-            .to(whyBuildTeam, { autoAlpha: 0, y: -14 }, 0.48)
-            .to(whyBuildTeamMembers, { autoAlpha: 0, y: -10, stagger: 0.03 }, 0.5)
+            .to(whyBuildCard, { autoAlpha: 0, y: -20, scale: 0.96 }, 0.28)
+            .to(whyBuildTeam, { autoAlpha: 0, y: -14 }, 0.3)
+            .to(whyBuildTeamMembers, { autoAlpha: 0, y: -10, stagger: 0.02 }, 0.32)
             .fromTo(
               arrivalGlowLeftRef.current,
               { x: '-10vw', y: '3vh', scale: 0.9 },
