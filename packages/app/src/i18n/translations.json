@@ -1,0 +1,212 @@
+{
+  "en": {
+    "hero": {
+      "title1": "No more",
+      "title2": "chickens loose.",
+      "subtitle": "Turning knowledge into opportunity."
+    },
+    "how_works": {
+      "heading": "How Coop works",
+      "description": "Coop takes your scattered tabs, meeting notes, and field signals — refines them locally into clear opportunities.",
+      "card1": {
+        "title": "Your data stays yours",
+        "detail": "Everything you capture stays on your device until your group decides what to share."
+      },
+      "card2": {
+        "title": "One place for everything",
+        "detail": "Tabs, notes, files, and call fragments land together before they scatter."
+      },
+      "card3": {
+        "title": "Shared review loop",
+        "detail": "One clear queue for the group instead of hunting across chats, browsers, and memory."
+      },
+      "card4": {
+        "title": "Proof that lasts",
+        "detail": "Progress and outcomes stay close to the work so updates are easier to revisit and trust."
+      }
+    },
+    "ritual": {
+      "heading": "Curate your coop",
+      "description": "Open each card, capture what matters, and walk away with a clean setup packet."
+    },
+    "extension": {
+      "heading": "Meet the extension",
+      "description": "Your browser becomes your capture station. Highlight, clip, and save — all without breaking focus.",
+      "step1": "Quick capture",
+      "step2": "Review & refine",
+      "step3": "Publish together"
+    },
+    "why_build": {
+      "heading": "Why we build",
+      "description": "Scattered knowledge becomes shared action when the right group has a clear place to work from."
+    }
+  },
+  "pt": {
+    "hero": {
+      "title1": "Sem mais",
+      "title2": "galinhas soltas.",
+      "subtitle": "Transformando conhecimento em oportunidade."
+    },
+    "how_works": {
+      "heading": "Como o Coop funciona",
+      "description": "Coop pega suas abas dispersas, notas de reuniões e sinais do campo — refina-os localmente em oportunidades claras.",
+      "card1": {
+        "title": "Seus dados continuam sendo seus",
+        "detail": "Tudo que você captura fica no seu dispositivo até que seu grupo decida o que compartilhar."
+      },
+      "card2": {
+        "title": "Um lugar para tudo",
+        "detail": "Abas, notas, arquivos e fragmentos de chamadas chegam juntos antes de se dispersarem."
+      },
+      "card3": {
+        "title": "Loop de revisão compartilhada",
+        "detail": "Uma fila clara para o grupo em vez de procurar em chats, navegadores e memória."
+      },
+      "card4": {
+        "title": "Prova que dura",
+        "detail": "Progresso e resultados ficam perto do trabalho para que as atualizações sejam mais fáceis de revisar e confiar."
+      }
+    },
+    "ritual": {
+      "heading": "Organize seu coop",
+      "description": "Abra cada card, capture o que importa e saia com um pacote de configuração limpo."
+    },
+    "extension": {
+      "heading": "Conheça a extensão",
+      "description": "Seu navegador se torna sua estação de captura. Destaque, recorte e salve — tudo sem perder o foco.",
+      "step1": "Captura rápida",
+      "step2": "Revise e refine",
+      "step3": "Publique juntos"
+    },
+    "why_build": {
+      "heading": "Por que construímos",
+      "description": "Conhecimento disperso se torna ação compartilhada quando o grupo certo tem um lugar claro para trabalhar."
+    }
+  },
+  "es": {
+    "hero": {
+      "title1": "Sin más",
+      "title2": "gallinas sueltas.",
+      "subtitle": "Transformando conocimiento en oportunidad."
+    },
+    "how_works": {
+      "heading": "Cómo funciona Coop",
+      "description": "Coop toma tus pestañas dispersas, notas de reuniones y señales de campo — las refina localmente en oportunidades claras.",
+      "card1": {
+        "title": "Tus datos siguen siendo tuyos",
+        "detail": "Todo lo que capturas permanece en tu dispositivo hasta que tu grupo decida qué compartir."
+      },
+      "card2": {
+        "title": "Un lugar para todo",
+        "detail": "Las pestañas, notas, archivos y fragmentos de llamadas llegan juntos antes de dispersarse."
+      },
+      "card3": {
+        "title": "Bucle de revisión compartida",
+        "detail": "Una cola clara para el grupo en lugar de buscar en chats, navegadores y memoria."
+      },
+      "card4": {
+        "title": "Prueba que persiste",
+        "detail": "El progreso y los resultados se mantienen cerca del trabajo para que las actualizaciones sean más fáciles de revisar y confiar."
+      }
+    },
+    "ritual": {
+      "heading": "Organiza tu coop",
+      "description": "Abre cada tarjeta, captura lo que importa y sal con un paquete de configuración limpio."
+    },
+    "extension": {
+      "heading": "Conoce la extensión",
+      "description": "Tu navegador se convierte en tu estación de captura. Resalta, recorta y guarda — todo sin perder el enfoque.",
+      "step1": "Captura rápida",
+      "step2": "Revisa y refina",
+      "step3": "Publica juntos"
+    },
+    "why_build": {
+      "heading": "Por qué construimos",
+      "description": "El conocimiento disperso se convierte en acción compartida cuando el grupo adecuado tiene un lugar claro para trabajar."
+    }
+  },
+  "zh": {
+    "hero": {
+      "title1": "不再有",
+      "title2": "松散的鸡。",
+      "subtitle": "将知识转化为机会。"
+    },
+    "how_works": {
+      "heading": "Coop 如何运作",
+      "description": "Coop 收集您分散的标签页、会议笔记和现场信号 — 将它们本地精炼成清晰的机会。",
+      "card1": {
+        "title": "您的数据仍然是您的",
+        "detail": "您捕获的所有内容都保存在您的设备上，直到您的小组决定要分享什么。"
+      },
+      "card2": {
+        "title": "一个统一的地方",
+        "detail": "标签页、笔记、文件和通话片段聚集在一起，不再分散。"
+      },
+      "card3": {
+        "title": "共享审查循环",
+        "detail": "为团队提供一个清晰的队列，而不是在聊天、浏览器和记忆中搜索。"
+      },
+      "card4": {
+        "title": "持久的证明",
+        "detail": "进度和成果紧跟工作，使更新更容易审查和信任。"
+      }
+    },
+    "ritual": {
+      "heading": "策划您的 Coop",
+      "description": "打开每张卡片，捕获重要内容，获得一个清晰的设置包。"
+    },
+    "extension": {
+      "heading": "认识扩展程序",
+      "description": "您的浏览器成为您的捕获站。高亮、剪切和保存 — 无需分心。",
+      "step1": "快速捕获",
+      "step2": "审查和优化",
+      "step3": "一起发布"
+    },
+    "why_build": {
+      "heading": "我们为什么构建",
+      "description": "当合适的小组有一个清晰的工作地方时，分散的知识变成共享的行动。"
+    }
+  },
+  "fr": {
+    "hero": {
+      "title1": "Plus de",
+      "title2": "poules en fuite.",
+      "subtitle": "Transformer le savoir en opportunité."
+    },
+    "how_works": {
+      "heading": "Comment fonctionne Coop",
+      "description": "Coop récupère vos onglets dispersés, vos notes de réunion et vos signaux de terrain — les affine localement en opportunités claires.",
+      "card1": {
+        "title": "Vos données restent les vôtres",
+        "detail": "Tout ce que vous capturez reste sur votre appareil jusqu'à ce que votre groupe décide de partager."
+      },
+      "card2": {
+        "title": "Un seul endroit pour tout",
+        "detail": "Les onglets, les notes, les fichiers et les fragments d'appels arrivent ensemble avant de se disperser."
+      },
+      "card3": {
+        "title": "Boucle d'examen partagée",
+        "detail": "Une file d'attente claire pour le groupe au lieu de chercher dans les chats, les navigateurs et la mémoire."
+      },
+      "card4": {
+        "title": "Preuve qui persiste",
+        "detail": "Les progrès et les résultats restent près du travail pour que les mises à jour soient plus faciles à examiner et à approuver."
+      }
+    },
+    "ritual": {
+      "heading": "Organisez votre coop",
+      "description": "Ouvrez chaque carte, capturez ce qui compte et obtenez un paquet de configuration propre."
+    },
+    "extension": {
+      "heading": "Découvrez l'extension",
+      "description": "Votre navigateur devient votre station de capture. Surlignez, découpez et enregistrez — sans interruption.",
+      "step1": "Capture rapide",
+      "step2": "Examinez et affinez",
+      "step3": "Publiez ensemble"
+    },
+    "why_build": {
+      "heading": "Pourquoi nous construisons",
+      "description": "La connaissance dispersée devient une action partagée lorsque le bon groupe a un endroit clair pour travailler."
+    }
+  }
+}

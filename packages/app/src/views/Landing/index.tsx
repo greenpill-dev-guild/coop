@@ -2,7 +2,9 @@ import type { SetupInsightsInput } from '@coop/shared';
 import { getRitualLenses } from '@coop/shared';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
+import { LanguageSelector } from '../../components/LanguageSelector';
 import type { DevEnvironmentState } from '../../dev-environment';
+import { useI18n } from '../../hooks/useI18n';
 import { useScrollHijack } from '../../hooks/useScrollHijack';
 import { ChickenSprite, CoopIllustration } from './landing-animations';
 import {
@@ -48,8 +50,9 @@ export { buildLandingSetupPacket, emptyLandingTranscripts };
 export function App({
   devEnvironment = null,
 }: {
-  devEnvironment?: DevEnvironmentState | null;
+  devEnvironmentState?: DevEnvironmentState | null;
 }) {
+  const { t } = useI18n();
   const initialDraftRef = useRef<LandingDraft | null>(null);
 
   if (!initialDraftRef.current) {
@@ -1061,6 +1064,8 @@ export function App({
   return (
     <div className="page-shell landing-shell" ref={landingRootRef}>
       <div className="backdrop landing-backdrop" />
+
+      <LanguageSelector />
 
       <header className="landing-topbar">
         <div className="topbar">
