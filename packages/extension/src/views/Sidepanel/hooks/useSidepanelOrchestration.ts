@@ -282,6 +282,7 @@ export function useSidepanelOrchestration(
     activeCoop,
     activeMember,
     dashboard,
+    inviteResult,
     setMessage,
     setInviteResult,
     setPairingResult,

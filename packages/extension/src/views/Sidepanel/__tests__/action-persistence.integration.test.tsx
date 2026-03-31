@@ -693,6 +693,7 @@ function ActionPersistenceHarness(props: {
     activeCoop,
     activeMember,
     dashboard,
+    inviteResult,
     setMessage,
     setInviteResult,
     setPairingResult,

@@ -24,6 +24,11 @@ type SyncBinding = {
   pendingUpdates: Uint8Array[];
 };
 
+type SyncHealthState = {
+  syncError: boolean;
+  note?: string;
+};
+
 export function useSyncBindings(deps: {
   coops: CoopSharedState[] | undefined;
   loadDashboard: () => Promise<void>;
@@ -31,6 +36,22 @@ export function useSyncBindings(deps: {
 }) {
   const { coops, loadDashboard, websocketSyncUrl } = deps;
   const syncBindings = useRef<Map<string, SyncBinding>>(new Map());
+  const syncHealthByCoop = useRef<Map<string, SyncHealthState>>(new Map());
+
+  const reportAggregateSyncHealth = async () => {
+    const healthStates = [...syncHealthByCoop.current.values()];
+    const degraded = healthStates.find((health) => health.syncError);
+    const healthy = healthStates.find((health) => health.note);
+    const aggregate = degraded ?? healthy ?? { syncError: false };
+
+    await sendRuntimeMessage({
+      type: 'report-sync-health',
+      payload: {
+        syncError: aggregate.syncError,
+        note: aggregate.note,
+      },
+    });
+  };
 
   // Cleanup all sync bindings on unmount.
   useEffect(() => {
@@ -77,6 +98,8 @@ export function useSyncBindings(deps: {
               window.clearTimeout(binding.healthTimer);
             }
             disposeSyncHealth?.();
+            syncHealthByCoop.current.delete(coop.profile.id);
+            void reportAggregateSyncHealth();
             doc.off('update', onDocUpdate);
             providers.disconnect();
           },
@@ -84,13 +107,8 @@ export function useSyncBindings(deps: {
 
         const reportSyncHealth = async () => {
           const health = summarizeSyncTransportHealth(providers.webrtc, providers.websocket);
-          await sendRuntimeMessage({
-            type: 'report-sync-health',
-            payload: {
-              syncError: health.syncError,
-              note: health.note,
-            },
-          });
+          syncHealthByCoop.current.set(coop.profile.id, health);
+          await reportAggregateSyncHealth();
         };
 
         const scheduleSyncHealthReport = (delay = 0) => {
@@ -194,13 +212,11 @@ export function useSyncBindings(deps: {
               },
             });
             if (!persist.ok) {
-              await sendRuntimeMessage({
-                type: 'report-sync-health',
-                payload: {
-                  syncError: true,
-                  note: persist.error ?? 'Could not persist synced coop state.',
-                },
+              syncHealthByCoop.current.set(coop.profile.id, {
+                syncError: true,
+                note: persist.error ?? 'Could not persist synced coop state.',
               });
+              await reportAggregateSyncHealth();
               return;
             }
             await reportSyncHealth();

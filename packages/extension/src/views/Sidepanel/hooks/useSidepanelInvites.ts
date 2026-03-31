@@ -6,6 +6,7 @@ export interface SidepanelInvitesDeps {
   activeCoop: ReturnType<typeof useDashboard>['activeCoop'];
   activeMember: ReturnType<typeof useDashboard>['activeMember'];
   dashboard: ReturnType<typeof useDashboard>['dashboard'];
+  inviteResult: InviteCode | null;
   setMessage: (msg: string) => void;
   setInviteResult: (result: InviteCode | null) => void;
   setPairingResult: (result: ReceiverPairingRecord | null) => void;
@@ -17,6 +18,7 @@ export function useSidepanelInvites(deps: SidepanelInvitesDeps) {
     activeCoop,
     activeMember,
     dashboard,
+    inviteResult,
     setMessage,
     setInviteResult,
     setPairingResult,
@@ -60,6 +62,9 @@ export function useSidepanelInvites(deps: SidepanelInvitesDeps) {
     if (!response.ok) {
       setMessage(response.error ?? 'Invite revocation failed.');
       return;
+    }
+    if (inviteResult?.id === inviteId) {
+      setInviteResult(null);
     }
     setMessage('Invite revoked.');
     await loadDashboard();
@@ -125,9 +130,10 @@ export function useSidepanelInvites(deps: SidepanelInvitesDeps) {
       return;
     }
 
-    setPairingResult(
-      dashboard?.receiverPairings.find((pairing) => pairing.pairingId === pairingId) ?? null,
+    const selectedPairing = dashboard?.receiverPairings.find(
+      (pairing) => pairing.pairingId === pairingId,
     );
+    setPairingResult(selectedPairing ? { ...selectedPairing, active: true } : null);
     await loadDashboard();
   }
 
