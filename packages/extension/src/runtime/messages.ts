@@ -49,6 +49,21 @@ import type {
   UiPreferences,
 } from '@coop/shared';
 
+export type CoopSyncMode = 'inactive' | 'local-only' | 'websocket-only' | 'webrtc' | 'mixed';
+
+export interface CoopSyncRuntime {
+  mode: CoopSyncMode;
+  peerCount: number;
+  broadcastPeerCount: number;
+  signalingConnectionCount: number;
+  configuredSignalingCount: number;
+  websocketConnected: boolean;
+  lastRemoteUpdateAt?: string;
+  lastPersistAt?: string;
+  lastError?: string;
+  active: boolean;
+}
+
 export interface RuntimeSummary {
   iconState: ExtensionIconState;
   iconLabel: string;
@@ -70,6 +85,12 @@ export interface RuntimeSummary {
   localInferenceOptIn: boolean;
   activeCoopId?: string;
   pendingOutboxCount: number;
+  sync?: {
+    runtime: CoopSyncRuntime;
+    label: string;
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+  };
 }
 
 export interface PopupSidepanelState {
@@ -94,6 +115,14 @@ export interface PopupSnapshot {
   lastCaptureAt?: string;
   recentDraftTitles: string[];
   cachedAt: string;
+  sync?: {
+    label: string;
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+    peerCount: number;
+    websocketConnected: boolean;
+    mode: string;
+  };
 }
 
 export interface CoopBadgeSummary {
@@ -456,6 +485,12 @@ export type RuntimeRequest =
   | { type: 'set-capture-mode'; payload: { captureMode: CaptureMode } }
   | { type: 'set-active-coop'; payload: { coopId: string } }
   | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: Uint8Array } }
+  | { type: 'get-coop-sync-config' }
+  | { type: 'refresh-coop-sync-bindings' }
+  | {
+      type: 'report-coop-sync-runtime';
+      payload: { coopId: string } & Partial<CoopSyncRuntime>;
+    }
   | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
   | {
       type: 'resolve-onchain-state';
