@@ -77,7 +77,7 @@ const INVITES_V2_MAP_KEY = 'v2:invites';
 const ARCHIVE_RECEIPTS_V2_MAP_KEY = 'v2:archiveReceipts';
 const MEMBER_ACCOUNTS_V2_MAP_KEY = 'v2:memberAccounts';
 const GG_BINDINGS_V2_MAP_KEY = 'v2:greenGoods.memberBindings';
-const MEMBER_COMMITMENTS_V2_ARRAY_KEY = 'v2:memberCommitments';
+const MEMBER_COMMITMENTS_V2_MAP_KEY = 'v2:memberCommitments';
 
 // v2 scalar-object map keys (Y.Map<string> with per-field entries)
 const V2_SCALAR_KEYS = [
@@ -307,7 +307,10 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
         continue;
       }
       const obj = value as Record<string, unknown>;
-      const definedEntries = Object.entries(obj).filter(([, v]) => v !== undefined);
+      // Exclude sub-collections that have their own v2 keyed paths (e.g. greenGoods.memberBindings)
+      const definedEntries = Object.entries(obj).filter(
+        ([k, v]) => v !== undefined && !(scalarKey === 'greenGoods' && k === 'memberBindings'),
+      );
       const definedKeys = new Set(definedEntries.map(([k]) => k));
 
       // Clean up keys no longer in the source object
@@ -358,10 +361,21 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
       }
     }
 
-    // Member commitments: Y.Array under v2:memberCommitments
-    const commitmentsArr = doc.getArray<string>(MEMBER_COMMITMENTS_V2_ARRAY_KEY);
-    commitmentsArr.delete(0, commitmentsArr.length);
-    commitmentsArr.insert(0, state.memberCommitments);
+    // Member commitments: Y.Map<boolean> keyed by commitment string.
+    // Using a map instead of Y.Array gives set semantics with proper CRDT merge —
+    // concurrent adds from different peers merge cleanly without duplicates.
+    const commitmentsMap = doc.getMap<boolean>(MEMBER_COMMITMENTS_V2_MAP_KEY);
+    const currentCommitments = new Set(state.memberCommitments);
+    for (const key of [...commitmentsMap.keys()]) {
+      if (!currentCommitments.has(key)) {
+        commitmentsMap.delete(key);
+      }
+    }
+    for (const commitment of state.memberCommitments) {
+      if (!commitmentsMap.has(commitment)) {
+        commitmentsMap.set(commitment, true);
+      }
+    }
   }, ORIGIN_LOCAL);
 }
 
@@ -479,7 +493,7 @@ export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
     readKeyedCollectionV2(doc, MEMBER_ACCOUNTS_V2_MAP_KEY) ??
     readLegacyArray(root, 'memberAccounts');
 
-  // Read v2 member commitments: Y.Array with deduplication
+  // Read v2 member commitments: Y.Map<boolean> keyed by commitment string
   const memberCommitments =
     readMemberCommitmentsV2(doc) ?? readLegacyArray(root, 'memberCommitments');
 
@@ -567,22 +581,13 @@ function readKeyedCollectionV2(doc: Y.Doc, mapKey: string): unknown[] | null {
 }
 
 /**
- * Reads v2 member commitments from the Y.Array, deduplicating by string value.
- * Returns null if the array is empty (fall back to legacy).
+ * Reads v2 member commitments from the Y.Map<boolean>.
+ * Returns null if the map is empty (fall back to legacy).
  */
 function readMemberCommitmentsV2(doc: Y.Doc): string[] | null {
-  const arr = doc.getArray<string>(MEMBER_COMMITMENTS_V2_ARRAY_KEY);
-  if (arr.length === 0) return null;
-
-  const seen = new Set<string>();
-  const deduped: string[] = [];
-  for (const commitment of arr.toArray()) {
-    if (!seen.has(commitment)) {
-      seen.add(commitment);
-      deduped.push(commitment);
-    }
-  }
-  return deduped;
+  const map = doc.getMap<boolean>(MEMBER_COMMITMENTS_V2_MAP_KEY);
+  if (map.size === 0) return null;
+  return [...map.keys()];
 }
 
 /**

@@ -180,7 +180,14 @@ async function refreshBindings() {
   }
 
   refreshPromise = (async () => {
-    const config = await fetchCoopSyncConfig();
+    let config: Awaited<ReturnType<typeof fetchCoopSyncConfig>>;
+    try {
+      config = await fetchCoopSyncConfig();
+    } catch (error) {
+      console.warn('[coop-sync-offscreen] Failed to fetch sync config:', error);
+      return;
+    }
+
     const nextIds = new Map(
       config.coops.map((entry) => [entry.coopId, buildBindingKey(entry.syncRoom)]),
     );
@@ -229,7 +236,9 @@ window.setInterval(() => {
 chrome.runtime.onMessage.addListener(
   (message: { type?: string }, _sender: unknown, sendResponse: (response: unknown) => void) => {
     if (message.type === 'refresh-coop-sync-bindings') {
-      void refreshBindings().then(() => sendResponse({ ok: true }));
+      void refreshBindings()
+        .then(() => sendResponse({ ok: true }))
+        .catch(() => sendResponse({ ok: false, error: 'Sync binding refresh failed.' }));
       return true;
     }
   },
