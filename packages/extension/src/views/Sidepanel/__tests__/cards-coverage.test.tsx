@@ -342,6 +342,37 @@ describe('sidepanel cards coverage', () => {
     expect(onFvmRegister).toHaveBeenCalledWith('receipt-1');
   });
 
+  it('hides Filecoin registration until live onchain mode is enabled', () => {
+    render(
+      <ArchiveReceiptCard
+        receipt={
+          {
+            id: 'receipt-1',
+            scope: 'artifact',
+            delegationMode: 'live',
+            filecoinStatus: 'indexed',
+            title: 'River proof',
+            purpose: 'Archive a shared find',
+            summary: 'Proof summary',
+            gatewayUrl: 'https://storacha.link/ipfs/bafy-proof',
+            rootCid: 'bafy-root',
+            uploadedAt: '2026-03-28T00:00:00.000Z',
+            itemCount: 3,
+            filecoinDeals: [],
+            filecoinAggregates: [],
+          } as never
+        }
+        runtimeConfig={{ onchainMode: 'mock' } as never}
+        liveArchiveAvailable
+        refreshArchiveStatus={vi.fn()}
+        onAnchorOnChain={vi.fn()}
+        onFvmRegister={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Register on Filecoin' })).not.toBeInTheDocument();
+  });
+
   it('renders skeleton helpers with the requested labels and counts', () => {
     render(
       <div>

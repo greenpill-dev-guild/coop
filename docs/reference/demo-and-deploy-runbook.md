@@ -279,7 +279,10 @@ After deployment:
 1. Record the deployed registry address.
 2. Set `VITE_COOP_FVM_CHAIN` to `filecoin-calibration` or `filecoin`.
 3. Set `VITE_COOP_FVM_REGISTRY_ADDRESS` to the deployed contract address.
-4. Update the deployment map in `packages/shared/src/modules/fvm/fvm.ts`.
+4. Set `VITE_COOP_FVM_OPERATOR_KEY` in the operator-only root `.env.local`.
+5. Update the deployment map in `packages/shared/src/modules/fvm/fvm.ts` once the deployment is canonical.
+6. Rebuild the operator bundle before attempting extension-side Filecoin registration.
+7. Re-run `bun run validate:archive-live` and then `bun run validate:production-live-readiness`.
 
 Current implementation note:
 

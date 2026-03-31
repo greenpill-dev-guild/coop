@@ -7,12 +7,19 @@ import { loadRootEnv } from './load-root-env';
 loadRootEnv();
 
 const defaultProbeAudienceDid = 'did:key:z5h9testaudience';
+const allowFallback = process.env.COOP_ALLOW_ARCHIVE_PROBE_FALLBACK === 'true';
 
 const trustedNodeArchiveConfig =
   resolveTrustedNodeArchiveBootstrapConfig(process.env) ??
   (() => {
+    if (!allowFallback) {
+      throw new Error(
+        '[archive-live] Trusted-node archive env is missing. Set the VITE_COOP_TRUSTED_NODE_ARCHIVE_* values in the operator-only root .env.local before claiming live archive readiness.',
+      );
+    }
+
     console.log(
-      '[archive-live] Trusted-node archive env missing. Using an in-process static delegation fallback.',
+      '[archive-live] Trusted-node archive env missing. Using an explicit in-process fallback wiring check because COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true.',
     );
     return {
       spaceDid: 'did:test:space',

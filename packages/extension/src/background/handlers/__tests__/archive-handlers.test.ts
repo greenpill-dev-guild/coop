@@ -235,6 +235,27 @@ function buildCoopWithAttachment() {
   };
 }
 
+function buildLiveArchiveReceipt(
+  coop: ReturnType<typeof buildCoopWithAttachment>['coop'],
+  artifactId: string,
+) {
+  return createArchiveReceiptFromUpload({
+    bundle: createArchiveBundle({
+      scope: 'artifact',
+      state: coop,
+      artifactIds: [artifactId],
+    }),
+    delegationIssuer: 'did:key:issuer',
+    delegationMode: 'live',
+    allowsFilecoinInfo: true,
+    rootCid: 'bafyroot123',
+    shardCids: ['bafyshard1'],
+    pieceCids: ['bafkpiece1'],
+    gatewayUrl: 'https://storacha.link/ipfs/bafyroot123',
+    artifactIds: [artifactId],
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   configState.configuredArchiveMode = 'live';
@@ -968,7 +989,12 @@ describe('archive handlers', () => {
     );
   });
 
-  it('records a mock FVM registration when live registry credentials are not configured', async () => {
+  it('blocks Filecoin registration for mock archive receipts', async () => {
+    configState.configuredOnchainMode = 'live';
+    configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
+    configState.configuredFvmOperatorKey =
+      '0x8888888888888888888888888888888888888888888888888888888888888888';
+
     const { coop, artifactId } = buildCoopWithAttachment();
     const receipt = createMockArchiveReceipt({
       bundle: createArchiveBundle({
@@ -995,47 +1021,80 @@ describe('archive handlers', () => {
     });
 
     expect(result).toEqual({
-      ok: true,
-      data: {
-        txHash: `0x${'f'.repeat(64)}`,
-        status: 'mock',
-      },
+      ok: false,
+      error:
+        'Only live archive receipts can be registered on Filecoin. Re-run the archive step from an operator-controlled live build first.',
     });
-    expect(mocks.saveState).toHaveBeenCalledWith(
-      expect.objectContaining({
-        archiveReceipts: [
-          expect.objectContaining({
-            id: receipt.id,
-            fvmRegistryTxHash: `0x${'f'.repeat(64)}`,
-            fvmChainKey: 'filecoin-calibration',
-          }),
-        ],
-      }),
-    );
+    expect(mocks.saveState).not.toHaveBeenCalled();
+    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
+  });
+
+  it('returns a typed failure when live onchain mode is not enabled', async () => {
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
+    mocks.getCoops.mockResolvedValue([
+      {
+        ...coop,
+        archiveReceipts: [receipt],
+      },
+    ]);
+
+    const result = await handleFvmRegistration({
+      coopId: coop.profile.id,
+      receiptId: receipt.id,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Filecoin registry registration stays gated until live onchain mode is enabled for an operator-controlled build.',
+    });
+    expect(mocks.saveState).not.toHaveBeenCalled();
+    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
+  });
+
+  it('returns a typed failure when live registry material is not configured', async () => {
+    configState.configuredOnchainMode = 'live';
+
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
+    mocks.getCoops.mockResolvedValue([
+      {
+        ...coop,
+        archiveReceipts: [receipt],
+      },
+    ]);
+    mocks.getAuthSession.mockResolvedValue({
+      primaryAddress: coop.members[0]?.address,
+    });
+
+    const result = await handleFvmRegistration({
+      coopId: coop.profile.id,
+      receiptId: receipt.id,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Live Filecoin registry registration is blocked');
+    expect(result.error).toContain('VITE_COOP_FVM_OPERATOR_KEY');
+    expect(result.error).toContain('Deploy packages/contracts/src/CoopRegistry.sol');
+    expect(mocks.saveState).not.toHaveBeenCalled();
     expect(mocks.logPrivilegedAction).toHaveBeenCalledWith(
       expect.objectContaining({
         actionType: 'fvm-register-archive',
-        status: 'succeeded',
+        status: 'failed',
       }),
     );
+    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
   });
 
   it('registers an archive receipt on the live Filecoin registry and stores the tx hash', async () => {
-    configState.configuredArchiveMode = 'live';
+    configState.configuredOnchainMode = 'live';
     configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
     configState.configuredFvmOperatorKey =
       '0x8888888888888888888888888888888888888888888888888888888888888888';
 
     const { coop, artifactId } = buildCoopWithAttachment();
-    const receipt = createMockArchiveReceipt({
-      bundle: createArchiveBundle({
-        scope: 'artifact',
-        state: coop,
-        artifactIds: [artifactId],
-      }),
-      delegationIssuer: 'did:key:issuer',
-      artifactIds: [artifactId],
-    });
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
     mocks.getCoops.mockResolvedValue([
       {
         ...coop,
@@ -1082,21 +1141,13 @@ describe('archive handlers', () => {
   });
 
   it('returns a typed failure when live Filecoin registration fails', async () => {
-    configState.configuredArchiveMode = 'live';
+    configState.configuredOnchainMode = 'live';
     configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
     configState.configuredFvmOperatorKey =
       '0x8888888888888888888888888888888888888888888888888888888888888888';
 
     const { coop, artifactId } = buildCoopWithAttachment();
-    const receipt = createMockArchiveReceipt({
-      bundle: createArchiveBundle({
-        scope: 'artifact',
-        state: coop,
-        artifactIds: [artifactId],
-      }),
-      delegationIssuer: 'did:key:issuer',
-      artifactIds: [artifactId],
-    });
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
     mocks.getCoops.mockResolvedValue([
       {
         ...coop,

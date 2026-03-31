@@ -43,6 +43,63 @@ export const FVM_REGISTRY_DEPLOYMENTS: Partial<Record<FvmChainKey, Address>> = {
   // Populated after deployment to Calibration testnet
 };
 
+export function resolveFvmRegistryAddress(
+  chainKey: FvmChainKey,
+  configuredAddress?: string,
+): Address | undefined {
+  if (configuredAddress && /^0x[a-fA-F0-9]{40}$/.test(configuredAddress)) {
+    return configuredAddress as Address;
+  }
+
+  return FVM_REGISTRY_DEPLOYMENTS[chainKey];
+}
+
+export function describeFvmRegistryRegistrationGate(input: {
+  chainKey: FvmChainKey;
+  configuredRegistryAddress?: string;
+  operatorKey?: string;
+}) {
+  const config = getFvmChainConfig(input.chainKey);
+  const registryAddress = resolveFvmRegistryAddress(
+    input.chainKey,
+    input.configuredRegistryAddress,
+  );
+  const hasOperatorKey =
+    typeof input.operatorKey === 'string' && /^0x[a-fA-F0-9]{64}$/.test(input.operatorKey);
+
+  if (registryAddress && hasOperatorKey) {
+    return {
+      available: true,
+      registryAddress,
+      detail: `Live Filecoin registry registration is ready on ${config.label}.`,
+      checklist: [] as string[],
+    };
+  }
+
+  const missing: string[] = [];
+  if (!registryAddress) {
+    missing.push(`a registry address for ${config.label}`);
+  }
+  if (!hasOperatorKey) {
+    missing.push('VITE_COOP_FVM_OPERATOR_KEY');
+  }
+
+  return {
+    available: false,
+    registryAddress,
+    detail: `Live Filecoin registry registration is blocked because ${missing.join(
+      ' and ',
+    )} is missing. Deploy packages/contracts/src/CoopRegistry.sol, set the operator-only FVM env in .env.local, and rebuild before retrying.`,
+    checklist: [
+      `Deploy packages/contracts/src/CoopRegistry.sol to ${config.label}.`,
+      'Set VITE_COOP_FVM_REGISTRY_ADDRESS in the operator-only root .env.local.',
+      'Set VITE_COOP_FVM_OPERATOR_KEY in the operator-only root .env.local.',
+      'Update packages/shared/src/modules/fvm/fvm.ts once the deployment is canonical.',
+      'Rebuild the operator bundle before retrying Filecoin registration.',
+    ],
+  };
+}
+
 export function getFvmChainConfig(chainKey: FvmChainKey) {
   const config = fvmChainConfigs[chainKey];
   if (!config) {

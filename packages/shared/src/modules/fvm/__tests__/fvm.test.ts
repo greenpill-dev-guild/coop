@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   createMockFvmRegistryState,
+  describeFvmRegistryRegistrationGate,
   encodeFvmRegisterArchiveCalldata,
   encodeFvmRegisterMembershipCalldata,
   encodeFvmRegisterMembershipsCalldata,
   getFvmChainConfig,
   getFvmExplorerTxUrl,
+  resolveFvmRegistryAddress,
 } from '../fvm';
 
 describe('fvm module', () => {
@@ -114,6 +116,53 @@ describe('fvm module', () => {
         registryAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
       });
       expect(state.registryAddress).toBe('0xabcdef1234567890abcdef1234567890abcdef12');
+    });
+  });
+
+  describe('resolveFvmRegistryAddress', () => {
+    it('prefers a configured registry address', () => {
+      expect(
+        resolveFvmRegistryAddress(
+          'filecoin-calibration',
+          '0xabcdef1234567890abcdef1234567890abcdef12',
+        ),
+      ).toBe('0xabcdef1234567890abcdef1234567890abcdef12');
+    });
+
+    it('returns undefined when no configured or known deployment exists', () => {
+      expect(resolveFvmRegistryAddress('filecoin-calibration')).toBeUndefined();
+    });
+  });
+
+  describe('describeFvmRegistryRegistrationGate', () => {
+    it('reports readiness when registry address and operator key are present', () => {
+      const gate = describeFvmRegistryRegistrationGate({
+        chainKey: 'filecoin-calibration',
+        configuredRegistryAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+        operatorKey: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      });
+
+      expect(gate.available).toBe(true);
+      expect(gate.registryAddress).toBe('0xabcdef1234567890abcdef1234567890abcdef12');
+      expect(gate.detail).toContain('ready');
+      expect(gate.checklist).toEqual([]);
+    });
+
+    it('returns an operator checklist when live registry material is missing', () => {
+      const gate = describeFvmRegistryRegistrationGate({
+        chainKey: 'filecoin-calibration',
+      });
+
+      expect(gate.available).toBe(false);
+      expect(gate.detail).toContain('blocked');
+      expect(gate.detail).toContain('VITE_COOP_FVM_OPERATOR_KEY');
+      expect(gate.checklist).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Deploy packages/contracts/src/CoopRegistry.sol'),
+          expect.stringContaining('VITE_COOP_FVM_REGISTRY_ADDRESS'),
+          expect.stringContaining('VITE_COOP_FVM_OPERATOR_KEY'),
+        ]),
+      );
     });
   });
 });
