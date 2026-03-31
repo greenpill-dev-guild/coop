@@ -3,6 +3,7 @@ import { getRitualLenses } from '@coop/shared';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import type { DevEnvironmentState } from '../../dev-environment';
+import { useScrollHijack } from '../../hooks/useScrollHijack';
 import { ChickenSprite, CoopIllustration } from './landing-animations';
 import {
   LANDING_DRAFT_STORAGE_KEY,
@@ -161,6 +162,9 @@ export function App({
       mediaQuery.removeEventListener('change', updatePreference);
     };
   }, []);
+
+  // Enable scroll hijack for ritual section (1.8x slowdown for demo control)
+  useScrollHijack(ritualSectionRef, true, 1.8);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
