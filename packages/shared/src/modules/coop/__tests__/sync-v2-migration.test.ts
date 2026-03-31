@@ -8,7 +8,7 @@ import type {
   MemberOnchainAccount,
 } from '../../../contracts/schema';
 import { createCoop } from '../flows';
-import { createCoopDoc, readCoopState, writeCoopState } from '../sync';
+import { createCoopDoc, readCoopState, readCoopStateRaw, writeCoopState } from '../sync';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -421,6 +421,32 @@ describe('v2 Yjs storage migration', () => {
 
       // v2 should win -- profile should have original name
       expect(loaded.profile.name).toBe(state.profile.name);
+    });
+
+    it('clears stale v2 greenGoods data when greenGoods becomes undefined', () => {
+      const state = buildTestState();
+      // First write with greenGoods enabled
+      state.greenGoods = {
+        gardenAddress: '0x123',
+        operatorAddress: '0x456',
+        memberBindings: [{ memberId: 'member-1', hypercertFractionId: 'frac-1' }],
+      } as CoopSharedState['greenGoods'];
+
+      const doc = new Y.Doc();
+      writeCoopState(doc, state);
+
+      // Verify greenGoods was written
+      const raw1 = readCoopStateRaw(doc);
+      expect(raw1.greenGoods).toBeDefined();
+
+      // Now write with greenGoods undefined (disabled)
+      // Use readCoopStateRaw to avoid Zod stripping the optional field
+      const stateWithoutGG = { ...state, greenGoods: undefined };
+      writeCoopState(doc, stateWithoutGG as unknown as CoopSharedState);
+
+      const raw2 = readCoopStateRaw(doc);
+      // greenGoods should be undefined, not stale v2 data
+      expect(raw2.greenGoods).toBeUndefined();
     });
 
     it('v2 keyed collections take precedence over legacy root JSON', () => {

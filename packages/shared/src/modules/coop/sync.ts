@@ -297,9 +297,15 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
     // cleanly instead of last-writer-wins on the entire JSON string.
     for (const scalarKey of V2_SCALAR_KEYS) {
       const value = state[scalarKey];
-      if (value === undefined || value === null) continue;
-
       const fieldMap = doc.getMap<string>(`v2:${scalarKey}`);
+
+      // Clear stale v2 data when the source is absent (e.g. greenGoods disabled)
+      if (value === undefined || value === null) {
+        for (const k of [...fieldMap.keys()]) {
+          fieldMap.delete(k);
+        }
+        continue;
+      }
       const obj = value as Record<string, unknown>;
       const definedEntries = Object.entries(obj).filter(([, v]) => v !== undefined);
       const definedKeys = new Set(definedEntries.map(([k]) => k));
@@ -344,6 +350,12 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
         state.greenGoods.memberBindings,
         (item) => item.memberId,
       );
+    } else {
+      // Clear stale v2 bindings when greenGoods is disabled
+      const ggBindingsMap = doc.getMap<Y.Map<string>>(GG_BINDINGS_V2_MAP_KEY);
+      for (const id of [...ggBindingsMap.keys()]) {
+        ggBindingsMap.delete(id);
+      }
     }
 
     // Member commitments: Y.Array under v2:memberCommitments
