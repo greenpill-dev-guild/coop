@@ -48,11 +48,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return typeof value === 'string' ? value : defaultValue;
   };
 
-  // Don't render children until initialized to avoid hydration mismatch
-  if (!isInitialized) {
-    return <>{children}</>;
-  }
-
   return (
     <I18nContext.Provider value={{ language, setLanguage, t }}>{children}</I18nContext.Provider>
   );
