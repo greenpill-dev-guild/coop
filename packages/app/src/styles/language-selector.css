@@ -21,7 +21,7 @@
   transition: all 0.2s ease;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--coop-brown);
+  color: #2a1810;
   letter-spacing: 0.04em;
   box-shadow: 0 4px 16px rgba(79, 46, 31, 0.1);
   backdrop-filter: blur(8px);
@@ -95,7 +95,7 @@
   text-align: left;
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--coop-brown);
+  color: #2a1810;
   font-family: inherit;
 }
 

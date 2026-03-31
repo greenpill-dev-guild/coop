@@ -5,7 +5,6 @@ import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import type { DevEnvironmentState } from '../../dev-environment';
 import { useI18n } from '../../hooks/useI18n';
-import { useScrollHijack } from '../../hooks/useScrollHijack';
 import { ChickenSprite, CoopIllustration } from './landing-animations';
 import {
   LANDING_DRAFT_STORAGE_KEY,
@@ -165,9 +164,6 @@ export function App({
       mediaQuery.removeEventListener('change', updatePreference);
     };
   }, []);
-
-  // Enable scroll hijack for ritual section (1.8x slowdown for demo control)
-  useScrollHijack(ritualSectionRef, true, 1.2);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1403,111 +1399,6 @@ export function App({
                   : 'Open a card to start capturing.'}
               </p>
             )}
-          </div>
-        </section>
-
-        <section className="section extension-preview-section" id="extension-preview">
-          <div className="extension-preview-wrapper">
-            <div className="extension-preview-content">
-              <div className="section-heading extension-preview-heading">
-                <h2>Meet the extension</h2>
-                <p className="lede">
-                  Your browser becomes your capture station. Highlight, clip, and save — all without
-                  breaking focus.
-                </p>
-              </div>
-
-              <div className="extension-preview-grid">
-                <div className="extension-preview-card extension-popup-card">
-                  <div className="extension-preview-title">
-                    <span className="extension-preview-number">1</span>
-                    <span>Quick capture</span>
-                  </div>
-                  <div className="extension-preview-mockup extension-popup-mockup">
-                    <div className="mockup-frame">
-                      <div className="mockup-header">
-                        <div className="mockup-button-group">
-                          <button className="mockup-icon-btn" disabled aria-label="back" />
-                          <button className="mockup-icon-btn" disabled aria-label="forward" />
-                          <button className="mockup-icon-btn" disabled aria-label="menu" />
-                        </div>
-                      </div>
-                      <div className="mockup-body">
-                        <div className="mockup-section">
-                          <div className="mockup-label">From page</div>
-                          <div className="mockup-content">
-                            <div className="mockup-chip">Selected text</div>
-                          </div>
-                        </div>
-                        <div className="mockup-section">
-                          <div className="mockup-label">Add note</div>
-                          <div className="mockup-textarea" />
-                        </div>
-                        <div className="mockup-button">Capture to Coop</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="extension-preview-card extension-sidebar-card">
-                  <div className="extension-preview-title">
-                    <span className="extension-preview-number">2</span>
-                    <span>Review & refine</span>
-                  </div>
-                  <div className="extension-preview-mockup extension-sidebar-mockup">
-                    <div className="mockup-frame">
-                      <div className="mockup-header mockup-sidebar-header">
-                        <div className="mockup-logo">Coop</div>
-                      </div>
-                      <div className="mockup-body mockup-sidebar-body">
-                        <div className="mockup-item">
-                          <div className="mockup-item-icon" />
-                          <div className="mockup-item-content">
-                            <div className="mockup-item-title" />
-                            <div className="mockup-item-subtitle" />
-                          </div>
-                        </div>
-                        <div className="mockup-item">
-                          <div className="mockup-item-icon" />
-                          <div className="mockup-item-content">
-                            <div className="mockup-item-title" />
-                            <div className="mockup-item-subtitle" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="extension-preview-card extension-benefit-card">
-                  <div className="extension-preview-title">
-                    <span className="extension-preview-number">3</span>
-                    <span>Publish together</span>
-                  </div>
-                  <div className="extension-preview-mockup extension-benefit-mockup">
-                    <div className="mockup-frame">
-                      <div className="mockup-header">
-                        <div className="mockup-header-text">Ready to publish?</div>
-                      </div>
-                      <div className="mockup-body">
-                        <div className="mockup-benefit">
-                          <div className="mockup-benefit-icon" />
-                          <div className="mockup-benefit-text">2 members reviewing</div>
-                        </div>
-                        <div className="mockup-benefit">
-                          <div className="mockup-benefit-icon" />
-                          <div className="mockup-benefit-text">12 opportunities</div>
-                        </div>
-                        <div className="mockup-benefit">
-                          <div className="mockup-benefit-icon" />
-                          <div className="mockup-benefit-text">Saved to archive</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 

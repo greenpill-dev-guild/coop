@@ -582,8 +582,8 @@ pre {
 
 .how-works-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.3rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
 }
 
 .how-works-card {
@@ -641,6 +641,46 @@ pre {
   color: var(--coop-green);
   font-weight: 700;
   box-shadow: inset 0 0 0 1px rgba(90, 125, 16, 0.14);
+}
+
+.how-works-thought-bubble {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.how-works-card:hover .how-works-thought-bubble,
+.how-works-card:focus-within .how-works-thought-bubble {
+  opacity: 1;
+}
+
+.thought-bubble-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(255, 252, 246, 0.95);
+  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.15);
+  border: 1px solid rgba(79, 46, 31, 0.1);
+}
+
+.thought-bubble-emoji {
+  font-size: 1.4rem;
+  display: inline-block;
+}
+
+.thought-bubble-pointer {
+  position: absolute;
+  bottom: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 0.5rem solid transparent;
+  border-right: 0.5rem solid transparent;
+  border-top: 0.6rem solid rgba(255, 252, 246, 0.95);
 }
 
 .ritual-section {
