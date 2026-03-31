@@ -563,12 +563,12 @@ pre {
 .how-works-shell {
   width: min(34rem, 48vw);
   display: grid;
-  gap: 0.35rem;
+  gap: 1.5rem;
   margin: 0 auto 0 0;
   background: linear-gradient(145deg, rgba(255, 252, 246, 0.97), rgba(255, 248, 238, 0.95));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 0.8rem 1.1rem;
+  padding: 1.2rem 1.4rem;
   border-radius: var(--coop-radius-card-xl);
   border: 1px solid rgba(79, 46, 31, 0.16);
   box-shadow: 0 28px 58px rgba(79, 46, 31, 0.16);
@@ -583,16 +583,16 @@ pre {
 .how-works-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.3rem;
+  gap: 1.2rem;
 }
 
 .how-works-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.5rem;
+  gap: 0.8rem;
   align-items: start;
   position: relative;
-  padding: 0.4rem 0.6rem;
+  padding: 0.6rem 0.8rem;
 }
 
 .how-works-card::after {
@@ -4881,6 +4881,14 @@ button.sync-pill {
   .receiver-install-banner {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+  }
+
+  .how-works-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .how-works-card::after {
+    display: none;
   }
 }
 
