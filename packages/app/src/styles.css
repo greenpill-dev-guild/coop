@@ -201,6 +201,13 @@ pre {
   contain: layout style;
 }
 
+.journey-scene-arrival {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Panels sit above the scene but pass pointer events through so
    chickens in .journey-scene-inner can receive hover.
    Any new interactive content added to .journey-panels must opt back
@@ -1494,10 +1501,9 @@ pre {
 }
 
 .why-build-heading-card {
-  position: absolute;
-  left: max(1rem, calc((100% - 1120px) / 2));
-  top: 8%;
+  position: relative;
   max-width: 22rem;
+  margin: 0 auto;
   padding: 1.25rem 1.4rem;
   border-radius: 1.2rem;
   background: rgba(255, 252, 246, 0.85);
@@ -1510,8 +1516,8 @@ pre {
   display: grid;
   gap: 0.45rem;
   text-align: left;
-  visibility: hidden;
-  opacity: 0;
+  visibility: visible;
+  opacity: 1;
 }
 
 .why-build-heading-card h2 {
@@ -1529,7 +1535,7 @@ pre {
 .why-build-scene-team {
   position: relative;
   width: fit-content;
-  margin: 0 auto;
+  margin: 0.5rem auto 0 auto;
   pointer-events: auto;
   z-index: 4;
   opacity: 1;

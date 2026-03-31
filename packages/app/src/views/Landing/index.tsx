@@ -1096,13 +1096,15 @@ export function App({
                   ref={setStoryChickenRef(chicken.id)}
                 >
                   <div className="thought-bubble" aria-hidden="true">
-                    <span className="thought-kicker">{chickenThoughts[chicken.id].kicker}</span>
-                    <span className="thought-text">{chickenThoughts[chicken.id].text}</span>
+                    <span className="thought-kicker">
+                      {t(`chickenThoughts.${chicken.id}.kicker`)}
+                    </span>
+                    <span className="thought-text">{t(`chickenThoughts.${chicken.id}.text`)}</span>
                   </div>
                   <ChickenSprite
                     color={chicken.color}
                     facing={chicken.facing}
-                    label={chicken.label}
+                    label={chicken.labelKey ? t(chicken.labelKey) : chicken.label}
                     showLabel={true}
                     variant={chicken.variant}
                   />
@@ -1203,7 +1205,7 @@ export function App({
                       data-audience-option={option.id}
                       key={option.id}
                       onClick={() => setAudience(option.id)}
-                      title={option.tone}
+                      title={t(`audience.${option.id}Tone`)}
                       type="button"
                     >
                       {t(`audience.${option.id}`)}
@@ -1445,7 +1447,9 @@ export function App({
                     <ChickenSprite
                       color={chicken.color}
                       facing={chicken.facing}
-                      label={communityLabel ?? chicken.label}
+                      label={
+                        communityLabel ?? (chicken.labelKey ? t(chicken.labelKey) : chicken.label)
+                      }
                       showLabel={!!communityLabel}
                       variant={chicken.variant}
                     />
@@ -1454,11 +1458,8 @@ export function App({
               })}
 
               <div className="why-build-heading-card">
-                <h2>Why we build</h2>
-                <p className="lede">
-                  Scattered knowledge becomes shared action when the right group has a clear place
-                  to work from.
-                </p>
+                <h2>{t('why_build.heading')}</h2>
+                <p className="lede">{t('why_build.description')}</p>
               </div>
 
               <div className="why-build-scene-team" aria-label={t('why_build.builtByTeam')}>

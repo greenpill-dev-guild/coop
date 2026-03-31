@@ -543,7 +543,75 @@
       "persona": "个人",
       "family": "家庭",
       "friends": "朋友",
-      "community": "社区"
+      "community": "社区",
+      "personaTone": "个人专注和反思",
+      "familyTone": "家庭记忆和支持",
+      "friendsTone": "与信任的同龄人共享动力",
+      "communityTone": "集体协调和管理"
+    },
+    "chickens": {
+      "tabs": "标签页",
+      "notes": "笔记",
+      "ideas": "想法",
+      "signals": "信号",
+      "links": "链接",
+      "drafts": "草稿",
+      "threads": "讨论串",
+      "clips": "片段",
+      "bookmarks": "书签",
+      "photos": "照片",
+      "voiceMemos": "语音备忘录",
+      "receipts": "收据"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "浏览器标签",
+        "text": "这个赠款机会值得跟进。"
+      },
+      "notes": {
+        "kicker": "现场笔记",
+        "text": "成员的能量这周在转变。"
+      },
+      "ideas": {
+        "kicker": "松散的线索",
+        "text": "会议后重新联系。"
+      },
+      "signals": {
+        "kicker": "通话片段",
+        "text": "在它消散前保存关键时刻。"
+      },
+      "links": {
+        "kicker": "保存的链接",
+        "text": "这在对话中一直出现。"
+      },
+      "drafts": {
+        "kicker": "草稿",
+        "text": "未完成但值得保存。"
+      },
+      "threads": {
+        "kicker": "讨论串",
+        "text": "上周的对话片段。"
+      },
+      "clips": {
+        "kicker": "片段",
+        "text": "值得重新访问的音频时刻。"
+      },
+      "bookmarks": {
+        "kicker": "书签",
+        "text": "这个链接一直在出现。"
+      },
+      "photos": {
+        "kicker": "照片",
+        "text": "上周二在现场拍摄。"
+      },
+      "voiceMemos": {
+        "kicker": "语音备忘录",
+        "text": "从回家的路上快速录制。"
+      },
+      "receipts": {
+        "kicker": "收据",
+        "text": "上月贡献的证明。"
+      }
     }
   },
   "fr": {
@@ -629,7 +697,75 @@
       "persona": "Personnel",
       "family": "Famille",
       "friends": "Amis",
-      "community": "Communauté"
+      "community": "Communauté",
+      "personaTone": "Focus personnel et réflexion",
+      "familyTone": "Mémoire familiale et soutien",
+      "friendsTone": "Élan partagé avec des pairs de confiance",
+      "communityTone": "Coordination collective et gouvernance"
+    },
+    "chickens": {
+      "tabs": "Onglets",
+      "notes": "Notes",
+      "ideas": "Idées",
+      "signals": "Signaux",
+      "links": "Liens",
+      "drafts": "Brouillons",
+      "threads": "Discussions",
+      "clips": "Extraits",
+      "bookmarks": "Signets",
+      "photos": "Photos",
+      "voiceMemos": "Mémos vocaux",
+      "receipts": "Reçus"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "Onglet du navigateur",
+        "text": "Cette piste de subvention mérite le suivi."
+      },
+      "notes": {
+        "kicker": "Note de terrain",
+        "text": "L'énergie des membres change cette semaine."
+      },
+      "ideas": {
+        "kicker": "Fil lâche",
+        "text": "Reconnecter ceci après la réunion."
+      },
+      "signals": {
+        "kicker": "Extrait d'appel",
+        "text": "Sauvegardez le moment clé avant qu'il ne disparaisse."
+      },
+      "links": {
+        "kicker": "Lien sauvegardé",
+        "text": "Ceci réapparaît continuellement dans les conversations."
+      },
+      "drafts": {
+        "kicker": "Brouillon",
+        "text": "Inachevé mais vaut la peine de garder à proximité."
+      },
+      "threads": {
+        "kicker": "Discussion",
+        "text": "Fragments de conversation de la semaine dernière."
+      },
+      "clips": {
+        "kicker": "Extrait",
+        "text": "Moment audio qui vaut la peine d'être révisé."
+      },
+      "bookmarks": {
+        "kicker": "Signet",
+        "text": "Ce lien continue à réapparaître."
+      },
+      "photos": {
+        "kicker": "Photo",
+        "text": "Capturée sur le terrain mardi dernier."
+      },
+      "voiceMemos": {
+        "kicker": "Mémo vocal",
+        "text": "Capture rapide sur le chemin du retour."
+      },
+      "receipts": {
+        "kicker": "Reçu",
+        "text": "Preuve de la contribution du mois dernier."
+      }
     }
   }
 }

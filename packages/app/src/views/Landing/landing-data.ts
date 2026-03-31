@@ -22,18 +22,51 @@ export const defaultTranscriptStatus =
   'Use live transcript if this browser supports it, or type directly into the card. Everything stays saved on this device.';
 
 export const journeyChickens: JourneyChicken[] = [
-  { id: 'tabs', label: 'Tabs', facing: 'right' },
-  { id: 'notes', label: 'Notes', facing: 'right' },
-  { id: 'ideas', label: 'Ideas', facing: 'left' },
-  { id: 'signals', label: 'Signals', facing: 'left' },
-  { id: 'links', label: 'Links', variant: 'young', facing: 'right' },
-  { id: 'drafts', label: 'Drafts', variant: 'chick', facing: 'right' },
-  { id: 'threads', label: 'Threads', variant: 'young', facing: 'left' },
-  { id: 'clips', label: 'Clips', variant: 'chick', facing: 'left' },
-  { id: 'bookmarks', label: 'Bookmarks', facing: 'right', color: 'russet' },
-  { id: 'photos', label: 'Photos', variant: 'young', facing: 'left', color: 'golden' },
-  { id: 'voice-memos', label: 'Voice Memos', variant: 'chick', facing: 'right', color: 'plum' },
-  { id: 'receipts', label: 'Receipts', variant: 'young', facing: 'left', color: 'slate' },
+  { id: 'tabs', label: 'tabs', labelKey: 'chickens.tabs', facing: 'right' },
+  { id: 'notes', label: 'notes', labelKey: 'chickens.notes', facing: 'right' },
+  { id: 'ideas', label: 'ideas', labelKey: 'chickens.ideas', facing: 'left' },
+  { id: 'signals', label: 'signals', labelKey: 'chickens.signals', facing: 'left' },
+  { id: 'links', label: 'links', labelKey: 'chickens.links', variant: 'young', facing: 'right' },
+  { id: 'drafts', label: 'drafts', labelKey: 'chickens.drafts', variant: 'chick', facing: 'right' },
+  {
+    id: 'threads',
+    label: 'threads',
+    labelKey: 'chickens.threads',
+    variant: 'young',
+    facing: 'left',
+  },
+  { id: 'clips', label: 'clips', labelKey: 'chickens.clips', variant: 'chick', facing: 'left' },
+  {
+    id: 'bookmarks',
+    label: 'bookmarks',
+    labelKey: 'chickens.bookmarks',
+    facing: 'right',
+    color: 'russet',
+  },
+  {
+    id: 'photos',
+    label: 'photos',
+    labelKey: 'chickens.photos',
+    variant: 'young',
+    facing: 'left',
+    color: 'golden',
+  },
+  {
+    id: 'voice-memos',
+    label: 'voice-memos',
+    labelKey: 'chickens.voiceMemos',
+    variant: 'chick',
+    facing: 'right',
+    color: 'plum',
+  },
+  {
+    id: 'receipts',
+    label: 'receipts',
+    labelKey: 'chickens.receipts',
+    variant: 'young',
+    facing: 'left',
+    color: 'slate',
+  },
 ];
 
 export const audienceOptions: AudienceOption[] = [
