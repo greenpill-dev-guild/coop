@@ -3960,62 +3960,76 @@ html.has-receiver {
 .receiver-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
   border-radius: var(--coop-radius-pill);
-  background: var(--coop-brown-6);
-  font-size: 0.75rem;
+  background: rgba(79, 46, 31, 0.06);
+  border: 1.5px solid rgba(79, 46, 31, 0.12);
+  font-size: 0.77rem;
   font-weight: 700;
-  color: var(--coop-brown-soft);
-  min-height: 2rem;
-  transition: background var(--coop-ease), color var(--coop-ease);
+  color: var(--coop-brown);
+  min-height: 2.2rem;
+  transition: all var(--coop-ease);
 }
 
 .receiver-status-chip-icon {
   flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .receiver-status-chip.is-good {
-  background: var(--coop-green-12);
-  color: var(--coop-green);
+  background: rgba(90, 125, 16, 0.12);
+  border-color: rgba(90, 125, 16, 0.24);
+  color: rgba(90, 125, 16, 0.85);
 }
 
 .receiver-status-chip.is-warning {
-  background: var(--coop-orange-15);
-  color: var(--coop-orange);
+  background: rgba(253, 138, 1, 0.12);
+  border-color: rgba(253, 138, 1, 0.24);
+  color: rgba(253, 138, 1, 0.85);
 }
 
 .receiver-status-chip.is-muted {
-  background: var(--coop-brown-6);
-  color: var(--coop-brown-soft);
+  background: rgba(79, 46, 31, 0.06);
+  border-color: rgba(79, 46, 31, 0.12);
+  color: rgba(79, 46, 31, 0.6);
 }
 
 /* ── Paired nest card ── */
 
 .receiver-paired-nest-card {
-  padding: 0.75rem 0.85rem;
-  border-radius: var(--coop-radius-chip);
-  background: var(--coop-brown-4);
-  border: 1px solid var(--coop-line);
+  padding: 0.9rem 1rem;
+  border-radius: var(--coop-radius-input);
+  background: linear-gradient(135deg, rgba(90, 125, 16, 0.08), rgba(253, 138, 1, 0.04));
+  border: 1.5px solid rgba(90, 125, 16, 0.16);
+  transition: all var(--coop-ease);
 }
 
 .receiver-paired-nest-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   color: var(--coop-brown);
+}
+
+.receiver-paired-nest-header svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  color: rgba(90, 125, 16, 0.72);
 }
 
 .receiver-paired-nest-info {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.2rem;
   min-width: 0;
 }
 
 .receiver-paired-nest-name {
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   color: var(--coop-brown);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4023,8 +4037,8 @@ html.has-receiver {
 }
 
 .receiver-paired-nest-member {
-  font-size: 0.76rem;
-  color: var(--coop-brown-soft);
+  font-size: 0.8rem;
+  color: rgba(79, 46, 31, 0.6);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4036,50 +4050,54 @@ html.has-receiver {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
   width: 100%;
-  min-height: 44px;
-  padding: 0.5rem 0;
+  min-height: 48px;
+  padding: 0.65rem 0;
   border: none;
   background: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: all var(--coop-ease);
 }
 
 .receiver-toggle-switch-label {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--coop-brown);
 }
 
 .receiver-toggle-switch-track {
   position: relative;
-  width: 2.75rem;
-  height: 1.6rem;
+  width: 2.9rem;
+  height: 1.75rem;
   border-radius: var(--coop-radius-pill);
-  background: var(--coop-brown-14);
+  background: rgba(79, 46, 31, 0.12);
+  border: 1px solid rgba(79, 46, 31, 0.14);
   flex-shrink: 0;
-  transition: background 200ms ease;
+  transition: all 240ms ease;
 }
 
 .receiver-toggle-switch-thumb {
   position: absolute;
-  top: 0.2rem;
-  left: 0.2rem;
-  width: 1.2rem;
-  height: 1.2rem;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(79, 46, 31, 0.18);
-  transition: transform 200ms ease;
+  box-shadow: 0 2px 6px rgba(79, 46, 31, 0.2);
+  transition: transform 240ms ease, box-shadow 240ms ease;
 }
 
 .receiver-toggle-switch.is-on .receiver-toggle-switch-track {
-  background: var(--coop-green);
+  background: rgba(90, 125, 16, 0.22);
+  border-color: rgba(90, 125, 16, 0.32);
 }
 
 .receiver-toggle-switch.is-on .receiver-toggle-switch-thumb {
   transform: translateX(1.15rem);
+  box-shadow: 0 2px 6px rgba(90, 125, 16, 0.24);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4945,22 +4963,22 @@ button.sync-pill {
   max-height: 70dvh;
   width: 100%;
   max-width: 100%;
-  background: rgba(255, 252, 249, 0.96);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 -14px 40px var(--coop-brown-12);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(248, 240, 220, 0.96));
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 -18px 50px rgba(79, 46, 31, 0.12);
 }
 
 .bottom-sheet::backdrop {
-  background: rgba(39, 20, 14, 0.4);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: rgba(39, 20, 14, 0.48);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .bottom-sheet-content {
   display: grid;
-  gap: var(--coop-space-sm);
-  padding: 0.5rem var(--coop-space-md) calc(var(--coop-space-md) + env(safe-area-inset-bottom));
+  gap: 0.9rem;
+  padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
   overflow-y: auto;
   max-height: 70vh;
   max-height: 70dvh;
@@ -4969,24 +4987,31 @@ button.sync-pill {
 .bottom-sheet-handle {
   display: flex;
   justify-content: center;
-  padding: 0.6rem 0 0.25rem;
+  padding: 0.75rem 0 0.35rem;
   cursor: grab;
+  user-select: none;
 }
 
 .bottom-sheet-handle-bar {
-  width: 3rem;
-  height: 0.3rem;
+  width: 3.2rem;
+  height: 0.36rem;
   border-radius: var(--coop-radius-pill);
-  background: var(--coop-brown-20);
-  box-shadow: 0 1px 3px rgba(79, 46, 31, 0.08);
+  background: rgba(79, 46, 31, 0.18);
+  box-shadow: 0 2px 4px rgba(79, 46, 31, 0.08);
+  transition: all var(--coop-ease);
+}
+
+.bottom-sheet-handle:active .bottom-sheet-handle-bar {
+  background: rgba(79, 46, 31, 0.28);
 }
 
 .bottom-sheet-title {
-  margin: 0;
+  margin: 0 0 0.2rem;
   font-family: var(--coop-font-display);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--coop-brown);
+  letter-spacing: -0.01em;
 }
 
 .bottom-sheet-body {
@@ -5950,7 +5975,91 @@ button.sync-pill {
   }
 
   .bottom-sheet {
-    background: rgba(30, 24, 20, 0.96);
+    background: linear-gradient(180deg, rgba(30, 24, 20, 0.96), rgba(26, 20, 16, 0.94));
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    backdrop-filter: blur(18px) saturate(1.2);
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.24);
+  }
+
+  .bottom-sheet::backdrop {
+    background: rgba(0, 0, 0, 0.56);
+  }
+
+  .bottom-sheet-handle-bar {
+    background: rgba(232, 213, 196, 0.14);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  }
+
+  .bottom-sheet-title {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .receiver-status-grid {
+    gap: 0.6rem;
+  }
+
+  .receiver-status-chip {
+    background: rgba(232, 213, 196, 0.08);
+    border-color: rgba(232, 213, 196, 0.12);
+    color: rgba(232, 213, 196, 0.85);
+  }
+
+  .receiver-status-chip.is-good {
+    background: rgba(138, 184, 64, 0.12);
+    border-color: rgba(138, 184, 64, 0.2);
+    color: rgba(138, 184, 64, 0.85);
+  }
+
+  .receiver-status-chip.is-warning {
+    background: rgba(253, 138, 1, 0.12);
+    border-color: rgba(253, 138, 1, 0.2);
+    color: rgba(253, 138, 1, 0.85);
+  }
+
+  .receiver-status-chip.is-muted {
+    background: rgba(232, 213, 196, 0.06);
+    border-color: rgba(232, 213, 196, 0.1);
+    color: rgba(232, 213, 196, 0.6);
+  }
+
+  .receiver-paired-nest-card {
+    background: linear-gradient(135deg, rgba(90, 125, 16, 0.08), rgba(253, 138, 1, 0.04));
+    border-color: rgba(138, 184, 64, 0.14);
+  }
+
+  .receiver-paired-nest-header {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .receiver-paired-nest-header svg {
+    color: rgba(138, 184, 64, 0.6);
+  }
+
+  .receiver-paired-nest-name {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .receiver-paired-nest-member {
+    color: rgba(232, 213, 196, 0.6);
+  }
+
+  .receiver-toggle-switch-label {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .receiver-toggle-switch-track {
+    background: rgba(232, 213, 196, 0.1);
+    border-color: rgba(232, 213, 196, 0.12);
+  }
+
+  .receiver-toggle-switch-thumb {
+    background: rgba(232, 213, 196, 0.92);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
+  }
+
+  .receiver-toggle-switch.is-on .receiver-toggle-switch-track {
+    background: rgba(138, 184, 64, 0.2);
+    border-color: rgba(138, 184, 64, 0.28);
   }
 
   .receiver-settings-trigger {
