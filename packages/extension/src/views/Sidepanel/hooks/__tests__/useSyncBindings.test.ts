@@ -264,4 +264,74 @@ describe('useSyncBindings', () => {
       'wss://sync.coop.test/yjs',
     );
   });
+
+  it('reports degraded sync health when any bound coop is unhealthy', async () => {
+    const firstDoc = {
+      on: vi.fn(),
+      off: vi.fn(),
+    };
+    const secondDoc = {
+      on: vi.fn(),
+      off: vi.fn(),
+    };
+    const healthyProviders = {
+      webrtc: { id: 'healthy-webrtc' },
+      websocket: null,
+      disconnect: vi.fn(),
+    };
+    const degradedProviders = {
+      webrtc: { id: 'degraded-webrtc' },
+      websocket: null,
+      disconnect: vi.fn(),
+    };
+
+    createCoopDocMock.mockReturnValueOnce(firstDoc).mockReturnValueOnce(secondDoc);
+    connectSyncProvidersMock
+      .mockReturnValueOnce(healthyProviders)
+      .mockReturnValueOnce(degradedProviders);
+    hashJsonMock.mockReturnValue('hash-local');
+    sendRuntimeMessageMock.mockResolvedValue({ ok: true });
+    summarizeSyncTransportHealthMock.mockImplementation((webrtc: { id?: string } | null) =>
+      webrtc?.id === 'degraded-webrtc'
+        ? {
+            syncError: true,
+            note: 'Second coop degraded',
+          }
+        : {
+            syncError: false,
+            note: 'Healthy sync',
+          },
+    );
+
+    renderHook(() =>
+      useSyncBindings({
+        coops: [
+          {
+            profile: { id: 'coop-1' },
+            syncRoom: { roomId: 'room-1' },
+          } as never,
+          {
+            profile: { id: 'coop-2' },
+            syncRoom: { roomId: 'room-2' },
+          } as never,
+        ],
+        loadDashboard: vi.fn(async () => undefined),
+      }),
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+
+    const healthReports = sendRuntimeMessageMock.mock.calls.filter(
+      ([message]) => message.type === 'report-sync-health',
+    );
+    expect(healthReports.at(-1)?.[0]).toEqual({
+      type: 'report-sync-health',
+      payload: {
+        syncError: true,
+        note: 'Second coop degraded',
+      },
+    });
+  });
 });
