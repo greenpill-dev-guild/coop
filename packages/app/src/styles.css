@@ -216,7 +216,7 @@ pre {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 5.5rem 0 4.5rem;
+  padding: 5.5rem 0 2.5rem;
   display: flex;
   align-items: center;
   pointer-events: none;
