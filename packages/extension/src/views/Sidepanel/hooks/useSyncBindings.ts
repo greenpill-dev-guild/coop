@@ -4,6 +4,7 @@ import {
   buildIceServers,
   connectSyncProviders,
   createBlobRelayTransport,
+  ORIGIN_LOCAL,
   createCoopDoc,
   hashJson,
   mergeCoopDocUpdates,
@@ -172,7 +173,9 @@ export function useSyncBindings(deps: {
           void reportSyncHealth();
         }
 
-        const onDocUpdate = (update: Uint8Array) => {
+        const onDocUpdate = (update: Uint8Array, origin: unknown) => {
+          // Skip local writes — only process remote peer updates.
+          if (origin === ORIGIN_LOCAL) return;
           binding.pendingUpdates.push(update);
           if (binding.timer) {
             window.clearTimeout(binding.timer);

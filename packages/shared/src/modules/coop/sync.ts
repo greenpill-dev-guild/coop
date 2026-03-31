@@ -70,6 +70,13 @@ function decodeRelayFrame(data: Uint8Array): { messageType: number; payload: str
 const ROOT_KEY = 'coop';
 const ARTIFACTS_MAP_KEY = 'coop-artifacts';
 const ARTIFACTS_V2_MAP_KEY = 'coop-artifacts-v2';
+const MEMBERS_V2_MAP_KEY = 'coop-members-v2';
+
+/**
+ * Transaction origin tag for local writes. Handlers observing doc updates
+ * can check `origin === ORIGIN_LOCAL` to skip processing their own writes.
+ */
+export const ORIGIN_LOCAL = 'local';
 export {
   buildIceServers,
   defaultIceServers,
@@ -192,6 +199,7 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   const root = doc.getMap<string>(ROOT_KEY);
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
   const artifactsV2 = doc.getMap<Y.Map<string>>(ARTIFACTS_V2_MAP_KEY);
+  const membersV2 = doc.getMap<Y.Map<string>>(MEMBERS_V2_MAP_KEY);
 
   doc.transact(() => {
     for (const key of sharedKeys) {
@@ -234,24 +242,51 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
         fieldMap.set(key, JSON.stringify(value));
       }
     }
-  });
+
+    // Per-member v2 format: each member is a nested Y.Map keyed by member.id.
+    // Concurrent member joins on separate peers merge cleanly instead of
+    // last-writer-wins on the JSON-serialized members array.
+    const currentMemberIds = new Set(state.members.map((m) => m.id));
+    for (const id of membersV2.keys()) {
+      if (!currentMemberIds.has(id)) {
+        membersV2.delete(id);
+      }
+    }
+    for (const member of state.members) {
+      let fieldMap = membersV2.get(member.id);
+      if (!fieldMap) {
+        fieldMap = new Y.Map<string>();
+        membersV2.set(member.id, fieldMap);
+      }
+      const definedEntries = Object.entries(member).filter(([, value]) => value !== undefined);
+      const definedKeys = new Set(definedEntries.map(([key]) => key));
+      for (const key of fieldMap.keys()) {
+        if (!definedKeys.has(key)) {
+          fieldMap.delete(key);
+        }
+      }
+      for (const [key, value] of definedEntries) {
+        fieldMap.set(key, JSON.stringify(value));
+      }
+    }
+  }, ORIGIN_LOCAL);
 }
 
 /**
- * Reads and validates the coop shared state from a Yjs document.
- * Prefers v2 per-field artifact format, falls back to v1 per-artifact JSON, then legacy array.
+ * Reads the raw (unvalidated) coop state from a Yjs document.
+ * Prefers v2 per-field formats for artifacts and members, falls back to legacy.
  * @param doc - The Yjs document to read from
- * @returns The parsed and validated coop shared state
+ * @returns The raw state object (not Zod-validated)
  */
-export function readCoopState(doc: Y.Doc): CoopSharedState {
+export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
   const root = doc.getMap<string>(ROOT_KEY);
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
   const artifactsV2 = doc.getMap<Y.Map<string>>(ARTIFACTS_V2_MAP_KEY);
+  const membersV2 = doc.getMap<Y.Map<string>>(MEMBERS_V2_MAP_KEY);
 
   // Read artifacts: prefer v2 (per-field) > v1 (per-artifact JSON) > legacy
   let artifacts: unknown[];
   if (artifactsV2.size > 0) {
-    // v2: each artifact is a Y.Map of field→JSON-string
     artifacts = [];
     for (const fieldMap of artifactsV2.values()) {
       try {
@@ -265,7 +300,6 @@ export function readCoopState(doc: Y.Doc): CoopSharedState {
       }
     }
   } else if (artifactsMap.size > 0) {
-    // v1: each artifact is a JSON string
     artifacts = [];
     for (const value of artifactsMap.values()) {
       try {
@@ -275,20 +309,48 @@ export function readCoopState(doc: Y.Doc): CoopSharedState {
       }
     }
   } else {
-    // legacy: all artifacts in a single JSON array string
     const raw = root.get('artifacts');
     artifacts = raw ? JSON.parse(raw) : [];
   }
 
-  const raw = Object.fromEntries(
+  // Read members: prefer v2 (per-member Y.Map) > legacy JSON string
+  let members: unknown[];
+  if (membersV2.size > 0) {
+    members = [];
+    for (const fieldMap of membersV2.values()) {
+      try {
+        const obj: Record<string, unknown> = {};
+        for (const [key, value] of fieldMap.entries()) {
+          obj[key] = JSON.parse(value);
+        }
+        members.push(obj);
+      } catch {
+        // skip corrupted entries
+      }
+    }
+  } else {
+    const raw = root.get('members');
+    members = raw ? JSON.parse(raw) : [];
+  }
+
+  return Object.fromEntries(
     sharedKeys.map((key) => {
       if (key === 'artifacts') return ['artifacts', artifacts];
+      if (key === 'members') return ['members', members];
       const value = root.get(key);
       return [key, value ? JSON.parse(value) : undefined];
     }),
   );
+}
 
-  return coopSharedStateSchema.parse(raw);
+/**
+ * Reads and validates the coop shared state from a Yjs document.
+ * Prefers v2 per-field artifact format, falls back to v1 per-artifact JSON, then legacy array.
+ * @param doc - The Yjs document to read from
+ * @returns The parsed and validated coop shared state
+ */
+export function readCoopState(doc: Y.Doc): CoopSharedState {
+  return coopSharedStateSchema.parse(readCoopStateRaw(doc));
 }
 
 /**

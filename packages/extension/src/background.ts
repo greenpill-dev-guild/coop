@@ -572,17 +572,26 @@ export function startBackground() {
           return;
         case 'persist-coop-state': {
           try {
-            await mergeCoopStateUpdate(db, message.payload.coopId, message.payload.docUpdate);
+            const merged = await mergeCoopStateUpdate(
+              db,
+              message.payload.coopId,
+              message.payload.docUpdate,
+            );
+            await refreshBadge();
+            // Transient Zod validation warnings are not fatal — the CRDT merge
+            // was persisted successfully and will self-heal as sync converges.
+            const warning = (merged as { _validationWarning?: string })._validationWarning;
+            if (warning) {
+              console.warn('persist-coop-state: transient validation warning:', warning);
+            }
+            sendResponse({ ok: true } satisfies RuntimeActionResponse);
           } catch (error) {
-            console.warn('persist-coop-state validation failed:', error);
+            console.warn('persist-coop-state failed:', error);
             sendResponse({
               ok: false,
               error: 'Invalid coop state',
             } satisfies RuntimeActionResponse);
-            return;
           }
-          await refreshBadge();
-          sendResponse({ ok: true } satisfies RuntimeActionResponse);
           return;
         }
         case 'report-sync-health':

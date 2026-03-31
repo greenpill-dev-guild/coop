@@ -71,31 +71,38 @@ async function persistInviteToYjsDoc(
   coopId: string,
   mutation: (doc: ReturnType<typeof hydrateCoopDoc>) => void,
 ) {
-  const record = await db.coopDocs.get(coopId);
-  if (!record) return; // No persisted doc yet — saveState() will create one
+  await db.transaction('rw', db.coopDocs, async () => {
+    const record = await db.coopDocs.get(coopId);
+    if (!record) return; // No persisted doc yet — saveState() will create one
 
-  const doc = hydrateCoopDoc(record.encodedState);
-  mutation(doc);
-  await db.coopDocs.put({
-    ...record,
-    encodedState: encodeCoopDoc(doc),
-    updatedAt: nowIso(),
+    const doc = hydrateCoopDoc(record.encodedState);
+    mutation(doc);
+    await db.coopDocs.put({
+      ...record,
+      encodedState: encodeCoopDoc(doc),
+      updatedAt: nowIso(),
+    });
+    doc.destroy();
   });
-  doc.destroy();
 }
 
-async function persistInviteStateToYjsDoc(coopId: string, nextState: Awaited<ReturnType<typeof getCoops>>[number]) {
-  const record = await db.coopDocs.get(coopId);
-  if (!record) return;
+async function persistInviteStateToYjsDoc(
+  coopId: string,
+  nextState: Awaited<ReturnType<typeof getCoops>>[number],
+) {
+  await db.transaction('rw', db.coopDocs, async () => {
+    const record = await db.coopDocs.get(coopId);
+    if (!record) return;
 
-  const doc = hydrateCoopDoc(record.encodedState);
-  updateCoopState(doc, () => nextState);
-  await db.coopDocs.put({
-    ...record,
-    encodedState: encodeCoopDoc(doc),
-    updatedAt: nowIso(),
+    const doc = hydrateCoopDoc(record.encodedState);
+    updateCoopState(doc, () => nextState);
+    await db.coopDocs.put({
+      ...record,
+      encodedState: encodeCoopDoc(doc),
+      updatedAt: nowIso(),
+    });
+    doc.destroy();
   });
-  doc.destroy();
 }
 
 function isIdempotentReceiverReplay(

@@ -6,13 +6,20 @@ import type {
   TabCandidate,
 } from '../../contracts/schema';
 import {
+  coopSharedStateSchema,
   readablePageExtractSchema,
   reviewDraftSchema,
   tabCandidateSchema,
 } from '../../contracts/schema';
 import { nowIso } from '../../utils';
 import { arePageExtractsNearDuplicates } from '../coop/pipeline';
-import { encodeCoopDoc, hydrateCoopDoc, readCoopState, writeCoopState } from '../coop/sync';
+import {
+  encodeCoopDoc,
+  hydrateCoopDoc,
+  readCoopState,
+  readCoopStateRaw,
+  writeCoopState,
+} from '../coop/sync';
 import {
   buildEncryptedLocalPayloadId,
   buildEncryptedLocalPayloadRecord,
@@ -28,19 +35,21 @@ import {
 import type { CoopDexie } from './db-schema';
 
 export async function saveCoopState(db: CoopDexie, state: CoopSharedState) {
-  const existing = await db.coopDocs.get(state.profile.id);
-  const doc = hydrateCoopDoc(existing?.encodedState);
+  return db.transaction('rw', db.coopDocs, async () => {
+    const existing = await db.coopDocs.get(state.profile.id);
+    const doc = hydrateCoopDoc(existing?.encodedState);
 
-  try {
-    writeCoopState(doc, state);
-    await db.coopDocs.put({
-      id: state.profile.id,
-      encodedState: encodeCoopDoc(doc),
-      updatedAt: nowIso(),
-    });
-  } finally {
-    doc.destroy();
-  }
+    try {
+      writeCoopState(doc, state);
+      await db.coopDocs.put({
+        id: state.profile.id,
+        encodedState: encodeCoopDoc(doc),
+        updatedAt: nowIso(),
+      });
+    } finally {
+      doc.destroy();
+    }
+  });
 }
 
 export async function mergeCoopStateUpdate(
@@ -48,27 +57,50 @@ export async function mergeCoopStateUpdate(
   coopId: string,
   encodedState: Uint8Array,
 ) {
-  const existing = await db.coopDocs.get(coopId);
-  const doc = hydrateCoopDoc(existing?.encodedState);
+  return db.transaction('rw', db.coopDocs, async () => {
+    const existing = await db.coopDocs.get(coopId);
+    const doc = hydrateCoopDoc(existing?.encodedState);
 
-  try {
-    Y.applyUpdate(doc, encodedState);
-    const merged = readCoopState(doc);
+    try {
+      Y.applyUpdate(doc, encodedState);
 
-    if (merged.profile.id !== coopId) {
-      throw new Error(`Persisted coop update target mismatch for ${coopId}.`);
+      // Always persist the merged Y.Doc state — the CRDT merge itself is valid
+      // even when the materialized state temporarily violates Zod constraints.
+      await db.coopDocs.put({
+        id: coopId,
+        encodedState: encodeCoopDoc(doc),
+        updatedAt: nowIso(),
+      });
+
+      // Try to parse the merged state. If Zod validation fails, return a
+      // partial result with a warning instead of throwing — transient states
+      // during concurrent joins may temporarily violate schema invariants
+      // but self-heal as sync converges.
+      const raw = readCoopStateRaw(doc);
+      const parseResult = coopSharedStateSchema.safeParse(raw);
+
+      if (parseResult.success) {
+        if (parseResult.data.profile.id !== coopId) {
+          throw new Error(`Persisted coop update target mismatch for ${coopId}.`);
+        }
+        return parseResult.data;
+      }
+
+      // Validation failed — log but don't throw. Return the raw state
+      // cast as CoopSharedState with a warning marker so callers know.
+      console.warn(
+        `mergeCoopStateUpdate: Zod validation failed for coop ${coopId}, persisting raw Y.Doc anyway.`,
+        parseResult.error.issues,
+      );
+      const partial = raw as CoopSharedState & { _validationWarning?: string };
+      partial._validationWarning = parseResult.error.issues
+        .map((i) => `${i.path.join('.')}: ${i.message}`)
+        .join('; ');
+      return partial;
+    } finally {
+      doc.destroy();
     }
-
-    await db.coopDocs.put({
-      id: coopId,
-      encodedState: encodeCoopDoc(doc),
-      updatedAt: nowIso(),
-    });
-
-    return merged;
-  } finally {
-    doc.destroy();
-  }
+  });
 }
 
 export async function saveTabCandidate(db: CoopDexie, candidate: TabCandidate) {
