@@ -6123,4 +6123,48 @@ button.sync-pill {
   .empty-nest-hint {
     color: rgba(232, 213, 196, 0.7);
   }
+
+  .receiver-install-banner {
+    border-color: rgba(253, 138, 1, 0.18);
+    background: linear-gradient(
+      160deg,
+      rgba(253, 138, 1, 0.08) 0%,
+      rgba(30, 24, 20, 0.92) 40%,
+      rgba(90, 125, 16, 0.04) 100%
+    );
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+
+  .receiver-install-banner-icon {
+    background: rgba(253, 138, 1, 0.14);
+    color: rgba(253, 138, 1, 0.8);
+  }
+
+  .receiver-install-copy h2 {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .receiver-install-copy .quiet-note {
+    color: rgba(232, 213, 196, 0.6);
+  }
+
+  .boot-shell {
+    background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.08), transparent 24rem),
+      radial-gradient(circle at top right, rgba(253, 138, 1, 0.08), transparent 22rem),
+      linear-gradient(180deg, #1a1410 0%, #1a1410 42%, #1e1814 100%);
+  }
+
+  .boot-card {
+    border-color: rgba(232, 213, 196, 0.1);
+    background: rgba(30, 24, 20, 0.92);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.24);
+  }
+
+  .boot-card h1 {
+    color: rgba(232, 213, 196, 0.95);
+  }
+
+  .boot-card .quiet-note {
+    color: rgba(232, 213, 196, 0.6);
+  }
 }
