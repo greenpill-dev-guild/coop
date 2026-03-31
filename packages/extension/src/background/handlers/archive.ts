@@ -11,6 +11,7 @@ import {
   createArchiveRecoveryRecord,
   createMockArchiveReceipt,
   createStorachaArchiveClient,
+  describeFvmRegistryRegistrationGate,
   doesArchiveReceiptNeedOnChainSealWitness,
   encodeArchiveAnchorCalldata,
   encodeFvmRegisterArchiveCalldata,
@@ -1265,8 +1266,48 @@ export async function handleFvmRegistration(
     } satisfies RuntimeActionResponse;
   }
 
+  if (receipt.delegation?.mode !== 'live') {
+    return {
+      ok: false,
+      error:
+        'Only live archive receipts can be registered on Filecoin. Re-run the archive step from an operator-controlled live build first.',
+    } satisfies RuntimeActionResponse;
+  }
+
+  if (configuredOnchainMode !== 'live') {
+    return {
+      ok: false,
+      error:
+        'Filecoin registry registration stays gated until live onchain mode is enabled for an operator-controlled build.',
+    } satisfies RuntimeActionResponse;
+  }
+
   const authSession = await getAuthSession(db);
   const member = resolveReceiverPairingMember(coop, authSession);
+  const registryGate = describeFvmRegistryRegistrationGate({
+    chainKey: configuredFvmChain,
+    configuredRegistryAddress: configuredFvmRegistryAddress,
+    operatorKey: configuredFvmOperatorKey,
+  });
+
+  if (!registryGate.available || !registryGate.registryAddress) {
+    const detail = registryGate.detail;
+    await logPrivilegedAction({
+      actionType: 'fvm-register-archive',
+      status: 'failed',
+      detail,
+      coop,
+      memberId: member?.id,
+      memberDisplayName: member?.displayName,
+      authSession,
+      receiptId: input.receiptId,
+      archiveScope: receipt.scope,
+    });
+    return {
+      ok: false,
+      error: detail,
+    } satisfies RuntimeActionResponse;
+  }
 
   // Verify anchor mode
   try {
@@ -1277,27 +1318,10 @@ export async function handleFvmRegistration(
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Anchor mode is required.';
-    return { ok: false, error: detail } satisfies RuntimeActionResponse;
-  }
-
-  // Mock mode: skip tx, return deterministic hash
-  if (
-    configuredArchiveMode === 'mock' ||
-    !configuredFvmRegistryAddress ||
-    !configuredFvmOperatorKey
-  ) {
-    const mockTxHash = `0x${'f'.repeat(64)}`;
-    const nextReceipt = {
-      ...receipt,
-      fvmRegistryTxHash: mockTxHash,
-      fvmChainKey: configuredFvmChain,
-    };
-    const nextState = updateArchiveReceipt(coop, receipt.id, nextReceipt);
-    await saveState(nextState);
     await logPrivilegedAction({
       actionType: 'fvm-register-archive',
-      status: 'succeeded',
-      detail: `Mock FVM registration for CID ${receipt.rootCid}.`,
+      status: 'failed',
+      detail,
       coop,
       memberId: member?.id,
       memberDisplayName: member?.displayName,
@@ -1305,10 +1329,7 @@ export async function handleFvmRegistration(
       receiptId: input.receiptId,
       archiveScope: receipt.scope,
     });
-    return {
-      ok: true,
-      data: { txHash: mockTxHash, status: 'mock' },
-    } satisfies RuntimeActionResponse;
+    return { ok: false, error: detail } satisfies RuntimeActionResponse;
   }
 
   await logPrivilegedAction({
@@ -1341,7 +1362,7 @@ export async function handleFvmRegistration(
     });
 
     const txHash = await walletClient.sendTransaction({
-      to: configuredFvmRegistryAddress as Address,
+      to: registryGate.registryAddress,
       data: calldata,
     });
 

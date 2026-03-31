@@ -177,10 +177,10 @@ Commonly needed:
 
 Important current behavior:
 
-- if the trusted-node archive env is missing, the script falls back to an in-process static
-  delegation
-- that fallback is useful for wiring checks, but it is not a proof that operator archive
-  credentials are configured correctly
+- `bun run validate:archive-live` now requires the real trusted-node archive env
+- the old in-process fallback is available only when
+  `COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true` is set intentionally
+- that fallback is a wiring check only and does not count as live-archive readiness
 
 Operational guidance:
 
@@ -221,6 +221,20 @@ Current constraint:
 - runtime registry actions in the extension still depend on `VITE_COOP_FVM_OPERATOR_KEY`
 - because that value is baked into the bundle, it is not appropriate for a standard public Chrome
   Web Store build
+
+Operator checklist before claiming live Filecoin registry readiness:
+
+1. Deploy `packages/contracts/src/CoopRegistry.sol` to the intended FVM chain from
+   `packages/contracts/script/DeployRegistry.s.sol`.
+2. Record the deployed address and update the checked-in deployment reference in
+   `packages/shared/src/modules/fvm/fvm.ts` once that deployment is canonical.
+3. Set `VITE_COOP_FVM_CHAIN`, `VITE_COOP_FVM_REGISTRY_ADDRESS`, and
+   `VITE_COOP_FVM_OPERATOR_KEY` in the operator-only root `.env.local`.
+4. Rebuild the operator bundle so the baked env matches the intended live registry.
+5. Re-run `bun run validate:archive-live` and then `bun run validate:production-live-readiness`.
+
+If any step above is incomplete, treat Filecoin registry registration as intentionally gated rather
+than partially live.
 
 ## Operator Discipline
 

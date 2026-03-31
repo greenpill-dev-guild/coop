@@ -129,7 +129,9 @@ const suites: Record<string, Suite> = {
   'unit:receiver-intake': {
     description:
       'Focused receiver/background coverage for pairing lifecycle, intake ingestion, invite coordination, offscreen wake-up, and related context helpers.',
-    steps: [{ label: 'unit:receiver-intake', command: ['bun', 'run', 'test:unit:receiver-intake'] }],
+    steps: [
+      { label: 'unit:receiver-intake', command: ['bun', 'run', 'test:unit:receiver-intake'] },
+    ],
   },
   'unit:sync-hardening': {
     description:
@@ -194,7 +196,7 @@ const suites: Record<string, Suite> = {
   },
   'probe:archive-live': {
     description:
-      'Archive probe that issues local trusted-node delegation material from repo-root env or an in-process fallback.',
+      'Archive probe that requires real trusted-node delegation material from repo-root env; optional fallback wiring checks require COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true.',
     steps: [{ label: 'probe:archive-live', command: ['bun', 'run', 'probe:archive-live'] }],
   },
   quick: {
@@ -296,7 +298,7 @@ const suites: Record<string, Suite> = {
   },
   'archive-live': {
     description:
-      'Archive live-path validation: lint, targeted archive tests, build, then a trusted-node delegation probe using root env or an in-process fallback.',
+      'Archive live-path validation: lint, targeted archive tests, build, then a trusted-node delegation probe that requires operator archive env.',
     includes: ['lint', 'unit:archive-live', 'build', 'probe:archive-live'],
   },
   'unit:local-inference': {

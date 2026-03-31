@@ -10,13 +10,60 @@ lanes.
 
 | Lane File | Agent | Category | Status | Phase |
 |-----------|-------|----------|--------|-------|
-| `lanes/state.codex.todo.md` | Codex | bugs | in_progress | 1 |
-| `lanes/api.codex.todo.md` | Codex | bugs | in_progress | 1 |
-| `lanes/contracts.codex.todo.md` | Codex | bugs | in_progress | 1 |
-| `lanes/docs.claude.todo.md` | Claude | documentation | in_progress | 1 and 4 |
+| `lanes/state.codex.todo.md` | Codex | bugs | done | 1 |
+| `lanes/api.codex.todo.md` | Codex | bugs | done | 1 |
+| `lanes/contracts.codex.todo.md` | Codex | bugs | done | 1 |
+| `lanes/docs.claude.todo.md` | Claude | documentation | done | 1 and 4 |
 | `lanes/ui.claude.todo.md` | Claude | polish | blocked | 2 |
 | `qa/qa-codex.todo.md` | Codex | testing | blocked | 3 |
 | `qa/qa-claude.todo.md` | Claude | testing | blocked | 3 |
+
+## Phase 1 Findings
+
+### State Lane (Codex)
+
+- Popup create no longer auto-enables Green Goods; both paths send config only on explicit opt-in.
+- Added shared passkey trust explainer copy to create/join flows.
+- Preview metadata (favicon, socialPreviewImageUrl) now survives capture through review.
+- New `resolvePreviewCardImageUrl()` helper for UI fallback logic.
+- Targeted Vitest passed; popup E2E failed only due to sandbox Chromium limitations.
+
+### API Lane (Codex)
+
+- Sync health is now aggregated across all bound coops — one healthy coop no longer masks degraded.
+- Stale invite state cleared on revoke; selected receiver pairing marked active immediately.
+- New test coverage for invite lifecycle and multi-coop sync health.
+
+### Contracts Lane (Codex)
+
+- Filecoin registry registration no longer invents a mock success path when live onchain mode or
+  live registry material is missing.
+- Live Filecoin registration is now limited to live archive receipts produced from an
+  operator-controlled live build.
+- The archive live probe now requires real trusted-node archive env by default; the old fallback is
+  available only through the explicit `COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true` wiring-check escape
+  hatch.
+- Operator docs now include an explicit registry deployment and live-rails checklist.
+- The previous contract blurred operator-only live rails and mock-first staged-launch behavior by
+  treating missing Filecoin registry config as a successful mock registration.
+- `validate:archive-live` could also pass on a fallback delegation, which made the live gate look
+  greener than it really was.
+
+### Docs Lane (Claude)
+
+- Landing page: topbar nav with Install Extension CTA, footer install links.
+- Install docs: restructured with fastest-path 4-command install, clearer dev/zip paths.
+- Demo storyboard: 7-beat flow (~7 min total).
+- Strategic narrative: four bets, core tenets, monetization — all provisional.
+
+## Follow-Ups
+
+- Populate `packages/shared/src/modules/fvm/fvm.ts` with the canonical live registry deployment
+  only after the deployment is actually finalized and verified.
+- Keep Filecoin registry registration gated in QA until the operator checklist is completed end to
+  end.
+- `validate:production-readiness` and `archive-live` blocked on pre-existing Biome lint failures
+  in unrelated files — needs a baseline lint fix pass.
 
 ## Claude -> Codex Execution Pattern
 
