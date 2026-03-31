@@ -108,7 +108,23 @@ export function popupSyncStatus(input: {
   syncDetail?: string;
   syncTone?: 'ok' | 'warning' | 'error';
   dashboardError?: string;
+  sync?: {
+    label: string;
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+    peerCount: number;
+    websocketConnected: boolean;
+    mode: string;
+  };
 }) {
+  if (input.sync) {
+    return {
+      label: input.sync.label === 'Bridge' ? 'Connected' : input.sync.label,
+      detail: input.sync.detail,
+      tone: input.sync.tone,
+    };
+  }
+
   const detail =
     input.syncDetail || input.syncState || input.dashboardError || 'Checking sync status.';
   const normalized = detail.toLowerCase();

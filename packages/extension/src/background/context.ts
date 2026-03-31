@@ -40,7 +40,11 @@ import {
   resolveReceiverAppUrl,
   resolveTrustedNodeArchiveBootstrapConfig,
 } from '../runtime/config';
-import type { ReceiverSyncRuntimeStatus, SidepanelIntent } from '../runtime/messages';
+import type {
+  CoopSyncRuntime,
+  ReceiverSyncRuntimeStatus,
+  SidepanelIntent,
+} from '../runtime/messages';
 
 // ---- Database ----
 
@@ -127,6 +131,7 @@ export const stateKeys = {
   activeCoopId: 'active-coop-id',
   agentOnboarding: 'agent-onboarding',
   captureMode: 'capture-mode',
+  coopSyncRuntime: 'coop-sync-runtime',
   notificationIntentRegistry: 'notification-intent-registry',
   notificationRegistry: 'notification-registry',
   receiverSyncRuntime: 'receiver-sync-runtime',
@@ -545,6 +550,22 @@ export async function reportReceiverSyncRuntime(patch: Partial<ReceiverSyncRunti
   } satisfies ReceiverSyncRuntimeStatus;
   await setLocalSetting(stateKeys.receiverSyncRuntime, next);
   return next;
+}
+
+export async function getCoopSyncRuntime(coopId: string): Promise<CoopSyncRuntime | undefined> {
+  const key = `${stateKeys.coopSyncRuntime}:${coopId}`;
+  const result = await chrome.storage.local.get(key);
+  return result[key] as CoopSyncRuntime | undefined;
+}
+
+export async function reportCoopSyncRuntime(
+  coopId: string,
+  patch: Partial<CoopSyncRuntime>,
+): Promise<void> {
+  const key = `${stateKeys.coopSyncRuntime}:${coopId}`;
+  const current = await getCoopSyncRuntime(coopId);
+  const next = { ...current, ...patch };
+  await chrome.storage.local.set({ [key]: next });
 }
 
 export async function getSidepanelStateRegistry() {
