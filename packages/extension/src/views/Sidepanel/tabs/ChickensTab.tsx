@@ -8,6 +8,7 @@ import type {
   SidepanelIntentSegment,
 } from '../../../runtime/messages';
 import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
+import { resolvePreviewCardImageUrl } from '../../shared/dashboard-selectors';
 import { SidepanelSubheader } from '../SidepanelSubheader';
 import { SkeletonCards } from '../cards';
 import type { useDraftEditor } from '../hooks/useDraftEditor';
@@ -56,17 +57,13 @@ function formatCategoryLabel(value: string) {
 
 /** Resolve the best preview image URL from draft or artifact metadata. */
 function resolvePreviewImage(item: ReviewItem): string | undefined {
-  if (item.draft?.previewImageUrl) return item.draft.previewImageUrl;
-  if (item.signal?.url) {
-    // No direct previewImageUrl on signals, fall through
-  }
+  if (item.draft) return resolvePreviewCardImageUrl(item.draft);
   return undefined;
 }
 
-/** Build a favicon URL from a domain string using Google's public service. */
-function faviconUrl(domain: string | undefined): string | undefined {
-  if (!domain) return undefined;
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+/** Resolve favicon from captured source data, no external service. */
+function faviconUrl(item: ReviewItem): string | undefined {
+  return item.draft?.sources[0]?.faviconUrl ?? item.signal?.favicon;
 }
 
 /** Extract the source domain from a review item. */
@@ -275,7 +272,7 @@ function CompactCard(props: {
   const previewImage = resolvePreviewImage(item);
   const sourceDomain = resolveSourceDomain(item);
   const sourceUrl = resolveSourceUrl(item);
-  const favicon = faviconUrl(sourceDomain);
+  const favicon = faviconUrl(item);
 
   return (
     <article className="compact-card" data-focused={focused || undefined} data-kind={item.kind}>
@@ -410,10 +407,10 @@ function CompactCard(props: {
 function CompactSharedCard(props: { artifact: Artifact; coopName?: string }) {
   const { artifact, coopName } = props;
   const visibleTags = artifact.tags.slice(0, 3);
-  const previewImage = artifact.previewImageUrl;
+  const previewImage = resolvePreviewCardImageUrl(artifact);
   const sourceDomain = artifact.sources[0]?.domain;
   const sourceUrl = artifact.sources[0]?.url;
-  const favicon = faviconUrl(sourceDomain);
+  const favicon = artifact.sources[0]?.faviconUrl;
 
   return (
     <article className="compact-card" data-kind="shared">

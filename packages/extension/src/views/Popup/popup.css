@@ -493,7 +493,7 @@ button:focus-visible,
 }
 
 .popup-subheader__tag.popup-subheader__tag--error {
-  background: color-mix(in srgb, #c54a3c 12%, var(--coop-field));
+  background: color-mix(in srgb, var(--coop-error) 12%, var(--coop-field));
 }
 
 .popup-subheader__tag strong {
@@ -1097,7 +1097,7 @@ button:focus-visible,
 }
 
 .popup-stat--tone-error {
-  border-color: color-mix(in srgb, #c54a3c 42%, var(--coop-border));
+  border-color: color-mix(in srgb, var(--coop-error) 42%, var(--coop-border));
 }
 
 .popup-stat--tone-warning strong {
@@ -1951,8 +1951,8 @@ body::-webkit-scrollbar,
 }
 
 .popup-mini-pill--danger {
-  background: rgba(197, 74, 60, 0.14);
-  color: #c54a3c;
+  background: color-mix(in srgb, var(--coop-error) 14%, transparent);
+  color: var(--coop-error);
 }
 
 /* ---- Popup notification banner ---- */
@@ -2113,7 +2113,7 @@ body::-webkit-scrollbar,
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--coop-red, #e53935);
+  background: var(--coop-error);
   animation: recording-pulse 1.2s ease-in-out infinite;
 }
 
@@ -2185,20 +2185,14 @@ body::-webkit-scrollbar,
 
 /* Red accent for cancel recording button */
 .popup-handoff-button[data-accent="red"] {
-  background: rgba(229, 57, 53, 0.12);
-  color: #e53935;
-  border-color: rgba(229, 57, 53, 0.18);
+  background: color-mix(in srgb, var(--coop-error) 12%, transparent);
+  color: var(--coop-error);
+  border-color: color-mix(in srgb, var(--coop-error) 18%, transparent);
 }
 
 .popup-handoff-button[data-accent="red"]:hover {
-  background: rgba(229, 57, 53, 0.2);
-  border-color: rgba(229, 57, 53, 0.35);
-}
-
-[data-theme="dark"] .popup-handoff-button[data-accent="red"] {
-  background: rgba(239, 83, 80, 0.16);
-  color: #ef5350;
-  border-color: rgba(239, 83, 80, 0.25);
+  background: color-mix(in srgb, var(--coop-error) 20%, transparent);
+  border-color: color-mix(in srgb, var(--coop-error) 35%, transparent);
 }
 
 /* Disabled state for handoff buttons */
@@ -2268,7 +2262,7 @@ body::-webkit-scrollbar,
 .invite-composer-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--coop-z-overlay);
   background: rgba(16, 12, 10, 0.46);
   display: flex;
   align-items: center;

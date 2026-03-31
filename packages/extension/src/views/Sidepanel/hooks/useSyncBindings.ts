@@ -86,6 +86,7 @@ export function useSyncBindings(deps: {
           credential: import.meta.env.VITE_COOP_TURN_CREDENTIAL,
         });
         const providers = connectSyncProviders(doc, coop.syncRoom, iceServers, websocketSyncUrl);
+        let disposeSyncHealth: (() => void) | undefined;
         const binding: SyncBinding = {
           doc,
           lastHash: nextHash,
@@ -182,7 +183,7 @@ export function useSyncBindings(deps: {
         }
 
         scheduleSyncHealthReport(2500);
-        const disposeSyncHealth = () => {
+        disposeSyncHealth = () => {
           for (const dispose of disposers) dispose();
         };
 
