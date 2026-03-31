@@ -72,6 +72,26 @@ const ARTIFACTS_MAP_KEY = 'coop-artifacts';
 const ARTIFACTS_V2_MAP_KEY = 'coop-artifacts-v2';
 const MEMBERS_V2_MAP_KEY = 'coop-members-v2';
 
+// v2 keyed-collection map keys (Y.Map-of-Y.Map, keyed by item ID)
+const INVITES_V2_MAP_KEY = 'v2:invites';
+const ARCHIVE_RECEIPTS_V2_MAP_KEY = 'v2:archiveReceipts';
+const MEMBER_ACCOUNTS_V2_MAP_KEY = 'v2:memberAccounts';
+const GG_BINDINGS_V2_MAP_KEY = 'v2:greenGoods.memberBindings';
+const MEMBER_COMMITMENTS_V2_ARRAY_KEY = 'v2:memberCommitments';
+
+// v2 scalar-object map keys (Y.Map<string> with per-field entries)
+const V2_SCALAR_KEYS = [
+  'profile',
+  'setupInsights',
+  'soul',
+  'syncRoom',
+  'onchainState',
+  'archiveConfig',
+  'agentIdentity',
+  'fvmState',
+  'greenGoods',
+] as const;
+
 /**
  * Transaction origin tag for local writes. Handlers observing doc updates
  * can check `origin === ORIGIN_LOCAL` to skip processing their own writes.
@@ -101,6 +121,8 @@ const sharedKeys = [
   'greenGoods',
   'archiveConfig',
   'memberCommitments',
+  'agentIdentity',
+  'fvmState',
 ] as const;
 
 /**
@@ -269,12 +291,114 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
         fieldMap.set(key, JSON.stringify(value));
       }
     }
+
+    // --- v2 scalar objects: per-field Y.Map under `v2:{key}` ---
+    // Concurrent edits to different fields of the same scalar object merge
+    // cleanly instead of last-writer-wins on the entire JSON string.
+    for (const scalarKey of V2_SCALAR_KEYS) {
+      const value = state[scalarKey];
+      if (value === undefined || value === null) continue;
+
+      const fieldMap = doc.getMap<string>(`v2:${scalarKey}`);
+      const obj = value as Record<string, unknown>;
+      const definedEntries = Object.entries(obj).filter(([, v]) => v !== undefined);
+      const definedKeys = new Set(definedEntries.map(([k]) => k));
+
+      // Clean up keys no longer in the source object
+      for (const k of fieldMap.keys()) {
+        if (!definedKeys.has(k)) {
+          fieldMap.delete(k);
+        }
+      }
+      for (const [k, v] of definedEntries) {
+        fieldMap.set(k, JSON.stringify(v));
+      }
+    }
+
+    // --- v2 keyed collections: Y.Map-of-Y.Map keyed by item ID ---
+
+    // Invites (keyed by id)
+    writeKeyedCollectionV2(doc, INVITES_V2_MAP_KEY, state.invites, (item) => item.id);
+
+    // Archive receipts (keyed by id)
+    writeKeyedCollectionV2(
+      doc,
+      ARCHIVE_RECEIPTS_V2_MAP_KEY,
+      state.archiveReceipts,
+      (item) => item.id,
+    );
+
+    // Member accounts (keyed by memberId)
+    writeKeyedCollectionV2(
+      doc,
+      MEMBER_ACCOUNTS_V2_MAP_KEY,
+      state.memberAccounts,
+      (item) => item.memberId,
+    );
+
+    // Green Goods member bindings (keyed by memberId)
+    if (state.greenGoods) {
+      writeKeyedCollectionV2(
+        doc,
+        GG_BINDINGS_V2_MAP_KEY,
+        state.greenGoods.memberBindings,
+        (item) => item.memberId,
+      );
+    }
+
+    // Member commitments: Y.Array under v2:memberCommitments
+    const commitmentsArr = doc.getArray<string>(MEMBER_COMMITMENTS_V2_ARRAY_KEY);
+    commitmentsArr.delete(0, commitmentsArr.length);
+    commitmentsArr.insert(0, state.memberCommitments);
   }, ORIGIN_LOCAL);
 }
 
 /**
+ * Writes items of a keyed collection into a Y.Map-of-Y.Map structure.
+ * Each item becomes a nested Y.Map with per-field entries, keyed by a
+ * stable identifier extracted via `keyFn`. Stale entries are removed.
+ */
+function writeKeyedCollectionV2<T extends Record<string, unknown>>(
+  doc: Y.Doc,
+  mapKey: string,
+  items: T[],
+  keyFn: (item: T) => string,
+): void {
+  const collectionMap = doc.getMap<Y.Map<string>>(mapKey);
+  const currentIds = new Set(items.map(keyFn));
+
+  // Remove stale entries
+  for (const id of collectionMap.keys()) {
+    if (!currentIds.has(id)) {
+      collectionMap.delete(id);
+    }
+  }
+
+  // Upsert each item
+  for (const item of items) {
+    const id = keyFn(item);
+    let fieldMap = collectionMap.get(id);
+    if (!fieldMap) {
+      fieldMap = new Y.Map<string>();
+      collectionMap.set(id, fieldMap);
+    }
+    const definedEntries = Object.entries(item).filter(([, value]) => value !== undefined);
+    const definedKeys = new Set(definedEntries.map(([key]) => key));
+    for (const key of fieldMap.keys()) {
+      if (!definedKeys.has(key)) {
+        fieldMap.delete(key);
+      }
+    }
+    for (const [key, value] of definedEntries) {
+      fieldMap.set(key, JSON.stringify(value));
+    }
+  }
+}
+
+/**
  * Reads the raw (unvalidated) coop state from a Yjs document.
- * Prefers v2 per-field formats for artifacts and members, falls back to legacy.
+ * Prefers v2 per-field formats for artifacts, members, scalar objects, and
+ * keyed collections. Falls back to legacy root JSON for backward compat.
  * @param doc - The Yjs document to read from
  * @returns The raw state object (not Zod-validated)
  */
@@ -333,14 +457,150 @@ export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
     members = raw ? JSON.parse(raw) : [];
   }
 
-  return Object.fromEntries(
-    sharedKeys.map((key) => {
-      if (key === 'artifacts') return ['artifacts', artifacts];
-      if (key === 'members') return ['members', members];
+  // Read v2 keyed collections: prefer v2 Y.Map-of-Y.Map > legacy root JSON
+  const invites =
+    readKeyedCollectionV2(doc, INVITES_V2_MAP_KEY) ?? readLegacyArray(root, 'invites');
+  const archiveReceipts =
+    readKeyedCollectionV2(doc, ARCHIVE_RECEIPTS_V2_MAP_KEY) ??
+    readLegacyArray(root, 'archiveReceipts');
+  const memberAccounts =
+    readKeyedCollectionV2(doc, MEMBER_ACCOUNTS_V2_MAP_KEY) ??
+    readLegacyArray(root, 'memberAccounts');
+
+  // Read v2 member commitments: Y.Array with deduplication
+  const memberCommitments =
+    readMemberCommitmentsV2(doc) ?? readLegacyArray(root, 'memberCommitments');
+
+  // Read greenGoods: v2 scalar for the top-level object, v2 keyed for memberBindings
+  const greenGoods = readGreenGoodsV2(doc, root);
+
+  // Build the result, starting from legacy root and overriding with v2 values
+  const result: Record<string, unknown> = {};
+
+  for (const key of sharedKeys) {
+    if (key === 'artifacts') {
+      result.artifacts = artifacts;
+    } else if (key === 'members') {
+      result.members = members;
+    } else if (key === 'invites') {
+      result.invites = invites;
+    } else if (key === 'archiveReceipts') {
+      result.archiveReceipts = archiveReceipts;
+    } else if (key === 'memberAccounts') {
+      result.memberAccounts = memberAccounts;
+    } else if (key === 'memberCommitments') {
+      result.memberCommitments = memberCommitments;
+    } else if (key === 'greenGoods') {
+      result.greenGoods = greenGoods;
+    } else if (key === 'reviewBoard' || key === 'memoryProfile') {
+      // Legacy mirrors -- these are derived from artifacts/archive data on
+      // the write side. On read we use the legacy value as-is.
       const value = root.get(key);
-      return [key, value ? JSON.parse(value) : undefined];
-    }),
-  );
+      result[key] = value ? JSON.parse(value) : undefined;
+    } else {
+      // v2 scalar objects take precedence over legacy root JSON
+      const v2Value = readScalarV2(doc, key);
+      if (v2Value !== undefined) {
+        result[key] = v2Value;
+      } else {
+        const value = root.get(key);
+        result[key] = value ? JSON.parse(value) : undefined;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Reads a v2 scalar object from its per-field Y.Map.
+ * Returns undefined if the map is empty (no v2 data).
+ */
+function readScalarV2(doc: Y.Doc, key: string): Record<string, unknown> | undefined {
+  const fieldMap = doc.getMap<string>(`v2:${key}`);
+  if (fieldMap.size === 0) return undefined;
+
+  const obj: Record<string, unknown> = {};
+  for (const [k, v] of fieldMap.entries()) {
+    try {
+      obj[k] = JSON.parse(v);
+    } catch {
+      // skip corrupted field
+    }
+  }
+  return obj;
+}
+
+/**
+ * Reads a v2 keyed collection from its Y.Map-of-Y.Map.
+ * Returns null if the map is empty (fall back to legacy).
+ */
+function readKeyedCollectionV2(doc: Y.Doc, mapKey: string): unknown[] | null {
+  const collectionMap = doc.getMap<Y.Map<string>>(mapKey);
+  if (collectionMap.size === 0) return null;
+
+  const items: unknown[] = [];
+  for (const fieldMap of collectionMap.values()) {
+    try {
+      const obj: Record<string, unknown> = {};
+      for (const [key, value] of fieldMap.entries()) {
+        obj[key] = JSON.parse(value);
+      }
+      items.push(obj);
+    } catch {
+      // skip corrupted entries
+    }
+  }
+  return items;
+}
+
+/**
+ * Reads v2 member commitments from the Y.Array, deduplicating by string value.
+ * Returns null if the array is empty (fall back to legacy).
+ */
+function readMemberCommitmentsV2(doc: Y.Doc): string[] | null {
+  const arr = doc.getArray<string>(MEMBER_COMMITMENTS_V2_ARRAY_KEY);
+  if (arr.length === 0) return null;
+
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const commitment of arr.toArray()) {
+    if (!seen.has(commitment)) {
+      seen.add(commitment);
+      deduped.push(commitment);
+    }
+  }
+  return deduped;
+}
+
+/**
+ * Reads a legacy JSON array from the root map.
+ */
+function readLegacyArray(root: Y.Map<string>, key: string): unknown[] {
+  const raw = root.get(key);
+  return raw ? JSON.parse(raw) : [];
+}
+
+/**
+ * Reads the greenGoods state, preferring v2 scalar for the top-level object
+ * and v2 keyed collection for memberBindings.
+ */
+function readGreenGoodsV2(doc: Y.Doc, root: Y.Map<string>): unknown {
+  const v2Scalar = readScalarV2(doc, 'greenGoods');
+  const v2Bindings = readKeyedCollectionV2(doc, GG_BINDINGS_V2_MAP_KEY);
+
+  if (v2Scalar !== undefined) {
+    // v2 scalar greenGoods available -- merge with v2 bindings if present
+    const gg = { ...v2Scalar };
+    if (v2Bindings !== null) {
+      gg.memberBindings = v2Bindings;
+    }
+    return gg;
+  }
+
+  // Fall back to legacy root JSON
+  const raw = root.get('greenGoods');
+  return raw ? JSON.parse(raw) : undefined;
 }
 
 /**
