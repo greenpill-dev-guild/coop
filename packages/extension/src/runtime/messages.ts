@@ -70,6 +70,25 @@ export interface RuntimeSummary {
   localInferenceOptIn: boolean;
   activeCoopId?: string;
   pendingOutboxCount: number;
+  sync?: {
+    runtime: CoopSyncRuntime;
+    label: string;
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+  };
+}
+
+export interface CoopSyncRuntime {
+  mode: 'inactive' | 'local-only' | 'websocket-only' | 'webrtc' | 'mixed';
+  peerCount: number;
+  broadcastPeerCount: number;
+  signalingConnectionCount: number;
+  configuredSignalingCount: number;
+  websocketConnected: boolean;
+  lastRemoteUpdateAt?: string;
+  lastPersistAt?: string;
+  lastError?: string;
+  active: boolean;
 }
 
 export interface PopupSidepanelState {
@@ -94,6 +113,14 @@ export interface PopupSnapshot {
   lastCaptureAt?: string;
   recentDraftTitles: string[];
   cachedAt: string;
+  sync?: {
+    label: string;
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+    peerCount: number;
+    websocketConnected: boolean;
+    mode: CoopSyncRuntime['mode'];
+  };
 }
 
 export interface CoopBadgeSummary {

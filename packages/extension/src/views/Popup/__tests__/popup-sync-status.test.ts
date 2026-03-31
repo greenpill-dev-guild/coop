@@ -106,6 +106,110 @@ describe('popupSyncStatus', () => {
   });
 });
 
+describe('popupSyncStatus structured sync path', () => {
+  it('prefers structured sync over string-based status when sync object is present', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Peer-ready local-first sync.',
+        sync: {
+          label: 'Connected',
+          detail: 'Live sync with 2 peers.',
+          tone: 'ok',
+          peerCount: 2,
+          websocketConnected: false,
+          mode: 'webrtc',
+        },
+      }),
+    ).toEqual({
+      label: 'Connected',
+      detail: 'Live sync with 2 peers.',
+      tone: 'ok',
+    });
+  });
+
+  it('maps Bridge label to Connected in UI display', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Peer-ready local-first sync.',
+        sync: {
+          label: 'Bridge',
+          detail: 'WebSocket sync connected. No direct peers.',
+          tone: 'ok',
+          peerCount: 0,
+          websocketConnected: true,
+          mode: 'websocket-only',
+        },
+      }),
+    ).toEqual({
+      label: 'Connected',
+      detail: 'WebSocket sync connected. No direct peers.',
+      tone: 'ok',
+    });
+  });
+
+  it('falls back to string-based logic when sync is undefined', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Connected to 2 peers.',
+      }),
+    ).toEqual({
+      label: 'Live',
+      detail: 'Connected to 2 peers.',
+      tone: 'ok',
+    });
+  });
+
+  it('surfaces structured sync error state', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Peer-ready local-first sync.',
+        sync: {
+          label: 'Error',
+          detail: 'WebRTC signaling handshake failed',
+          tone: 'error',
+          peerCount: 0,
+          websocketConnected: false,
+          mode: 'local-only',
+        },
+      }),
+    ).toEqual({
+      label: 'Error',
+      detail: 'WebRTC signaling handshake failed',
+      tone: 'error',
+    });
+  });
+
+  it('shows Local label for inactive structured sync', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Peer-ready local-first sync.',
+        sync: {
+          label: 'Local',
+          detail: 'Sync not active.',
+          tone: 'warning',
+          peerCount: 0,
+          websocketConnected: false,
+          mode: 'inactive',
+        },
+      }),
+    ).toEqual({
+      label: 'Local',
+      detail: 'Sync not active.',
+      tone: 'warning',
+    });
+  });
+});
+
 describe('popupReviewStatus', () => {
   it('counts only review-queue items and appends pending action context separately', () => {
     expect(

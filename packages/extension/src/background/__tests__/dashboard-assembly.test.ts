@@ -44,6 +44,7 @@ const sharedMocks = vi.hoisted(() => ({
 }));
 
 const contextMocks = vi.hoisted(() => ({
+  getCoopSyncRuntime: vi.fn(),
   getCoops: vi.fn(),
   getLocalSetting: vi.fn(),
   getRuntimeHealth: vi.fn(),
@@ -132,6 +133,7 @@ vi.mock('../context', () => ({
       })),
     },
   },
+  getCoopSyncRuntime: contextMocks.getCoopSyncRuntime,
   getCoops: contextMocks.getCoops,
   getLocalSetting: contextMocks.getLocalSetting,
   getRuntimeHealth: contextMocks.getRuntimeHealth,
@@ -139,6 +141,7 @@ vi.mock('../context', () => ({
   localEnhancementAvailability: contextMocks.localEnhancementAvailability,
   stateKeys: {
     captureMode: 'capture-mode',
+    coopSyncRuntime: 'coop-sync-runtime',
   },
 }));
 
@@ -163,9 +166,8 @@ vi.mock('../../runtime/messages', async (importOriginal) => {
   };
 });
 
-const { buildProactiveSignals, buildSummary, getDashboard, refreshBadge } = await import(
-  '../dashboard'
-);
+const { buildProactiveSignals, buildSummary, getDashboard, refreshBadge, summarizeSyncStatus } =
+  await import('../dashboard');
 
 function makeDraft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
   return {
@@ -289,6 +291,7 @@ describe('dashboard assembly', () => {
       }),
     ];
 
+    contextMocks.getCoopSyncRuntime.mockResolvedValue({});
     contextMocks.getCoops.mockResolvedValue([coopOne, coopTwo]);
     contextMocks.getLocalSetting.mockImplementation(
       async (_key: string, fallback: unknown) => fallback,
@@ -504,6 +507,179 @@ describe('dashboard assembly', () => {
     expect(dashboard.receiverIntake).toHaveLength(2);
     expect(dashboard.tabRoutings).toHaveLength(3);
     expect(dashboard.proactiveSignals).toHaveLength(1);
+  });
+
+  it('does not let capture errors affect sync status when syncError is false', async () => {
+    contextMocks.getRuntimeHealth.mockResolvedValue({
+      offline: false,
+      missingPermission: false,
+      syncError: false,
+      lastCaptureError: 'Tab capture failed: no active tab',
+    });
+
+    const result = await buildSummary();
+
+    expect(result.summary.syncLabel).toBe('Healthy');
+    expect(result.summary.syncTone).toBe('ok');
+  });
+
+  describe('summarizeSyncStatus structured sync labels', () => {
+    it('returns label Local when coop sync mode is inactive', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'inactive',
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 0,
+          configuredSignalingCount: 1,
+          websocketConnected: false,
+          active: false,
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Local');
+      expect(result.structuredSync!.tone).toBe('warning');
+    });
+
+    it('returns label Bridge when coop sync mode is websocket-only', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'websocket-only',
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 1,
+          configuredSignalingCount: 1,
+          websocketConnected: true,
+          active: true,
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Bridge');
+      expect(result.structuredSync!.tone).toBe('ok');
+    });
+
+    it('returns label Connected when coop sync mode is webrtc with peers', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'webrtc',
+          peerCount: 2,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 1,
+          configuredSignalingCount: 1,
+          websocketConnected: false,
+          active: true,
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Connected');
+      expect(result.structuredSync!.detail).toContain('2 peer');
+    });
+
+    it('returns label Syncing when outbox has pending changes', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 3,
+        coopSyncRuntime: {
+          mode: 'webrtc',
+          peerCount: 1,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 1,
+          configuredSignalingCount: 1,
+          websocketConnected: false,
+          active: true,
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Syncing');
+      expect(result.structuredSync!.detail).toContain('3 changes');
+    });
+
+    it('returns label Offline when browser is offline', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: true, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'webrtc',
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 0,
+          configuredSignalingCount: 1,
+          websocketConnected: false,
+          active: true,
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Offline');
+      expect(result.structuredSync!.tone).toBe('warning');
+    });
+
+    it('returns label Error when coop sync runtime has lastError', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'local-only',
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 0,
+          configuredSignalingCount: 1,
+          websocketConnected: false,
+          active: true,
+          lastError: 'WebRTC signaling handshake failed',
+        },
+      });
+
+      expect(result.structuredSync).toBeDefined();
+      expect(result.structuredSync!.label).toBe('Error');
+      expect(result.structuredSync!.detail).toBe('WebRTC signaling handshake failed');
+      expect(result.structuredSync!.tone).toBe('error');
+    });
+
+    it('returns undefined structured sync when no coop sync runtime is provided', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+      });
+
+      expect(result.structuredSync).toBeUndefined();
+    });
+
+    it('returns undefined structured sync when coopCount is zero', () => {
+      const result = summarizeSyncStatus({
+        coopCount: 0,
+        runtimeHealth: { offline: false, missingPermission: false, syncError: false },
+        pendingOutboxCount: 0,
+        coopSyncRuntime: {
+          mode: 'inactive',
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          signalingConnectionCount: 0,
+          configuredSignalingCount: 0,
+          websocketConnected: false,
+          active: false,
+        },
+      });
+
+      expect(result.structuredSync).toBeUndefined();
+    });
   });
 
   it('deduplicates candidates by canonicalUrlHash, keeping only the most recent per URL', async () => {

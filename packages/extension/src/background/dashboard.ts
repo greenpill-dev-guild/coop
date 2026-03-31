@@ -36,6 +36,7 @@ import {
 import { isTrustedNodeRole } from '../runtime/agent-harness';
 import {
   type CoopBadgeSummary,
+  type CoopSyncRuntime,
   type DashboardResponse,
   POPUP_SNAPSHOT_KEY,
   type PopupSnapshot,
@@ -56,6 +57,7 @@ import {
   configuredSignalingUrls,
   configuredWebsocketSyncUrl,
   db,
+  getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getRuntimeHealth,
@@ -144,12 +146,104 @@ export function extensionIconPaths(state: RuntimeSummary['iconState']) {
   }
 }
 
+function deriveStructuredSync(input: {
+  runtimeHealth: Awaited<ReturnType<typeof getRuntimeHealth>>;
+  coopSyncRuntime?: CoopSyncRuntime;
+  pendingOutboxCount: number;
+  coopCount: number;
+}): RuntimeSummary['sync'] | undefined {
+  const { runtimeHealth, coopSyncRuntime, pendingOutboxCount, coopCount } = input;
+
+  if (coopCount === 0 || !coopSyncRuntime) return undefined;
+
+  if (runtimeHealth.offline) {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Offline',
+      detail: 'Browser is offline. Changes save locally.',
+      tone: 'warning',
+    };
+  }
+
+  if (coopSyncRuntime.lastError) {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Error',
+      detail: coopSyncRuntime.lastError,
+      tone: 'error',
+    };
+  }
+
+  if (pendingOutboxCount > 0) {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Syncing',
+      detail: `${pendingOutboxCount} change${pendingOutboxCount === 1 ? '' : 's'} pending.`,
+      tone: 'ok',
+    };
+  }
+
+  if (!coopSyncRuntime.active || coopSyncRuntime.mode === 'inactive') {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Local',
+      detail: 'Sync not active.',
+      tone: 'warning',
+    };
+  }
+
+  if (coopSyncRuntime.mode === 'local-only') {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Local',
+      detail: 'No remote connection. Working locally.',
+      tone: 'warning',
+    };
+  }
+
+  if (coopSyncRuntime.mode === 'websocket-only') {
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Bridge',
+      detail: 'WebSocket sync connected. No direct peers.',
+      tone: 'ok',
+    };
+  }
+
+  if (coopSyncRuntime.mode === 'webrtc' || coopSyncRuntime.mode === 'mixed') {
+    const total = coopSyncRuntime.peerCount + coopSyncRuntime.broadcastPeerCount;
+    return {
+      runtime: coopSyncRuntime,
+      label: 'Connected',
+      detail: `Live sync with ${total} peer${total === 1 ? '' : 's'}.`,
+      tone: 'ok',
+    };
+  }
+
+  return {
+    runtime: coopSyncRuntime,
+    label: 'Local',
+    detail: 'Checking sync status.',
+    tone: 'ok',
+  };
+}
+
 export function summarizeSyncStatus(input: {
   coopCount: number;
   runtimeHealth: Awaited<ReturnType<typeof getRuntimeHealth>>;
   pendingOutboxCount?: number;
-}): Pick<RuntimeSummary, 'syncState' | 'syncLabel' | 'syncDetail' | 'syncTone'> {
-  const { coopCount, runtimeHealth, pendingOutboxCount = 0 } = input;
+  coopSyncRuntime?: CoopSyncRuntime;
+}): Pick<RuntimeSummary, 'syncState' | 'syncLabel' | 'syncDetail' | 'syncTone'> & {
+  structuredSync?: RuntimeSummary['sync'];
+} {
+  const { coopCount, runtimeHealth, pendingOutboxCount = 0, coopSyncRuntime } = input;
+
+  const structuredSync = deriveStructuredSync({
+    runtimeHealth,
+    coopSyncRuntime,
+    pendingOutboxCount,
+    coopCount,
+  });
 
   if (runtimeHealth.missingPermission) {
     return {
@@ -158,6 +252,7 @@ export function summarizeSyncStatus(input: {
       syncDetail:
         'Required extension permissions are missing. Check Coop site access and extension permissions.',
       syncTone: 'error',
+      structuredSync,
     };
   }
 
@@ -167,6 +262,7 @@ export function summarizeSyncStatus(input: {
       syncLabel: 'No coop',
       syncDetail: 'Create or join a coop to enable shared sync.',
       syncTone: 'warning',
+      structuredSync,
     };
   }
 
@@ -176,16 +272,15 @@ export function summarizeSyncStatus(input: {
       syncLabel: 'Offline',
       syncDetail: 'Browser is offline. Shared sync will resume when the connection returns.',
       syncTone: 'warning',
+      structuredSync,
     };
   }
 
   const syncDetail =
-    runtimeHealth.lastSyncError ??
-    runtimeHealth.lastCaptureError ??
-    'Runtime needs attention. Shared sync may be degraded.';
+    runtimeHealth.lastSyncError ?? 'Runtime needs attention. Shared sync may be degraded.';
   const normalizedDetail = syncDetail.toLowerCase();
 
-  if (runtimeHealth.syncError || runtimeHealth.lastCaptureError) {
+  if (runtimeHealth.syncError) {
     if (
       normalizedDetail.includes('no signaling server connection') ||
       normalizedDetail.includes('limited to this browser profile')
@@ -195,6 +290,7 @@ export function summarizeSyncStatus(input: {
         syncLabel: 'Local',
         syncDetail,
         syncTone: 'warning',
+        structuredSync,
       };
     }
 
@@ -204,6 +300,7 @@ export function summarizeSyncStatus(input: {
         syncLabel: 'Permission',
         syncDetail,
         syncTone: 'error',
+        structuredSync,
       };
     }
 
@@ -212,6 +309,7 @@ export function summarizeSyncStatus(input: {
       syncLabel: 'Needs attention',
       syncDetail,
       syncTone: 'error',
+      structuredSync,
     };
   }
 
@@ -222,6 +320,7 @@ export function summarizeSyncStatus(input: {
       syncLabel: 'Syncing',
       syncDetail: `${pendingOutboxCount} ${noun} pending sync.`,
       syncTone: 'ok',
+      structuredSync,
     };
   }
 
@@ -230,6 +329,7 @@ export function summarizeSyncStatus(input: {
     syncLabel: 'Healthy',
     syncDetail: 'Peer-ready local-first sync.',
     syncTone: 'ok',
+    structuredSync,
   };
 }
 
@@ -529,10 +629,15 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     blocked: runtimeHealth.missingPermission,
   });
   const outboxCount = await getPendingOutboxCount(db).catch(() => 0);
+  const coopSyncRuntimes = await getCoopSyncRuntime().catch(() => ({}));
+  const activeCoopRuntime = activeContext.activeCoopId
+    ? coopSyncRuntimes[activeContext.activeCoopId]
+    : undefined;
   const syncSummary = summarizeSyncStatus({
     coopCount: coops.length,
     runtimeHealth,
     pendingOutboxCount: outboxCount,
+    coopSyncRuntime: activeCoopRuntime,
   });
 
   const summary: RuntimeSummary = {
@@ -559,6 +664,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     localInferenceOptIn: prefs.localInferenceOptIn,
     activeCoopId: activeContext.activeCoopId,
     pendingOutboxCount: outboxCount,
+    sync: syncSummary.structuredSync,
   };
   return { summary, drafts };
 }
@@ -588,6 +694,16 @@ export async function writePopupSnapshot(
     lastCaptureAt: summary.lastCaptureAt,
     recentDraftTitles,
     cachedAt: new Date().toISOString(),
+    sync: summary.sync
+      ? {
+          label: summary.sync.label,
+          detail: summary.sync.detail,
+          tone: summary.sync.tone,
+          peerCount: summary.sync.runtime.peerCount,
+          websocketConnected: summary.sync.runtime.websocketConnected,
+          mode: summary.sync.runtime.mode,
+        }
+      : undefined,
   };
 
   await chrome.storage.local.set({ [POPUP_SNAPSHOT_KEY]: snapshot }).catch(() => {});
