@@ -1182,6 +1182,12 @@ export function App({
                         <h3>{card.title}</h3>
                         <p>{card.detail}</p>
                       </div>
+                      <div className="how-works-thought-bubble" aria-hidden="true">
+                        <div className="thought-bubble-inner">
+                          <span className="thought-bubble-emoji">🐔</span>
+                        </div>
+                        <div className="thought-bubble-pointer" />
+                      </div>
                     </article>
                   ))}
                 </div>

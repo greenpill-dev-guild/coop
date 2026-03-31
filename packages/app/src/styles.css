@@ -885,6 +885,49 @@ pre {
   font-weight: 500;
 }
 
+/* How Works Card Thought Bubbles */
+
+.how-works-thought-bubble {
+  position: absolute;
+  top: -1.2rem;
+  right: -0.8rem;
+  opacity: 0;
+  transform: scale(0.7) translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 10;
+}
+
+.how-works-card:hover .how-works-thought-bubble {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.thought-bubble-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.96), rgba(248, 240, 220, 0.94));
+  border: 1.5px solid rgba(79, 46, 31, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.1);
+  font-size: 1.2rem;
+}
+
+.thought-bubble-pointer {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 0.4rem solid transparent;
+  border-right: 0rem solid transparent;
+  border-top: 0.5rem solid rgba(248, 240, 220, 0.94);
+  bottom: -0.35rem;
+  right: 0.4rem;
+  z-index: -1;
+}
+
 .ritual-section {
   position: relative;
   z-index: 2;
