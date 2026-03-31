@@ -87,6 +87,13 @@ describe('useCoopActions', () => {
         }),
       }),
     );
+    expect(sendRuntimeMessageMock.mock.calls[2]?.[0]).not.toMatchObject({
+      payload: {
+        greenGoods: {
+          enabled: true,
+        },
+      },
+    });
     expect(playCoopSoundMock).toHaveBeenCalledWith('coop-created', {
       enabled: true,
       reducedMotion: false,

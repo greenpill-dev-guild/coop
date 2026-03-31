@@ -82,6 +82,8 @@ export function buildRedactedPageExtract(extract: ReadablePageExtract): Readable
     topHeadings: [],
     leadParagraphs: [],
     salientTextBlocks: [],
+    faviconUrl: undefined,
+    socialPreviewImageUrl: undefined,
     previewImageUrl: undefined,
   });
 }

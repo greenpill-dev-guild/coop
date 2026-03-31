@@ -120,9 +120,13 @@ export function useCoopForm(deps: {
           signalingUrls: configuredSignalingUrls,
           creator,
           onchainState,
-          greenGoods: {
-            enabled: createForm.createGreenGoodsGarden,
-          },
+          ...(createForm.createGreenGoodsGarden
+            ? {
+                greenGoods: {
+                  enabled: true,
+                },
+              }
+            : {}),
         },
       });
       if (!response.ok) {

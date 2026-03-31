@@ -173,6 +173,7 @@ export async function runCaptureForTabs(
         metaDescription: snapshot.metaDescription,
         headings: snapshot.headings,
         paragraphs: snapshot.paragraphs,
+        socialPreviewImageUrl: snapshot.socialPreviewImageUrl,
         previewImageUrl: snapshot.previewImageUrl,
       });
 

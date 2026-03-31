@@ -110,9 +110,13 @@ export function useCoopActions(deps: {
           signalingUrls: configuredSignalingUrls,
           creator,
           onchainState,
-          greenGoods: {
-            enabled: true,
-          },
+          ...(createForm.createGreenGoodsGarden
+            ? {
+                greenGoods: {
+                  enabled: true,
+                },
+              }
+            : {}),
         },
       });
       if (!response.ok) {

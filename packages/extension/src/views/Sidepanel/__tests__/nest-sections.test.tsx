@@ -8,6 +8,7 @@ import type {
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../../shared/coop-copy';
 import type { SidepanelOrchestration } from '../hooks/useSidepanelOrchestration';
 import type { NestArchiveSectionProps } from '../tabs/NestArchiveSection';
 import { NestArchiveSection } from '../tabs/NestArchiveSection';
@@ -1055,6 +1056,8 @@ describe('NestTab', () => {
     render(<NestTab {...baseOrchestration({ activeCoop: undefined })} />);
 
     expect(screen.getByText(/start a coop/i)).toBeInTheDocument();
+    expect(screen.getAllByText(passkeyTrustExplainer).length).toBeGreaterThan(0);
+    expect(screen.getByText(greenGoodsConnectLaterCopy)).toBeInTheDocument();
   });
 
   describe('subheader actions', () => {

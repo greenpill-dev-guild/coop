@@ -911,6 +911,15 @@ describe('Sidepanel action persistence integration', () => {
     await user.type(screen.getByLabelText('Creator name'), 'Mina');
     await user.click(screen.getByRole('button', { name: 'Create coop' }));
 
+    expect(runtimeSendMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'create-coop',
+        payload: expect.not.objectContaining({
+          greenGoods: expect.anything(),
+        }),
+      }),
+    );
+
     await waitFor(() => {
       expect(screen.getByTestId('coop-count')).toHaveTextContent('3');
       expect(screen.getByTestId('active-coop')).toHaveTextContent('River Coop');
