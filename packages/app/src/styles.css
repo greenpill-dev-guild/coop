@@ -561,14 +561,14 @@ pre {
 }
 
 .how-works-shell {
-  width: min(100% - 2rem, 90vw, 52rem);
+  width: min(100% - 2rem, 45vw, 44rem);
   display: grid;
-  gap: 2rem;
-  margin: 0 auto 0 0;
+  gap: 1.5rem;
+  margin: 0;
   background: linear-gradient(145deg, rgba(255, 252, 246, 0.97), rgba(255, 248, 238, 0.95));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 2.5rem 3rem;
+  padding: 2rem 2.2rem;
   border-radius: var(--coop-radius-card-xl);
   border: 1px solid rgba(79, 46, 31, 0.12);
   box-shadow: 0 20px 48px rgba(79, 46, 31, 0.12);
@@ -577,33 +577,33 @@ pre {
 .how-works-heading {
   max-width: 100%;
   text-align: left;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.3rem 0;
 }
 
 .how-works-heading h2 {
-  margin: 0 0 0.6rem 0;
-  font-size: clamp(1.8rem, 5vw, 2.2rem);
+  margin: 0 0 0.4rem 0;
+  font-size: clamp(1.6rem, 4.5vw, 2rem);
 }
 
 .how-works-heading .lede {
-  font-size: clamp(0.95rem, 2vw, 1.05rem);
-  line-height: 1.6;
+  font-size: clamp(0.9rem, 1.8vw, 0.95rem);
+  line-height: 1.5;
 }
 
 .how-works-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1.1rem;
 }
 
 .how-works-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 1.2rem;
+  gap: 0.9rem;
   align-items: start;
   position: relative;
-  padding: 1.2rem;
-  border-radius: 0.8rem;
+  padding: 0.95rem;
+  border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   transition: all 0.3s ease;
@@ -625,16 +625,16 @@ pre {
 
 .how-works-card h3 {
   margin: 0;
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  line-height: 1.3;
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+  line-height: 1.25;
   font-weight: 700;
   color: var(--coop-brown);
 }
 
 .how-works-card p {
-  margin: 0.5rem 0 0;
-  font-size: clamp(0.9rem, 1.5vw, 0.95rem);
-  line-height: 1.5;
+  margin: 0.3rem 0 0;
+  font-size: clamp(0.82rem, 1.3vw, 0.88rem);
+  line-height: 1.4;
   color: rgba(79, 46, 31, 0.8);
 }
 
@@ -642,10 +642,10 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.8rem;
-  height: 2.8rem;
-  min-width: 2.8rem;
-  border-radius: 0.9rem;
+  width: 2.3rem;
+  height: 2.3rem;
+  min-width: 2.3rem;
+  border-radius: 0.7rem;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--coop-green-12) 85%, white),
@@ -653,8 +653,8 @@ pre {
   );
   color: var(--coop-green);
   font-weight: 700;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 12px rgba(90, 125, 16, 0.12);
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(90, 125, 16, 0.1);
   border: 1px solid rgba(90, 125, 16, 0.08);
 }
 
@@ -3145,14 +3145,14 @@ pre {
 
   .how-works-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    gap: 1.1rem;
   }
 
   .how-works-shell {
-    width: min(100% - 1.5rem, 85vw);
+    width: min(100% - 1.5rem, 50vw, 42rem);
     margin-left: 0;
-    padding: 2rem 2rem;
-    gap: 1.5rem;
+    padding: 1.8rem 2rem;
+    gap: 1.2rem;
   }
 
   .how-works-card {

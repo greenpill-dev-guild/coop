@@ -947,9 +947,11 @@ export function App({
       >
         <div className="flashcard-stage-header">
           <div className="flashcard-front-meta">
-            <span className="flashcard-number">Lens {openCardIndex + 1}</span>
+            <span className="flashcard-number">
+              {t('ritual.lens')} {openCardIndex + 1}
+            </span>
             <span className={`flashcard-status-pill is-${openCardProgress.status}`}>
-              {statusLabel(openCardProgress.status)}
+              {statusLabel(openCardProgress.status, t)}
             </span>
           </div>
           <button
@@ -957,7 +959,7 @@ export function App({
             onClick={closeOpenCard}
             ref={setFlashcardCloseRef(openCardLens.id)}
             type="button"
-            aria-label="Close card"
+            aria-label={t('ritual.closeCardLabel')}
           >
             {'\u00D7'}
           </button>
@@ -982,7 +984,9 @@ export function App({
             type="button"
           >
             <span className="record-dot" aria-hidden="true" />
-            {recordingLens === openCardLens.id ? 'Stop recording' : 'Record'}
+            {recordingLens === openCardLens.id
+              ? t('ritual.stopRecordButton')
+              : t('ritual.recordButton')}
           </button>
 
           <button
@@ -997,12 +1001,12 @@ export function App({
                   );
                 }
               } catch {
-                setTranscriptStatus('Clipboard access unavailable. Use Cmd+V to paste.');
+                setTranscriptStatus(t('ritual.notesPlaceholder'));
               }
             }}
             type="button"
           >
-            Paste
+            {t('ritual.pasteButton')}
           </button>
         </div>
 
@@ -1013,11 +1017,13 @@ export function App({
         ) : null}
 
         <label className="ritual-field flashcard-notes-field">
-          <span className="sr-only">{openCardLens.title} notes</span>
+          <span className="sr-only">
+            {openCardLens.title} {t('ritual.notesSrLabel')}
+          </span>
           <textarea
-            aria-label={`${openCardLens.title} notes`}
+            aria-label={`${openCardLens.title} ${t('ritual.notesSrLabel')}`}
             onChange={(event) => updateTranscript(openCardLens.id, event.target.value)}
-            placeholder="Paste notes or let live transcript fill this in."
+            placeholder={t('ritual.notesPlaceholder')}
             ref={setFlashcardNotesRef(openCardLens.id)}
             value={transcripts[openCardLens.id]}
           />
@@ -1025,9 +1031,7 @@ export function App({
 
         <div className="flashcard-stage-footer">
           <p className="flashcard-stage-footnote">
-            {isDone
-              ? 'This lens is already ready to carry into the packet.'
-              : 'Capture the signal, then mark this card complete.'}
+            {isDone ? t('ritual.readyMessage') : t('ritual.captureMessage')}
           </p>
           <button
             className={isDone ? 'flashcard-complete-btn is-done' : 'flashcard-complete-btn'}
@@ -1050,7 +1054,7 @@ export function App({
             }}
             type="button"
           >
-            {isDone ? '\u2713 Complete' : 'Mark complete'}
+            {isDone ? t('ritual.completeButton') : t('ritual.markCompleteButton')}
           </button>
         </div>
       </dialog>
@@ -1065,7 +1069,7 @@ export function App({
 
       <header className="landing-topbar">
         <div className="topbar">
-          <a aria-label="Coop landing page" className="hero-logo" href="#meadow">
+          <a aria-label={t('hero.logoLabel')} className="hero-logo" href="#meadow">
             <img className="wordmark" src="/branding/coop-wordmark-flat.png" alt="Coop" />
           </a>
         </div>
@@ -1148,7 +1152,7 @@ export function App({
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                     role="img"
-                    aria-label="Scroll down"
+                    aria-label={t('hero.scrollHint')}
                   >
                     <path
                       d="M12 5v14M5 12l7 7 7-7"
@@ -1166,11 +1170,8 @@ export function App({
             <article className="journey-panel works-panel" id="how-it-works">
               <div className="how-works-shell" ref={howItWorksRef}>
                 <div className="section-heading how-works-heading">
-                  <h2>How Coop works</h2>
-                  <p className="lede">
-                    Coop takes your scattered tabs, meeting notes, and field signals — refines them
-                    locally into clear opportunities.
-                  </p>
+                  <h2>{t('how_works.heading')}</h2>
+                  <p className="lede">{t('how_works.description')}</p>
                 </div>
 
                 <div className="how-works-grid">
@@ -1199,10 +1200,8 @@ export function App({
 
         <section className="section ritual-section" id="ritual" ref={ritualSectionRef}>
           <div className="section-heading ritual-section-heading">
-            <h2>Curate your coop</h2>
-            <p className="lede ritual-section-copy">
-              Open each card, capture what matters, and walk away with a clean setup packet.
-            </p>
+            <h2>{t('ritual.heading')}</h2>
+            <p className="lede ritual-section-copy">{t('ritual.description')}</p>
           </div>
 
           <div className="ritual-game-shell nest-card" data-audience={audience}>
@@ -1221,13 +1220,13 @@ export function App({
                       title={option.tone}
                       type="button"
                     >
-                      {option.label}
+                      {t(`audience.${option.id}`)}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <span className="ritual-local-badge" aria-label="All data stays on this device">
+              <span className="ritual-local-badge" aria-label={t('ritual.localBadgeLabel')}>
                 <svg
                   aria-hidden="true"
                   className="ritual-local-icon"
@@ -1240,7 +1239,7 @@ export function App({
                     fill="currentColor"
                   />
                 </svg>
-                All data stays on this device
+                {t('ritual.localBadgeLabel')}
               </span>
 
               <button
@@ -1248,7 +1247,7 @@ export function App({
                 onClick={resetRitual}
                 type="button"
               >
-                Reset ritual
+                {t('ritual.resetButton')}
               </button>
             </div>
 
@@ -1256,7 +1255,7 @@ export function App({
               <div className={`flashcard-focus-shell${openCardLens ? ' is-active' : ''}`}>
                 {openCardLens ? (
                   <button
-                    aria-label="Close card backdrop"
+                    aria-label={t('ritual.closeCardBackdrop')}
                     className="flashcard-focus-backdrop"
                     onClick={closeOpenCard}
                     type="button"
@@ -1296,9 +1295,11 @@ export function App({
                       >
                         <div className="flashcard-front-top">
                           <div className="flashcard-front-meta">
-                            <span className="flashcard-number">Lens {index + 1}</span>
+                            <span className="flashcard-number">
+                              {t('ritual.lens')} {index + 1}
+                            </span>
                             <span className={`flashcard-status-pill is-${progress.status}`}>
-                              {statusLabel(progress.status)}
+                              {statusLabel(progress.status, t)}
                             </span>
                           </div>
                           <h3>{lens.title}</h3>
@@ -1307,7 +1308,10 @@ export function App({
 
                         <div className="flashcard-front-bottom">
                           {isDone ? (
-                            <span className="flashcard-check" aria-label="Complete">
+                            <span
+                              className="flashcard-check"
+                              aria-label={t('ritual.completeCheckmark')}
+                            >
                               &#10003;
                             </span>
                           ) : null}
@@ -1322,38 +1326,36 @@ export function App({
             {allLensesReady ? (
               <div className="ritual-synthesis">
                 <div className="section-heading">
-                  <h3>Your setup packet is ready</h3>
-                  <p className="lede">
-                    All four lenses are captured. Name your coop and take the packet with you.
-                  </p>
+                  <h3>{t('ritual.setupPacketReady')}</h3>
+                  <p className="lede">{t('ritual.setupPacketReadyDesc')}</p>
                 </div>
 
                 <div className="ritual-setup-grid">
                   <label className="ritual-field">
-                    <span>Coop name</span>
+                    <span>{t('ritual.coopNameLabel')}</span>
                     <input
                       onChange={(event) => updateField('coopName', event.target.value)}
-                      placeholder="Pocket Coop"
+                      placeholder={t('ritual.coopNamePlaceholder')}
                       type="text"
                       value={setupInput.coopName}
                     />
                   </label>
 
                   <label className="ritual-field">
-                    <span>What opportunity are you organizing around?</span>
+                    <span>{t('ritual.purposeLabel')}</span>
                     <textarea
                       onChange={(event) => updateField('purpose', event.target.value)}
-                      placeholder="Turn scattered knowledge into clearer coordination for the group."
+                      placeholder={t('ritual.purposePlaceholder')}
                       value={setupInput.purpose}
                     />
                   </label>
                 </div>
 
                 <label className="ritual-field">
-                  <span>Shared notes</span>
+                  <span>{t('ritual.sharedNotesLabel')}</span>
                   <textarea
                     onChange={(event) => setSharedNotes(event.target.value)}
-                    placeholder="Paste meeting notes or additional context here."
+                    placeholder={t('ritual.sharedNotesPlaceholder')}
                     value={sharedNotes}
                   />
                 </label>
@@ -1361,8 +1363,8 @@ export function App({
                 <div className="prompt-shell ritual-packet-shell">
                   <div className="prompt-toolbar">
                     <div>
-                      <strong>Setup packet</strong>
-                      <div>All four cards are shaped and ready to hand off.</div>
+                      <strong>{t('ritual.setupPacketLabel')}</strong>
+                      <div>{t('ritual.setupPacketDesc')}</div>
                     </div>
                     <div className="cta-row packet-actions">
                       <button
@@ -1375,17 +1377,17 @@ export function App({
                         type="button"
                       >
                         {copyState === 'copied'
-                          ? 'Copied'
+                          ? t('ritual.copiedButton')
                           : copyState === 'failed'
-                            ? 'Clipboard unavailable'
-                            : 'Copy packet'}
+                            ? t('ritual.clipboardUnavailableButton')
+                            : t('ritual.copyPacketButton')}
                       </button>
                       <button
                         className="button button-secondary button-small"
                         onClick={downloadSetupNotes}
                         type="button"
                       >
-                        Download
+                        {t('ritual.downloadButton')}
                       </button>
                     </div>
                   </div>
@@ -1395,8 +1397,8 @@ export function App({
             ) : (
               <p className="ritual-progress-hint">
                 {completedLensCount > 0
-                  ? `${completedLensCount} of 4 lenses complete. Open the next card when you are ready.`
-                  : 'Open a card to start capturing.'}
+                  ? `${completedLensCount} ${t('ritual.progressPartial')}`
+                  : t('ritual.progressStart')}
               </p>
             )}
           </div>
@@ -1473,7 +1475,7 @@ export function App({
                 </p>
               </div>
 
-              <div className="why-build-scene-team" aria-label="Built by the Coop team">
+              <div className="why-build-scene-team" aria-label={t('why_build.builtByTeam')}>
                 <span className="scene-team-label">Built by the Coop team</span>
                 <div className="scene-team-member scene-team-left">
                   <span className="team-avatar">{initialsForName(teamMembers[0])}</span>

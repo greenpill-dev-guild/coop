@@ -3,7 +3,9 @@
     "hero": {
       "title1": "No more",
       "title2": "chickens loose.",
-      "subtitle": "Turning knowledge into opportunity."
+      "subtitle": "Turning knowledge into opportunity.",
+      "scrollHint": "Scroll down",
+      "logoLabel": "Coop landing page"
     },
     "how_works": {
       "heading": "How Coop works",
@@ -27,7 +29,42 @@
     },
     "ritual": {
       "heading": "Curate your coop",
-      "description": "Open each card, capture what matters, and walk away with a clean setup packet."
+      "description": "Open each card, capture what matters, and walk away with a clean setup packet.",
+      "localBadgeLabel": "All data stays on this device",
+      "resetButton": "Reset ritual",
+      "progressPartial": "of 4 lenses complete. Open the next card when you are ready.",
+      "progressStart": "Open a card to start capturing.",
+      "lens": "Lens",
+      "statusReady": "Ready",
+      "statusInProgress": "In progress",
+      "statusNotStarted": "Not started",
+      "recordButton": "Record",
+      "stopRecordButton": "Stop recording",
+      "pasteButton": "Paste",
+      "markCompleteButton": "Mark complete",
+      "completeButton": "✓ Complete",
+      "readyMessage": "This lens is already ready to carry into the packet.",
+      "captureMessage": "Capture the signal, then mark this card complete.",
+      "coopNameLabel": "Coop name",
+      "coopNamePlaceholder": "Pocket Coop",
+      "purposeLabel": "What opportunity are you organizing around?",
+      "purposePlaceholder": "Turn scattered knowledge into clearer coordination for the group.",
+      "sharedNotesLabel": "Shared notes",
+      "sharedNotesPlaceholder": "Paste meeting notes or additional context here.",
+      "setupPacketReady": "Your setup packet is ready",
+      "setupPacketReadyDesc": "All four lenses are captured. Name your coop and take the packet with you.",
+      "setupPacketLabel": "Setup packet",
+      "setupPacketDesc": "All four cards are shaped and ready to hand off.",
+      "copyPacketButton": "Copy packet",
+      "copiedButton": "Copied",
+      "clipboardUnavailableButton": "Clipboard unavailable",
+      "downloadButton": "Download",
+      "notesSrLabel": "notes",
+      "notesPlaceholder": "Paste notes or let live transcript fill this in.",
+      "closeCardLabel": "Close card",
+      "transcriptPlaceholder": "Use live transcript if this browser supports it, or type directly into the card. Everything stays saved on this device.",
+      "closeCardBackdrop": "Close card backdrop",
+      "completeCheckmark": "Complete"
     },
     "extension": {
       "heading": "Meet the extension",
@@ -38,14 +75,23 @@
     },
     "why_build": {
       "heading": "Why we build",
-      "description": "Scattered knowledge becomes shared action when the right group has a clear place to work from."
+      "description": "Scattered knowledge becomes shared action when the right group has a clear place to work from.",
+      "builtByTeam": "Built by the Coop team"
+    },
+    "audience": {
+      "persona": "Personal",
+      "family": "Family",
+      "friends": "Friends",
+      "community": "Community"
     }
   },
   "pt": {
     "hero": {
       "title1": "Sem mais",
       "title2": "galinhas soltas.",
-      "subtitle": "Transformando conhecimento em oportunidade."
+      "subtitle": "Transformando conhecimento em oportunidade.",
+      "scrollHint": "Rolar para baixo",
+      "logoLabel": "Página inicial do Coop"
     },
     "how_works": {
       "heading": "Como o Coop funciona",
@@ -69,7 +115,42 @@
     },
     "ritual": {
       "heading": "Organize seu coop",
-      "description": "Abra cada card, capture o que importa e saia com um pacote de configuração limpo."
+      "description": "Abra cada card, capture o que importa e saia com um pacote de configuração limpo.",
+      "localBadgeLabel": "Todos os dados permanecem neste dispositivo",
+      "resetButton": "Redefinir ritual",
+      "progressPartial": "de 4 lentes concluídas. Abra o próximo card quando estiver pronto.",
+      "progressStart": "Abra um card para começar a capturar.",
+      "lens": "Lente",
+      "statusReady": "Pronto",
+      "statusInProgress": "Em progresso",
+      "statusNotStarted": "Não iniciado",
+      "recordButton": "Gravar",
+      "stopRecordButton": "Parar de gravar",
+      "pasteButton": "Colar",
+      "markCompleteButton": "Marcar como concluído",
+      "completeButton": "✓ Concluído",
+      "readyMessage": "Esta lente já está pronta para ser incluída no pacote.",
+      "captureMessage": "Capture o sinal e marque este card como concluído.",
+      "coopNameLabel": "Nome do coop",
+      "coopNamePlaceholder": "Coop de Bolso",
+      "purposeLabel": "Qual oportunidade você está organizando?",
+      "purposePlaceholder": "Transformar conhecimento disperso em uma coordenação mais clara para o grupo.",
+      "sharedNotesLabel": "Notas compartilhadas",
+      "sharedNotesPlaceholder": "Cole notas de reunião ou contexto adicional aqui.",
+      "setupPacketReady": "Seu pacote de configuração está pronto",
+      "setupPacketReadyDesc": "Todas as quatro lentes foram capturadas. Nomeie seu coop e leve o pacote com você.",
+      "setupPacketLabel": "Pacote de configuração",
+      "setupPacketDesc": "Todos os quatro cards estão moldados e prontos para serem entregues.",
+      "copyPacketButton": "Copiar pacote",
+      "copiedButton": "Copiado",
+      "clipboardUnavailableButton": "Área de transferência indisponível",
+      "downloadButton": "Baixar",
+      "notesSrLabel": "notas",
+      "notesPlaceholder": "Cole notas ou deixe a transcrição ao vivo preencher isso.",
+      "closeCardLabel": "Fechar card",
+      "transcriptPlaceholder": "Use transcrição ao vivo se este navegador a suportá-la, ou digite diretamente no card. Tudo fica salvo neste dispositivo.",
+      "closeCardBackdrop": "Fechar plano de fundo do card",
+      "completeCheckmark": "Completo"
     },
     "extension": {
       "heading": "Conheça a extensão",
@@ -80,14 +161,22 @@
     },
     "why_build": {
       "heading": "Por que construímos",
-      "description": "Conhecimento disperso se torna ação compartilhada quando o grupo certo tem um lugar claro para trabalhar."
+      "description": "Conhecimento disperso se torna ação compartilhada quando o grupo certo tem um lugar claro para trabalhar.",
+      "builtByTeam": "Construído pelo time Coop"
+    },
+    "audience": {
+      "persona": "Pessoal",
+      "family": "Família",
+      "friends": "Amigos",
+      "community": "Comunidade"
     }
   },
   "es": {
     "hero": {
       "title1": "Sin más",
       "title2": "gallinas sueltas.",
-      "subtitle": "Transformando conocimiento en oportunidad."
+      "subtitle": "Transformando conocimiento en oportunidad.",
+      "scrollHint": "Desplazarse hacia abajo"
     },
     "how_works": {
       "heading": "Cómo funciona Coop",
@@ -111,7 +200,42 @@
     },
     "ritual": {
       "heading": "Organiza tu coop",
-      "description": "Abre cada tarjeta, captura lo que importa y sal con un paquete de configuración limpio."
+      "description": "Abre cada tarjeta, captura lo que importa y sal con un paquete de configuración limpio.",
+      "localBadgeLabel": "Todos los datos permanecen en este dispositivo",
+      "resetButton": "Reiniciar ritual",
+      "progressPartial": "de 4 lentes completadas. Abre la siguiente tarjeta cuando estés listo.",
+      "progressStart": "Abre una tarjeta para comenzar a capturar.",
+      "lens": "Lente",
+      "statusReady": "Listo",
+      "statusInProgress": "En progreso",
+      "statusNotStarted": "No iniciado",
+      "recordButton": "Grabar",
+      "stopRecordButton": "Dejar de grabar",
+      "pasteButton": "Pegar",
+      "markCompleteButton": "Marcar como completado",
+      "completeButton": "✓ Completado",
+      "readyMessage": "Esta lente ya está lista para ser incluida en el paquete.",
+      "captureMessage": "Captura la señal y marca esta tarjeta como completada.",
+      "coopNameLabel": "Nombre del coop",
+      "coopNamePlaceholder": "Coop de Bolsillo",
+      "purposeLabel": "¿Qué oportunidad estás organizando?",
+      "purposePlaceholder": "Transformar conocimiento disperso en una coordinación más clara para el grupo.",
+      "sharedNotesLabel": "Notas compartidas",
+      "sharedNotesPlaceholder": "Pega notas de reunión o contexto adicional aquí.",
+      "setupPacketReady": "Tu paquete de configuración está listo",
+      "setupPacketReadyDesc": "Se capturaron las cuatro lentes. Nombra tu coop y lleva el paquete contigo.",
+      "setupPacketLabel": "Paquete de configuración",
+      "setupPacketDesc": "Las cuatro tarjetas están moldeadas y listas para ser entregadas.",
+      "copyPacketButton": "Copiar paquete",
+      "copiedButton": "Copiado",
+      "clipboardUnavailableButton": "Portapapeles no disponible",
+      "downloadButton": "Descargar",
+      "notesSrLabel": "notas",
+      "notesPlaceholder": "Pega notas o permite que la transcripción en vivo las complete.",
+      "closeCardLabel": "Cerrar tarjeta",
+      "transcriptPlaceholder": "Usa la transcripción en vivo si este navegador la admite, o escribe directamente en la tarjeta. Todo se guarda en este dispositivo.",
+      "closeCardBackdrop": "Cerrar fondo de tarjeta",
+      "completeCheckmark": "Completado"
     },
     "extension": {
       "heading": "Conoce la extensión",
@@ -122,14 +246,23 @@
     },
     "why_build": {
       "heading": "Por qué construimos",
-      "description": "El conocimiento disperso se convierte en acción compartida cuando el grupo adecuado tiene un lugar claro para trabajar."
+      "description": "El conocimiento disperso se convierte en acción compartida cuando el grupo adecuado tiene un lugar claro para trabajar.",
+      "builtByTeam": "Construido por el equipo Coop"
+    },
+    "audience": {
+      "persona": "Personal",
+      "family": "Familia",
+      "friends": "Amigos",
+      "community": "Comunidad"
     }
   },
   "zh": {
     "hero": {
       "title1": "不再有",
       "title2": "松散的鸡。",
-      "subtitle": "将知识转化为机会。"
+      "subtitle": "将知识转化为机会。",
+      "scrollHint": "向下滚动",
+      "logoLabel": "Coop 着陆页"
     },
     "how_works": {
       "heading": "Coop 如何运作",
@@ -153,7 +286,42 @@
     },
     "ritual": {
       "heading": "策划您的 Coop",
-      "description": "打开每张卡片，捕获重要内容，获得一个清晰的设置包。"
+      "description": "打开每张卡片，捕获重要内容，获得一个清晰的设置包。",
+      "localBadgeLabel": "所有数据保留在此设备上",
+      "resetButton": "重置仪式",
+      "progressPartial": "个镜头已完成。准备好时打开下一张卡片。",
+      "progressStart": "打开一张卡片开始捕获。",
+      "lens": "镜头",
+      "statusReady": "准备好",
+      "statusInProgress": "进行中",
+      "statusNotStarted": "未开始",
+      "recordButton": "录制",
+      "stopRecordButton": "停止录制",
+      "pasteButton": "粘贴",
+      "markCompleteButton": "标记完成",
+      "completeButton": "✓ 完成",
+      "readyMessage": "此镜头已准备好纳入数据包。",
+      "captureMessage": "捕获信号，然后标记此卡片已完成。",
+      "coopNameLabel": "Coop 名称",
+      "coopNamePlaceholder": "口袋 Coop",
+      "purposeLabel": "您在组织什么机会？",
+      "purposePlaceholder": "将分散的知识转化为群组更清晰的协调。",
+      "sharedNotesLabel": "共享笔记",
+      "sharedNotesPlaceholder": "在此粘贴会议笔记或额外背景。",
+      "setupPacketReady": "您的设置包已准备好",
+      "setupPacketReadyDesc": "已捕获所有四个镜头。为您的 Coop 命名并随身携带数据包。",
+      "setupPacketLabel": "设置包",
+      "setupPacketDesc": "所有四张卡片已成形并准备交付。",
+      "copyPacketButton": "复制数据包",
+      "copiedButton": "已复制",
+      "clipboardUnavailableButton": "剪贴板不可用",
+      "downloadButton": "下载",
+      "notesSrLabel": "笔记",
+      "notesPlaceholder": "粘贴笔记或让实时转录填充此内容。",
+      "closeCardLabel": "关闭卡片",
+      "transcriptPlaceholder": "如果此浏览器支持，请使用实时转录，或直接在卡片中键入。一切都保存在此设备上。",
+      "closeCardBackdrop": "关闭卡片背景",
+      "completeCheckmark": "完成"
     },
     "extension": {
       "heading": "认识扩展程序",
@@ -164,14 +332,23 @@
     },
     "why_build": {
       "heading": "我们为什么构建",
-      "description": "当合适的小组有一个清晰的工作地方时，分散的知识变成共享的行动。"
+      "description": "当合适的小组有一个清晰的工作地方时，分散的知识变成共享的行动。",
+      "builtByTeam": "由 Coop 团队构建"
+    },
+    "audience": {
+      "persona": "个人",
+      "family": "家庭",
+      "friends": "朋友",
+      "community": "社区"
     }
   },
   "fr": {
     "hero": {
       "title1": "Plus de",
       "title2": "poules en fuite.",
-      "subtitle": "Transformer le savoir en opportunité."
+      "subtitle": "Transformer le savoir en opportunité.",
+      "scrollHint": "Faire défiler vers le bas",
+      "logoLabel": "Page d'accueil de Coop"
     },
     "how_works": {
       "heading": "Comment fonctionne Coop",
@@ -195,7 +372,42 @@
     },
     "ritual": {
       "heading": "Organisez votre coop",
-      "description": "Ouvrez chaque carte, capturez ce qui compte et obtenez un paquet de configuration propre."
+      "description": "Ouvrez chaque carte, capturez ce qui compte et obtenez un paquet de configuration propre.",
+      "localBadgeLabel": "Toutes les données restent sur cet appareil",
+      "resetButton": "Réinitialiser le rituel",
+      "progressPartial": "lentilles complétées. Ouvrez la carte suivante quand vous êtes prêt.",
+      "progressStart": "Ouvrez une carte pour commencer à capturer.",
+      "lens": "Lentille",
+      "statusReady": "Prêt",
+      "statusInProgress": "En cours",
+      "statusNotStarted": "Non commencé",
+      "recordButton": "Enregistrer",
+      "stopRecordButton": "Arrêter l'enregistrement",
+      "pasteButton": "Coller",
+      "markCompleteButton": "Marquer comme terminé",
+      "completeButton": "✓ Terminé",
+      "readyMessage": "Cette lentille est déjà prête à être incluse dans le paquet.",
+      "captureMessage": "Capturez le signal et marquez cette carte comme terminée.",
+      "coopNameLabel": "Nom du coop",
+      "coopNamePlaceholder": "Coop de poche",
+      "purposeLabel": "Quelle opportunité organisez-vous?",
+      "purposePlaceholder": "Transformer la connaissance dispersée en une coordination plus claire pour le groupe.",
+      "sharedNotesLabel": "Notes partagées",
+      "sharedNotesPlaceholder": "Collez les notes de réunion ou le contexte supplémentaire ici.",
+      "setupPacketReady": "Votre paquet de configuration est prêt",
+      "setupPacketReadyDesc": "Les quatre lentilles sont capturées. Nommez votre coop et emportez le paquet avec vous.",
+      "setupPacketLabel": "Paquet de configuration",
+      "setupPacketDesc": "Les quatre cartes sont formées et prêtes à être livrées.",
+      "copyPacketButton": "Copier le paquet",
+      "copiedButton": "Copié",
+      "clipboardUnavailableButton": "Presse-papiers indisponible",
+      "downloadButton": "Télécharger",
+      "notesSrLabel": "notes",
+      "notesPlaceholder": "Collez les notes ou laissez la transcription en direct remplir ceci.",
+      "closeCardLabel": "Fermer la carte",
+      "transcriptPlaceholder": "Utilisez la transcription en direct si ce navigateur la supporte, ou tapez directement dans la carte. Tout est enregistré sur cet appareil.",
+      "closeCardBackdrop": "Fermer l'arrière-plan de la carte",
+      "completeCheckmark": "Complété"
     },
     "extension": {
       "heading": "Découvrez l'extension",
@@ -206,7 +418,14 @@
     },
     "why_build": {
       "heading": "Pourquoi nous construisons",
-      "description": "La connaissance dispersée devient une action partagée lorsque le bon groupe a un endroit clair pour travailler."
+      "description": "La connaissance dispersée devient une action partagée lorsque le bon groupe a un endroit clair pour travailler.",
+      "builtByTeam": "Construit par l'équipe Coop"
+    },
+    "audience": {
+      "persona": "Personnel",
+      "family": "Famille",
+      "friends": "Amis",
+      "community": "Communauté"
     }
   }
 }

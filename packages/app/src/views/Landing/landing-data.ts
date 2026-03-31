@@ -521,14 +521,15 @@ export function getLensProgress(
   };
 }
 
-export function statusLabel(status: LensStatus) {
+export function statusLabel(status: LensStatus, t?: (key: string) => string) {
+  const translate = t || ((key: string) => key);
   switch (status) {
     case 'ready':
-      return 'Ready';
+      return translate('ritual.statusReady');
     case 'drafting':
-      return 'In progress';
+      return translate('ritual.statusInProgress');
     default:
-      return 'Not started';
+      return translate('ritual.statusNotStarted');
   }
 }
 
