@@ -167,7 +167,7 @@ describe('summarizeSyncStatus', () => {
     expect(result.syncTone).toBe('ok');
   });
 
-  it('uses lastCaptureError as detail when present and syncError is false', () => {
+  it('does not leak lastCaptureError into sync status', () => {
     const result = summarizeSyncStatus({
       coopCount: 1,
       runtimeHealth: {
@@ -177,10 +177,9 @@ describe('summarizeSyncStatus', () => {
         lastCaptureError: 'Tab capture timed out.',
       },
     });
-    // lastCaptureError triggers the error path only when syncError or lastCaptureError is truthy
-    // syncError is false but lastCaptureError is truthy so the error branch fires
-    expect(result.syncTone).toBe('error');
-    expect(result.syncDetail).toBe('Tab capture timed out.');
+    // Capture errors stay in their own status channel — they should NOT drive sync status
+    expect(result.syncTone).toBe('ok');
+    expect(result.syncLabel).toBe('Healthy');
   });
 
   it('prefers lastSyncError over lastCaptureError for syncDetail', () => {
