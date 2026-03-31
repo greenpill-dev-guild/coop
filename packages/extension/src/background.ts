@@ -39,6 +39,7 @@ import {
   alarmNames,
   configuredChain,
   configuredOnchainMode,
+  configuredWebsocketSyncUrl,
   consumeNotificationIntent,
   consumePendingSidepanelIntent,
   contextMenuIds,
@@ -50,6 +51,7 @@ import {
   getLocalSetting,
   getReceiverSyncRuntime,
   hydrateUiPreferences,
+  reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
   saveState,
@@ -594,6 +596,28 @@ export function startBackground() {
           }
           return;
         }
+        case 'get-coop-sync-config': {
+          await ensureReceiverSyncOffscreenDocument();
+          const coops = await getCoops();
+          const config = {
+            coops: coops.map((coop) => ({
+              coopId: coop.profile.id,
+              state: coop,
+              syncRoom: coop.syncRoom,
+            })),
+            websocketSyncUrl: configuredWebsocketSyncUrl,
+          };
+          sendResponse({ ok: true, data: config } satisfies RuntimeActionResponse);
+          return;
+        }
+        case 'refresh-coop-sync-bindings':
+          // Offscreen handles this itself via its own message listener.
+          sendResponse({ ok: true } satisfies RuntimeActionResponse);
+          return;
+        case 'report-coop-sync-runtime':
+          await reportCoopSyncRuntime(message.payload.coopId, message.payload);
+          sendResponse({ ok: true } satisfies RuntimeActionResponse);
+          return;
         case 'report-sync-health':
           await setRuntimeHealth({
             syncError: message.payload.syncError,

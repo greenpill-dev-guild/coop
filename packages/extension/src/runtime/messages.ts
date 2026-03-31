@@ -485,10 +485,13 @@ export type RuntimeRequest =
   | { type: 'set-capture-mode'; payload: { captureMode: CaptureMode } }
   | { type: 'set-active-coop'; payload: { coopId: string } }
   | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: Uint8Array } }
-  | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
   | { type: 'get-coop-sync-config' }
   | { type: 'refresh-coop-sync-bindings' }
-  | { type: 'report-coop-sync-runtime'; payload: { coopId: string } & Partial<CoopSyncRuntime> }
+  | {
+      type: 'report-coop-sync-runtime';
+      payload: { coopId: string } & Partial<CoopSyncRuntime>;
+    }
+  | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
   | {
       type: 'resolve-onchain-state';
       payload: { coopSeed: string };
