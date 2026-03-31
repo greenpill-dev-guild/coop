@@ -275,12 +275,12 @@ describe('useSyncBindings', () => {
       off: vi.fn(),
     };
     const healthyProviders = {
-      webrtc: { id: 'healthy-webrtc' },
+      webrtc: { id: 'healthy-webrtc', on: vi.fn(), off: vi.fn(), signalingConns: [] },
       websocket: null,
       disconnect: vi.fn(),
     };
     const degradedProviders = {
-      webrtc: { id: 'degraded-webrtc' },
+      webrtc: { id: 'degraded-webrtc', on: vi.fn(), off: vi.fn(), signalingConns: [] },
       websocket: null,
       disconnect: vi.fn(),
     };

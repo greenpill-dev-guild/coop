@@ -25,6 +25,7 @@ export interface PopupCreateFormState {
   creatorName: string;
   purpose: string;
   starterNote: string;
+  enableGreenGoods?: boolean;
 }
 
 export interface PopupJoinFormState {

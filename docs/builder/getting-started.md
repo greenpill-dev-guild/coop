@@ -7,6 +7,32 @@ slug: /builder/getting-started
 
 This page is the builder onramp for the whole monorepo, not only the extension.
 
+## Quick Install (Extension Only)
+
+If you just want to run the Coop extension locally and skip the rest of the monorepo setup for now:
+
+```bash
+git clone https://github.com/greenpill-dev-guild/coop.git
+cd coop
+bun install
+cd packages/extension && bun run build
+```
+
+Then load the extension in Chrome:
+
+1. Open `chrome://extensions`
+2. Turn on **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the folder `packages/extension/.output/chrome-mv3`
+5. Pin the extension and open the sidepanel
+
+That is enough to explore the popup, sidepanel, and local mock workflows. Rebuild with `bun run build` after code changes and reload the extension in Chrome.
+
+For the full install path, zip distribution, and Chrome Web Store details, see
+[Extension Install & Distribution](/reference/extension-install-and-distribution).
+
+---
+
 ## Prerequisites
 
 - Node.js 22 from the repo's `.mise.toml`

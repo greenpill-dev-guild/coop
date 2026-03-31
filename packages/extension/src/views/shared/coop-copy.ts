@@ -1,5 +1,6 @@
-export const passkeyTrustExplainer =
-  'Coop uses a passkey so this browser can prove it is you without a wallet extension or shared password. Come back with the same browser profile to keep access simple.';
+/** Short label for inline display; full explanation available via title/hover. */
+export const passkeyTrustLabel = 'Secured with a passkey';
 
-export const greenGoodsConnectLaterCopy =
-  'Green Goods is optional. Leave it off for a quick start and connect a garden later when this coop is ready.';
+/** Full explanation shown on hover/click. */
+export const passkeyTrustDetail =
+  'Coop uses a passkey so this browser can prove it is you — no wallet extension or shared password needed. Come back with the same browser profile to keep access simple.';

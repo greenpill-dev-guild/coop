@@ -52,6 +52,64 @@ The intended trajectory is:
 3. keep the privacy boundary obvious
 4. expand the agent and onchain layers behind policies, logs, and bounded capabilities
 
+## Four Strategic Bets
+
+These are the near-term bets that shape where Coop is heading. They are not promises -- they are
+the directions we are actively investing in.
+
+### 1. React Flow Knowledge Exploration
+
+The board route already renders published artifacts as a graph. The bet is that an interactive
+React Flow canvas becomes the primary way groups explore what they know -- navigating connections
+between captures, drafts, and published opportunities rather than scrolling a flat feed.
+
+### 2. Coop OS
+
+Coop OS is the idea that the agent harness, skill pipeline, policy engine, and session-key
+boundaries form a reusable operating system for browser-native coordination. Instead of one
+product, the same primitives could power different community shapes: DAOs, research groups,
+neighborhood coops, mutual aid networks.
+
+### 3. PWA Upgrades
+
+The receiver PWA handles mobile capture and pairing today. The bet is that deeper PWA
+capabilities -- offline-first sync, background fetch, push notifications, and richer media
+handling -- make the mobile surface a genuine peer to the extension rather than a thin relay.
+
+### 4. Community Coop Calls With Coop Knowledge Sharing
+
+Live calls between coop members where the agent captures, synthesizes, and publishes shared
+knowledge in real time. The call itself becomes a coordination primitive: knowledge enters as
+conversation, passes through the agent harness, and exits as structured, reviewable artifacts.
+
+## Core Tenets
+
+These four principles are not aspirational -- they describe the current architecture and inform
+every product decision.
+
+1. **Browser-first.** The extension is the primary product surface. No server dependency for
+   core capture, synthesis, or review.
+2. **Local-first.** All data stays on the device until explicit publish or sync. The user is
+   always in control of what becomes shared.
+3. **Passkey-first.** Identity starts with passkeys, not wallet extensions. Onchain identity
+   is derived from the passkey, keeping the onboarding path simple.
+4. **Explicit publish.** Nothing becomes shared without human review and confirmation. The agent
+   proposes, the human disposes.
+
+## Coordination Integrity (Provisional)
+
+> **Note:** The framing in this section draws on the
+> [Durgadas Coordination Structural Integrity Suite](https://github.com/durgadasji/standards).
+> This is provisional -- the framework is maintained externally and has not been formally adopted
+> by the Coop project. We reference it because it articulates why coordination tools need
+> structural integrity guarantees (transparency, auditability, bounded execution) that align
+> closely with how Coop already works.
+
+The core argument: coordination infrastructure should make it structurally difficult for any
+single actor to silently capture or redirect group value. Coop's architecture -- local-first
+storage, passkey identity, Safe multisig, session-key boundaries, and Filecoin archival --
+was not designed to satisfy a framework, but the alignment is real and worth naming.
+
 ## Where To Look For More Detail
 
 - Read [AI Features](/ai-features) for the current browser-side agent story.

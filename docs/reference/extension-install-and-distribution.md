@@ -12,11 +12,52 @@ production deployment flow lives in [Demo & Deploy Runbook](/reference/demo-and-
 The current public-release boundary lives in
 [Current Release Status](/reference/current-release-status).
 
-## Local Developer Install
+## Fastest Path: Unpacked Install From Source
 
-Use the repo-root `.env.local`. Do not create package-specific env files.
+Clone, build, and load -- no environment file needed for mock mode:
 
-Recommended local defaults:
+```bash
+git clone https://github.com/greenpill-dev-guild/coop.git
+cd coop
+bun install
+cd packages/extension && bun run build
+```
+
+Load into Chrome:
+
+1. Open `chrome://extensions`
+2. Turn on **Developer mode** (top-right toggle)
+3. Click **Load unpacked**
+4. Select the folder `packages/extension/.output/chrome-mv3`
+5. Pin the extension icon and open the sidepanel from the toolbar
+
+After code changes, rebuild with `bun run build` in `packages/extension/` and click the
+reload icon on the extension card in `chrome://extensions`.
+
+> **No `.env.local` needed for first run.** The defaults (`sepolia`, `mock` onchain/archive,
+> session `off`) work out of the box. Create `.env.local` at the repo root only when you need
+> live rails or custom signaling URLs.
+
+## Local Developer Install (Full)
+
+For development with live-reload and all local services:
+
+```bash
+bun install
+bun dev
+```
+
+This starts the extension, the receiver PWA, and the signaling server concurrently. The dev script
+automatically sets `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension
+build.
+
+If you only need the extension:
+
+```bash
+bun run dev:extension
+```
+
+Optional `.env.local` at the repo root (do not create package-specific env files):
 
 ```bash
 VITE_COOP_CHAIN=sepolia
@@ -25,13 +66,6 @@ VITE_COOP_ARCHIVE_MODE=mock
 VITE_COOP_SESSION_MODE=off
 VITE_COOP_RECEIVER_APP_URL=http://127.0.0.1:3001
 VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
-```
-
-Build and load:
-
-```bash
-bun install
-bun run dev:extension
 ```
 
 For local live Sepolia rehearsals without editing `.env.local`:
@@ -44,21 +78,6 @@ bun run dev:extension:local-live-sepolia
 
 That profile enables live onchain/archive/session rails while keeping the receiver and signaling
 origins local to your machine.
-
-Optional supporting processes:
-
-```bash
-bun run dev:app
-bun run dev:api
-```
-
-Then in Chrome:
-
-1. Open `chrome://extensions`.
-2. Turn on `Developer mode`.
-3. Click `Load unpacked`.
-4. Select `packages/extension/.output/chrome-mv3`.
-5. Reload the extension after each rebuild.
 
 ## Local Extension + Production PWA
 
@@ -77,15 +96,11 @@ build time so the extension can inject on the configured production PWA origin.
 The canonical receiver protocol, route ownership, and member-private intake flow now live in
 [Receiver Pairing & Intake](/reference/receiver-pairing-and-intake).
 
-## Early Access Distribution
+## Early Access Distribution (Zip)
 
-For trusted testers outside the Chrome Web Store:
+For sharing with trusted testers who will not clone the repo:
 
-1. Build the extension.
-2. Zip the contents of `packages/extension/.output/chrome-mv3`.
-3. Share the archive plus manual install instructions.
-
-Commands:
+### Builder: Create The Zip
 
 ```bash
 cd packages/extension
@@ -94,14 +109,20 @@ cd .output/chrome-mv3
 zip -r ../coop-extension.zip .
 ```
 
-Early-access users still need to:
+The zip is at `packages/extension/.output/coop-extension.zip`. Share it directly or upload it
+to a file host. The archive must contain `manifest.json` at the root -- do not zip the parent
+folder.
 
-1. download the archive
-2. unzip it locally
-3. open `chrome://extensions`
-4. turn on `Developer mode`
-5. click `Load unpacked`
-6. choose the extracted folder
+### Tester: Install From Zip
+
+1. Download and unzip the archive into a folder (e.g. `~/coop-extension/`)
+2. Open Chrome and go to `chrome://extensions`
+3. Turn on **Developer mode** (top-right toggle)
+4. Click **Load unpacked**
+5. Select the unzipped folder (the one containing `manifest.json`)
+6. Pin the extension icon and open the sidepanel
+
+The extension will work in mock mode immediately. No credentials or environment setup required.
 
 ## Chrome Web Store Rollout
 

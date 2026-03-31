@@ -8,7 +8,7 @@ import type {
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../../shared/coop-copy';
+import { passkeyTrustLabel } from '../../shared/coop-copy';
 import type { SidepanelOrchestration } from '../hooks/useSidepanelOrchestration';
 import type { NestArchiveSectionProps } from '../tabs/NestArchiveSection';
 import { NestArchiveSection } from '../tabs/NestArchiveSection';
@@ -350,9 +350,7 @@ describe('NestInviteSection', () => {
     const user = userEvent.setup();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    const invites = [
-      makeInvite({ id: 'inv-active', status: 'active', type: 'member' }),
-    ];
+    const invites = [makeInvite({ id: 'inv-active', status: 'active', type: 'member' })];
     const activeCoop = makeActiveCoop({ invites });
 
     render(<NestInviteSection {...baseProps({ activeCoop, revokeInviteType })} />);
@@ -1056,8 +1054,7 @@ describe('NestTab', () => {
     render(<NestTab {...baseOrchestration({ activeCoop: undefined })} />);
 
     expect(screen.getByText(/start a coop/i)).toBeInTheDocument();
-    expect(screen.getAllByText(passkeyTrustExplainer).length).toBeGreaterThan(0);
-    expect(screen.getByText(greenGoodsConnectLaterCopy)).toBeInTheDocument();
+    expect(screen.getAllByText(passkeyTrustLabel).length).toBeGreaterThan(0);
   });
 
   describe('subheader actions', () => {

@@ -3,7 +3,7 @@ feature: hackathon-release-readiness
 title: Hackathon release archive and live-rails lane
 lane: contracts
 agent: codex
-status: in_progress
+status: done
 source_branch: main
 work_branch: codex/contracts/hackathon-release-readiness
 depends_on:

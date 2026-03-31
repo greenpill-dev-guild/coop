@@ -110,11 +110,20 @@ The extension also owns the user-facing state cues:
 
 ## Install And Distribution Posture
 
+**Fastest path:** Build from source and load unpacked -- no env file needed for mock mode:
+
+```bash
+bun install && cd packages/extension && bun run build
+```
+
+Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in Chrome. Full
+instructions are in [Extension Install & Distribution](/reference/extension-install-and-distribution).
+
 The reference install doc describes three practical paths:
 
-- local developer install from `packages/extension/.output/chrome-mv3`
-- trusted early-access distribution outside the Chrome Web Store
-- Chrome Web Store rollout once the extension is ready for broader release
+- **Unpacked install** from `packages/extension/.output/chrome-mv3` (developers)
+- **Zip distribution** for trusted early-access testers outside the Chrome Web Store
+- **Chrome Web Store rollout** once the extension is ready for broader release
 
 The extension asks for broad capabilities, so review notes and privacy explanations need to stay
 unusually clear.

@@ -101,12 +101,6 @@ That gate layers these probes on top of `production-readiness`:
 Read [Live Rails Operator Runbook](/reference/live-rails-operator-runbook) before enabling those
 env vars in any release candidate.
 
-Current Filecoin registry note:
-
-- archive follow-up and Filecoin registry registration stay operator-only
-- live Filecoin registration should be treated as blocked until the registry deployment address and
-  operator signing material are configured in an operator-only build
-
 ## What Coop Safely Claims Today
 
 Safe to claim:

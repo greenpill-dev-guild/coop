@@ -13,6 +13,59 @@ other readiness docs aligned to this one. For the current public-release boundar
 [Receiver Pairing & Intake](/reference/receiver-pairing-and-intake). For operator-only live rails,
 read [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
+## Demo Storyboard
+
+Use this narrative arc for live demos and recorded walkthroughs. Each beat is a self-contained
+moment that can be paused for commentary.
+
+### Beat 1 -- Landing (30s)
+
+Open `https://coop.town`. Walk the audience through the hero: "No more chickens loose." Scroll
+through the How Coop Works cards. Point out that this is a real product page, not a slide deck.
+Click **Install Extension** in the top bar to show the install path is one click away.
+
+### Beat 2 -- Create A Coop (60s)
+
+Open the extension sidepanel. Create a new coop, choosing a preset (e.g. "friends" or
+"community"). Walk through the create flow: name, ritual lens selection, and the coop preset
+copy. Show the coop landing in the **Coops** tab with its state badge.
+
+### Beat 3 -- Capture And Synthesize (90s)
+
+Open several tabs in Chrome -- articles, notes, whatever fits the story. Trigger **Manual
+round-up** from the popup or agent tab. Show the candidates appearing in **Chickens**.
+Open one candidate, demonstrate the AI synthesis output (summary, tags, opportunity signal).
+Emphasize: all processing happened in the browser with no cloud calls.
+
+### Beat 4 -- Review And Publish (60s)
+
+In **Chickens**, promote one candidate to a draft. Edit the draft title or body. Publish
+it to the coop. Switch to the **Coops** tab and show the published artifact in the feed.
+Open the board route to display the React Flow knowledge graph.
+
+### Beat 5 -- Archive To Filecoin (45s)
+
+From the **Coops** tab, trigger an archive snapshot. Export the receipt. Explain: the
+published state is now anchored to Filecoin via Storacha, creating an immutable record of
+what the group knows and decided.
+
+### Beat 6 -- Green Goods Action (45s)
+
+If the coop has Green Goods enabled, open the **Roost** tab (Green Goods member workspace).
+Show the garden pass, member-account provisioning, and a bounded session-key action (e.g.
+create garden). Emphasize: onchain execution is scoped by policy and human-confirmed for
+high-stakes operations.
+
+### Beat 7 -- The Larger Vision (60s)
+
+Zoom out. Recap the loop: scattered knowledge enters as loose chickens, gets refined locally
+by an in-browser agent, passes through human review, and becomes shared memory anchored
+onchain. Every step respects local-first privacy, passkey-first identity, and explicit
+publish. The product is already working -- what follows is deepening the knowledge graph,
+expanding community coordination patterns, and opening the agent harness to more skill types.
+
+---
+
 ## Shared Rules
 
 - Use the repo-root `.env.local` for local development. Do not create package-specific env files.
@@ -279,10 +332,7 @@ After deployment:
 1. Record the deployed registry address.
 2. Set `VITE_COOP_FVM_CHAIN` to `filecoin-calibration` or `filecoin`.
 3. Set `VITE_COOP_FVM_REGISTRY_ADDRESS` to the deployed contract address.
-4. Set `VITE_COOP_FVM_OPERATOR_KEY` in the operator-only root `.env.local`.
-5. Update the deployment map in `packages/shared/src/modules/fvm/fvm.ts` once the deployment is canonical.
-6. Rebuild the operator bundle before attempting extension-side Filecoin registration.
-7. Re-run `bun run validate:archive-live` and then `bun run validate:production-live-readiness`.
+4. Update the deployment map in `packages/shared/src/modules/fvm/fvm.ts`.
 
 Current implementation note:
 

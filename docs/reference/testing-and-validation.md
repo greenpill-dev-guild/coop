@@ -241,9 +241,10 @@ Commonly needed:
 
 Important:
 
-- `bun run validate:archive-live` now requires the real trusted-node archive env by default.
-- Use `COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true bun run validate:archive-live` only for an explicit
-  local wiring check. That fallback does not count as live-archive readiness.
+- `bun run validate:archive-live` falls back to an in-process static delegation when the trusted-node
+  archive env is missing.
+- Treat that fallback as a wiring check only. Use real trusted-node archive env when you need an
+  actual live-archive proof.
 
 ### Full Live-Rails Gate
 

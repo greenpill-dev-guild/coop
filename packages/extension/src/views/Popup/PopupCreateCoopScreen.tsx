@@ -1,6 +1,7 @@
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import type { PopupCreateFormState } from './popup-types';
-import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../shared/coop-copy';
+import { passkeyTrustDetail, passkeyTrustLabel } from '../shared/coop-copy';
+import { Tooltip } from '../shared/Tooltip';
 
 export function PopupCreateCoopScreen(props: {
   form: PopupCreateFormState;
@@ -31,8 +32,6 @@ export function PopupCreateCoopScreen(props: {
       <div className="popup-copy-block">
         <span className="popup-eyebrow">Create</span>
         <h1>Start your coop.</h1>
-        <p>{passkeyTrustExplainer}</p>
-        <p>{greenGoodsConnectLaterCopy}</p>
       </div>
 
       <form
@@ -79,7 +78,37 @@ export function PopupCreateCoopScreen(props: {
           />
         </label>
 
-        <div className="popup-stack">
+        <div className="popup-form__footer">
+          <label className="popup-toggle-field">
+            <input
+              checked={form.enableGreenGoods ?? false}
+              onChange={(event) => onChange({ enableGreenGoods: event.target.checked })}
+              type="checkbox"
+            />
+            <span>Enable Green Goods</span>
+            <Tooltip
+              label="Green Goods lets your coop route shared work into verifiable real-world actions. Learn more at docs.coop.town"
+              position="top"
+            >
+              {({ targetProps }) => (
+                <button
+                  {...targetProps}
+                  aria-label="Green Goods info"
+                  className="popup-info-bubble"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open('https://docs.coop.town/community/road-ahead', '_blank');
+                  }}
+                  type="button"
+                >
+                  ?
+                </button>
+              )}
+            </Tooltip>
+          </label>
+          <span className="popup-hint" title={passkeyTrustDetail}>
+            {passkeyTrustLabel}
+          </span>
           <button className="popup-primary-action" disabled={disabled} type="submit">
             {submitting ? 'Creating...' : 'Create Coop'}
           </button>

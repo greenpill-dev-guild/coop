@@ -2,7 +2,7 @@ import type { CaptureMode, CoopSharedState, CoopSpaceType } from '@coop/shared';
 import { formatCoopSpaceTypeLabel, getCoopChainLabel } from '@coop/shared';
 import { useState } from 'react';
 import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
-import { greenGoodsConnectLaterCopy, passkeyTrustExplainer } from '../../shared/coop-copy';
+import { passkeyTrustDetail, passkeyTrustLabel } from '../../shared/coop-copy';
 import { Tooltip } from '../../shared/Tooltip';
 import { SidepanelSubheader } from '../SidepanelSubheader';
 import { getAddressExplorerUrl, truncateAddress } from '../helpers';
@@ -538,7 +538,9 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
                 required
                 value={coopForm.createForm.creatorDisplayName}
               />
-              <span className="helper-text">{passkeyTrustExplainer}</span>
+              <span className="helper-text" title={passkeyTrustDetail}>
+                {passkeyTrustLabel}
+              </span>
             </div>
             <div className="field-grid">
               <label htmlFor="capture-mode">Round-up timing</label>
@@ -623,11 +625,7 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
                   />{' '}
                   Request a Green Goods garden owned by the coop safe
                 </label>
-                <span className="helper-text">
-                  {coopForm.selectedSpacePreset.greenGoodsRecommended
-                    ? `Useful when this coop may route shared work into Green Goods later. ${greenGoodsConnectLaterCopy}`
-                    : greenGoodsConnectLaterCopy}
-                </span>
+                <span className="helper-text">Optional — connect a garden later if needed.</span>
               </div>
 
               <div className="lens-grid">
@@ -797,7 +795,9 @@ function NestCreationForm({ coopForm }: { coopForm: CoopFormReturn }) {
         <p className="helper-text">
           Already have an invite? Add it here to join an existing coop from a fresh browser.
         </p>
-        <p className="helper-text">{passkeyTrustExplainer}</p>
+        <p className="helper-text" title={passkeyTrustDetail}>
+          {passkeyTrustLabel}
+        </p>
         <form className="form-grid" onSubmit={coopForm.joinCoopAction}>
           <div className="field-grid">
             <label htmlFor="join-code">Invite code</label>

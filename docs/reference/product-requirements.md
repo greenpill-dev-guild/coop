@@ -110,7 +110,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 **Acceptance Criteria**:
 - Coop appears in coop selector dropdown
-- Initial artifacts visible in Coops
+- Initial artifacts visible in Feed
 - Sync room created and connectable
 - Safe address generated (mock or live depending on `VITE_COOP_ONCHAIN_MODE`)
 
@@ -425,7 +425,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
    - Writes to Yjs doc (syncs to peers)
    - Removes draft from review board
    - Sound event + haptic feedback
-5. Artifact appears in Coops for all coop members
+5. Artifact appears in Feed tab for all coop members
 
 **Acceptance Criteria**:
 - Only `ready` drafts can be published
@@ -460,7 +460,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** I can browse the group's shared knowledge.
 
 **Flow**:
-1. Coops tab → Artifacts grouped by category sections:
+1. Feed tab → Artifacts grouped by category sections:
    - Setup insights
    - Rituals
    - Resources
@@ -492,7 +492,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** I can trust the group's knowledge is durably stored.
 
 **Flow**:
-1. Coops tab → Archive receipts section
+1. Feed tab → Archive receipts section
 2. Each receipt shows:
    - Scope: "Shared find" (artifact) or "Coop snapshot"
    - Status: Waiting → Saved → Tracked → Deep saved
@@ -516,7 +516,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** important knowledge is durably preserved.
 
 **Flow**:
-1. Coops tab → Click "Archive" on an artifact
+1. Feed tab → Click "Archive" on an artifact
 2. Background worker:
    - Creates archive bundle (JSON with coop context)
    - Uploads to Storacha (or generates mock receipt)
@@ -543,7 +543,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** the entire group's progress is preserved at a point in time.
 
 **Flow**:
-1. Coops tab → "Archive snapshot" action
+1. Feed tab → "Archive snapshot" action
 2. Background worker:
    - Serializes full `CoopSharedState`
    - Creates archive bundle with scope: 'snapshot'
@@ -563,7 +563,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 **So that** I have offline copies of important knowledge.
 
 **Flow**:
-1. Coops tab → "Export" action on artifact or snapshot
+1. Feed tab → "Export" action on artifact or snapshot
 2. Background worker generates export bundle (JSON)
 3. Browser download triggered
 
@@ -722,7 +722,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 6. **Garden Requests**: Green Goods work approvals, assessments, admin sync
 7. **Agent Dashboard**: Observations, plans, skill runs
 
-**Access Control**: Only `creator` and `trusted` roles see the Operator Console (in Nest tab).
+**Access Control**: Only `creator` and `trusted` roles see the Operator Console (in Feed tab).
 
 ---
 

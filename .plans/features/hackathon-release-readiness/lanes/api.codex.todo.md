@@ -3,7 +3,7 @@ feature: hackathon-release-readiness
 title: Hackathon release sync and pairing reliability lane
 lane: api
 agent: codex
-status: in_progress
+status: done
 source_branch: main
 work_branch: codex/api/hackathon-release-readiness
 depends_on:

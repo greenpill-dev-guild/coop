@@ -3,7 +3,7 @@ feature: hackathon-release-readiness
 title: Hackathon release setup and metadata bug lane
 lane: state
 agent: codex
-status: in_progress
+status: done
 source_branch: main
 work_branch: codex/state/hackathon-release-readiness
 depends_on:

@@ -600,6 +600,72 @@ button:focus-visible,
   resize: vertical;
 }
 
+.popup-toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--coop-text-soft);
+  cursor: pointer;
+}
+
+.popup-toggle-field input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--coop-green);
+  cursor: pointer;
+}
+
+.popup-info-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--coop-border);
+  background: var(--coop-field);
+  color: var(--coop-text-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.popup-info-bubble:hover {
+  background: var(--coop-green);
+  color: #fff;
+  border-color: var(--coop-green);
+}
+
+.popup-form__footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px 14px;
+  background: var(--coop-bg);
+  border-top: 1px solid var(--coop-border);
+  z-index: var(--coop-z-sticky);
+}
+
+.popup-screen--onboarding .popup-form {
+  padding-bottom: 110px;
+}
+
+.popup-hint {
+  font-size: 0.78rem;
+  color: var(--coop-text-soft);
+  text-align: center;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
 .popup-primary-action,
 .popup-secondary-action,
 .popup-switcher-row {
