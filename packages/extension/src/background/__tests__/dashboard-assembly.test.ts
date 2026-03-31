@@ -7,6 +7,7 @@ import type {
   TabRouting,
 } from '@coop/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CoopSyncRuntime } from '../../runtime/messages';
 import {
   makeCoopState,
   makeReceiverCapture,
@@ -44,6 +45,7 @@ const sharedMocks = vi.hoisted(() => ({
 }));
 
 const contextMocks = vi.hoisted(() => ({
+  getCoopSyncRuntime: vi.fn(),
   getCoops: vi.fn(),
   getLocalSetting: vi.fn(),
   getRuntimeHealth: vi.fn(),
@@ -132,6 +134,7 @@ vi.mock('../context', () => ({
       })),
     },
   },
+  getCoopSyncRuntime: contextMocks.getCoopSyncRuntime,
   getCoops: contextMocks.getCoops,
   getLocalSetting: contextMocks.getLocalSetting,
   getRuntimeHealth: contextMocks.getRuntimeHealth,
@@ -163,9 +166,8 @@ vi.mock('../../runtime/messages', async (importOriginal) => {
   };
 });
 
-const { buildProactiveSignals, buildSummary, getDashboard, refreshBadge } = await import(
-  '../dashboard'
-);
+const { buildProactiveSignals, buildSummary, deriveStructuredSync, getDashboard, refreshBadge } =
+  await import('../dashboard');
 
 function makeDraft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
   return {
@@ -236,6 +238,7 @@ function makeRouting(overrides: Partial<TabRouting> = {}): TabRouting {
 describe('dashboard assembly', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    contextMocks.getCoopSyncRuntime.mockResolvedValue(undefined);
 
     const coopOne = {
       ...makeCoopState(),
@@ -534,5 +537,128 @@ describe('dashboard assembly', () => {
     expect(dashboard.candidates.map((c) => c.id)).toContain('recent-capture');
     expect(dashboard.candidates.map((c) => c.id)).toContain('unique-capture');
     expect(dashboard.candidates.map((c) => c.id)).not.toContain('older-capture');
+  });
+});
+
+function makeCoopSyncRuntime(overrides: Partial<CoopSyncRuntime> = {}): CoopSyncRuntime {
+  return {
+    mode: 'webrtc',
+    peerCount: 1,
+    broadcastPeerCount: 0,
+    signalingConnectionCount: 1,
+    configuredSignalingCount: 1,
+    websocketConnected: false,
+    active: true,
+    ...overrides,
+  };
+}
+
+describe('deriveStructuredSync', () => {
+  const baseHealth = {
+    offline: false,
+    missingPermission: false,
+    syncError: false,
+  };
+
+  it('returns undefined when coopCount is 0', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: makeCoopSyncRuntime(),
+      pendingOutboxCount: 0,
+      coopCount: 0,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('returns undefined when coopSyncRuntime is undefined', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: undefined,
+      pendingOutboxCount: 0,
+      coopCount: 1,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('returns Offline when browser is offline', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: { ...baseHealth, offline: true },
+      coopSyncRuntime: makeCoopSyncRuntime(),
+      pendingOutboxCount: 0,
+      coopCount: 1,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        label: 'Offline',
+        tone: 'warning',
+      }),
+    );
+  });
+
+  it('returns Error when lastError is set', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: makeCoopSyncRuntime({ lastError: 'WebRTC failure' }),
+      pendingOutboxCount: 0,
+      coopCount: 1,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        label: 'Error',
+        detail: 'WebRTC failure',
+        tone: 'error',
+      }),
+    );
+  });
+
+  it('returns Syncing when outbox has pending items', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: makeCoopSyncRuntime(),
+      pendingOutboxCount: 3,
+      coopCount: 1,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        label: 'Syncing',
+        detail: '3 changes pending.',
+        tone: 'ok',
+      }),
+    );
+  });
+
+  it('returns Bridge for websocket-only mode', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: makeCoopSyncRuntime({ mode: 'websocket-only', peerCount: 0 }),
+      pendingOutboxCount: 0,
+      coopCount: 1,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        label: 'Bridge',
+        tone: 'ok',
+      }),
+    );
+  });
+
+  it('returns Connected for webrtc/mixed mode with peer count', () => {
+    const result = deriveStructuredSync({
+      runtimeHealth: baseHealth,
+      coopSyncRuntime: makeCoopSyncRuntime({
+        mode: 'mixed',
+        peerCount: 2,
+        broadcastPeerCount: 1,
+      }),
+      pendingOutboxCount: 0,
+      coopCount: 1,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        label: 'Connected',
+        detail: 'Live sync with 3 peers.',
+        tone: 'ok',
+      }),
+    );
   });
 });

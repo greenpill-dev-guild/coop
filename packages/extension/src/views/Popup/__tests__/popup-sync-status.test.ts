@@ -10,7 +10,81 @@ beforeEach(async () => {
   ({ popupHealthStatus, popupReviewStatus, popupSyncStatus } = await import('../helpers'));
 });
 
-describe('popupSyncStatus', () => {
+describe('popupSyncStatus — structured sync path', () => {
+  it('uses structured sync when present', () => {
+    expect(
+      popupSyncStatus({
+        sync: {
+          label: 'Connected',
+          detail: 'Live sync with 2 peers.',
+          tone: 'ok',
+          peerCount: 2,
+          websocketConnected: false,
+          mode: 'webrtc',
+        },
+      }),
+    ).toEqual({
+      label: 'Connected',
+      detail: 'Live sync with 2 peers.',
+      tone: 'ok',
+    });
+  });
+
+  it('maps Bridge label to Connected for display', () => {
+    expect(
+      popupSyncStatus({
+        sync: {
+          label: 'Bridge',
+          detail: 'WebSocket sync connected. No direct peers.',
+          tone: 'ok',
+          peerCount: 0,
+          websocketConnected: true,
+          mode: 'websocket-only',
+        },
+      }),
+    ).toEqual({
+      label: 'Connected',
+      detail: 'WebSocket sync connected. No direct peers.',
+      tone: 'ok',
+    });
+  });
+
+  it('falls back to string path when sync is absent', () => {
+    expect(
+      popupSyncStatus({
+        syncLabel: 'Healthy',
+        syncTone: 'ok',
+        syncDetail: 'Peer-ready local-first sync.',
+      }),
+    ).toEqual({
+      label: 'Idle',
+      detail: 'Peer-ready local-first sync.',
+      tone: 'ok',
+    });
+  });
+
+  it('returns Error for dashboard errors', () => {
+    expect(
+      popupSyncStatus({
+        dashboardError: 'Service worker crashed.',
+      }),
+    ).toEqual({
+      label: 'Error',
+      detail: 'Service worker crashed.',
+      tone: 'error',
+    });
+  });
+
+  it('returns Idle when no sync data at all', () => {
+    expect(popupSyncStatus({})).toEqual({
+      label: 'Idle',
+      detail: 'Checking sync status.',
+      tone: 'ok',
+    });
+  });
+});
+
+describe('popupSyncStatus — legacy string path', () => {
   it('defaults to checking while sync summary is still loading', () => {
     expect(popupSyncStatus({})).toEqual({
       label: 'Idle',
