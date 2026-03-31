@@ -1770,13 +1770,13 @@ pre {
 .scene-team-label {
   position: absolute;
   left: max(1rem, calc((100% - 1120px) / 2));
-  top: 34%;
-  font-size: 0.72rem;
-  font-weight: 700;
+  top: 32%;
+  font-size: 0.75rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(255, 252, 246, 0.7);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.08em;
+  color: rgba(255, 252, 246, 0.82);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .scene-team-member {
@@ -1789,41 +1789,53 @@ pre {
 }
 
 .scene-team-member .team-avatar {
-  width: 2.8rem;
-  height: 2.8rem;
+  width: 3.2rem;
+  height: 3.2rem;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 252, 246, 0.9);
-  border: 2px solid rgba(79, 46, 31, 0.15);
-  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.12);
-  font-size: 0.85rem;
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.95), rgba(248, 240, 220, 0.92));
+  border: 2px solid rgba(79, 46, 31, 0.2);
+  box-shadow: 0 6px 18px rgba(79, 46, 31, 0.16), inset 0 1px 3px rgba(255, 255, 255, 0.5);
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--coop-brown);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.scene-team-member:hover .team-avatar {
+  transform: scale(1.12);
+  box-shadow: 0 8px 24px rgba(79, 46, 31, 0.24), inset 0 1px 3px rgba(255, 255, 255, 0.6);
 }
 
 .scene-team-name {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(255, 252, 246, 0.88);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 252, 246, 0.92);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: text-shadow 0.3s ease;
+}
+
+.scene-team-member:hover .scene-team-name {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .scene-team-left {
-  left: max(1.5rem, calc((100% - 1120px) / 2 + 0.5rem));
-  top: 40%;
+  left: max(1.5rem, calc((100% - 1120px) / 2 - 1rem));
+  top: 42%;
 }
 
 .scene-team-right-top {
-  left: max(6.5rem, calc((100% - 1120px) / 2 + 5.5rem));
-  top: 40%;
+  left: max(6.5rem, calc((100% - 1120px) / 2 + 6rem));
+  top: 38%;
 }
 
 .scene-team-right-bottom {
-  left: max(11.5rem, calc((100% - 1120px) / 2 + 10.5rem));
-  top: 40%;
+  left: max(11.5rem, calc((100% - 1120px) / 2 + 12rem));
+  top: 46%;
 }
 
 .landing-footer {
