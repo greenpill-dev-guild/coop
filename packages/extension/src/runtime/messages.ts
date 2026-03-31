@@ -63,6 +63,12 @@ export interface RuntimeSummary {
   syncLabel: string;
   syncDetail: string;
   syncTone: 'ok' | 'warning' | 'error';
+  sync?: {
+    runtime: CoopSyncRuntime;
+    label: 'Local' | 'Bridge' | 'Connected' | 'Syncing' | 'Offline' | 'Error';
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+  };
   lastCaptureAt?: string;
   captureMode: CaptureMode;
   agentCadenceMinutes: UiPreferences['agentCadenceMinutes'];
@@ -87,6 +93,14 @@ export interface PopupSnapshot {
   syncLabel: string;
   syncTone: 'ok' | 'warning' | 'error';
   syncDetail: string;
+  sync?: {
+    label: 'Local' | 'Bridge' | 'Connected' | 'Syncing' | 'Offline' | 'Error';
+    detail: string;
+    tone: 'ok' | 'warning' | 'error';
+    peerCount: number;
+    websocketConnected: boolean;
+    mode: CoopSyncRuntime['mode'];
+  };
   draftCount: number;
   routedSignalCount: number;
   staleObservationCount: number;
@@ -219,6 +233,19 @@ export interface ReceiverSyncRuntimeStatus {
   hasRtcPeerConnection?: boolean;
   activePairingIds: string[];
   activeBindingKeys: string[];
+}
+
+export interface CoopSyncRuntime {
+  mode: 'inactive' | 'local-only' | 'websocket-only' | 'webrtc' | 'mixed';
+  peerCount: number;
+  broadcastPeerCount: number;
+  signalingConnectionCount: number;
+  configuredSignalingCount: number;
+  websocketConnected: boolean;
+  lastRemoteUpdateAt?: string;
+  lastPersistAt?: string;
+  lastError?: string;
+  active: boolean;
 }
 
 export interface PopupPreparedCapture {
@@ -457,6 +484,9 @@ export type RuntimeRequest =
   | { type: 'set-active-coop'; payload: { coopId: string } }
   | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: Uint8Array } }
   | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
+  | { type: 'get-coop-sync-config' }
+  | { type: 'refresh-coop-sync-bindings' }
+  | { type: 'report-coop-sync-runtime'; payload: Partial<CoopSyncRuntime> & { coopId: string } }
   | {
       type: 'resolve-onchain-state';
       payload: { coopSeed: string };

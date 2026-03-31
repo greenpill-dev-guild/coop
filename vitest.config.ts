@@ -63,6 +63,7 @@ export default defineConfig({
         'packages/**/src/**/main.tsx',
         'packages/extension/src/runtime/agent-runner.ts',
         'packages/extension/src/runtime/receiver-sync-offscreen.ts',
+        'packages/extension/src/runtime/coop-sync-offscreen.ts',
         'packages/extension/src/runtime/inference-worker.ts',
         'packages/extension/src/runtime/agent-webllm-bridge.ts',
         'packages/extension/src/runtime/agent-webllm-worker.ts',

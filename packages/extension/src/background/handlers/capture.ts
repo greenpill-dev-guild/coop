@@ -215,8 +215,8 @@ export async function runCaptureForTabs(
     skippedCount,
   });
   await setRuntimeHealth({
-    syncError: Boolean(lastCaptureError),
     lastCaptureError,
+    // Do NOT set syncError from capture failures — sync status is owned by the sync runtime
   });
   await refreshBadge();
 

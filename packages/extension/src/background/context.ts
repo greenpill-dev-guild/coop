@@ -40,7 +40,11 @@ import {
   resolveReceiverAppUrl,
   resolveTrustedNodeArchiveBootstrapConfig,
 } from '../runtime/config';
-import type { ReceiverSyncRuntimeStatus, SidepanelIntent } from '../runtime/messages';
+import type {
+  CoopSyncRuntime,
+  ReceiverSyncRuntimeStatus,
+  SidepanelIntent,
+} from '../runtime/messages';
 
 // ---- Database ----
 
@@ -129,6 +133,7 @@ export const stateKeys = {
   captureMode: 'capture-mode',
   notificationIntentRegistry: 'notification-intent-registry',
   notificationRegistry: 'notification-registry',
+  coopSyncRuntime: 'coop-sync-runtime',
   receiverSyncRuntime: 'receiver-sync-runtime',
   runtimeHealth: 'runtime-health',
   sidepanelIntent: 'sidepanel-intent',
@@ -545,6 +550,29 @@ export async function reportReceiverSyncRuntime(patch: Partial<ReceiverSyncRunti
   } satisfies ReceiverSyncRuntimeStatus;
   await setLocalSetting(stateKeys.receiverSyncRuntime, next);
   return next;
+}
+
+export async function getCoopSyncRuntime(): Promise<Record<string, CoopSyncRuntime>> {
+  return getLocalSetting<Record<string, CoopSyncRuntime>>(stateKeys.coopSyncRuntime, {});
+}
+
+export async function reportCoopSyncRuntime(
+  coopId: string,
+  patch: Partial<CoopSyncRuntime>,
+): Promise<CoopSyncRuntime> {
+  const current = await getCoopSyncRuntime();
+  const existing = current[coopId] ?? {
+    mode: 'inactive',
+    peerCount: 0,
+    broadcastPeerCount: 0,
+    signalingConnectionCount: 0,
+    configuredSignalingCount: 0,
+    websocketConnected: false,
+    active: false,
+  };
+  current[coopId] = { ...existing, ...patch };
+  await setLocalSetting(stateKeys.coopSyncRuntime, current);
+  return current[coopId];
 }
 
 export async function getSidepanelStateRegistry() {

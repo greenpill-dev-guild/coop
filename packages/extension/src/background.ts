@@ -25,6 +25,7 @@ import {
 } from '@coop/shared';
 import { listRegisteredSkills } from './runtime/agent-registry';
 import type {
+  CoopSyncRuntime,
   DashboardResponse,
   ReceiverSyncRuntimeStatus,
   RuntimeActionResponse,
@@ -39,6 +40,7 @@ import {
   alarmNames,
   configuredChain,
   configuredOnchainMode,
+  configuredWebsocketSyncUrl,
   consumeNotificationIntent,
   consumePendingSidepanelIntent,
   contextMenuIds,
@@ -46,9 +48,11 @@ import {
   ensureDbReady,
   ensureDefaults,
   ensureReceiverSyncOffscreenDocument,
+  getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getReceiverSyncRuntime,
+  reportCoopSyncRuntime,
   hydrateUiPreferences,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
@@ -599,6 +603,45 @@ export function startBackground() {
             data: await reportReceiverSyncRuntime(message.payload),
           } satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>);
           return;
+        case 'get-coop-sync-config': {
+          const syncCoops = await getCoops();
+          sendResponse({
+            ok: true,
+            data: {
+              coops: syncCoops.map((state) => ({
+                coopId: state.profile.id,
+                state,
+                syncRoom: state.syncRoom,
+              })),
+              websocketSyncUrl: configuredWebsocketSyncUrl,
+            },
+          } satisfies RuntimeActionResponse);
+          return;
+        }
+        case 'refresh-coop-sync-bindings': {
+          try {
+            await chrome.runtime.sendMessage({ type: 'refresh-coop-sync-bindings' });
+          } catch {
+            // offscreen may not be ready
+          }
+          sendResponse({ ok: true } satisfies RuntimeActionResponse);
+          return;
+        }
+        case 'report-coop-sync-runtime': {
+          const { coopId, ...patch } = message.payload;
+          await reportCoopSyncRuntime(coopId, patch);
+          const allRuntimes = await getCoopSyncRuntime();
+          const runtimes = Object.values(allRuntimes);
+          const hasError = runtimes.some((r) => r.lastError);
+          const hasConnection = runtimes.some((r) => r.peerCount > 0 || r.websocketConnected);
+          await setRuntimeHealth({
+            syncError: Boolean(hasError && !hasConnection),
+            lastSyncError: runtimes.find((r) => r.lastError)?.lastError,
+          });
+          await refreshBadge();
+          sendResponse({ ok: true } satisfies RuntimeActionResponse);
+          return;
+        }
         case 'set-local-inference-opt-in':
           sendResponse({
             ok: true,
