@@ -120,7 +120,11 @@ async function ensureLocalMemberFvmSigner(passkeyCredentialId: string) {
     return existingSigner;
   }
 
-  const existingBinding = await getLocalFvmSignerBinding(db, configuredFvmChain, passkeyCredentialId);
+  const existingBinding = await getLocalFvmSignerBinding(
+    db,
+    configuredFvmChain,
+    passkeyCredentialId,
+  );
   if (existingBinding) {
     throw new Error(
       'Local Filecoin signer data is incomplete on this device. Restore the original browser profile or clear the saved signer binding before retrying.',
@@ -1305,7 +1309,8 @@ export async function handleFvmRegistration(
   if (!authSession?.passkey) {
     return {
       ok: false,
-      error: 'A stored passkey session is required before a member can register proofs on Filecoin.',
+      error:
+        'A stored passkey session is required before a member can register proofs on Filecoin.',
     } satisfies RuntimeActionResponse;
   }
 
@@ -1375,9 +1380,7 @@ export async function handleFvmRegistration(
     archiveScope: receipt.scope,
   });
 
-  let localSigner:
-    | Awaited<ReturnType<typeof ensureLocalMemberFvmSigner>>
-    | undefined;
+  let localSigner: Awaited<ReturnType<typeof ensureLocalMemberFvmSigner>> | undefined;
   try {
     localSigner = await ensureLocalMemberFvmSigner(authSession.passkey.id);
     const fvmConfig = getFvmChainConfig(configuredFvmChain);

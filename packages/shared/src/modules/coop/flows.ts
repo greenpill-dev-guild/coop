@@ -39,7 +39,11 @@ import { createUnavailableOnchainState } from '../onchain/onchain';
 import { buildMemoryProfileSeed } from './pipeline';
 import { formatCoopSpaceTypeLabel } from './presets';
 import { buildReviewBoard, updateMemoryProfileFromArtifacts } from './publish';
-import { summarizeRitualArtifact, summarizeSoulArtifact, synthesizeCoopFromPurpose } from './synthesis';
+import {
+  summarizeRitualArtifact,
+  summarizeSoulArtifact,
+  synthesizeCoopFromPurpose,
+} from './synthesis';
 import {
   createBootstrapSyncRoomConfig,
   createCoopDoc,

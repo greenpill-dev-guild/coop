@@ -11,6 +11,7 @@ export {
 } from './modules/coop/setup-insights';
 export { getRitualLenses } from './modules/coop/presets';
 export type { RitualLensPreset } from './modules/coop/presets';
+export { synthesizeTranscriptsToPurpose } from './modules/coop/synthesis';
 export { buildCoopArchiveStory, describeArchiveReceipt } from './modules/archive/story';
 export { buildIceServers } from './modules/coop/sync';
 export { saveCoopBlob } from './modules/blob';

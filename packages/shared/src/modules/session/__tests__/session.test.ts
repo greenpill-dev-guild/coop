@@ -458,7 +458,7 @@ function makeUnsupportedGreenGoodsSessionBundle(actionClass: UnsupportedGreenGoo
 }
 
 describe('session capability helpers', () => {
-  it('routes 7579-enabled Safes through the ERC-7579 module account path', () => {
+  it('keeps 7579-enabled Safes on the Safe module account path', () => {
     expect(
       buildSessionModuleAccount({
         safeAddress: SAFE_ADDRESS as `0x${string}`,
@@ -467,7 +467,7 @@ describe('session capability helpers', () => {
       }),
     ).toEqual({
       address: SAFE_ADDRESS,
-      type: 'erc7579-implementation',
+      type: 'safe',
       deployedOnChains: [11155111],
     });
   });

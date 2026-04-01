@@ -1,9 +1,10 @@
 import {
   type Session,
-  type Account as SessionModuleAccount,
   SmartSessionMode,
   encodeSmartSessionSignature,
   getEnableSessionsAction,
+  getOwnableValidatorMockSignature,
+  getOwnableValidatorSignature,
   getOwnableValidator,
   getPermissionId,
   getRemoveSessionAction,
@@ -14,7 +15,18 @@ import {
   getUsageLimitPolicy,
   isSessionEnabled,
 } from '@rhinestone/module-sdk/module';
-import { type Address, type Hex, hexToBytes, toFunctionSelector, toHex, zeroHash } from 'viem';
+import type { Account as SessionModuleAccount } from '@rhinestone/module-sdk/account';
+import {
+  type Address,
+  type Hex,
+  hexToBigInt,
+  hexToBytes,
+  pad,
+  toFunctionSelector,
+  toHex,
+  zeroHash,
+} from 'viem';
+import { getUserOperationHash, type EntryPointVersion, type UserOperation } from 'viem/account-abstraction';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import type {
   ActionBundle,
@@ -350,6 +362,7 @@ export function buildSmartSession(input: { capability: SessionCapability }): {
   };
 } {
   const capability = refreshSessionCapabilityStatus(input.capability);
+  const compatibilityFallback = getSmartSessionsCompatibilityFallback();
   const actionEntries = capability.scope.allowedActions.flatMap((actionClass) => {
     const targets = capability.scope.targetAllowlist[actionClass]?.filter(isAddress) ?? [];
     if (targets.length === 0) {
@@ -392,7 +405,10 @@ export function buildSmartSession(input: { capability: SessionCapability }): {
     permissionId: getPermissionId({ session }),
     modules: {
       validator: getSmartSessionsValidator({}),
-      fallback: getSmartSessionsCompatibilityFallback(),
+      fallback: {
+        ...compatibilityFallback,
+        functionSig: compatibilityFallback.selector,
+      },
     },
   };
 }
@@ -404,9 +420,19 @@ export function buildSessionModuleAccount(input: {
 }): SessionModuleAccount {
   return {
     address: input.safeAddress,
-    type: input.safeSupports7579 ? 'erc7579-implementation' : 'safe',
+    // Safe7579 accounts are still Safe accounts from the module-sdk's perspective.
+    type: 'safe',
     deployedOnChains: [input.chainId],
   };
+}
+
+export function getSmartSessionsValidatorNonceKey() {
+  return hexToBigInt(
+    pad(getSmartSessionsValidator({}).address, {
+      dir: 'right',
+      size: 24,
+    }),
+  );
 }
 
 export function buildEnableSessionExecution(capability: SessionCapability) {
@@ -433,11 +459,78 @@ export function wrapUseSessionSignature(input: {
   capability: SessionCapability;
   validatorSignature: Hex;
 }) {
-  const { permissionId } = buildSmartSession({ capability: input.capability });
+  const permissionId =
+    typeof input.capability.permissionId === 'string' &&
+    /^0x[a-fA-F0-9]{64}$/.test(input.capability.permissionId)
+      ? (input.capability.permissionId as Hex)
+      : getPermissionId({
+          session: {
+            sessionValidator: input.capability.validatorAddress as Address,
+            sessionValidatorInitData: input.capability.validatorInitData as Hex,
+            salt: zeroHash,
+            userOpPolicies: [],
+            erc7739Policies: {
+              allowedERC7739Content: [],
+              erc1271Policies: [],
+            },
+            actions: [],
+            permitERC4337Paymaster: true,
+            chainId: BigInt(getCoopChainConfig(input.capability.scope.chainKey).chain.id),
+          },
+        });
   return encodeSmartSessionSignature({
     mode: SmartSessionMode.USE,
     permissionId,
     signature: input.validatorSignature,
+  });
+}
+
+export function getSessionCapabilityUseStubSignature(input: {
+  capability: SessionCapability;
+  threshold?: number;
+}) {
+  return wrapUseSessionSignature({
+    capability: input.capability,
+    validatorSignature: getOwnableValidatorMockSignature({
+      threshold: input.threshold ?? 1,
+    }),
+  });
+}
+
+export async function signSessionCapabilityUserOperation(input: {
+  capability: SessionCapability;
+  signer: {
+    sign?: (parameters: { hash: Hex }) => Promise<Hex>;
+    signMessage: (parameters: { message: { raw: Hex } }) => Promise<Hex>;
+  };
+  userOperation: Parameters<
+    import('viem/account-abstraction').SmartAccount['signUserOperation']
+  >[0];
+  chainId: number;
+  entryPointAddress: Address;
+  entryPointVersion: EntryPointVersion;
+  sender?: Address;
+}) {
+  const hash = getUserOperationHash({
+    userOperation: {
+      ...input.userOperation,
+      sender: input.userOperation.sender ?? input.sender ?? input.capability.scope.safeAddress,
+      signature: '0x',
+    } as UserOperation<EntryPointVersion>,
+    entryPointAddress: input.entryPointAddress,
+    entryPointVersion: input.entryPointVersion,
+    chainId: input.chainId,
+  });
+  const signature = input.signer.sign
+    ? await input.signer.sign({ hash })
+    : await input.signer.signMessage({
+        message: { raw: hash },
+      });
+  return wrapUseSessionSignature({
+    capability: input.capability,
+    validatorSignature: getOwnableValidatorSignature({
+      signatures: [signature],
+    }),
   });
 }
 

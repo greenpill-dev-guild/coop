@@ -105,10 +105,12 @@ describe('create, join, and publish flows', () => {
     expect(created.state.profile.spaceType).toBe('community');
     expect(created.state.artifacts).toHaveLength(4);
     expect(created.state.members[0]?.role).toBe('creator');
-    expect(created.state.artifacts.find((artifact) => artifact.category === 'coop-soul')?.summary)
-      .toMatch(/Forest Coop exists to coordinate forest stewardship/i);
-    expect(created.state.artifacts.find((artifact) => artifact.category === 'ritual')?.summary)
-      .toMatch(/Weekly review circle/i);
+    expect(
+      created.state.artifacts.find((artifact) => artifact.category === 'coop-soul')?.summary,
+    ).toMatch(/Forest Coop exists to coordinate forest stewardship/i);
+    expect(
+      created.state.artifacts.find((artifact) => artifact.category === 'ritual')?.summary,
+    ).toMatch(/Weekly review circle/i);
   });
 
   it('seeds canonical member and trusted invites when a coop is created', () => {

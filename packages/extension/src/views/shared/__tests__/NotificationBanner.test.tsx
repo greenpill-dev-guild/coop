@@ -91,7 +91,9 @@ describe('NotificationBanner', () => {
 
   it('calls onDismiss after the banner is dismissed', () => {
     const handleDismiss = vi.fn();
-    render(<NotificationBanner id="banner-dismiss" message="Dismiss me" onDismiss={handleDismiss} />);
+    render(
+      <NotificationBanner id="banner-dismiss" message="Dismiss me" onDismiss={handleDismiss} />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
 

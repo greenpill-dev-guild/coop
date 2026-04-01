@@ -64,7 +64,8 @@ describe('isRitualReviewDue', () => {
               skillId: 'review-digest',
             },
             status: 'published',
-            createdAt: '2026-03-25T00:00:00.000Z',
+            // Must be within the 7-day freshness window relative to now
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           }),
         ] as never[],
       }),

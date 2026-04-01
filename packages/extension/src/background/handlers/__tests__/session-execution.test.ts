@@ -44,6 +44,9 @@ const sharedMocks = vi.hoisted(() => ({
   getAuthSession: vi.fn(),
   getEncryptedSessionMaterial: vi.fn(),
   getSessionCapability: vi.fn(),
+  getSessionCapabilityUseStubSignature: vi.fn(
+    ({ capability }: { capability: SessionCapability }) => `wrapped:${capability.id}:validator-stub`,
+  ),
   incrementSessionCapabilityUsage: vi.fn((capability: SessionCapability) => ({
     ...capability,
     usedCount: ((capability as SessionCapability & { usedCount?: number }).usedCount ?? 0) + 1,
@@ -77,6 +80,20 @@ const sharedMocks = vi.hoisted(() => ({
   saveEncryptedSessionMaterial: vi.fn(async () => undefined),
   saveSessionCapability: vi.fn(async () => undefined),
   saveSessionCapabilityLogEntry: vi.fn(async () => undefined),
+  sendSmartAccountTransactionWithCoopGasFallback: vi.fn(async () => ({
+    txHash: '0xtxhash',
+    userOperationHash: '0xuophash',
+    receipt: {
+      transactionHash: '0xreceipt',
+    },
+  })),
+  signSessionCapabilityUserOperation: vi.fn(
+    async ({
+      capability,
+    }: {
+      capability: SessionCapability;
+    }) => `wrapped:${capability.id}:validator-signature`,
+  ),
   validateSessionCapabilityForBundle: vi.fn(),
   wrapUseSessionSignature: vi.fn(
     ({
@@ -126,6 +143,7 @@ vi.mock('@coop/shared', async (importOriginal) => {
     getAuthSession: sharedMocks.getAuthSession,
     getEncryptedSessionMaterial: sharedMocks.getEncryptedSessionMaterial,
     getSessionCapability: sharedMocks.getSessionCapability,
+    getSessionCapabilityUseStubSignature: sharedMocks.getSessionCapabilityUseStubSignature,
     incrementSessionCapabilityUsage: sharedMocks.incrementSessionCapabilityUsage,
     listSessionCapabilities: sharedMocks.listSessionCapabilities,
     listSessionCapabilityLogEntries: sharedMocks.listSessionCapabilityLogEntries,
@@ -137,6 +155,9 @@ vi.mock('@coop/shared', async (importOriginal) => {
     saveEncryptedSessionMaterial: sharedMocks.saveEncryptedSessionMaterial,
     saveSessionCapability: sharedMocks.saveSessionCapability,
     saveSessionCapabilityLogEntry: sharedMocks.saveSessionCapabilityLogEntry,
+    sendSmartAccountTransactionWithCoopGasFallback:
+      sharedMocks.sendSmartAccountTransactionWithCoopGasFallback,
+    signSessionCapabilityUserOperation: sharedMocks.signSessionCapabilityUserOperation,
     validateSessionCapabilityForBundle: sharedMocks.validateSessionCapabilityForBundle,
     wrapUseSessionSignature: sharedMocks.wrapUseSessionSignature,
   };
@@ -291,6 +312,10 @@ describe('session execution paths', () => {
       sendTransaction: vi.fn(async () => '0xtxhash'),
     };
     const baseAccount = {
+      entryPoint: {
+        address: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+        version: '0.7' as const,
+      },
       getStubSignature: vi.fn(async () => 'validator-stub'),
       signUserOperation: vi.fn(async () => 'validator-signature'),
     };
@@ -358,7 +383,7 @@ describe('session execution paths', () => {
       expect.objectContaining({
         account: expect.objectContaining({
           address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          type: 'erc7579-implementation',
+          type: 'safe',
           deployedOnChains: [11155111],
         }),
       }),
@@ -367,7 +392,7 @@ describe('session execution paths', () => {
       expect.objectContaining({
         account: expect.objectContaining({
           address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          type: 'erc7579-implementation',
+          type: 'safe',
           deployedOnChains: [11155111],
         }),
       }),
@@ -492,6 +517,8 @@ describe('session execution paths', () => {
         version: '1.4.1',
         safe4337ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
         erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+        attesters: ['0x000000333034E9f539ce08819E12c1b8Cb29084d'],
+        attestersThreshold: 1,
       }),
     );
   });
@@ -629,6 +656,9 @@ describe('session execution paths', () => {
   });
 
   it('records failed Green Goods session executions and rethrows the failure', async () => {
+    sharedMocks.sendSmartAccountTransactionWithCoopGasFallback.mockRejectedValueOnce(
+      new Error('Bundler rejected user operation.'),
+    );
     const sendTransaction = vi.fn(async () => {
       throw new Error('Bundler rejected user operation.');
     });

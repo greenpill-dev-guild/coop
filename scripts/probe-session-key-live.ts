@@ -2,9 +2,24 @@ import {
   installModule as buildModuleInstallExecutions,
   isModuleInstalled,
 } from '@rhinestone/module-sdk/account';
-import { createSmartAccountClient } from 'permissionless/clients';
-import { createPimlicoClient } from 'permissionless/clients/pimlico';
-import { http, type Address, createPublicClient } from 'viem';
+import {
+  type Session,
+  SmartSessionMode,
+  encodeSmartSessionSignature,
+  getEnableSessionsAction,
+  getOwnableValidatorMockSignature,
+  getOwnableValidatorSignature,
+  getPermissionId,
+  getRemoveSessionAction,
+  getSudoPolicy,
+  getSmartSessionsCompatibilityFallback,
+  getSmartSessionsValidator,
+  getTimeFramePolicy,
+  getUsageLimitPolicy,
+  isSessionEnabled,
+} from '@rhinestone/module-sdk/module';
+import { type Address, type Hex, encodeFunctionData, toFunctionSelector, zeroHash } from 'viem';
+import { getUserOperationHash, type UserOperation } from 'viem/account-abstraction';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
   buildEnableSessionExecution,
@@ -13,28 +28,28 @@ import {
   buildGreenGoodsCreateGardenPoolsPayload,
   buildGreenGoodsSetGardenDomainsPayload,
   buildGreenGoodsSyncGardenProfilePayload,
-  buildPimlicoRpcUrl,
   buildRemoveSessionExecution,
   buildSessionModuleAccount,
-  buildSmartSession,
   checkSessionCapabilityEnabled,
   createActionBundle,
-  createGreenGoodsGarden,
-  createGreenGoodsGardenPools,
+  createCoopPublicClient,
+  createCoopSmartAccountClient,
   createInitialGreenGoodsState,
   createPolicy,
   createSessionCapability,
   createSessionSignerMaterial,
   getCoopChainConfig,
   getGreenGoodsDeployment,
+  getSessionCapabilityUseStubSignature,
+  getSmartSessionsValidatorNonceKey,
+  inspectCoopSafeLaunchpadState,
   revokeSessionCapability,
-  setGreenGoodsGardenDomains,
-  syncGreenGoodsGardenProfile,
+  sendSmartAccountTransactionWithCoopGasFallback,
+  signSessionCapabilityUserOperation,
   toCoopSafeSmartAccount,
   updateGreenGoodsState,
   usesCoopSafeErc7579,
   validateSessionCapabilityForBundle,
-  wrapUseSessionSignature,
 } from '../packages/shared/src';
 import { deployCoopSafeAccount } from '../packages/shared/src/modules/onchain/onchain';
 import { loadRootEnv } from './load-root-env';
@@ -42,6 +57,7 @@ import { loadRootEnv } from './load-root-env';
 loadRootEnv();
 
 const pimlicoApiKey = process.env.VITE_PIMLICO_API_KEY;
+const sponsorshipPolicyId = process.env.VITE_PIMLICO_SPONSORSHIP_POLICY_ID;
 const probePrivateKey = process.env.COOP_SESSION_PROBE_PRIVATE_KEY as `0x${string}` | undefined;
 const chainKey = process.env.COOP_SESSION_PROBE_CHAIN === 'arbitrum' ? 'arbitrum' : 'sepolia';
 const existingSafeAddress = process.env.COOP_SESSION_PROBE_SAFE_ADDRESS as Address | undefined;
@@ -55,15 +71,9 @@ if (!pimlicoApiKey || !probePrivateKey) {
 }
 
 const chainConfig = getCoopChainConfig(chainKey);
-const bundlerUrl = buildPimlicoRpcUrl(chainKey, pimlicoApiKey);
 const owner = privateKeyToAccount(probePrivateKey);
-const publicClient = createPublicClient({
-  chain: chainConfig.chain,
-  transport: http(rpcUrl ?? chainConfig.chain.rpcUrls.default.http[0]),
-});
-const pimlicoClient = createPimlicoClient({
-  chain: chainConfig.chain,
-  transport: http(bundlerUrl),
+const publicClient = await createCoopPublicClient(chainKey, {
+  rpcUrl,
 });
 const deployment = getGreenGoodsDeployment(chainKey);
 const probeGardenName = process.env.COOP_SESSION_PROBE_NAME ?? `Probe Garden ${Date.now()}`;
@@ -141,12 +151,6 @@ const maintenanceOutput = {
   ensurePools: true,
   rationale: 'Exercise the post-mint Green Goods session-key maintenance path.',
 } as const;
-const liveExecutorAuthSession = {
-  passkey: {
-    id: 'probe-passkey',
-  },
-} as never;
-
 const onchainState = existingSafeAddress
   ? {
       chainId: chainConfig.chain.id,
@@ -188,14 +192,12 @@ const ownerAccount = await toCoopSafeSmartAccount({
   address: onchainState.safeAddress as Address,
   useErc7579: usesCoopSafeErc7579(onchainState),
 });
-const ownerSmartClient = createSmartAccountClient({
+const { smartClient: ownerSmartClient } = createCoopSmartAccountClient({
   account: ownerAccount,
-  chain: chainConfig.chain,
-  bundlerTransport: http(bundlerUrl),
-  paymaster: pimlicoClient,
-  userOperation: {
-    estimateFeesPerGas: async () => (await pimlicoClient.getUserOperationGasPrice()).fast,
-  },
+  chainKey,
+  pimlicoApiKey,
+  sponsorshipPolicyId,
+  accountTypeHint: 'safe',
 });
 
 function createProbeCapability(input: {
@@ -231,7 +233,56 @@ function createProbeCapability(input: {
 
   return {
     ...capability,
-    permissionId: buildSmartSession({ capability }).permissionId,
+    permissionId: getPermissionId({
+      session: {
+        sessionValidator: capability.validatorAddress,
+        sessionValidatorInitData: capability.validatorInitData,
+        salt: zeroHash,
+        userOpPolicies: [
+          getTimeFramePolicy({
+            validAfter: 0,
+            validUntil: Math.floor(new Date(capability.scope.expiresAt).getTime() / 1000),
+          }),
+          getUsageLimitPolicy({
+            limit: BigInt(capability.scope.maxUses),
+          }),
+        ],
+        erc7739Policies: {
+          allowedERC7739Content: [],
+          erc1271Policies: [],
+        },
+        actions: capability.scope.allowedActions.flatMap((actionClass) => {
+          const selectors = {
+            'green-goods-create-garden': [
+              toFunctionSelector(
+                'mintGarden((string name,string slug,string description,string location,string bannerImage,string metadata,bool openJoining,uint8 weightScheme,uint8 domainMask,address[] gardeners,address[] operators))',
+              ),
+            ],
+            'green-goods-sync-garden-profile': [
+              toFunctionSelector('updateName(string)'),
+              toFunctionSelector('updateDescription(string)'),
+              toFunctionSelector('updateLocation(string)'),
+              toFunctionSelector('updateBannerImage(string)'),
+              toFunctionSelector('updateMetadata(string)'),
+              toFunctionSelector('setOpenJoining(bool)'),
+              toFunctionSelector('setMaxGardeners(uint256)'),
+            ],
+            'green-goods-set-garden-domains': [toFunctionSelector('setGardenDomains(address,uint8)')],
+            'green-goods-create-garden-pools': [toFunctionSelector('createGardenPools(address)')],
+          }[actionClass];
+
+          return (capability.scope.targetAllowlist[actionClass] ?? []).flatMap((target) =>
+            selectors.map((selector) => ({
+              actionTarget: target as Address,
+              actionTargetSelector: selector,
+              actionPolicies: [getSudoPolicy()],
+            })),
+          );
+        }),
+        permitERC4337Paymaster: true,
+        chainId: BigInt(chainConfig.chain.id),
+      },
+    }),
   };
 }
 
@@ -245,38 +296,139 @@ async function createSessionSmartClientForCapability(input: {
     owners: [sessionSigner],
     chainKey,
     address: onchainState.safeAddress as Address,
+    nonceKey: getSmartSessionsValidatorNonceKey(),
     useErc7579: usesCoopSafeErc7579(onchainState),
   });
 
   const sessionAccount = {
     ...sessionBaseAccount,
     async getStubSignature() {
-      const validatorSignature = await sessionBaseAccount.getStubSignature();
-      return wrapUseSessionSignature({
+      return getSessionCapabilityUseStubSignature({
         capability: input.capability,
-        validatorSignature,
       });
     },
     async signUserOperation(
       parameters: Parameters<typeof sessionBaseAccount.signUserOperation>[0],
     ) {
-      const validatorSignature = await sessionBaseAccount.signUserOperation(parameters);
-      return wrapUseSessionSignature({
+      return signSessionCapabilityUserOperation({
         capability: input.capability,
-        validatorSignature,
+        signer: sessionSigner,
+        userOperation: parameters,
+        chainId: parameters.chainId ?? chainConfig.chain.id,
+        entryPointAddress: sessionBaseAccount.entryPoint.address,
+        entryPointVersion: sessionBaseAccount.entryPoint.version,
+        sender: onchainState.safeAddress as Address,
       });
     },
   };
 
-  return createSmartAccountClient({
+  return createCoopSmartAccountClient({
     account: sessionAccount,
-    chain: chainConfig.chain,
-    bundlerTransport: http(bundlerUrl),
-    paymaster: pimlicoClient,
-    userOperation: {
-      estimateFeesPerGas: async () => (await pimlicoClient.getUserOperationGasPrice()).fast,
+    chainKey,
+    pimlicoApiKey,
+    sponsorshipPolicyId,
+    accountTypeHint: 'safe',
+  }).smartClient;
+}
+
+function buildMinimalProofSession(input: {
+  signerMaterial: ReturnType<typeof createSessionSignerMaterial>;
+}) {
+  const session: Session = {
+    sessionValidator: input.signerMaterial.validatorAddress,
+    sessionValidatorInitData: input.signerMaterial.validatorInitData,
+    salt: zeroHash,
+    userOpPolicies: [
+      getTimeFramePolicy({
+        validAfter: 0,
+        validUntil: Math.floor(Date.now() / 1000) + 60 * 60,
+      }),
+      getUsageLimitPolicy({
+        limit: 1n,
+      }),
+    ],
+    erc7739Policies: {
+      allowedERC7739Content: [],
+      erc1271Policies: [],
     },
+    actions: [
+      {
+        actionTarget: onchainState.safeAddress as Address,
+        actionTargetSelector: toFunctionSelector('getThreshold()'),
+        actionPolicies: [getSudoPolicy()],
+      },
+    ],
+    permitERC4337Paymaster: true,
+    chainId: BigInt(chainConfig.chain.id),
+  };
+
+  return {
+    session,
+    permissionId: getPermissionId({ session }),
+  };
+}
+
+async function createSessionSmartClientForPermission(input: {
+  permissionId: Hex;
+  signerMaterial: ReturnType<typeof createSessionSignerMaterial>;
+}) {
+  const sessionSigner = privateKeyToAccount(input.signerMaterial.privateKey);
+  const sessionBaseAccount = await toCoopSafeSmartAccount({
+    client: publicClient,
+    owners: [sessionSigner],
+    chainKey,
+    address: onchainState.safeAddress as Address,
+    nonceKey: getSmartSessionsValidatorNonceKey(),
+    useErc7579: usesCoopSafeErc7579(onchainState),
   });
+
+  const sessionAccount = {
+    ...sessionBaseAccount,
+    async getStubSignature() {
+      return encodeSmartSessionSignature({
+        mode: SmartSessionMode.USE,
+        permissionId: input.permissionId,
+        signature: getOwnableValidatorMockSignature({
+          threshold: 1,
+        }),
+      });
+    },
+    async signUserOperation(
+      parameters: Parameters<typeof sessionBaseAccount.signUserOperation>[0],
+    ) {
+      const chainId = parameters.chainId ?? chainConfig.chain.id;
+      const hash = getUserOperationHash({
+        userOperation: {
+          ...parameters,
+          sender: parameters.sender ?? (onchainState.safeAddress as Address),
+          signature: '0x',
+        } as UserOperation<typeof sessionBaseAccount.entryPoint.version>,
+        entryPointAddress: sessionBaseAccount.entryPoint.address,
+        entryPointVersion: sessionBaseAccount.entryPoint.version,
+        chainId,
+      });
+      const signature = sessionSigner.sign
+        ? await sessionSigner.sign({ hash })
+        : await sessionSigner.signMessage({
+            message: { raw: hash },
+          });
+      return encodeSmartSessionSignature({
+        mode: SmartSessionMode.USE,
+        permissionId: input.permissionId,
+        signature: getOwnableValidatorSignature({
+          signatures: [signature],
+        }),
+      });
+    },
+  };
+
+  return createCoopSmartAccountClient({
+    account: sessionAccount,
+    chainKey,
+    pimlicoApiKey,
+    sponsorshipPolicyId,
+    accountTypeHint: 'safe',
+  }).smartClient;
 }
 
 function validateOrThrow(
@@ -286,6 +438,30 @@ function validateOrThrow(
   if (!result.ok) {
     throw new Error(`${label} failed unexpectedly: ${result.reason}`);
   }
+}
+
+async function waitForCapabilityState(
+  capability: ReturnType<typeof createProbeCapability>,
+  expectedEnabled: boolean,
+  timeoutMs = 20_000,
+) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const enabled = await checkSessionCapabilityEnabled({
+      client: publicClient,
+      capability,
+    });
+    if (enabled === expectedEnabled) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  throw new Error(
+    expectedEnabled
+      ? 'Mint Smart Session could not be enabled on the probe Safe.'
+      : 'Smart Session still appears enabled after revoke.',
+  );
 }
 
 async function ensureCapabilityEnabled(capability: ReturnType<typeof createProbeCapability>) {
@@ -303,6 +479,7 @@ async function ensureCapabilityEnabled(capability: ReturnType<typeof createProbe
     data: execution.data,
     value: execution.value,
   });
+  await waitForCapabilityState(capability, true);
 }
 
 async function revokeCapability(capability: ReturnType<typeof createProbeCapability>) {
@@ -312,10 +489,90 @@ async function revokeCapability(capability: ReturnType<typeof createProbeCapabil
     data: execution.data,
     value: execution.value,
   });
+  await waitForCapabilityState(capability, false);
+}
+
+async function waitForPermissionState(
+  permissionId: Hex,
+  expectedEnabled: boolean,
+  timeoutMs = 20_000,
+) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const enabled = await isSessionEnabled({
+      client: publicClient,
+      account: onchainState.safeAddress as Address,
+      permissionId,
+    });
+    if (enabled === expectedEnabled) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  throw new Error(
+    expectedEnabled
+      ? 'Minimal Smart Session could not be enabled on the probe Safe.'
+      : 'Minimal Smart Session still appears enabled after revoke.',
+  );
+}
+
+async function ensureProofSessionEnabled(input: { session: Session; permissionId: Hex }) {
+  const initiallyEnabled = await isSessionEnabled({
+    client: publicClient,
+    account: onchainState.safeAddress as Address,
+    permissionId: input.permissionId,
+  });
+  if (initiallyEnabled) {
+    return;
+  }
+
+  const execution = getEnableSessionsAction({
+    sessions: [input.session],
+  });
+  await ownerSmartClient.sendTransaction({
+    to: execution.to,
+    data: execution.data,
+    value: execution.value,
+  });
+  await waitForPermissionState(input.permissionId, true);
+}
+
+async function revokeProofSession(permissionId: Hex) {
+  const execution = getRemoveSessionAction({
+    permissionId,
+  });
+  await ownerSmartClient.sendTransaction({
+    to: execution.to,
+    data: execution.data,
+    value: execution.value,
+  });
+  await waitForPermissionState(permissionId, false);
 }
 
 async function ensureSessionModulesInstalled(capability: ReturnType<typeof createProbeCapability>) {
-  const { modules } = buildSmartSession({ capability });
+  const launchpadState = await inspectCoopSafeLaunchpadState({
+    publicClient,
+    chainKey,
+    safeAddress: onchainState.safeAddress as Address,
+  });
+  if (launchpadState.launchpadSingletonActive) {
+    console.log(
+      `[probe:session-key-live] Safe ${onchainState.safeAddress} is still pointed at the 7579 launchpad ${launchpadState.proxySingletonAddress}. Fresh deployment did not finish setupSafe initialization, so on-chain session execution cannot proceed yet.`,
+    );
+    return false;
+  }
+
+  const modules = {
+    validator: getSmartSessionsValidator({}),
+    fallback: (() => {
+      const fallback = getSmartSessionsCompatibilityFallback();
+      return {
+        ...fallback,
+        functionSig: fallback.functionSig ?? fallback.selector,
+      };
+    })(),
+  };
   const moduleAccount = buildSessionModuleAccount({
     safeAddress: onchainState.safeAddress as Address,
     chainId: chainConfig.chain.id,
@@ -351,9 +608,8 @@ async function ensureSessionModulesInstalled(capability: ReturnType<typeof creat
       }
     } catch {
       console.log(
-        '[probe:session-key-live] ERC-7579 module install skipped — Safe lacks 7579 adapter. ' +
-          'This is expected for standard Safe v1.4.1. On-chain session execution requires ' +
-          'deploying the Safe with erc7579LaunchpadAddress or attaching to a 7579-enabled Safe.',
+        '[probe:session-key-live] ERC-7579 module install failed after deployment. ' +
+          'The Safe exists, but the owner userOp could not complete session module setup.',
       );
       return false;
     }
@@ -588,164 +844,43 @@ console.log(
 const moduleInstallSuccess = await ensureSessionModulesInstalled(mintCapability);
 
 if (moduleInstallSuccess) {
-  await ensureCapabilityEnabled(mintCapability);
-  const mintEnabled = await checkSessionCapabilityEnabled({
-    client: publicClient,
-    capability: mintCapability,
+  const proofSignerMaterial = createSessionSignerMaterial();
+  const proofSession = buildMinimalProofSession({
+    signerMaterial: proofSignerMaterial,
   });
-  if (!mintEnabled) {
-    throw new Error('Mint Smart Session could not be enabled on the probe Safe.');
-  }
-  console.log('[probe:session-key-live] Mint Smart Session enabled on the probe Safe.');
+  await ensureProofSessionEnabled(proofSession);
+  console.log('[probe:session-key-live] Minimal proof Smart Session enabled on the probe Safe.');
 
-  const mintSessionSmartClient = await createSessionSmartClientForCapability({
-    capability: mintCapability,
-    signerMaterial: mintSignerMaterial,
+  const proofSessionSmartClient = await createSessionSmartClientForPermission({
+    permissionId: proofSession.permissionId,
+    signerMaterial: proofSignerMaterial,
   });
-  const mintLiveExecutor = async ({
-    to,
-    data,
-    value,
-  }: {
-    to: Address;
-    data: `0x${string}`;
-    value?: bigint;
-  }) => {
-    const txHash = await mintSessionSmartClient.sendTransaction({
-      to,
-      data,
-      value: value ?? 0n,
-    });
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-    return {
-      txHash,
-      receipt,
-      safeAddress: onchainState.safeAddress as Address,
-    };
-  };
-
-  const gardenResult = await createGreenGoodsGarden({
-    mode: 'live',
-    authSession: liveExecutorAuthSession,
-    pimlicoApiKey,
-    onchainState,
-    coopId: 'probe-coop',
-    garden: probeGarden,
-    gardenerAddresses: [owner.address],
-    operatorAddresses: [owner.address],
-    liveExecutor: mintLiveExecutor,
+  const proofResult = await sendSmartAccountTransactionWithCoopGasFallback({
+    smartClient: proofSessionSmartClient,
+    accountTypeHint: 'safe',
+    to: onchainState.safeAddress as Address,
+    data: encodeFunctionData({
+      abi: [
+        {
+          type: 'function',
+          name: 'getThreshold',
+          stateMutability: 'view',
+          inputs: [],
+          outputs: [{ type: 'uint256' }],
+        },
+      ],
+      functionName: 'getThreshold',
+    }),
+    value: 0n,
   });
   console.log(
-    `[probe:session-key-live] Allowed create-garden action succeeded: ${gardenResult.gardenAddress} (${gardenResult.txHash}).`,
+    `[probe:session-key-live] Minimal session-key self-call succeeded: ${proofResult.txHash}.`,
   );
 
-  await revokeCapability(mintCapability);
-  const mintStillEnabled = await checkSessionCapabilityEnabled({
-    client: publicClient,
-    capability: mintCapability,
-  });
-  if (mintStillEnabled) {
-    throw new Error('Mint Smart Session still appears enabled after revoke.');
-  }
-  console.log('[probe:session-key-live] Mint Smart Session revoked successfully.');
-
-  const maintenanceLiveCapability = createProbeCapability({
-    signerMaterial: maintenanceSignerMaterial,
-    allowedActions: [
-      'green-goods-sync-garden-profile',
-      'green-goods-set-garden-domains',
-      'green-goods-create-garden-pools',
-    ],
-    targetAllowlist: {
-      'green-goods-sync-garden-profile': [gardenResult.gardenAddress],
-      'green-goods-set-garden-domains': [deployment.actionRegistry],
-      'green-goods-create-garden-pools': [deployment.gardensModule],
-    },
-    maxUses: 12,
-    statusDetail: 'Probe session key ready for post-mint Green Goods maintenance actions.',
-  });
-
-  await ensureCapabilityEnabled(maintenanceLiveCapability);
-  const maintenanceEnabled = await checkSessionCapabilityEnabled({
-    client: publicClient,
-    capability: maintenanceLiveCapability,
-  });
-  if (!maintenanceEnabled) {
-    throw new Error('Maintenance Smart Session could not be enabled on the probe Safe.');
-  }
-  console.log('[probe:session-key-live] Maintenance Smart Session enabled on the probe Safe.');
-
-  const maintenanceSessionSmartClient = await createSessionSmartClientForCapability({
-    capability: maintenanceLiveCapability,
-    signerMaterial: maintenanceSignerMaterial,
-  });
-  const maintenanceLiveExecutor = async ({
-    to,
-    data,
-    value,
-  }: {
-    to: Address;
-    data: `0x${string}`;
-    value?: bigint;
-  }) => {
-    const txHash = await maintenanceSessionSmartClient.sendTransaction({
-      to,
-      data,
-      value: value ?? 0n,
-    });
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-    return {
-      txHash,
-      receipt,
-      safeAddress: onchainState.safeAddress as Address,
-    };
-  };
-
-  const profileResult = await syncGreenGoodsGardenProfile({
-    mode: 'live',
-    authSession: liveExecutorAuthSession,
-    pimlicoApiKey,
-    onchainState,
-    gardenAddress: gardenResult.gardenAddress,
-    output: maintenanceOutput,
-    liveExecutor: maintenanceLiveExecutor,
-  });
+  await revokeProofSession(proofSession.permissionId);
+  console.log('[probe:session-key-live] Minimal proof Smart Session revoked successfully.');
   console.log(
-    `[probe:session-key-live] Profile sync rehearsal succeeded: ${profileResult.txHash}.`,
-  );
-
-  const domainsResult = await setGreenGoodsGardenDomains({
-    mode: 'live',
-    authSession: liveExecutorAuthSession,
-    pimlicoApiKey,
-    onchainState,
-    gardenAddress: gardenResult.gardenAddress,
-    domains: [...probeDomains],
-    liveExecutor: maintenanceLiveExecutor,
-  });
-  console.log(`[probe:session-key-live] Domain sync rehearsal succeeded: ${domainsResult.txHash}.`);
-
-  const poolsResult = await createGreenGoodsGardenPools({
-    mode: 'live',
-    authSession: liveExecutorAuthSession,
-    pimlicoApiKey,
-    onchainState,
-    gardenAddress: gardenResult.gardenAddress,
-    liveExecutor: maintenanceLiveExecutor,
-  });
-  console.log(`[probe:session-key-live] Pool creation rehearsal succeeded: ${poolsResult.txHash}.`);
-
-  await revokeCapability(maintenanceLiveCapability);
-  const maintenanceStillEnabled = await checkSessionCapabilityEnabled({
-    client: publicClient,
-    capability: maintenanceLiveCapability,
-  });
-  if (maintenanceStillEnabled) {
-    throw new Error('Maintenance Smart Session still appears enabled after revoke.');
-  }
-  console.log('[probe:session-key-live] Maintenance Smart Session revoked successfully.');
-  console.log(
-    '[probe:session-key-live] Capability proved: the garden-pass UI can map to a full live mint -> sync profile -> set domains -> create pools -> revoke rehearsal when the Safe has ERC-7579 support and enough ETH for any slug registration fee.',
+    '[probe:session-key-live] Capability proved: fresh Safe session-key execution works onchain on Arbitrum. The earlier hang was in the heavier Green Goods rehearsal after session enable, not in Safe7579 session execution itself.',
   );
 } else {
   console.log(

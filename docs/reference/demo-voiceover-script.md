@@ -15,11 +15,11 @@ For shot sequencing and operator actions, use
 
 ### Opening
 
-Communities do not have an information problem. They have a fragmentation problem.
+We do not have an information problem. We have a fragmentation problem.
 
 Important context already exists in messy tabs, notes, links, conversations, and half-finished
-research. What is usually missing is a way to turn that messy knowledge into shared opportunity,
-coordinated governance, and durable memory.
+research — scattered across people and tools. What is usually missing is a way to turn that
+scattered knowledge into clear opportunity, whether for yourself, a team, or an entire community.
 
 That is what Coop is for.
 
@@ -133,14 +133,13 @@ It turns messy knowledge into opportunity, coordinated governance, and durable p
 ### Future Coda
 
 What comes next is deeper knowledge exploration, stronger Coop OS patterns, richer mobile and
-call-based participation, and more ways for communities to turn what they know into coordinated
-opportunity.
+call-based participation, and more ways to turn what you know into coordinated opportunity.
 
 ## Shorter Alt Close
 
 If you want a sharper final line:
 
-Coop helps communities move from scattered context to shared opportunity, from shared opportunity to
+Coop helps you move from scattered context to shared opportunity, from shared opportunity to
 governance, and from governance to durable memory.
 
 ## Delivery Notes

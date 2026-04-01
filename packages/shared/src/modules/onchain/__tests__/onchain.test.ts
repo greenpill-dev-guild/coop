@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeLegacyOnchainState, onchainStateSchema } from '../../../contracts/schema';
 import {
+  buildCoopSafeSessionBootstrapModules,
   buildCoopUserOperationGasOverrides,
   buildPimlicoRpcUrl,
   createMockOnchainState,
@@ -8,6 +9,7 @@ import {
   describeOnchainModeSummary,
   getCoopChainConfig,
   getCoopChainLabel,
+  inspectCoopSafeLaunchpadState,
   prepareUserOperationWithCoopGasFallback,
   sendSmartAccountTransactionWithCoopGasFallback,
   shouldRetryWithManualUserOperationGas,
@@ -123,6 +125,10 @@ describe('onchain chain support', () => {
     expect(getCoopChainConfig('arbitrum').safe.erc7579LaunchpadAddress).toBe(
       '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
     );
+    expect(getCoopChainConfig('arbitrum').safe.attesters).toEqual([
+      '0x000000333034E9f539ce08819E12c1b8Cb29084d',
+    ]);
+    expect(getCoopChainConfig('arbitrum').safe.attestersThreshold).toBe(1);
     expect(getCoopChainLabel('arbitrum')).toBe('Arbitrum One');
     expect(getCoopChainLabel('sepolia', 'short')).toBe('Sepolia');
     expect(describeOnchainModeSummary({ mode: 'live', chainKey: 'sepolia' })).toBe(
@@ -134,6 +140,41 @@ describe('onchain chain support', () => {
     expect(buildPimlicoRpcUrl('sepolia', 'test-key')).toBe(
       'https://api.pimlico.io/v2/sepolia/rpc?apikey=test-key',
     );
+  });
+
+  it('builds Smart Session bootstrap modules for fresh 7579 Safe deploys', () => {
+    const modules = buildCoopSafeSessionBootstrapModules('sepolia');
+
+    expect(modules.validators).toEqual([
+      expect.objectContaining({
+        address: '0x00000000008bDABA73cD9815d79069c247Eb4bDA',
+        context: '0x',
+      }),
+    ]);
+    expect(modules.fallbacks).toEqual([
+      expect.objectContaining({
+        address: '0x000000000052e9685932845660777DF43C2dC496',
+        context: expect.stringMatching(/^0x84b0196e00/i),
+      }),
+    ]);
+  });
+
+  it('detects launchpad-backed Safe proxies that never finished setup', async () => {
+    await expect(
+      inspectCoopSafeLaunchpadState({
+        chainKey: 'sepolia',
+        safeAddress: '0x1111111111111111111111111111111111111111',
+        publicClient: {
+          getCode: async () => '0x1234',
+          getStorageAt: async () =>
+            '0x0000000000000000000000007579011ab74c46090561ea277ba79d510c6c00ff',
+        } as never,
+      }),
+    ).resolves.toEqual({
+      codePresent: true,
+      launchpadSingletonActive: true,
+      proxySingletonAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+    });
   });
 
   it('detects bundler estimation failures that should retry with manual gas', () => {

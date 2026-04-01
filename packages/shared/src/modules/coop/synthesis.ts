@@ -1,4 +1,9 @@
-import type { CaptureMode, CoopSoul, CoopSpaceType, RitualDefinition } from '../../contracts/schema';
+import type {
+  CaptureMode,
+  CoopSoul,
+  CoopSpaceType,
+  RitualDefinition,
+} from '../../contracts/schema';
 import { compactWhitespace, truncateWords, unique } from '../../utils';
 
 export interface SynthesizeCoopFromPurposeInput {
@@ -17,16 +22,7 @@ interface FocusRule {
 const focusRules: FocusRule[] = [
   {
     label: 'funding leads',
-    keywords: [
-      'fund',
-      'grant',
-      'budget',
-      'resource',
-      'capital',
-      'finance',
-      'donation',
-      'sponsor',
-    ],
+    keywords: ['fund', 'grant', 'budget', 'resource', 'capital', 'finance', 'donation', 'sponsor'],
     ritualMoment: 'Funding scan',
   },
   {
@@ -283,9 +279,47 @@ export function summarizeRitualArtifact(ritual: RitualDefinition) {
   );
 }
 
-export function synthesizeCoopFromPurpose(
-  input: SynthesizeCoopFromPurposeInput,
-): {
+export interface SynthesizeTranscriptsInput {
+  capital: string;
+  impact: string;
+  governance: string;
+  knowledge: string;
+}
+
+/**
+ * Combines the four ritual-lens transcripts into a single purpose paragraph
+ * suitable for pasting into the coop purpose field.
+ */
+export function synthesizeTranscriptsToPurpose(input: SynthesizeTranscriptsInput): string {
+  const parts: string[] = [];
+
+  const knowledge = clean(input.knowledge);
+  const capital = clean(input.capital);
+  const governance = clean(input.governance);
+  const impact = clean(input.impact);
+
+  if (knowledge) {
+    parts.push(`keep ${truncateWords(knowledge, 18)} visible`);
+  }
+  if (capital) {
+    parts.push(`track ${truncateWords(capital, 18)}`);
+  }
+  if (governance) {
+    parts.push(`coordinate ${truncateWords(governance, 18)}`);
+  }
+  if (impact) {
+    parts.push(`measure ${truncateWords(impact, 18)}`);
+  }
+
+  if (parts.length === 0) {
+    return '';
+  }
+
+  const joined = formatList(parts);
+  return `${joined.charAt(0).toUpperCase()}${joined.slice(1)} — so nothing useful gets lost.`;
+}
+
+export function synthesizeCoopFromPurpose(input: SynthesizeCoopFromPurposeInput): {
   soul: CoopSoul;
   rituals: RitualDefinition[];
 } {
@@ -308,7 +342,12 @@ export function synthesizeCoopFromPurpose(
     rituals: [
       {
         weeklyReviewCadence: buildWeeklyReviewCadence(spaceType),
-        namedMoments: buildNamedMoments(input.coopName, artifactFocus, spaceType, input.captureMode),
+        namedMoments: buildNamedMoments(
+          input.coopName,
+          artifactFocus,
+          spaceType,
+          input.captureMode,
+        ),
         facilitatorExpectation: buildFacilitatorExpectation(spaceType, artifactFocus),
         defaultCapturePosture: buildDefaultCapturePosture(input.captureMode, artifactFocus),
       },

@@ -16,7 +16,8 @@ const chainKey =
       ? 'filecoin'
       : 'filecoin-calibration';
 const configuredRegistryAddress =
-  process.env.COOP_FVM_REGISTRY_PROBE_REGISTRY_ADDRESS ?? process.env.VITE_COOP_FVM_REGISTRY_ADDRESS;
+  process.env.COOP_FVM_REGISTRY_PROBE_REGISTRY_ADDRESS ??
+  process.env.VITE_COOP_FVM_REGISTRY_ADDRESS;
 const rpcUrl = process.env.COOP_FVM_REGISTRY_PROBE_RPC_URL;
 
 const chainConfig = getFvmChainConfig(chainKey);

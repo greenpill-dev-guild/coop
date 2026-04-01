@@ -1079,7 +1079,8 @@ describe('archive handlers', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'A stored passkey session is required before a member can register proofs on Filecoin.',
+      error:
+        'A stored passkey session is required before a member can register proofs on Filecoin.',
     });
     expect(mocks.saveState).not.toHaveBeenCalled();
     expect(viemMocks.createWalletClient).not.toHaveBeenCalled();

@@ -1,9 +1,4 @@
-import {
-  http,
-  type Address,
-  createPublicClient,
-  encodeFunctionData,
-} from 'viem';
+import { http, type Address, createPublicClient, encodeFunctionData } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { filecoin, filecoinCalibration } from 'viem/chains';
 import type { FvmChainKey, FvmRegistryState, LocalFvmSignerBinding } from '../../contracts/schema';

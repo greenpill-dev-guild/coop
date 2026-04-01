@@ -1211,7 +1211,10 @@ describe('NestTab', () => {
     openNestSection('Edit Setup');
 
     await user.clear(screen.getByLabelText('Big picture'));
-    await user.type(screen.getByLabelText('Big picture'), 'A tighter operating picture for the coop.');
+    await user.type(
+      screen.getByLabelText('Big picture'),
+      'A tighter operating picture for the coop.',
+    );
     await user.click(screen.getByRole('button', { name: 'Save setup' }));
 
     expect(base.orchestration.updateCoopDetails).toHaveBeenCalledWith({

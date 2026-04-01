@@ -20,7 +20,10 @@ import {
   getAuthSession,
   getEncryptedSessionMaterial,
   getGreenGoodsDeployment,
+  getSmartSessionsValidatorNonceKey,
+  getCoopChainConfig,
   getSessionCapability,
+  getSessionCapabilityUseStubSignature,
   incrementSessionCapabilityUsage,
   listSessionCapabilities,
   listSessionCapabilityLogEntries,
@@ -32,10 +35,11 @@ import {
   saveEncryptedSessionMaterial,
   saveSessionCapability,
   saveSessionCapabilityLogEntry,
+  sendSmartAccountTransactionWithCoopGasFallback,
+  signSessionCapabilityUserOperation,
   toCoopSafeSmartAccount,
   usesCoopSafeErc7579,
   validateSessionCapabilityForBundle,
-  wrapUseSessionSignature,
 } from '@coop/shared';
 import {
   installModule as buildModuleInstallExecutions,
@@ -183,8 +187,33 @@ export async function ensureSessionCapabilityReadyLive(input: {
     onchainState: input.onchainState,
   });
   const { modules } = buildSmartSession({ capability: input.capability });
+  const modulesToEnsure = [
+    modules.validator,
+    {
+      ...modules.fallback,
+      functionSig: modules.fallback.functionSig ?? modules.fallback.selector,
+    },
+  ];
+  const waitForModuleInstalled = async (
+    module: (typeof modulesToEnsure)[number],
+    timeoutMs = 30_000,
+  ) => {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const installed = await checkModuleInstalled({
+        client: context.publicClient as Parameters<typeof checkModuleInstalled>[0]['client'],
+        account: context.moduleAccount,
+        module,
+      });
+      if (installed) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+    }
+    throw new Error(`Timed out waiting for ${module.type} module installation to finalize.`);
+  };
 
-  for (const module of [modules.validator, modules.fallback]) {
+  for (const module of modulesToEnsure) {
     const installed = await checkModuleInstalled({
       client: context.publicClient as Parameters<typeof checkModuleInstalled>[0]['client'],
       account: context.moduleAccount,
@@ -200,12 +229,15 @@ export async function ensureSessionCapabilityReadyLive(input: {
       module,
     });
     for (const execution of executions) {
-      await context.smartClient.sendTransaction({
+      await sendSmartAccountTransactionWithCoopGasFallback({
+        smartClient: context.smartClient,
+        accountTypeHint: 'safe',
         to: execution.to,
         data: execution.data,
         value: execution.value as bigint,
       });
     }
+    await waitForModuleInstalled(module);
   }
 
   const enabled = await checkSessionCapabilityEnabled({
@@ -288,21 +320,25 @@ export async function createSessionExecutionContext(input: {
     chainKey: input.onchainState.chainKey,
     address: input.onchainState.safeAddress as Address,
     useErc7579: usesCoopSafeErc7579(input.onchainState),
+    nonceKey: getSmartSessionsValidatorNonceKey(),
   });
   const account = {
     ...baseAccount,
     async getStubSignature() {
-      const validatorSignature = await baseAccount.getStubSignature();
-      return wrapUseSessionSignature({
+      return getSessionCapabilityUseStubSignature({
         capability: input.capability,
-        validatorSignature,
       });
     },
     async signUserOperation(parameters: Parameters<typeof baseAccount.signUserOperation>[0]) {
-      const validatorSignature = await baseAccount.signUserOperation(parameters);
-      return wrapUseSessionSignature({
+      return signSessionCapabilityUserOperation({
         capability: input.capability,
-        validatorSignature,
+        signer: owner,
+        userOperation: parameters,
+        chainId:
+          parameters.chainId ?? getCoopChainConfig(input.capability.scope.chainKey).chain.id,
+        entryPointAddress: baseAccount.entryPoint.address,
+        entryPointVersion: baseAccount.entryPoint.version,
+        sender: input.onchainState.safeAddress as Address,
       });
     },
   };
@@ -416,12 +452,13 @@ export async function buildGreenGoodsSessionExecutor(input: {
     );
 
     try {
-      const txHash = await context.smartClient.sendTransaction({
+      const result = await sendSmartAccountTransactionWithCoopGasFallback({
+        smartClient: context.smartClient,
+        accountTypeHint: 'safe',
         to,
         data,
         value: value ?? 0n,
       });
-      const receipt = await context.publicClient.waitForTransactionReceipt({ hash: txHash });
       const updatedCapability = incrementSessionCapabilityUsage(capability);
       await saveSessionCapability(db, updatedCapability);
       await saveSessionCapabilityLogEntry(
@@ -437,13 +474,16 @@ export async function buildGreenGoodsSessionExecutor(input: {
         }),
       );
       return {
-        txHash,
-        receipt,
+        txHash: result.txHash,
+        receipt: result.receipt,
         safeAddress: input.coop.onchainState.safeAddress as Address,
       };
     } catch (error) {
-      const detail =
+      const rawDetail =
         error instanceof Error ? error.message : 'Session-key execution failed unexpectedly.';
+      const detail = rawDetail.includes('AA24 signature error')
+        ? 'Session-key signature was rejected onchain by Smart Sessions (AA24). The Safe and owner path are still intact, but this session key must be re-issued or re-enabled before autonomous execution can continue.'
+        : rawDetail;
       await saveSessionCapabilityLogEntry(
         db,
         createSessionCapabilityLogEntry({
@@ -456,7 +496,9 @@ export async function buildGreenGoodsSessionExecutor(input: {
           replayId: input.bundle.replayId,
         }),
       );
-      throw error;
+      throw new Error(detail, {
+        cause: error instanceof Error ? error : undefined,
+      });
     }
   };
 }

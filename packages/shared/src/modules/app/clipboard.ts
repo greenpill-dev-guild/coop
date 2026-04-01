@@ -12,7 +12,8 @@ export type ClipboardPasteResult =
       value: string;
     };
 
-export const clipboardPasteFallbackMessage = 'Clipboard access unavailable. Use Cmd/Ctrl+V to paste.';
+export const clipboardPasteFallbackMessage =
+  'Clipboard access unavailable. Use Cmd/Ctrl+V to paste.';
 
 function normalizeClipboardText(value: string) {
   return value.trim();

@@ -12,10 +12,7 @@ const localFvmSignerSecretSchema = z.object({
   privateKey: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
 });
 
-export function buildLocalFvmSignerSettingKey(
-  chainKey: FvmChainKey,
-  passkeyCredentialId: string,
-) {
+export function buildLocalFvmSignerSettingKey(chainKey: FvmChainKey, passkeyCredentialId: string) {
   return buildLocalFvmSignerBindingId({ chainKey, passkeyCredentialId });
 }
 
@@ -44,7 +41,9 @@ export async function getLocalFvmSignerBinding(
   chainKey: FvmChainKey,
   passkeyCredentialId: string,
 ) {
-  const record = await db.settings.get(buildLocalFvmSignerSettingKey(chainKey, passkeyCredentialId));
+  const record = await db.settings.get(
+    buildLocalFvmSignerSettingKey(chainKey, passkeyCredentialId),
+  );
   if (!record?.value) {
     return null;
   }

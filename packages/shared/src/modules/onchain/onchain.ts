@@ -1,3 +1,11 @@
+import {
+  type Account as SessionModuleAccount,
+  encodeModuleInstallationData,
+} from '@rhinestone/module-sdk/account';
+import {
+  getSmartSessionsCompatibilityFallback,
+  getSmartSessionsValidator,
+} from '@rhinestone/module-sdk/module';
 import { toSafeSmartAccount } from 'permissionless/accounts';
 import { type SmartAccountClient, createSmartAccountClient } from 'permissionless/clients';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
@@ -10,6 +18,7 @@ import {
   type Transport,
   decodeAbiParameters,
   encodeAbiParameters,
+  getAddress,
   keccak256,
   parseAbiParameters,
   toHex,
@@ -35,10 +44,15 @@ const coopSafe7579Config = {
   // Legacy Safe7579 adapter/launchpad pair used by permissionless 0.3.x.
   safe7579ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
   erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+  // Pimlico's current Safe ERC-7579 guide requires a trusted attester set for fresh launchpad deploys.
+  attesters: ['0x000000333034E9f539ce08819E12c1b8Cb29084d'],
+  attestersThreshold: 1,
 } as const satisfies {
   version: '1.4.1';
   safe7579ModuleAddress: Address;
   erc7579LaunchpadAddress: Address;
+  attesters: readonly Address[];
+  attestersThreshold: number;
 };
 
 const chainConfigs = {
@@ -88,6 +102,40 @@ export function buildPimlicoRpcUrl(chainKey: CoopChainKey, pimlicoApiKey: string
   return `https://api.pimlico.io/v2/${config.bundlerSegment}/rpc?apikey=${pimlicoApiKey}`;
 }
 
+export async function inspectCoopSafeLaunchpadState(input: {
+  publicClient: Awaited<ReturnType<typeof createCoopPublicClient>>;
+  chainKey: CoopChainKey;
+  safeAddress: Address;
+}) {
+  const chainConfig = getCoopChainConfig(input.chainKey);
+  const code = await input.publicClient.getCode({
+    address: input.safeAddress,
+  });
+  if (!code || code === '0x') {
+    return {
+      codePresent: false,
+      launchpadSingletonActive: false,
+      proxySingletonAddress: undefined,
+    };
+  }
+
+  const slot0 = await input.publicClient.getStorageAt({
+    address: input.safeAddress,
+    slot: '0x0',
+  });
+  const slot0Body = slot0?.slice(2) ?? '';
+  const proxySingletonAddress =
+    slot0Body.length >= 40 ? getAddress(`0x${slot0Body.slice(-40)}`) : undefined;
+
+  return {
+    codePresent: true,
+    launchpadSingletonActive:
+      proxySingletonAddress?.toLowerCase() ===
+      chainConfig.safe.erc7579LaunchpadAddress.toLowerCase(),
+    proxySingletonAddress,
+  };
+}
+
 export function usesCoopSafeErc7579(input: { safeSupports7579?: boolean } | null | undefined) {
   return input?.safeSupports7579 === true;
 }
@@ -98,6 +146,7 @@ export async function toCoopSafeSmartAccount(input: {
   chainKey: CoopChainKey;
   address?: Address;
   saltNonce?: bigint;
+  nonceKey?: bigint;
   useErc7579?: boolean;
 }) {
   const safeConfig = getCoopChainConfig(input.chainKey).safe;
@@ -108,9 +157,12 @@ export async function toCoopSafeSmartAccount(input: {
       owners: input.owners,
       address: input.address,
       saltNonce: input.saltNonce,
+      nonceKey: input.nonceKey,
       version: safeConfig.version,
       safe4337ModuleAddress: safeConfig.safe7579ModuleAddress,
       erc7579LaunchpadAddress: safeConfig.erc7579LaunchpadAddress,
+      attesters: [...safeConfig.attesters],
+      attestersThreshold: safeConfig.attestersThreshold,
     });
   }
 
@@ -119,8 +171,40 @@ export async function toCoopSafeSmartAccount(input: {
     owners: input.owners,
     address: input.address,
     saltNonce: input.saltNonce,
+    nonceKey: input.nonceKey,
     version: safeConfig.version,
   });
+}
+
+export function buildCoopSafeSessionBootstrapModules(chainKey: CoopChainKey) {
+  const moduleAccount: SessionModuleAccount = {
+    address: zeroAddress,
+    type: 'erc7579-implementation',
+    deployedOnChains: [getCoopChainConfig(chainKey).chain.id],
+  };
+  const validator = getSmartSessionsValidator({});
+  const fallback = getSmartSessionsCompatibilityFallback();
+
+  return {
+    validators: [
+      {
+        address: validator.address,
+        context: encodeModuleInstallationData({
+          account: moduleAccount,
+          module: validator,
+        }) as Address,
+      },
+    ],
+    fallbacks: [
+      {
+        address: fallback.address,
+        context: encodeModuleInstallationData({
+          account: moduleAccount,
+          module: fallback,
+        }) as Address,
+      },
+    ],
+  };
 }
 
 type BundlerPrepareClient = Client<Transport, Chain | undefined, SmartAccount | undefined> & {
@@ -522,6 +606,11 @@ export async function deployCoopSafeAccount(input: {
   if (!code || code === '0x') {
     throw new Error('Safe deployment transaction landed, but the Safe code was not found.');
   }
+  const launchpadState = await inspectCoopSafeLaunchpadState({
+    publicClient,
+    chainKey,
+    safeAddress: account.address,
+  });
 
   return onchainStateSchema.parse({
     chainId: config.chain.id,
@@ -530,7 +619,9 @@ export async function deployCoopSafeAccount(input: {
     senderAddress: input.senderAddress,
     safeCapability: 'executed',
     safeSupports7579: true,
-    statusNote: `${describeOnchainModeSummary({ mode: 'live', chainKey })} was deployed via Pimlico account abstraction.`,
+    statusNote: launchpadState.launchpadSingletonActive
+      ? `${describeOnchainModeSummary({ mode: 'live', chainKey })} proxy was deployed, but launchpad setup is still pending onchain.`
+      : `${describeOnchainModeSummary({ mode: 'live', chainKey })} was deployed via Pimlico account abstraction.`,
     deploymentTxHash,
     userOperationHash: undefined,
   });

@@ -369,6 +369,8 @@ button:disabled {
   justify-content: center;
   gap: 6px;
   padding: 24px 16px;
+  /* Fill remaining sidepanel content area so justify-content centers visually */
+  min-height: calc(100vh - 12rem);
 }
 
 .empty-state__icon {

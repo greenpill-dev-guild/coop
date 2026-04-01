@@ -817,9 +817,7 @@ export function ArchiveReceiptCard({
         >
           Registered on Filecoin ({receipt.fvmChainKey === 'filecoin' ? 'mainnet' : 'calibration'})
         </a>
-      ) : onFvmRegister &&
-        receipt.delegationMode === 'live' &&
-        !receipt.fvmRegistryTxHash ? (
+      ) : onFvmRegister && receipt.delegationMode === 'live' && !receipt.fvmRegistryTxHash ? (
         <div className="action-row">
           <button
             className="secondary-button"

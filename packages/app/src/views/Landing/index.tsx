@@ -1,5 +1,10 @@
 import type { SetupInsightsInput } from '@coop/shared';
-import { clipboardPasteFallbackMessage, getRitualLenses, pasteClipboardText } from '@coop/shared';
+import {
+  clipboardPasteFallbackMessage,
+  getRitualLenses,
+  pasteClipboardText,
+  synthesizeTranscriptsToPurpose,
+} from '@coop/shared';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import { LanguageSelector } from '../../components/LanguageSelector';
@@ -119,6 +124,7 @@ export function App({
   });
   const focusOpenCardRef = useRef<TranscriptKey | null>(null);
   const focusReturnCardRef = useRef<TranscriptKey | null>(null);
+  const lastSynthesizedFromRef = useRef('');
 
   const [setupInput, setSetupInput] = useState<SetupInsightsInput>(() => initialDraft.setupInput);
   const [transcripts, setTranscripts] = useState<TranscriptMap>(() => initialDraft.transcripts);
@@ -145,6 +151,22 @@ export function App({
   );
   const completedLensCount = lensProgress.filter((progress) => progress.status === 'ready').length;
   const allLensesReady = completedLensCount === ritualCardMappings.length;
+
+  useEffect(() => {
+    if (!allLensesReady || setupInput.purpose) {
+      return;
+    }
+    const transcriptFingerprint = `${transcripts.capital}|${transcripts.impact}|${transcripts.governance}|${transcripts.knowledge}`;
+    if (transcriptFingerprint === lastSynthesizedFromRef.current) {
+      return;
+    }
+    lastSynthesizedFromRef.current = transcriptFingerprint;
+    const synthesized = synthesizeTranscriptsToPurpose(transcripts);
+    if (synthesized) {
+      setSetupInput((current) => ({ ...current, purpose: synthesized }));
+    }
+  }, [allLensesReady, setupInput.purpose, transcripts]);
+
   const openCardIndex = openCardId ? ritualLenses.findIndex((lens) => lens.id === openCardId) : -1;
   const openCardLens = openCardIndex >= 0 ? ritualLenses[openCardIndex] : null;
   const openCardMapping = openCardIndex >= 0 ? ritualCardMappings[openCardIndex] : null;

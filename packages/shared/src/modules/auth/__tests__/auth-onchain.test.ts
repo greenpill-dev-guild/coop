@@ -69,6 +69,9 @@ vi.mock('viem', async (importOriginal) => {
     createPublicClient: vi.fn(() => ({
       waitForTransactionReceipt: vi.fn(async () => ({})),
       getCode: vi.fn(async () => '0x1234'),
+      getStorageAt: vi.fn(
+        async () => '0x00000000000000000000000041675c099f32341bf84bfc5382af534df5c7461a',
+      ),
     })),
   };
 });
@@ -219,8 +222,12 @@ describe('auth and onchain helpers', () => {
           version: '1.4.1',
           safe4337ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
           erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+          attesters: ['0x000000333034E9f539ce08819E12c1b8Cb29084d'],
+          attestersThreshold: 1,
         }),
       );
+      expect(call).not.toHaveProperty('validators');
+      expect(call).not.toHaveProperty('fallbacks');
     }
   });
 
