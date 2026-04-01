@@ -52,6 +52,7 @@ export type ChickenColor = 'classic' | 'russet' | 'slate' | 'golden' | 'plum';
 export type JourneyChicken = {
   id: string;
   label: string;
+  labelKey?: string;
   variant?: ChickenVariant;
   facing?: ChickenFacing;
   color?: ChickenColor;

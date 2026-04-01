@@ -1,12 +1,10 @@
 import type { SetupInsightsInput } from '@coop/shared';
-import {
-  clipboardPasteFallbackMessage,
-  getRitualLenses,
-  pasteClipboardText,
-} from '@coop/shared';
+import { clipboardPasteFallbackMessage, getRitualLenses, pasteClipboardText } from '@coop/shared';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
+import { LanguageSelector } from '../../components/LanguageSelector';
 import type { DevEnvironmentState } from '../../dev-environment';
+import { useI18n } from '../../hooks/useI18n';
 import { ChickenSprite, CoopIllustration } from './landing-animations';
 import {
   LANDING_DRAFT_STORAGE_KEY,
@@ -48,15 +46,12 @@ import type {
 
 export { buildLandingSetupPacket, emptyLandingTranscripts };
 
-const BUILDER_RELEASES_URL = 'https://github.com/greenpill-dev-guild/coop/releases';
-const BUILDER_LATEST_RELEASE_URL = `${BUILDER_RELEASES_URL}/tag/builder-latest`;
-const BUILDER_INSTALL_GUIDE_URL = 'https://docs.coop.town/builder/getting-started';
-
 export function App({
   devEnvironment = null,
 }: {
-  devEnvironment?: DevEnvironmentState | null;
+  devEnvironmentState?: DevEnvironmentState | null;
 }) {
+  const { t } = useI18n();
   const initialDraftRef = useRef<LandingDraft | null>(null);
 
   if (!initialDraftRef.current) {
@@ -275,7 +270,8 @@ export function App({
             arrivalJourneyRef.current?.querySelector<HTMLDivElement>('.why-build-scene-team') ??
             null;
           const whyBuildTeamMembers = Array.from(
-            whyBuildTeam?.querySelectorAll<HTMLElement>('.scene-team-member') ?? [],
+            whyBuildTeam?.querySelectorAll<HTMLElement>('.team-members-grid .scene-team-member') ??
+              [],
           );
 
           const arrivalCoopParts = {
@@ -307,7 +303,7 @@ export function App({
               trigger: storyJourneyRef.current,
               start: 'top top',
               end: 'bottom bottom',
-              scrub: 0.96,
+              scrub: 0.8,
             },
           });
 
@@ -446,34 +442,19 @@ export function App({
               trigger: arrivalJourneyRef.current,
               start: 'top top',
               end: 'bottom bottom',
-              scrub: 0.98,
+              scrub: 0.8,
             },
           });
 
-          // Heading card and team fade in immediately, stay visible through mid-scroll,
-          // then fade out as the coop house rises
+          // Heading card and team already visible at start (no fade-in animation)
+          // They stay visible through mid-scroll, then fade out as the coop house rises
           arrivalTimeline
-            .fromTo(
-              whyBuildCard,
-              { autoAlpha: 0, y: 12 },
-              { autoAlpha: 1, y: 0, duration: 0.04 },
-              0,
-            )
-            .fromTo(
-              whyBuildTeam,
-              { autoAlpha: 0, y: 10 },
-              { autoAlpha: 1, y: 0, duration: 0.05 },
-              0.02,
-            )
-            .fromTo(
-              whyBuildTeamMembers,
-              { autoAlpha: 0, scale: 0.9 },
-              { autoAlpha: 1, scale: 1, stagger: 0.02, duration: 0.05 },
-              0.04,
-            )
-            .to(whyBuildCard, { autoAlpha: 0, y: -20, scale: 0.96 }, 0.45)
-            .to(whyBuildTeam, { autoAlpha: 0, y: -14 }, 0.48)
-            .to(whyBuildTeamMembers, { autoAlpha: 0, y: -10, stagger: 0.03 }, 0.5)
+            .set(whyBuildCard, { autoAlpha: 1, y: 0 }, 0)
+            .set(whyBuildTeam, { autoAlpha: 1, y: 0 }, 0)
+            .set(whyBuildTeamMembers, { autoAlpha: 1, scale: 1 }, 0)
+            .to(whyBuildCard, { autoAlpha: 0, y: -20, scale: 0.96 }, 0.32)
+            .to(whyBuildTeam, { autoAlpha: 0, y: -14 }, 0.34)
+            .to(whyBuildTeamMembers, { autoAlpha: 0, y: -10, stagger: 0.02 }, 0.36)
             .fromTo(
               arrivalGlowLeftRef.current,
               { x: '-10vw', y: '3vh', scale: 0.9 },
@@ -960,9 +941,11 @@ export function App({
       >
         <div className="flashcard-stage-header">
           <div className="flashcard-front-meta">
-            <span className="flashcard-number">Lens {openCardIndex + 1}</span>
+            <span className="flashcard-number">
+              {t('ritual.lens')} {openCardIndex + 1}
+            </span>
             <span className={`flashcard-status-pill is-${openCardProgress.status}`}>
-              {statusLabel(openCardProgress.status)}
+              {statusLabel(openCardProgress.status, t)}
             </span>
           </div>
           <button
@@ -970,7 +953,7 @@ export function App({
             onClick={closeOpenCard}
             ref={setFlashcardCloseRef(openCardLens.id)}
             type="button"
-            aria-label="Close card"
+            aria-label={t('ritual.closeCardLabel')}
           >
             {'\u00D7'}
           </button>
@@ -995,7 +978,9 @@ export function App({
             type="button"
           >
             <span className="record-dot" aria-hidden="true" />
-            {recordingLens === openCardLens.id ? 'Stop recording' : 'Record'}
+            {recordingLens === openCardLens.id
+              ? t('ritual.stopRecordButton')
+              : t('ritual.recordButton')}
           </button>
 
           <button
@@ -1015,7 +1000,7 @@ export function App({
             }}
             type="button"
           >
-            Paste
+            {t('ritual.pasteButton')}
           </button>
         </div>
 
@@ -1029,11 +1014,13 @@ export function App({
         ) : null}
 
         <label className="ritual-field flashcard-notes-field">
-          <span className="sr-only">{openCardLens.title} notes</span>
+          <span className="sr-only">
+            {openCardLens.title} {t('ritual.notesSrLabel')}
+          </span>
           <textarea
-            aria-label={`${openCardLens.title} notes`}
+            aria-label={`${openCardLens.title} ${t('ritual.notesSrLabel')}`}
             onChange={(event) => updateTranscript(openCardLens.id, event.target.value)}
-            placeholder="Paste notes or let live transcript fill this in."
+            placeholder={t('ritual.notesPlaceholder')}
             ref={setFlashcardNotesRef(openCardLens.id)}
             value={transcripts[openCardLens.id]}
           />
@@ -1041,9 +1028,7 @@ export function App({
 
         <div className="flashcard-stage-footer">
           <p className="flashcard-stage-footnote">
-            {isDone
-              ? 'This lens is already ready to carry into the packet.'
-              : 'Capture the signal, then mark this card complete.'}
+            {isDone ? t('ritual.readyMessage') : t('ritual.captureMessage')}
           </p>
           <button
             className={isDone ? 'flashcard-complete-btn is-done' : 'flashcard-complete-btn'}
@@ -1066,7 +1051,7 @@ export function App({
             }}
             type="button"
           >
-            {isDone ? '\u2713 Complete' : 'Mark complete'}
+            {isDone ? t('ritual.completeButton') : t('ritual.markCompleteButton')}
           </button>
         </div>
       </dialog>
@@ -1077,9 +1062,11 @@ export function App({
     <div className="page-shell landing-shell" ref={landingRootRef}>
       <div className="backdrop landing-backdrop" />
 
+      <LanguageSelector />
+
       <header className="landing-topbar">
         <div className="topbar">
-          <a aria-label="Coop landing page" className="hero-logo" href="#meadow">
+          <a aria-label={t('hero.logoLabel')} className="hero-logo" href="#meadow">
             <img className="wordmark" src="/branding/coop-wordmark-flat.png" alt="Coop" />
           </a>
         </div>
@@ -1120,13 +1107,15 @@ export function App({
                   ref={setStoryChickenRef(chicken.id)}
                 >
                   <div className="thought-bubble" aria-hidden="true">
-                    <span className="thought-kicker">{chickenThoughts[chicken.id].kicker}</span>
-                    <span className="thought-text">{chickenThoughts[chicken.id].text}</span>
+                    <span className="thought-kicker">
+                      {t(`chickenThoughts.${chicken.id}.kicker`)}
+                    </span>
+                    <span className="thought-text">{t(`chickenThoughts.${chicken.id}.text`)}</span>
                   </div>
                   <ChickenSprite
                     color={chicken.color}
                     facing={chicken.facing}
-                    label={chicken.label}
+                    label={chicken.labelKey ? t(chicken.labelKey) : chicken.label}
                     showLabel={true}
                     variant={chicken.variant}
                   />
@@ -1162,7 +1151,7 @@ export function App({
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                     role="img"
-                    aria-label="Scroll down"
+                    aria-label={t('hero.scrollHint')}
                   >
                     <path
                       d="M12 5v14M5 12l7 7 7-7"
@@ -1180,11 +1169,8 @@ export function App({
             <article className="journey-panel works-panel" id="how-it-works">
               <div className="how-works-shell" ref={howItWorksRef}>
                 <div className="section-heading how-works-heading">
-                  <h2>How Coop works</h2>
-                  <p className="lede">
-                    Coop takes your scattered tabs, meeting notes, and field signals — refines them
-                    locally into clear opportunities.
-                  </p>
+                  <h2>{t('how_works.heading')}</h2>
+                  <p className="lede">{t('how_works.description')}</p>
                 </div>
 
                 <div className="how-works-grid">
@@ -1194,8 +1180,14 @@ export function App({
                         {String(index + 1).padStart(2, '0')}
                       </span>
                       <div className="how-works-card-copy">
-                        <h3>{card.title}</h3>
-                        <p>{card.detail}</p>
+                        <h3>{t(`how_works.card${index + 1}.title`)}</h3>
+                        <p>{t(`how_works.card${index + 1}.detail`)}</p>
+                      </div>
+                      <div className="how-works-thought-bubble" aria-hidden="true">
+                        <div className="thought-bubble-inner">
+                          <span className="thought-bubble-emoji">🐔</span>
+                        </div>
+                        <div className="thought-bubble-pointer" />
                       </div>
                     </article>
                   ))}
@@ -1207,10 +1199,8 @@ export function App({
 
         <section className="section ritual-section" id="ritual" ref={ritualSectionRef}>
           <div className="section-heading ritual-section-heading">
-            <h2>Curate your coop</h2>
-            <p className="lede ritual-section-copy">
-              Open each card, capture what matters, and walk away with a clean setup packet.
-            </p>
+            <h2>{t('ritual.heading')}</h2>
+            <p className="lede ritual-section-copy">{t('ritual.description')}</p>
           </div>
 
           <div className="ritual-game-shell nest-card" data-audience={audience}>
@@ -1226,16 +1216,16 @@ export function App({
                       data-audience-option={option.id}
                       key={option.id}
                       onClick={() => setAudience(option.id)}
-                      title={option.tone}
+                      title={t(`audience.${option.id}Tone`)}
                       type="button"
                     >
-                      {option.label}
+                      {t(`audience.${option.id}`)}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <span className="ritual-local-badge" aria-label="All data stays on this device">
+              <span className="ritual-local-badge" aria-label={t('ritual.localBadgeLabel')}>
                 <svg
                   aria-hidden="true"
                   className="ritual-local-icon"
@@ -1248,7 +1238,7 @@ export function App({
                     fill="currentColor"
                   />
                 </svg>
-                All data stays on this device
+                {t('ritual.localBadgeLabel')}
               </span>
 
               <button
@@ -1256,7 +1246,7 @@ export function App({
                 onClick={resetRitual}
                 type="button"
               >
-                Reset ritual
+                {t('ritual.resetButton')}
               </button>
             </div>
 
@@ -1264,7 +1254,7 @@ export function App({
               <div className={`flashcard-focus-shell${openCardLens ? ' is-active' : ''}`}>
                 {openCardLens ? (
                   <button
-                    aria-label="Close card backdrop"
+                    aria-label={t('ritual.closeCardBackdrop')}
                     className="flashcard-focus-backdrop"
                     onClick={closeOpenCard}
                     type="button"
@@ -1304,9 +1294,11 @@ export function App({
                       >
                         <div className="flashcard-front-top">
                           <div className="flashcard-front-meta">
-                            <span className="flashcard-number">Lens {index + 1}</span>
+                            <span className="flashcard-number">
+                              {t('ritual.lens')} {index + 1}
+                            </span>
                             <span className={`flashcard-status-pill is-${progress.status}`}>
-                              {statusLabel(progress.status)}
+                              {statusLabel(progress.status, t)}
                             </span>
                           </div>
                           <h3>{lens.title}</h3>
@@ -1314,12 +1306,11 @@ export function App({
                         </div>
 
                         <div className="flashcard-front-bottom">
-                          <span aria-hidden="true" className="flashcard-action-mark">
-                            <span />
-                            <span />
-                          </span>
                           {isDone ? (
-                            <span className="flashcard-check" aria-label="Complete">
+                            <span
+                              className="flashcard-check"
+                              aria-label={t('ritual.completeCheckmark')}
+                            >
                               &#10003;
                             </span>
                           ) : null}
@@ -1334,38 +1325,36 @@ export function App({
             {allLensesReady ? (
               <div className="ritual-synthesis">
                 <div className="section-heading">
-                  <h3>Your setup packet is ready</h3>
-                  <p className="lede">
-                    All four lenses are captured. Name your coop and take the packet with you.
-                  </p>
+                  <h3>{t('ritual.setupPacketReady')}</h3>
+                  <p className="lede">{t('ritual.setupPacketReadyDesc')}</p>
                 </div>
 
                 <div className="ritual-setup-grid">
                   <label className="ritual-field">
-                    <span>Coop name</span>
+                    <span>{t('ritual.coopNameLabel')}</span>
                     <input
                       onChange={(event) => updateField('coopName', event.target.value)}
-                      placeholder="Pocket Coop"
+                      placeholder={t('ritual.coopNamePlaceholder')}
                       type="text"
                       value={setupInput.coopName}
                     />
                   </label>
 
                   <label className="ritual-field">
-                    <span>What opportunity are you organizing around?</span>
+                    <span>{t('ritual.purposeLabel')}</span>
                     <textarea
                       onChange={(event) => updateField('purpose', event.target.value)}
-                      placeholder="Turn scattered knowledge into clearer coordination for the group."
+                      placeholder={t('ritual.purposePlaceholder')}
                       value={setupInput.purpose}
                     />
                   </label>
                 </div>
 
                 <label className="ritual-field">
-                  <span>Shared notes</span>
+                  <span>{t('ritual.sharedNotesLabel')}</span>
                   <textarea
                     onChange={(event) => setSharedNotes(event.target.value)}
-                    placeholder="Paste meeting notes or additional context here."
+                    placeholder={t('ritual.sharedNotesPlaceholder')}
                     value={sharedNotes}
                   />
                 </label>
@@ -1373,8 +1362,8 @@ export function App({
                 <div className="prompt-shell ritual-packet-shell">
                   <div className="prompt-toolbar">
                     <div>
-                      <strong>Setup packet</strong>
-                      <div>All four cards are shaped and ready to hand off.</div>
+                      <strong>{t('ritual.setupPacketLabel')}</strong>
+                      <div>{t('ritual.setupPacketDesc')}</div>
                     </div>
                     <div className="cta-row packet-actions">
                       <button
@@ -1387,17 +1376,17 @@ export function App({
                         type="button"
                       >
                         {copyState === 'copied'
-                          ? 'Copied'
+                          ? t('ritual.copiedButton')
                           : copyState === 'failed'
-                            ? 'Clipboard unavailable'
-                            : 'Copy packet'}
+                            ? t('ritual.clipboardUnavailableButton')
+                            : t('ritual.copyPacketButton')}
                       </button>
                       <button
                         className="button button-secondary button-small"
                         onClick={downloadSetupNotes}
                         type="button"
                       >
-                        Download
+                        {t('ritual.downloadButton')}
                       </button>
                     </div>
                   </div>
@@ -1407,8 +1396,8 @@ export function App({
             ) : (
               <p className="ritual-progress-hint">
                 {completedLensCount > 0
-                  ? `${completedLensCount} of 4 lenses complete. Open the next card when you are ready.`
-                  : 'Open a card to start capturing.'}
+                  ? `${completedLensCount} ${t('ritual.progressPartial')}`
+                  : t('ritual.progressStart')}
               </p>
             )}
           </div>
@@ -1469,7 +1458,9 @@ export function App({
                     <ChickenSprite
                       color={chicken.color}
                       facing={chicken.facing}
-                      label={communityLabel ?? chicken.label}
+                      label={
+                        communityLabel ?? (chicken.labelKey ? t(chicken.labelKey) : chicken.label)
+                      }
                       showLabel={!!communityLabel}
                       variant={chicken.variant}
                     />
@@ -1478,26 +1469,19 @@ export function App({
               })}
 
               <div className="why-build-heading-card">
-                <h2>Why we build</h2>
-                <p className="lede">
-                  Scattered knowledge becomes shared action when the right group has a clear place
-                  to work from.
-                </p>
+                <h2>{t('why_build.heading')}</h2>
+                <p className="lede">{t('why_build.description')}</p>
               </div>
 
-              <div className="why-build-scene-team" aria-label="Built by the Coop team">
-                <span className="scene-team-label">Built by the Coop team</span>
-                <div className="scene-team-member scene-team-left">
-                  <span className="team-avatar">{initialsForName(teamMembers[0])}</span>
-                  <span className="scene-team-name">{teamMembers[0]}</span>
-                </div>
-                <div className="scene-team-member scene-team-right-top">
-                  <span className="team-avatar">{initialsForName(teamMembers[1])}</span>
-                  <span className="scene-team-name">{teamMembers[1]}</span>
-                </div>
-                <div className="scene-team-member scene-team-right-bottom">
-                  <span className="team-avatar">{initialsForName(teamMembers[2])}</span>
-                  <span className="scene-team-name">{teamMembers[2]}</span>
+              <div className="why-build-scene-team" aria-label={t('why_build.builtByTeam')}>
+                <span className="scene-team-label">{t('why_build.builtByTeam')}</span>
+                <div className="team-members-grid">
+                  {teamMembers.map((member) => (
+                    <div className="scene-team-member" key={member}>
+                      <span className="team-avatar">{initialsForName(member)}</span>
+                      <span className="scene-team-name">{member}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1509,31 +1493,6 @@ export function App({
           </div>
         </section>
       </main>
-
-      <section className="landing-builder-strip" aria-labelledby="builder-downloads">
-        <div className="landing-builder-strip-inner">
-          <div className="landing-builder-strip-copy">
-            <p className="eyebrow">For builders</p>
-            <h2 id="builder-downloads">Download the packaged extension from GitHub Releases</h2>
-            <p>
-              Use the rolling <code>builder-latest</code> prerelease for the freshest green build
-              from <code>main</code>, then follow the install guide to load it into Chrome.
-            </p>
-          </div>
-
-          <div className="landing-builder-strip-actions">
-            <a href={BUILDER_LATEST_RELEASE_URL} target="_blank" rel="noopener noreferrer">
-              Latest builder build
-            </a>
-            <a href={BUILDER_INSTALL_GUIDE_URL} target="_blank" rel="noopener noreferrer">
-              Install guide
-            </a>
-            <a href={BUILDER_RELEASES_URL} target="_blank" rel="noopener noreferrer">
-              All releases
-            </a>
-          </div>
-        </div>
-      </section>
 
       <footer className="landing-footer" id="resources">
         <div className="landing-footer-inner">

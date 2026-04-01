@@ -1,0 +1,771 @@
+{
+  "en": {
+    "hero": {
+      "title1": "No more",
+      "title2": "chickens loose.",
+      "subtitle": "Turning knowledge into opportunity.",
+      "scrollHint": "Scroll down",
+      "logoLabel": "Coop landing page"
+    },
+    "how_works": {
+      "heading": "How Coop works",
+      "description": "Coop takes your scattered tabs, meeting notes, and field signals — refines them locally into clear opportunities.",
+      "card1": {
+        "title": "Your data stays yours",
+        "detail": "Everything you capture stays on your device until your group decides what to share."
+      },
+      "card2": {
+        "title": "One place for everything",
+        "detail": "Tabs, notes, files, and call fragments land together before they scatter."
+      },
+      "card3": {
+        "title": "Shared review loop",
+        "detail": "One clear queue for the group instead of hunting across chats, browsers, and memory."
+      },
+      "card4": {
+        "title": "Proof that lasts",
+        "detail": "Progress and outcomes stay close to the work so updates are easier to revisit and trust."
+      }
+    },
+    "ritual": {
+      "heading": "Curate your coop",
+      "description": "Open each card, capture what matters, and walk away with a clean setup packet.",
+      "localBadgeLabel": "All data stays on this device",
+      "resetButton": "Reset ritual",
+      "progressPartial": "of 4 lenses complete. Open the next card when you are ready.",
+      "progressStart": "Open a card to start capturing.",
+      "lens": "Lens",
+      "statusReady": "Ready",
+      "statusInProgress": "In progress",
+      "statusNotStarted": "Not started",
+      "recordButton": "Record",
+      "stopRecordButton": "Stop recording",
+      "pasteButton": "Paste",
+      "markCompleteButton": "Mark complete",
+      "completeButton": "✓ Complete",
+      "readyMessage": "This lens is already ready to carry into the packet.",
+      "captureMessage": "Capture the signal, then mark this card complete.",
+      "coopNameLabel": "Coop name",
+      "coopNamePlaceholder": "Pocket Coop",
+      "purposeLabel": "What opportunity are you organizing around?",
+      "purposePlaceholder": "Turn scattered knowledge into clearer coordination for the group.",
+      "sharedNotesLabel": "Shared notes",
+      "sharedNotesPlaceholder": "Paste meeting notes or additional context here.",
+      "setupPacketReady": "Your setup packet is ready",
+      "setupPacketReadyDesc": "All four lenses are captured. Name your coop and take the packet with you.",
+      "setupPacketLabel": "Setup packet",
+      "setupPacketDesc": "All four cards are shaped and ready to hand off.",
+      "copyPacketButton": "Copy packet",
+      "copiedButton": "Copied",
+      "clipboardUnavailableButton": "Clipboard unavailable",
+      "downloadButton": "Download",
+      "notesSrLabel": "notes",
+      "notesPlaceholder": "Paste notes or let live transcript fill this in.",
+      "closeCardLabel": "Close card",
+      "transcriptPlaceholder": "Use live transcript if this browser supports it, or type directly into the card. Everything stays saved on this device.",
+      "closeCardBackdrop": "Close card backdrop",
+      "completeCheckmark": "Complete"
+    },
+    "extension": {
+      "heading": "Meet the extension",
+      "description": "Your browser becomes your capture station. Highlight, clip, and save — all without breaking focus.",
+      "step1": "Quick capture",
+      "step2": "Review & refine",
+      "step3": "Publish together"
+    },
+    "why_build": {
+      "heading": "Why we build",
+      "description": "Scattered knowledge becomes shared action when the right group has a clear place to work from.",
+      "builtByTeam": "Built by the Coop team"
+    },
+    "audience": {
+      "persona": "Personal",
+      "family": "Family",
+      "friends": "Friends",
+      "community": "Community",
+      "personaTone": "Personal focus and reflection",
+      "familyTone": "Household memory and support",
+      "friendsTone": "Shared momentum with trusted peers",
+      "communityTone": "Collective coordination and stewardship"
+    },
+    "chickens": {
+      "tabs": "Tabs",
+      "notes": "Notes",
+      "ideas": "Ideas",
+      "signals": "Signals",
+      "links": "Links",
+      "drafts": "Drafts",
+      "threads": "Threads",
+      "clips": "Clips",
+      "bookmarks": "Bookmarks",
+      "photos": "Photos",
+      "voiceMemos": "Voice Memos",
+      "receipts": "Receipts"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "Browser tab",
+        "text": "This grant lead is worth the follow-up."
+      },
+      "notes": {
+        "kicker": "Field note",
+        "text": "Member energy is shifting this week."
+      },
+      "ideas": {
+        "kicker": "Loose thread",
+        "text": "Reconnect this after the meeting."
+      },
+      "signals": {
+        "kicker": "Call clip",
+        "text": "Save the key moment before it drifts."
+      },
+      "links": {
+        "kicker": "Saved link",
+        "text": "This keeps coming back up in conversations."
+      },
+      "drafts": {
+        "kicker": "Draft",
+        "text": "Half-finished but worth keeping close."
+      },
+      "threads": {
+        "kicker": "Thread",
+        "text": "Conversation fragments from last week."
+      },
+      "clips": {
+        "kicker": "Clip",
+        "text": "Audio moment worth revisiting."
+      },
+      "bookmarks": {
+        "kicker": "Bookmark",
+        "text": "This link keeps coming back up."
+      },
+      "photos": {
+        "kicker": "Photo",
+        "text": "Captured in the field last Tuesday."
+      },
+      "voiceMemos": {
+        "kicker": "Voice memo",
+        "text": "Quick capture from the walk home."
+      },
+      "receipts": {
+        "kicker": "Receipt",
+        "text": "Proof of the contribution last month."
+      }
+    }
+  },
+  "pt": {
+    "hero": {
+      "title1": "Sem mais",
+      "title2": "galinhas soltas.",
+      "subtitle": "Transformando conhecimento em oportunidade.",
+      "scrollHint": "Rolar para baixo",
+      "logoLabel": "Página inicial do Coop"
+    },
+    "how_works": {
+      "heading": "Como o Coop funciona",
+      "description": "Coop pega suas abas dispersas, notas de reuniões e sinais do campo — refina-os localmente em oportunidades claras.",
+      "card1": {
+        "title": "Seus dados continuam sendo seus",
+        "detail": "Tudo que você captura fica no seu dispositivo até que seu grupo decida o que compartilhar."
+      },
+      "card2": {
+        "title": "Um lugar para tudo",
+        "detail": "Abas, notas, arquivos e fragmentos de chamadas chegam juntos antes de se dispersarem."
+      },
+      "card3": {
+        "title": "Loop de revisão compartilhada",
+        "detail": "Uma fila clara para o grupo em vez de procurar em chats, navegadores e memória."
+      },
+      "card4": {
+        "title": "Prova que dura",
+        "detail": "Progresso e resultados ficam perto do trabalho para que as atualizações sejam mais fáceis de revisar e confiar."
+      }
+    },
+    "ritual": {
+      "heading": "Organize seu coop",
+      "description": "Abra cada card, capture o que importa e saia com um pacote de configuração limpo.",
+      "localBadgeLabel": "Todos os dados permanecem neste dispositivo",
+      "resetButton": "Redefinir ritual",
+      "progressPartial": "de 4 lentes concluídas. Abra o próximo card quando estiver pronto.",
+      "progressStart": "Abra um card para começar a capturar.",
+      "lens": "Lente",
+      "statusReady": "Pronto",
+      "statusInProgress": "Em progresso",
+      "statusNotStarted": "Não iniciado",
+      "recordButton": "Gravar",
+      "stopRecordButton": "Parar de gravar",
+      "pasteButton": "Colar",
+      "markCompleteButton": "Marcar como concluído",
+      "completeButton": "✓ Concluído",
+      "readyMessage": "Esta lente já está pronta para ser incluída no pacote.",
+      "captureMessage": "Capture o sinal e marque este card como concluído.",
+      "coopNameLabel": "Nome do coop",
+      "coopNamePlaceholder": "Coop de Bolso",
+      "purposeLabel": "Qual oportunidade você está organizando?",
+      "purposePlaceholder": "Transformar conhecimento disperso em uma coordenação mais clara para o grupo.",
+      "sharedNotesLabel": "Notas compartilhadas",
+      "sharedNotesPlaceholder": "Cole notas de reunião ou contexto adicional aqui.",
+      "setupPacketReady": "Seu pacote de configuração está pronto",
+      "setupPacketReadyDesc": "Todas as quatro lentes foram capturadas. Nomeie seu coop e leve o pacote com você.",
+      "setupPacketLabel": "Pacote de configuração",
+      "setupPacketDesc": "Todos os quatro cards estão moldados e prontos para serem entregues.",
+      "copyPacketButton": "Copiar pacote",
+      "copiedButton": "Copiado",
+      "clipboardUnavailableButton": "Área de transferência indisponível",
+      "downloadButton": "Baixar",
+      "notesSrLabel": "notas",
+      "notesPlaceholder": "Cole notas ou deixe a transcrição ao vivo preencher isso.",
+      "closeCardLabel": "Fechar card",
+      "transcriptPlaceholder": "Use transcrição ao vivo se este navegador a suportá-la, ou digite diretamente no card. Tudo fica salvo neste dispositivo.",
+      "closeCardBackdrop": "Fechar plano de fundo do card",
+      "completeCheckmark": "Completo"
+    },
+    "extension": {
+      "heading": "Conheça a extensão",
+      "description": "Seu navegador se torna sua estação de captura. Destaque, recorte e salve — tudo sem perder o foco.",
+      "step1": "Captura rápida",
+      "step2": "Revise e refine",
+      "step3": "Publique juntos"
+    },
+    "why_build": {
+      "heading": "Por que construímos",
+      "description": "Conhecimento disperso se torna ação compartilhada quando o grupo certo tem um lugar claro para trabalhar.",
+      "builtByTeam": "Construído pelo time Coop"
+    },
+    "audience": {
+      "persona": "Pessoal",
+      "family": "Família",
+      "friends": "Amigos",
+      "community": "Comunidade",
+      "personaTone": "Foco pessoal e reflexão",
+      "familyTone": "Memória familiar e apoio",
+      "friendsTone": "Momentum compartilhado com pares confiáveis",
+      "communityTone": "Coordenação coletiva e administração"
+    },
+    "chickens": {
+      "tabs": "Abas",
+      "notes": "Notas",
+      "ideas": "Ideias",
+      "signals": "Sinais",
+      "links": "Links",
+      "drafts": "Rascunhos",
+      "threads": "Tópicos",
+      "clips": "Clipes",
+      "bookmarks": "Favoritos",
+      "photos": "Fotos",
+      "voiceMemos": "Notas de Voz",
+      "receipts": "Recibos"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "Aba do navegador",
+        "text": "Este lead de concessão vale o acompanhamento."
+      },
+      "notes": {
+        "kicker": "Nota de campo",
+        "text": "A energia dos membros está mudando esta semana."
+      },
+      "ideas": {
+        "kicker": "Fio solto",
+        "text": "Reconecte isto após a reunião."
+      },
+      "signals": {
+        "kicker": "Clipe de chamada",
+        "text": "Salve o momento-chave antes que ele se dissipe."
+      },
+      "links": {
+        "kicker": "Link salvo",
+        "text": "Isto continua aparecendo em conversas."
+      },
+      "drafts": {
+        "kicker": "Rascunho",
+        "text": "Inacabado mas vale a pena manter perto."
+      },
+      "threads": {
+        "kicker": "Tópico",
+        "text": "Fragmentos de conversa da semana passada."
+      },
+      "clips": {
+        "kicker": "Clipe",
+        "text": "Momento de áudio que vale a pena revisitar."
+      },
+      "bookmarks": {
+        "kicker": "Favorito",
+        "text": "Este link continua aparecendo."
+      },
+      "photos": {
+        "kicker": "Foto",
+        "text": "Capturada no campo terça-feira passada."
+      },
+      "voiceMemos": {
+        "kicker": "Nota de voz",
+        "text": "Captura rápida do caminho de volta para casa."
+      },
+      "receipts": {
+        "kicker": "Recibo",
+        "text": "Prova da contribuição do mês passado."
+      }
+    }
+  },
+  "es": {
+    "hero": {
+      "title1": "Sin más",
+      "title2": "gallinas sueltas.",
+      "subtitle": "Transformando conocimiento en oportunidad.",
+      "scrollHint": "Desplazarse hacia abajo"
+    },
+    "how_works": {
+      "heading": "Cómo funciona Coop",
+      "description": "Coop toma tus pestañas dispersas, notas de reuniones y señales de campo — las refina localmente en oportunidades claras.",
+      "card1": {
+        "title": "Tus datos siguen siendo tuyos",
+        "detail": "Todo lo que capturas permanece en tu dispositivo hasta que tu grupo decida qué compartir."
+      },
+      "card2": {
+        "title": "Un lugar para todo",
+        "detail": "Las pestañas, notas, archivos y fragmentos de llamadas llegan juntos antes de dispersarse."
+      },
+      "card3": {
+        "title": "Bucle de revisión compartida",
+        "detail": "Una cola clara para el grupo en lugar de buscar en chats, navegadores y memoria."
+      },
+      "card4": {
+        "title": "Prueba que persiste",
+        "detail": "El progreso y los resultados se mantienen cerca del trabajo para que las actualizaciones sean más fáciles de revisar y confiar."
+      }
+    },
+    "ritual": {
+      "heading": "Organiza tu coop",
+      "description": "Abre cada tarjeta, captura lo que importa y sal con un paquete de configuración limpio.",
+      "localBadgeLabel": "Todos los datos permanecen en este dispositivo",
+      "resetButton": "Reiniciar ritual",
+      "progressPartial": "de 4 lentes completadas. Abre la siguiente tarjeta cuando estés listo.",
+      "progressStart": "Abre una tarjeta para comenzar a capturar.",
+      "lens": "Lente",
+      "statusReady": "Listo",
+      "statusInProgress": "En progreso",
+      "statusNotStarted": "No iniciado",
+      "recordButton": "Grabar",
+      "stopRecordButton": "Dejar de grabar",
+      "pasteButton": "Pegar",
+      "markCompleteButton": "Marcar como completado",
+      "completeButton": "✓ Completado",
+      "readyMessage": "Esta lente ya está lista para ser incluida en el paquete.",
+      "captureMessage": "Captura la señal y marca esta tarjeta como completada.",
+      "coopNameLabel": "Nombre del coop",
+      "coopNamePlaceholder": "Coop de Bolsillo",
+      "purposeLabel": "¿Qué oportunidad estás organizando?",
+      "purposePlaceholder": "Transformar conocimiento disperso en una coordinación más clara para el grupo.",
+      "sharedNotesLabel": "Notas compartidas",
+      "sharedNotesPlaceholder": "Pega notas de reunión o contexto adicional aquí.",
+      "setupPacketReady": "Tu paquete de configuración está listo",
+      "setupPacketReadyDesc": "Se capturaron las cuatro lentes. Nombra tu coop y lleva el paquete contigo.",
+      "setupPacketLabel": "Paquete de configuración",
+      "setupPacketDesc": "Las cuatro tarjetas están moldeadas y listas para ser entregadas.",
+      "copyPacketButton": "Copiar paquete",
+      "copiedButton": "Copiado",
+      "clipboardUnavailableButton": "Portapapeles no disponible",
+      "downloadButton": "Descargar",
+      "notesSrLabel": "notas",
+      "notesPlaceholder": "Pega notas o permite que la transcripción en vivo las complete.",
+      "closeCardLabel": "Cerrar tarjeta",
+      "transcriptPlaceholder": "Usa la transcripción en vivo si este navegador la admite, o escribe directamente en la tarjeta. Todo se guarda en este dispositivo.",
+      "closeCardBackdrop": "Cerrar fondo de tarjeta",
+      "completeCheckmark": "Completado"
+    },
+    "extension": {
+      "heading": "Conoce la extensión",
+      "description": "Tu navegador se convierte en tu estación de captura. Resalta, recorta y guarda — todo sin perder el enfoque.",
+      "step1": "Captura rápida",
+      "step2": "Revisa y refina",
+      "step3": "Publica juntos"
+    },
+    "why_build": {
+      "heading": "Por qué construimos",
+      "description": "El conocimiento disperso se convierte en acción compartida cuando el grupo adecuado tiene un lugar claro para trabajar.",
+      "builtByTeam": "Construido por el equipo Coop"
+    },
+    "audience": {
+      "persona": "Personal",
+      "family": "Familia",
+      "friends": "Amigos",
+      "community": "Comunidad",
+      "personaTone": "Enfoque personal y reflexión",
+      "familyTone": "Memoria familiar y apoyo",
+      "friendsTone": "Impulso compartido con compañeros de confianza",
+      "communityTone": "Coordinación colectiva y administración"
+    },
+    "chickens": {
+      "tabs": "Pestañas",
+      "notes": "Notas",
+      "ideas": "Ideas",
+      "signals": "Señales",
+      "links": "Enlaces",
+      "drafts": "Borradores",
+      "threads": "Conversaciones",
+      "clips": "Clips",
+      "bookmarks": "Marcadores",
+      "photos": "Fotos",
+      "voiceMemos": "Notas de Voz",
+      "receipts": "Recibos"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "Pestaña del navegador",
+        "text": "Este lead de subvención vale la pena seguir."
+      },
+      "notes": {
+        "kicker": "Nota de campo",
+        "text": "La energía de los miembros está cambiando esta semana."
+      },
+      "ideas": {
+        "kicker": "Hilo suelto",
+        "text": "Reconecta esto después de la reunión."
+      },
+      "signals": {
+        "kicker": "Clip de llamada",
+        "text": "Guarda el momento clave antes de que se disipe."
+      },
+      "links": {
+        "kicker": "Enlace guardado",
+        "text": "Esto sigue apareciendo en conversaciones."
+      },
+      "drafts": {
+        "kicker": "Borrador",
+        "text": "A medio terminar pero vale la pena mantener cerca."
+      },
+      "threads": {
+        "kicker": "Conversación",
+        "text": "Fragmentos de conversación de la semana pasada."
+      },
+      "clips": {
+        "kicker": "Clip",
+        "text": "Momento de audio que vale la pena revisar."
+      },
+      "bookmarks": {
+        "kicker": "Marcador",
+        "text": "Este enlace sigue apareciendo."
+      },
+      "photos": {
+        "kicker": "Foto",
+        "text": "Capturada en el campo el martes pasado."
+      },
+      "voiceMemos": {
+        "kicker": "Nota de voz",
+        "text": "Captura rápida del camino a casa."
+      },
+      "receipts": {
+        "kicker": "Recibo",
+        "text": "Prueba de la contribución del mes pasado."
+      }
+    }
+  },
+  "zh": {
+    "hero": {
+      "title1": "不再有",
+      "title2": "松散的鸡。",
+      "subtitle": "将知识转化为机会。",
+      "scrollHint": "向下滚动",
+      "logoLabel": "Coop 着陆页"
+    },
+    "how_works": {
+      "heading": "Coop 如何运作",
+      "description": "Coop 收集您分散的标签页、会议笔记和现场信号 — 将它们本地精炼成清晰的机会。",
+      "card1": {
+        "title": "您的数据仍然是您的",
+        "detail": "您捕获的所有内容都保存在您的设备上，直到您的小组决定要分享什么。"
+      },
+      "card2": {
+        "title": "一个统一的地方",
+        "detail": "标签页、笔记、文件和通话片段聚集在一起，不再分散。"
+      },
+      "card3": {
+        "title": "共享审查循环",
+        "detail": "为团队提供一个清晰的队列，而不是在聊天、浏览器和记忆中搜索。"
+      },
+      "card4": {
+        "title": "持久的证明",
+        "detail": "进度和成果紧跟工作，使更新更容易审查和信任。"
+      }
+    },
+    "ritual": {
+      "heading": "策划您的 Coop",
+      "description": "打开每张卡片，捕获重要内容，获得一个清晰的设置包。",
+      "localBadgeLabel": "所有数据保留在此设备上",
+      "resetButton": "重置仪式",
+      "progressPartial": "个镜头已完成。准备好时打开下一张卡片。",
+      "progressStart": "打开一张卡片开始捕获。",
+      "lens": "镜头",
+      "statusReady": "准备好",
+      "statusInProgress": "进行中",
+      "statusNotStarted": "未开始",
+      "recordButton": "录制",
+      "stopRecordButton": "停止录制",
+      "pasteButton": "粘贴",
+      "markCompleteButton": "标记完成",
+      "completeButton": "✓ 完成",
+      "readyMessage": "此镜头已准备好纳入数据包。",
+      "captureMessage": "捕获信号，然后标记此卡片已完成。",
+      "coopNameLabel": "Coop 名称",
+      "coopNamePlaceholder": "口袋 Coop",
+      "purposeLabel": "您在组织什么机会？",
+      "purposePlaceholder": "将分散的知识转化为群组更清晰的协调。",
+      "sharedNotesLabel": "共享笔记",
+      "sharedNotesPlaceholder": "在此粘贴会议笔记或额外背景。",
+      "setupPacketReady": "您的设置包已准备好",
+      "setupPacketReadyDesc": "已捕获所有四个镜头。为您的 Coop 命名并随身携带数据包。",
+      "setupPacketLabel": "设置包",
+      "setupPacketDesc": "所有四张卡片已成形并准备交付。",
+      "copyPacketButton": "复制数据包",
+      "copiedButton": "已复制",
+      "clipboardUnavailableButton": "剪贴板不可用",
+      "downloadButton": "下载",
+      "notesSrLabel": "笔记",
+      "notesPlaceholder": "粘贴笔记或让实时转录填充此内容。",
+      "closeCardLabel": "关闭卡片",
+      "transcriptPlaceholder": "如果此浏览器支持，请使用实时转录，或直接在卡片中键入。一切都保存在此设备上。",
+      "closeCardBackdrop": "关闭卡片背景",
+      "completeCheckmark": "完成"
+    },
+    "extension": {
+      "heading": "认识扩展程序",
+      "description": "您的浏览器成为您的捕获站。高亮、剪切和保存 — 无需分心。",
+      "step1": "快速捕获",
+      "step2": "审查和优化",
+      "step3": "一起发布"
+    },
+    "why_build": {
+      "heading": "我们为什么构建",
+      "description": "当合适的小组有一个清晰的工作地方时，分散的知识变成共享的行动。",
+      "builtByTeam": "由 Coop 团队构建"
+    },
+    "audience": {
+      "persona": "个人",
+      "family": "家庭",
+      "friends": "朋友",
+      "community": "社区",
+      "personaTone": "个人专注和反思",
+      "familyTone": "家庭记忆和支持",
+      "friendsTone": "与信任的同龄人共享动力",
+      "communityTone": "集体协调和管理"
+    },
+    "chickens": {
+      "tabs": "标签页",
+      "notes": "笔记",
+      "ideas": "想法",
+      "signals": "信号",
+      "links": "链接",
+      "drafts": "草稿",
+      "threads": "讨论串",
+      "clips": "片段",
+      "bookmarks": "书签",
+      "photos": "照片",
+      "voiceMemos": "语音备忘录",
+      "receipts": "收据"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "浏览器标签",
+        "text": "这个赠款机会值得跟进。"
+      },
+      "notes": {
+        "kicker": "现场笔记",
+        "text": "成员的能量这周在转变。"
+      },
+      "ideas": {
+        "kicker": "松散的线索",
+        "text": "会议后重新联系。"
+      },
+      "signals": {
+        "kicker": "通话片段",
+        "text": "在它消散前保存关键时刻。"
+      },
+      "links": {
+        "kicker": "保存的链接",
+        "text": "这在对话中一直出现。"
+      },
+      "drafts": {
+        "kicker": "草稿",
+        "text": "未完成但值得保存。"
+      },
+      "threads": {
+        "kicker": "讨论串",
+        "text": "上周的对话片段。"
+      },
+      "clips": {
+        "kicker": "片段",
+        "text": "值得重新访问的音频时刻。"
+      },
+      "bookmarks": {
+        "kicker": "书签",
+        "text": "这个链接一直在出现。"
+      },
+      "photos": {
+        "kicker": "照片",
+        "text": "上周二在现场拍摄。"
+      },
+      "voiceMemos": {
+        "kicker": "语音备忘录",
+        "text": "从回家的路上快速录制。"
+      },
+      "receipts": {
+        "kicker": "收据",
+        "text": "上月贡献的证明。"
+      }
+    }
+  },
+  "fr": {
+    "hero": {
+      "title1": "Plus de",
+      "title2": "poules en fuite.",
+      "subtitle": "Transformer le savoir en opportunité.",
+      "scrollHint": "Faire défiler vers le bas",
+      "logoLabel": "Page d'accueil de Coop"
+    },
+    "how_works": {
+      "heading": "Comment fonctionne Coop",
+      "description": "Coop récupère vos onglets dispersés, vos notes de réunion et vos signaux de terrain — les affine localement en opportunités claires.",
+      "card1": {
+        "title": "Vos données restent les vôtres",
+        "detail": "Tout ce que vous capturez reste sur votre appareil jusqu'à ce que votre groupe décide de partager."
+      },
+      "card2": {
+        "title": "Un seul endroit pour tout",
+        "detail": "Les onglets, les notes, les fichiers et les fragments d'appels arrivent ensemble avant de se disperser."
+      },
+      "card3": {
+        "title": "Boucle d'examen partagée",
+        "detail": "Une file d'attente claire pour le groupe au lieu de chercher dans les chats, les navigateurs et la mémoire."
+      },
+      "card4": {
+        "title": "Preuve qui persiste",
+        "detail": "Les progrès et les résultats restent près du travail pour que les mises à jour soient plus faciles à examiner et à approuver."
+      }
+    },
+    "ritual": {
+      "heading": "Organisez votre coop",
+      "description": "Ouvrez chaque carte, capturez ce qui compte et obtenez un paquet de configuration propre.",
+      "localBadgeLabel": "Toutes les données restent sur cet appareil",
+      "resetButton": "Réinitialiser le rituel",
+      "progressPartial": "lentilles complétées. Ouvrez la carte suivante quand vous êtes prêt.",
+      "progressStart": "Ouvrez une carte pour commencer à capturer.",
+      "lens": "Lentille",
+      "statusReady": "Prêt",
+      "statusInProgress": "En cours",
+      "statusNotStarted": "Non commencé",
+      "recordButton": "Enregistrer",
+      "stopRecordButton": "Arrêter l'enregistrement",
+      "pasteButton": "Coller",
+      "markCompleteButton": "Marquer comme terminé",
+      "completeButton": "✓ Terminé",
+      "readyMessage": "Cette lentille est déjà prête à être incluse dans le paquet.",
+      "captureMessage": "Capturez le signal et marquez cette carte comme terminée.",
+      "coopNameLabel": "Nom du coop",
+      "coopNamePlaceholder": "Coop de poche",
+      "purposeLabel": "Quelle opportunité organisez-vous?",
+      "purposePlaceholder": "Transformer la connaissance dispersée en une coordination plus claire pour le groupe.",
+      "sharedNotesLabel": "Notes partagées",
+      "sharedNotesPlaceholder": "Collez les notes de réunion ou le contexte supplémentaire ici.",
+      "setupPacketReady": "Votre paquet de configuration est prêt",
+      "setupPacketReadyDesc": "Les quatre lentilles sont capturées. Nommez votre coop et emportez le paquet avec vous.",
+      "setupPacketLabel": "Paquet de configuration",
+      "setupPacketDesc": "Les quatre cartes sont formées et prêtes à être livrées.",
+      "copyPacketButton": "Copier le paquet",
+      "copiedButton": "Copié",
+      "clipboardUnavailableButton": "Presse-papiers indisponible",
+      "downloadButton": "Télécharger",
+      "notesSrLabel": "notes",
+      "notesPlaceholder": "Collez les notes ou laissez la transcription en direct remplir ceci.",
+      "closeCardLabel": "Fermer la carte",
+      "transcriptPlaceholder": "Utilisez la transcription en direct si ce navigateur la supporte, ou tapez directement dans la carte. Tout est enregistré sur cet appareil.",
+      "closeCardBackdrop": "Fermer l'arrière-plan de la carte",
+      "completeCheckmark": "Complété"
+    },
+    "extension": {
+      "heading": "Découvrez l'extension",
+      "description": "Votre navigateur devient votre station de capture. Surlignez, découpez et enregistrez — sans interruption.",
+      "step1": "Capture rapide",
+      "step2": "Examinez et affinez",
+      "step3": "Publiez ensemble"
+    },
+    "why_build": {
+      "heading": "Pourquoi nous construisons",
+      "description": "La connaissance dispersée devient une action partagée lorsque le bon groupe a un endroit clair pour travailler.",
+      "builtByTeam": "Construit par l'équipe Coop"
+    },
+    "audience": {
+      "persona": "Personnel",
+      "family": "Famille",
+      "friends": "Amis",
+      "community": "Communauté",
+      "personaTone": "Focus personnel et réflexion",
+      "familyTone": "Mémoire familiale et soutien",
+      "friendsTone": "Élan partagé avec des pairs de confiance",
+      "communityTone": "Coordination collective et gouvernance"
+    },
+    "chickens": {
+      "tabs": "Onglets",
+      "notes": "Notes",
+      "ideas": "Idées",
+      "signals": "Signaux",
+      "links": "Liens",
+      "drafts": "Brouillons",
+      "threads": "Discussions",
+      "clips": "Extraits",
+      "bookmarks": "Signets",
+      "photos": "Photos",
+      "voiceMemos": "Mémos vocaux",
+      "receipts": "Reçus"
+    },
+    "chickenThoughts": {
+      "tabs": {
+        "kicker": "Onglet du navigateur",
+        "text": "Cette piste de subvention mérite le suivi."
+      },
+      "notes": {
+        "kicker": "Note de terrain",
+        "text": "L'énergie des membres change cette semaine."
+      },
+      "ideas": {
+        "kicker": "Fil lâche",
+        "text": "Reconnecter ceci après la réunion."
+      },
+      "signals": {
+        "kicker": "Extrait d'appel",
+        "text": "Sauvegardez le moment clé avant qu'il ne disparaisse."
+      },
+      "links": {
+        "kicker": "Lien sauvegardé",
+        "text": "Ceci réapparaît continuellement dans les conversations."
+      },
+      "drafts": {
+        "kicker": "Brouillon",
+        "text": "Inachevé mais vaut la peine de garder à proximité."
+      },
+      "threads": {
+        "kicker": "Discussion",
+        "text": "Fragments de conversation de la semaine dernière."
+      },
+      "clips": {
+        "kicker": "Extrait",
+        "text": "Moment audio qui vaut la peine d'être révisé."
+      },
+      "bookmarks": {
+        "kicker": "Signet",
+        "text": "Ce lien continue à réapparaître."
+      },
+      "photos": {
+        "kicker": "Photo",
+        "text": "Capturée sur le terrain mardi dernier."
+      },
+      "voiceMemos": {
+        "kicker": "Mémo vocal",
+        "text": "Capture rapide sur le chemin du retour."
+      },
+      "receipts": {
+        "kicker": "Reçu",
+        "text": "Preuve de la contribution du mois dernier."
+      }
+    }
+  }
+}

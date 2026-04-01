@@ -201,6 +201,14 @@ pre {
   contain: layout style;
 }
 
+.journey-scene-arrival {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding-left: max(1rem, calc((100% - 1120px) / 2));
+}
+
 /* Panels sit above the scene but pass pointer events through so
    chickens in .journey-scene-inner can receive hover.
    Any new interactive content added to .journey-panels must opt back
@@ -561,86 +569,142 @@ pre {
 }
 
 .how-works-shell {
-  width: min(34rem, 48vw);
+  width: min(100% - 2rem, 52vw, 48rem);
   display: grid;
-  gap: 0.35rem;
-  margin: 0 auto 0 0;
+  gap: 0.8rem;
+  margin: 0;
   background: linear-gradient(145deg, rgba(255, 252, 246, 0.97), rgba(255, 248, 238, 0.95));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 0.8rem 1.1rem;
+  padding: 1.4rem 1.6rem;
   border-radius: var(--coop-radius-card-xl);
-  border: 1px solid rgba(79, 46, 31, 0.16);
-  box-shadow: 0 28px 58px rgba(79, 46, 31, 0.16);
+  border: 1px solid rgba(79, 46, 31, 0.12);
+  box-shadow: 0 20px 48px rgba(79, 46, 31, 0.12);
 }
 
 .how-works-heading {
-  max-width: 42rem;
+  max-width: 100%;
   text-align: left;
-  margin: 0;
+  margin: 0 0 0.2rem 0;
+}
+
+.how-works-heading h2 {
+  margin: 0 0 0.3rem 0;
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+}
+
+.how-works-heading .lede {
+  font-size: clamp(0.85rem, 1.6vw, 0.9rem);
+  line-height: 1.4;
 }
 
 .how-works-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.3rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
 }
 
 .how-works-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.5rem;
-  align-items: start;
+  gap: 0.7rem;
+  align-items: center;
   position: relative;
-  padding: 0.4rem 0.6rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  min-height: 2.8rem;
+}
+
+.how-works-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 24px rgba(79, 46, 31, 0.08);
 }
 
 .how-works-card::after {
-  content: "";
-  position: absolute;
-  left: 2.25rem;
-  top: calc(100% - 0.15rem);
-  width: 1px;
-  height: 0.9rem;
-  background: linear-gradient(180deg, rgba(90, 125, 16, 0.26), rgba(90, 125, 16, 0));
-}
-
-.how-works-card:last-child::after {
   display: none;
 }
 
 .how-works-card-copy {
   display: grid;
-  gap: 0.18rem;
+  gap: 0.1rem;
 }
 
 .how-works-card h3 {
   margin: 0;
-  font-size: 1.08rem;
-  line-height: 1.12;
+  font-size: clamp(0.88rem, 1.5vw, 0.95rem);
+  line-height: 1.15;
+  font-weight: 700;
   color: var(--coop-brown);
 }
 
 .how-works-card p {
   margin: 0.15rem 0 0;
-  font-size: 0.82rem;
+  font-size: clamp(0.75rem, 1.1vw, 0.78rem);
+  line-height: 1.25;
+  color: rgba(79, 46, 31, 0.8);
 }
 
 .how-works-index {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 0.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  border-radius: 0.5rem;
   background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--coop-green-12) 82%, white),
-    color-mix(in srgb, var(--coop-green-12) 55%, white)
+    135deg,
+    color-mix(in srgb, var(--coop-green-12) 85%, white),
+    color-mix(in srgb, var(--coop-green-12) 60%, white)
   );
   color: var(--coop-green);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(90, 125, 16, 0.14);
+  font-size: 0.75rem;
+  box-shadow: 0 2px 6px rgba(90, 125, 16, 0.1);
+  border: none;
+}
+
+.how-works-thought-bubble {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.how-works-card:hover .how-works-thought-bubble,
+.how-works-card:focus-within .how-works-thought-bubble {
+  opacity: 1;
+}
+
+.thought-bubble-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: rgba(255, 252, 246, 0.95);
+  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.15);
+  border: 1px solid rgba(79, 46, 31, 0.1);
+}
+
+.thought-bubble-emoji {
+  font-size: 1.4rem;
+  display: inline-block;
+}
+
+.thought-bubble-pointer {
+  position: absolute;
+  bottom: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 0.5rem solid transparent;
+  border-right: 0.5rem solid transparent;
+  border-top: 0.6rem solid rgba(255, 252, 246, 0.95);
 }
 
 .ritual-section {
@@ -1438,10 +1502,9 @@ pre {
 }
 
 .why-build-heading-card {
-  position: absolute;
-  left: max(1rem, calc((100% - 1120px) / 2));
-  top: 8%;
+  position: relative;
   max-width: 22rem;
+  margin: 0;
   padding: 1.25rem 1.4rem;
   border-radius: 1.2rem;
   background: rgba(255, 252, 246, 0.85);
@@ -1454,8 +1517,8 @@ pre {
   display: grid;
   gap: 0.45rem;
   text-align: left;
-  visibility: hidden;
-  opacity: 0;
+  visibility: visible;
+  opacity: 1;
 }
 
 .why-build-heading-card h2 {
@@ -1471,48 +1534,65 @@ pre {
 }
 
 .why-build-scene-team {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  pointer-events: none;
+  position: relative;
+  width: fit-content;
+  margin: 0.5rem 0 0 0;
+  pointer-events: auto;
   z-index: 4;
-  visibility: hidden;
-  opacity: 0;
+  opacity: 1;
+  visibility: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.3rem;
+  background: linear-gradient(135deg, rgba(79, 46, 31, 0.08), rgba(90, 125, 16, 0.04));
+  border: 1px solid rgba(255, 252, 246, 0.15);
+  border-radius: 0.8rem;
+  backdrop-filter: blur(8px);
 }
 
 .scene-team-label {
-  position: absolute;
-  left: max(1rem, calc((100% - 1120px) / 2));
-  top: 34%;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(255, 252, 246, 0.7);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.05em;
+  color: rgba(255, 252, 246, 0.75);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  margin: 0;
+}
+
+.team-members-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  width: 100%;
 }
 
 .scene-team-member {
-  position: absolute;
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
   opacity: 0.92;
   pointer-events: auto;
+  transition: transform 0.3s ease;
+}
+
+.scene-team-member:hover {
+  transform: scale(1.05);
 }
 
 .scene-team-member .team-avatar {
-  width: 2.8rem;
-  height: 2.8rem;
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 252, 246, 0.9);
-  border: 2px solid rgba(79, 46, 31, 0.15);
-  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.12);
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.95), rgba(248, 240, 220, 0.9));
+  border: 1px solid rgba(79, 46, 31, 0.15);
+  box-shadow: 0 4px 12px rgba(79, 46, 31, 0.1);
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--coop-brown);
@@ -1520,25 +1600,23 @@ pre {
 
 .scene-team-name {
   font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(255, 252, 246, 0.88);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-weight: 500;
+  color: rgba(255, 252, 246, 0.92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
+  text-align: center;
 }
 
 .scene-team-left {
-  left: max(1.5rem, calc((100% - 1120px) / 2 + 0.5rem));
-  top: 40%;
+  position: static;
 }
 
 .scene-team-right-top {
-  left: max(6.5rem, calc((100% - 1120px) / 2 + 5.5rem));
-  top: 40%;
+  position: static;
 }
 
 .scene-team-right-bottom {
-  left: max(11.5rem, calc((100% - 1120px) / 2 + 10.5rem));
-  top: 40%;
+  position: static;
 }
 
 .landing-builder-strip {
@@ -3090,11 +3168,14 @@ pre {
 
   .how-works-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem;
   }
 
   .how-works-shell {
-    width: min(100%, 34rem);
+    width: min(100% - 1.5rem, 50vw, 42rem);
     margin-left: 0;
+    padding: 1.8rem 2rem;
+    gap: 1.2rem;
   }
 
   .how-works-card {
@@ -3230,6 +3311,18 @@ pre {
 
   .how-works-grid {
     grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+
+  .how-works-shell {
+    width: min(100% - 1rem, 90vw);
+    padding: 1.5rem 1.5rem;
+    gap: 1.2rem;
+  }
+
+  .how-works-card {
+    padding: 1rem;
+    gap: 1rem;
   }
 
   .audience-chip-group {
