@@ -1,6 +1,9 @@
 import type { CaptureExclusionCategory, ReceiverCapture, UiPreferences } from '@coop/shared';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ActiveTabCaptureResult } from '../../../runtime/messages';
 import { sendRuntimeMessage } from '../../../runtime/messages';
 import {
+  hasBroadHostAccess,
   preflightActiveTabCapture,
   preflightManualCapture,
   preflightScreenshotCapture,
@@ -8,20 +11,83 @@ import {
 } from '../../shared/capture-preflight';
 import type { SidepanelTab } from '../sidepanel-tabs';
 
+const MANUAL_TAB_RECAPTURE_INTENT_WINDOW_MS = 12_000;
+
+function normalizeActiveTabCaptureResult(
+  result: ActiveTabCaptureResult | number | undefined,
+): ActiveTabCaptureResult {
+  if (typeof result === 'number') {
+    return { capturedCount: result };
+  }
+
+  return result ?? { capturedCount: 0 };
+}
+
 export function useTabCapture(deps: {
   setMessage: (msg: string) => void;
   setPanelTab: (tab: SidepanelTab) => void;
   loadDashboard: () => Promise<void>;
 }) {
   const { setMessage, setPanelTab, loadDashboard } = deps;
+  const [roundupAccessStatus, setRoundupAccessStatus] = useState<
+    'checking' | 'granted' | 'missing'
+  >('checking');
+  const [requestingRoundupAccess, setRequestingRoundupAccess] = useState(false);
+  const activeTabRecaptureArmedUntilRef = useRef(0);
+
+  const refreshRoundupAccess = useCallback(async () => {
+    const hasAccess = await hasBroadHostAccess();
+    setRoundupAccessStatus(hasAccess ? 'granted' : 'missing');
+    return hasAccess;
+  }, []);
+
+  useEffect(() => {
+    void refreshRoundupAccess();
+  }, [refreshRoundupAccess]);
+
+  async function requestRoundupAccess(options: { runRoundupAfterGrant?: boolean } = {}) {
+    const { runRoundupAfterGrant = false } = options;
+
+    if (requestingRoundupAccess) {
+      return false;
+    }
+
+    if (await refreshRoundupAccess()) {
+      if (runRoundupAfterGrant) {
+        await runManualCapture();
+      }
+      return true;
+    }
+
+    setRequestingRoundupAccess(true);
+    try {
+      const granted = await requestBroadHostAccess();
+      setRoundupAccessStatus(granted ? 'granted' : 'missing');
+
+      if (!granted) {
+        setMessage('Site access is needed to round up tabs. Please grant access and try again.');
+        return false;
+      }
+
+      await loadDashboard();
+
+      if (runRoundupAfterGrant) {
+        await runManualCapture();
+      } else {
+        setMessage('Roundup site access enabled. Coop can now inspect tabs locally on demand.');
+      }
+
+      return true;
+    } finally {
+      setRequestingRoundupAccess(false);
+    }
+  }
 
   async function runManualCapture() {
     const preflight = await preflightManualCapture();
     if (!preflight.ok && preflight.needsPermission) {
-      // Sidepanel survives permission dialogs — safe to request directly.
-      const granted = await requestBroadHostAccess();
+      const granted = await requestRoundupAccess();
       if (!granted) {
-        setMessage('Site access is needed to round up tabs. Please grant access and try again.');
         return;
       }
     } else if (!preflight.ok) {
@@ -56,17 +122,33 @@ export function useTabCapture(deps: {
     }
 
     try {
-      const response = await sendRuntimeMessage<number>({ type: 'capture-active-tab' });
+      const allowRecentDuplicate = activeTabRecaptureArmedUntilRef.current > Date.now();
+      activeTabRecaptureArmedUntilRef.current = 0;
+      const response = await sendRuntimeMessage<ActiveTabCaptureResult>(
+        allowRecentDuplicate
+          ? {
+              type: 'capture-active-tab',
+              payload: { allowRecentDuplicate: true },
+            }
+          : { type: 'capture-active-tab' },
+      );
+      const captureResult = normalizeActiveTabCaptureResult(response.data);
       if (!response.ok) {
         setMessage(response.error ?? 'This-tab round-up failed.');
         return;
       }
 
-      if ((response.data ?? 0) > 0) {
-        setMessage(`This tab was rounded up locally. Coop checked ${response.data ?? 0} tab.`);
+      if (captureResult.capturedCount > 0) {
+        setMessage(
+          `This tab was rounded up locally. Coop checked ${captureResult.capturedCount} tab.`,
+        );
         setPanelTab('chickens');
+      } else if (captureResult.duplicateSuppressed) {
+        activeTabRecaptureArmedUntilRef.current =
+          Date.now() + MANUAL_TAB_RECAPTURE_INTENT_WINDOW_MS;
+        setMessage('Captured this tab a moment ago. Choose Capture Tab again to recapture it now.');
       } else {
-        setMessage('This tab did not produce a new capture.');
+        setMessage('Could not pull fresh context from this tab. Try again.');
       }
       await loadDashboard();
     } catch (error) {
@@ -186,6 +268,10 @@ export function useTabCapture(deps: {
     runManualCapture,
     runActiveTabCapture,
     captureVisibleScreenshotAction,
+    refreshRoundupAccess,
+    requestRoundupAccess,
+    requestingRoundupAccess,
+    roundupAccessStatus,
     updateAgentCadence,
     updateExcludedCategories,
     updateCustomExcludedDomains,

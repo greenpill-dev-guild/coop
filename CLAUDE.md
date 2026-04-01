@@ -199,6 +199,28 @@ Named suites via `scripts/validate.ts`:
 - Never replace content that was asked to be added as new
 - When unsure about scope, ask
 
+### Session Scope Lock
+
+When the user asks to **explore**, **audit**, **plan**, or **investigate** — the session is **read-only**:
+- Do NOT edit, write, or delete any code files
+- Produce analysis, findings, or plans as chat output or markdown reports only
+- If findings require fixes, list them and let the user decide when to implement
+- If an agent drifts into making code changes during a read-only session, stop it immediately
+
+Implementation only begins when the user explicitly says to **implement**, **fix**, **apply**, or **execute**.
+
+### Post-Agent Regression Review
+
+After completing parallel sub-agent runs that modify code, a **regression review is mandatory** before committing:
+
+1. **Scope check**: For each file changed, verify it was in the agent's assigned scope — flag any out-of-scope modifications
+2. **Conflict check**: Flag any file modified by more than one agent — these need manual review
+3. **Build gate**: Run `bun run validate quick` (minimum) or `smoke` for cross-package changes
+4. **Test gate**: Run `bun run test` and confirm no regressions vs. the pre-agent baseline
+5. **Summary**: List all changes with a before/after test count before committing
+
+Never commit agent outputs without completing this review. If regressions are found, fix them before reporting done.
+
 ## Git Workflow
 
 **Branches**: `type/description` (e.g., `feature/receiver-pwa`, `fix/sync-race`)

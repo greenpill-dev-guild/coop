@@ -99,7 +99,7 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
             ...state.resolveDraftValue(draft as unknown as ReviewDraft),
           }))}
           filterTags={state.draftFilterTags}
-          isCapturing={state.isCapturing}
+          isCapturing={state.isRoundupInFlight}
           onMarkReady={state.handleMarkDraftReady}
           onOpenDraft={state.navigation.openDraft}
           onRoundUp={() => void state.captureActions.runManualCapture()}
@@ -165,10 +165,10 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
   return (
     <ErrorBoundary>
       <PopupHomeScreen
-        audioPermissionMessage={state.recording.permissionMessage}
         audioStatus={state.recording.status}
         elapsedSeconds={state.recording.elapsedSeconds}
         isCapturing={state.isCapturing}
+        isRoundupInFlight={state.isRoundupInFlight}
         isRecording={state.recording.isRecording}
         noteText={state.noteDraftText}
         onCancelRecording={state.recording.cancelRecording}

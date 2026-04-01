@@ -16,6 +16,10 @@ import { SidepanelFooterNav } from './TabStrip';
 import { useSidepanelOrchestration } from './hooks/useSidepanelOrchestration';
 import type { SidepanelTab } from './sidepanel-tabs';
 
+type ChickensSynthesisSegment = Extract<SidepanelIntentSegment, 'review' | 'shared'>;
+
+const ROUNDUP_ACCESS_PROMPT_DISMISSED_KEY = 'coop:sidepanel-roundup-access-dismissed';
+
 function PairDeviceIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 20 20" width="16" height="16">
@@ -60,10 +64,20 @@ function WorkspaceIcon() {
 export function SidepanelApp() {
   const { preference, setTheme } = useCoopTheme();
   const [panelTab, setPanelTab] = useState<SidepanelTab>('roost');
-  const [synthesisSegment, setSynthesisSegment] = useState<SidepanelIntentSegment>('review');
+  const [synthesisSegment, setSynthesisSegment] = useState<ChickensSynthesisSegment>('review');
   const [focusedDraftId, setFocusedDraftId] = useState<string | undefined>();
   const [focusedSignalId, setFocusedSignalId] = useState<string | undefined>();
   const [focusedObservationId, setFocusedObservationId] = useState<string | undefined>();
+  const [roundupAccessIntentMode, setRoundupAccessIntentMode] = useState<
+    'prompt' | 'grant-and-roundup' | null
+  >(null);
+  const [passiveRoundupAccessDismissed, setPassiveRoundupAccessDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(ROUNDUP_ACCESS_PROMPT_DISMISSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const orchestration = useSidepanelOrchestration(setPanelTab);
 
@@ -74,6 +88,7 @@ export function SidepanelApp() {
     hasTrustedNodeAccess,
     soundPreferences,
     message,
+    setMessage,
     agentDelta,
     clearAgentDelta,
   } = orchestration;
@@ -97,7 +112,17 @@ export function SidepanelApp() {
         await orchestration.selectActiveCoop(targetCoopId);
       }
       setPanelTab(intent.tab);
-      if (intent.segment) {
+      if (intent.segment === 'roundup-access') {
+        setSynthesisSegment('review');
+        setRoundupAccessIntentMode(intent.roundupAccessMode ?? 'prompt');
+        setFocusedDraftId(undefined);
+        setFocusedSignalId(undefined);
+        setFocusedObservationId(undefined);
+        clearAgentDelta();
+        return;
+      }
+      setRoundupAccessIntentMode(null);
+      if (intent.segment === 'review' || intent.segment === 'shared') {
         setSynthesisSegment(intent.segment);
       }
       setFocusedDraftId(intent.draftId);
@@ -109,10 +134,49 @@ export function SidepanelApp() {
   );
 
   useEffect(() => {
+    if (orchestration.tabCapture.roundupAccessStatus === 'granted') {
+      setRoundupAccessIntentMode(null);
+    }
+  }, [orchestration.tabCapture.roundupAccessStatus]);
+
+  const roundupAccessPromptMode =
+    panelTab !== 'chickens'
+      ? null
+      : roundupAccessIntentMode
+        ? roundupAccessIntentMode
+        : orchestration.tabCapture.roundupAccessStatus === 'missing' &&
+            !passiveRoundupAccessDismissed
+          ? 'passive'
+          : null;
+
+  function handleDismissRoundupAccessPrompt() {
+    if (roundupAccessIntentMode) {
+      setRoundupAccessIntentMode(null);
+      return;
+    }
+
+    setPassiveRoundupAccessDismissed(true);
+    try {
+      sessionStorage.setItem(ROUNDUP_ACCESS_PROMPT_DISMISSED_KEY, 'true');
+    } catch {
+      // Ignore session storage failures in restricted environments.
+    }
+  }
+
+  useEffect(() => {
     if (activeCoop && panelTab === 'nest' && !hasTrustedNodeAccess) {
       setPanelTab('coops');
     }
   }, [activeCoop, hasTrustedNodeAccess, panelTab]);
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setMessage(''), 4000);
+    return () => window.clearTimeout(timer);
+  }, [message, setMessage]);
 
   useEffect(() => {
     void sendRuntimeMessage<SidepanelIntent | null>({
@@ -201,28 +265,39 @@ export function SidepanelApp() {
           <SidepanelWelcomeView />
         ) : (
           <>
-            {message ? <div className="panel-card helper-text">{message}</div> : null}
+            <div className="sidepanel-toast-anchor" aria-live="polite">
+              <div className="sidepanel-toast-layer">
+                {message ? (
+                  <NotificationBanner
+                    id={`sidepanel-message:${message}`}
+                    message={message}
+                    onDismiss={() => setMessage('')}
+                    persistDismissal={false}
+                  />
+                ) : null}
 
-            <div className="sidepanel-banner-overlay">
-              {agentDelta?.focusIntent ? (
-                <NotificationBanner
-                  id={`agent-delta-${agentDelta.emittedAt}`}
-                  message={agentDelta.message}
-                  actionLabel="Open"
-                  onAction={() =>
-                    void applySidepanelIntent(agentDelta.focusIntent as SidepanelIntent)
-                  }
-                />
-              ) : null}
+                {agentDelta?.focusIntent ? (
+                  <NotificationBanner
+                    id={`agent-delta-${agentDelta.emittedAt}`}
+                    message={agentDelta.message}
+                    actionLabel="Open"
+                    onAction={() =>
+                      void applySidepanelIntent(agentDelta.focusIntent as SidepanelIntent)
+                    }
+                    onDismiss={clearAgentDelta}
+                    persistDismissal={false}
+                  />
+                ) : null}
 
-              {(dashboard?.summary.pendingDrafts ?? 0) > 0 && (
-                <NotificationBanner
-                  id={`roundup-${dashboard?.summary.lastCaptureAt ?? 'none'}`}
-                  message={`${dashboard?.summary.pendingDrafts} chicken${dashboard?.summary.pendingDrafts === 1 ? '' : 's'} waiting for review.`}
-                  actionLabel="Review"
-                  onAction={() => setPanelTab('chickens')}
-                />
-              )}
+                {(dashboard?.summary.pendingDrafts ?? 0) > 0 && (
+                  <NotificationBanner
+                    id={`roundup-${dashboard?.summary.lastCaptureAt ?? 'none'}`}
+                    message={`${dashboard?.summary.pendingDrafts} chicken${dashboard?.summary.pendingDrafts === 1 ? '' : 's'} waiting for review.`}
+                    actionLabel="Review"
+                    onAction={() => setPanelTab('chickens')}
+                  />
+                )}
+              </div>
             </div>
 
             <SidepanelTabRouter
@@ -230,6 +305,8 @@ export function SidepanelApp() {
               orchestration={orchestration}
               synthesisSegment={synthesisSegment}
               onSelectSynthesisSegment={setSynthesisSegment}
+              roundupAccessPromptMode={roundupAccessPromptMode}
+              onDismissRoundupAccessPrompt={handleDismissRoundupAccessPrompt}
               focusedDraftId={focusedDraftId}
               focusedSignalId={focusedSignalId}
               focusedObservationId={focusedObservationId}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInviteShareContent, type InviteShareInput } from '../../../shared/invite-share';
+import { type InviteShareInput, buildInviteShareContent } from '../../../shared/invite-share';
 
 // ---------------------------------------------------------------------------
 // Helpers

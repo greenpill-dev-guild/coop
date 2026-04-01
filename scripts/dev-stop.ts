@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { loadRootEnv, repoRoot } from './load-root-env';
 
 loadRootEnv();
@@ -36,7 +36,7 @@ function readDevState() {
 }
 
 function listListeningPids(port: number) {
-  const result = spawnSync('lsof', ['-tiTCP:' + String(port), '-sTCP:LISTEN'], {
+  const result = spawnSync('lsof', [`-tiTCP:${String(port)}`, '-sTCP:LISTEN'], {
     cwd: repoRoot,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],

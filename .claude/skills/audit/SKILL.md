@@ -21,6 +21,16 @@ Systematic codebase analysis: quality audit, dead code detection, architectural 
 
 ---
 
+## Scope Lock (ENFORCED)
+
+**Audits are strictly read-only.** This is non-negotiable:
+- Do NOT use Edit, Write, or any file-modifying tool during an audit
+- Do NOT let sub-agents edit files — all agents must be read-only
+- If a finding requires a fix, describe it in the report with file:line references
+- Implementation is **gated behind explicit user approval** — the report must be delivered and reviewed before any fixes begin
+
+If the user wants fixes applied after the audit, they must explicitly say "implement", "fix", or "apply" — then switch to `/review --mode apply_fixes` or direct implementation. The audit itself never modifies code.
+
 ## Activation
 
 | Trigger | Action |
@@ -306,6 +316,13 @@ _Tracked from: [previous audit date]_
 
 1. **[Action]** -- [context] (Severity, finding ID)
 2. **[Action]** -- [context] (Severity, finding ID)
+
+## Next Steps
+
+> **This audit is read-only.** To apply fixes, reply with:
+> - `fix critical` — address Critical findings only
+> - `fix all` — address all findings by priority
+> - `fix H1, M3` — address specific findings by ID
 ```
 
 ---

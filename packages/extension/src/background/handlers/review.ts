@@ -3,6 +3,7 @@ import {
   type ReviewDraft,
   addOutboxEntry,
   createAgentMemory,
+  createId,
   createOutboxEntry,
   deleteReviewDraft,
   getAuthSession,
@@ -291,4 +292,78 @@ export async function handlePublishDraft(
     activeCoopId: activeContext.activeCoopId,
     activeMemberId: activeContext.activeMemberId,
   });
+}
+
+export async function handlePromoteSignalToDraft(
+  message: Extract<RuntimeRequest, { type: 'promote-signal-to-draft' }>,
+) {
+  const { payload } = message;
+  const primaryTarget = payload.targetCoops[0];
+  if (!primaryTarget) {
+    return { ok: false, error: 'Signal has no target coops.' } satisfies RuntimeActionResponse;
+  }
+
+  const coops = await getCoops();
+  const coopNames = payload.targetCoops.map((t) => t.coopName).join(', ');
+  const lenses = primaryTarget.matchedRitualLenses.join(', ');
+  const whyItMatters = lenses
+    ? `${primaryTarget.rationale} Relevant to ${coopNames}'s ${lenses} lane.`
+    : primaryTarget.rationale;
+
+  const draft: ReviewDraft = {
+    id: createId('draft'),
+    interpretationId: createId('interp'),
+    extractId: payload.extractId,
+    sourceCandidateId: payload.sourceCandidateId,
+    title: payload.title,
+    summary: primaryTarget.rationale,
+    sources: [
+      {
+        label: payload.title,
+        url: payload.url,
+        domain: payload.domain,
+        faviconUrl: payload.favicon,
+      },
+    ],
+    tags: payload.tags,
+    category: payload.category,
+    whyItMatters,
+    suggestedNextStep: primaryTarget.suggestedNextStep,
+    suggestedTargetCoopIds: payload.targetCoops.map((t) => t.coopId),
+    confidence: payload.topRelevanceScore,
+    rationale: primaryTarget.rationale,
+    status: 'draft',
+    workflowStage: 'ready',
+    attachments: [],
+    provenance: {
+      type: 'tab',
+      interpretationId: undefined,
+      extractId: payload.extractId,
+      sourceCandidateId: payload.sourceCandidateId,
+    },
+    createdAt: nowIso(),
+  } as ReviewDraft;
+
+  await saveReviewDraft(db, draft);
+
+  // Update related tab routings to 'drafted' status
+  const routings = await listTabRoutings(db, {
+    extractId: payload.extractId,
+    limit: 500,
+  });
+  const targetCoopIds = new Set(payload.targetCoops.map((t) => t.coopId));
+  for (const routing of routings) {
+    if (routing.status === 'published' || routing.status === 'dismissed') continue;
+    if (targetCoopIds.has(routing.coopId)) {
+      await saveTabRouting(db, {
+        ...routing,
+        status: 'drafted',
+        draftId: draft.id,
+        updatedAt: nowIso(),
+      });
+    }
+  }
+
+  await refreshBadge();
+  return { ok: true, data: draft } satisfies RuntimeActionResponse<ReviewDraft>;
 }

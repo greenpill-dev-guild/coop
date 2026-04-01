@@ -149,13 +149,25 @@ button:focus-visible,
   z-index: var(--coop-z-toast);
 }
 
-.popup-toast {
-  border: 1px solid var(--coop-border);
-  border-radius: var(--coop-radius-button);
-  padding: 10px 12px;
+.popup-toast-layer .notification-banner {
   background: var(--coop-panel);
+  border-color: var(--coop-border);
+  color: var(--coop-text);
+  box-shadow: var(--coop-shadow);
+}
+
+.popup-toast-layer .notification-banner__message {
   color: var(--coop-text-soft);
-  line-height: 1.45;
+}
+
+.popup-toast-layer .notification-banner__action {
+  background: var(--coop-active-bg);
+  border-color: var(--coop-active-border);
+  color: var(--coop-text);
+}
+
+.popup-toast-layer .notification-banner__dismiss {
+  color: var(--coop-text-soft);
   pointer-events: auto;
 }
 
@@ -1293,6 +1305,12 @@ button:focus-visible,
   color: var(--coop-text-soft);
 }
 
+.popup-mini-pill--wrap {
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
 .popup-review-queue__card {
   width: 100%;
   border: 1px solid var(--coop-border);
@@ -1479,6 +1497,70 @@ button:focus-visible,
   object-fit: cover;
 }
 
+.popup-file-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--coop-radius-photo);
+  border: 1px solid var(--coop-border);
+  background: var(--coop-panel);
+  color: var(--coop-text-soft);
+}
+
+.popup-file-summary__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.popup-file-summary__name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--coop-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-file-summary__meta {
+  font-size: 0.75rem;
+  color: var(--coop-text-soft);
+}
+
+.popup-audio-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--coop-radius-photo);
+  border: 1px solid var(--coop-border);
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--coop-panel) 92%, var(--coop-green) 8%),
+      var(--coop-panel)
+    ), var(--coop-panel);
+}
+
+.popup-audio-preview__copy {
+  display: grid;
+  gap: 3px;
+}
+
+.popup-audio-preview__copy strong {
+  font-size: 0.88rem;
+  color: var(--coop-text);
+}
+
+.popup-audio-preview__copy span {
+  font-size: 0.76rem;
+  color: var(--coop-text-soft);
+}
+
+.popup-audio-preview__player {
+  width: 100%;
+  max-width: 100%;
+}
+
 .popup-footer-nav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1651,7 +1733,7 @@ button:focus-visible,
 }
 
 .popup-dialog__field textarea {
-  min-height: 88px;
+  min-height: 72px;
 }
 
 .popup-dialog__meta {
@@ -1659,6 +1741,8 @@ button:focus-visible,
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .popup-dialog__meta a {
@@ -2092,29 +2176,6 @@ body::-webkit-scrollbar,
   color: var(--coop-error);
 }
 
-/* ---- Popup notification banner ---- */
-
-.popup-notification-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--coop-radius-icon);
-  border: 1px solid rgba(253, 138, 1, 0.25);
-  background: rgba(253, 138, 1, 0.08);
-  font-size: 0.78rem;
-  color: var(--coop-text);
-}
-
-.popup-notification-banner__dismiss {
-  padding: 2px 6px;
-  border: none;
-  background: transparent;
-  color: var(--coop-text-soft);
-  font-size: 0.9rem;
-}
-
 .popup-empty-state--illustrated {
   display: flex;
   flex-direction: column;
@@ -2347,35 +2408,6 @@ body::-webkit-scrollbar,
 
 .popup-recording__actions .popup-handoff-button {
   flex: 0 0 auto;
-}
-
-.popup-audio-permission {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: var(--coop-radius-photo);
-  border: 1px solid var(--coop-border);
-  background: color-mix(in srgb, var(--coop-panel) 96%, transparent);
-}
-
-.popup-audio-permission strong {
-  font-size: 0.9rem;
-}
-
-.popup-audio-permission p {
-  margin: 0;
-  color: var(--coop-text-soft);
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.popup-audio-permission--pending {
-  border-style: dashed;
-}
-
-.popup-audio-permission .popup-secondary-action {
-  width: auto;
-  justify-self: start;
 }
 
 /* Red accent for cancel recording button */

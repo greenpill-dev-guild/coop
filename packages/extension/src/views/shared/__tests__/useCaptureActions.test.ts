@@ -2,9 +2,10 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PopupPendingCapture } from '../../Popup/popup-types';
 
-const { mockSendRuntimeMessage, mockPlayCoopSound } = vi.hoisted(() => ({
+const { mockSendRuntimeMessage, mockPlayCoopSound, mockCompressImage } = vi.hoisted(() => ({
   mockSendRuntimeMessage: vi.fn(),
   mockPlayCoopSound: vi.fn().mockResolvedValue(undefined),
+  mockCompressImage: vi.fn(),
 }));
 
 vi.mock('../../../runtime/messages', () => ({
@@ -14,6 +15,11 @@ vi.mock('../../../runtime/messages', () => ({
 vi.mock('../../../runtime/audio', () => ({
   playCoopSound: mockPlayCoopSound,
 }));
+
+vi.mock('@coop/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@coop/shared')>();
+  return { ...actual, compressImage: mockCompressImage };
+});
 
 const { useCaptureActions } = await import('../useCaptureActions');
 
@@ -71,7 +77,7 @@ describe('useCaptureActions', () => {
   });
 
   describe('runManualCapture', () => {
-    it('sets isCapturing while the runtime call is in flight', async () => {
+    it('tracks roundup progress separately while the runtime call is in flight', async () => {
       let resolveCapture: ((value: unknown) => void) | undefined;
       mockSendRuntimeMessage.mockReturnValue(
         new Promise((resolve) => {
@@ -87,7 +93,8 @@ describe('useCaptureActions', () => {
         await Promise.resolve();
       });
 
-      expect(result.current.isCapturing).toBe(true);
+      expect(result.current.isRoundupInFlight).toBe(true);
+      expect(result.current.isCapturing).toBe(false);
 
       if (!capturePromise) {
         throw new Error('Expected manual capture promise to be created.');
@@ -98,7 +105,7 @@ describe('useCaptureActions', () => {
         await capturePromise;
       });
 
-      expect(result.current.isCapturing).toBe(false);
+      expect(result.current.isRoundupInFlight).toBe(false);
     });
 
     it('sends manual-capture and only navigates when tabs were captured', async () => {
@@ -199,7 +206,7 @@ describe('useCaptureActions', () => {
           title: 'test.txt',
         }),
       });
-      expect(setMessage).toHaveBeenCalledWith('File saved to Pocket Coop finds.');
+      expect(setMessage).toHaveBeenCalledWith('File saved as draft.');
     });
 
     it('rejects files over 10 MB', async () => {
@@ -215,6 +222,63 @@ describe('useCaptureActions', () => {
 
       expect(pendingCapture).toBeNull();
       expect(setMessage).toHaveBeenCalledWith('This file is too large — 10 MB maximum.');
+    });
+
+    it('compresses large image files over 2 MB before creating the pending capture', async () => {
+      const compressedBlob = new Blob(['compressed'], { type: 'image/webp' });
+      mockCompressImage.mockResolvedValue({ blob: compressedBlob, width: 800, height: 600 });
+
+      const { result } = renderCaptureActions();
+      const largeImage = new File(['x'.repeat(3 * 1024 * 1024)], 'photo.png', {
+        type: 'image/png',
+      });
+
+      let pendingCapture: PopupPendingCapture | null | undefined = null;
+      await act(async () => {
+        pendingCapture = await result.current.prepareFileCapture(largeImage);
+      });
+
+      expect(mockCompressImage).toHaveBeenCalledWith({ blob: largeImage });
+      expect(pendingCapture).toMatchObject({
+        kind: 'file',
+        mimeType: 'image/webp',
+        byteSize: compressedBlob.size,
+        fileName: 'photo.png',
+      });
+      expect(pendingCapture?.previewUrl).toMatch(/^blob:/);
+    });
+
+    it('falls back to the original file when compression fails', async () => {
+      mockCompressImage.mockRejectedValue(new Error('No canvas'));
+
+      const { result } = renderCaptureActions();
+      const largeImage = new File(['x'.repeat(3 * 1024 * 1024)], 'photo.png', {
+        type: 'image/png',
+      });
+
+      let pendingCapture: PopupPendingCapture | null | undefined = null;
+      await act(async () => {
+        pendingCapture = await result.current.prepareFileCapture(largeImage);
+      });
+
+      expect(pendingCapture).toMatchObject({
+        kind: 'file',
+        mimeType: 'image/png',
+        byteSize: largeImage.size,
+        fileName: 'photo.png',
+      });
+      expect(pendingCapture?.previewUrl).toMatch(/^blob:/);
+    });
+
+    it('skips compression for small image files under 2 MB', async () => {
+      const { result } = renderCaptureActions();
+      const smallImage = new File(['tiny'], 'icon.png', { type: 'image/png' });
+
+      await act(async () => {
+        await result.current.prepareFileCapture(smallImage);
+      });
+
+      expect(mockCompressImage).not.toHaveBeenCalled();
     });
   });
 
@@ -256,6 +320,7 @@ describe('useCaptureActions', () => {
         mimeType: 'audio/webm',
         durationSeconds: 15,
       });
+      expect(pendingCapture?.previewUrl).toMatch(/^blob:/);
       const preparedCapture = pendingCapture;
       if (!preparedCapture) {
         throw new Error('Expected a pending audio capture.');
@@ -273,7 +338,25 @@ describe('useCaptureActions', () => {
           durationSeconds: 15,
         }),
       });
-      expect(setMessage).toHaveBeenCalledWith('Voice note saved.');
+      expect(setMessage).toHaveBeenCalledWith('Voice note saved as draft.');
+    });
+
+    it('adds an audio preview URL for uploaded audio files', async () => {
+      const { result } = renderCaptureActions();
+
+      let pendingCapture: PopupPendingCapture | null | undefined = null;
+      await act(async () => {
+        pendingCapture = await result.current.prepareFileCapture(
+          new File(['field audio'], 'field-note.webm', { type: 'audio/webm' }),
+        );
+      });
+
+      expect(pendingCapture).toMatchObject({
+        kind: 'file',
+        title: 'field-note.webm',
+        mimeType: 'audio/webm',
+      });
+      expect(pendingCapture?.previewUrl).toMatch(/^blob:/);
     });
 
     it('prepares a screenshot for review instead of saving immediately', async () => {
@@ -393,8 +476,57 @@ describe('useCaptureActions', () => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith({ type: 'capture-active-tab' });
     });
 
-    it('reloads the dashboard but does not navigate when capture-tab returns zero results', async () => {
-      mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: 0 });
+    it('allows active-tab capture to run while roundup is already in flight', async () => {
+      let resolveRoundup: ((value: unknown) => void) | undefined;
+      mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+        if (message.type === 'manual-capture') {
+          return new Promise((resolve) => {
+            resolveRoundup = resolve;
+          });
+        }
+
+        if (message.type === 'capture-active-tab') {
+          return { ok: true, data: 1 };
+        }
+
+        return { ok: true };
+      });
+
+      const { result, afterActiveTabCapture } = renderCaptureActions();
+
+      let roundupPromise: Promise<void> | undefined;
+      await act(async () => {
+        roundupPromise = result.current.runManualCapture();
+        await Promise.resolve();
+      });
+
+      expect(result.current.isRoundupInFlight).toBe(true);
+
+      await act(async () => {
+        await result.current.runActiveTabCapture();
+      });
+
+      expect(mockSendRuntimeMessage).toHaveBeenNthCalledWith(1, { type: 'manual-capture' });
+      expect(mockSendRuntimeMessage).toHaveBeenNthCalledWith(2, { type: 'capture-active-tab' });
+      expect(afterActiveTabCapture).toHaveBeenCalled();
+
+      if (!roundupPromise) {
+        throw new Error('Expected roundup promise to be created.');
+      }
+
+      await act(async () => {
+        resolveRoundup?.({ ok: true, data: 2 });
+        await roundupPromise;
+      });
+    });
+
+    it('arms a confirmed recapture when an immediate duplicate active-tab capture is suppressed', async () => {
+      mockSendRuntimeMessage
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { capturedCount: 0, duplicateSuppressed: true },
+        })
+        .mockResolvedValueOnce({ ok: true, data: { capturedCount: 1 } });
 
       const { result, setMessage, loadDashboard, afterActiveTabCapture } = renderCaptureActions();
 
@@ -402,8 +534,38 @@ describe('useCaptureActions', () => {
         await result.current.runActiveTabCapture();
       });
 
-      expect(setMessage).toHaveBeenCalledWith('This tab did not produce a new capture.');
-      expect(loadDashboard).toHaveBeenCalled();
+      expect(setMessage).toHaveBeenCalledWith(
+        'Captured this tab a moment ago. Choose Capture Tab again to recapture it now.',
+      );
+      expect(loadDashboard).toHaveBeenCalledTimes(1);
+      expect(afterActiveTabCapture).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.runActiveTabCapture();
+      });
+
+      expect(mockSendRuntimeMessage).toHaveBeenNthCalledWith(1, { type: 'capture-active-tab' });
+      expect(mockSendRuntimeMessage).toHaveBeenNthCalledWith(2, {
+        type: 'capture-active-tab',
+        payload: { allowRecentDuplicate: true },
+      });
+      expect(afterActiveTabCapture).toHaveBeenCalledTimes(1);
+      expect(loadDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    it('reloads the dashboard but does not navigate when active-tab capture returns no fresh context', async () => {
+      mockSendRuntimeMessage.mockResolvedValue({ ok: true, data: { capturedCount: 0 } });
+
+      const { result, setMessage, loadDashboard, afterActiveTabCapture } = renderCaptureActions();
+
+      await act(async () => {
+        await result.current.runActiveTabCapture();
+      });
+
+      expect(setMessage).toHaveBeenCalledWith(
+        'Could not pull fresh context from this tab. Try again.',
+      );
+      expect(loadDashboard).toHaveBeenCalledTimes(1);
       expect(afterActiveTabCapture).not.toHaveBeenCalled();
     });
 

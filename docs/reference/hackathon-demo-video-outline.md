@@ -5,293 +5,319 @@ slug: /reference/hackathon-demo-video-outline
 
 # Hackathon Demo Video Outline
 
-This is the camera-ready narrative for the immediate hackathon demo. It is intentionally separate
-from the broader vision, strategy, monetization, and future-features docs.
+This is the camera-ready outline for the immediate hackathon demo. It is intentionally specific to
+the sequence we want to show, not a generic product walkthrough.
 
-The rule for this video is simple:
+For environment and operator setup, use the [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook).
 
-- show the working loop first
-- label mock versus live rails honestly
-- keep the narrative anchored in product, not abstraction
+## 1. Demo Thesis
 
-For environment setup and operational details, use the
-[Demo & Deploy Runbook](/reference/demo-and-deploy-runbook).
+The demo should prove this claim:
 
-## 1. Demo Objective
+> Coop turns messy knowledge into shared opportunity, coordinated governance, and durable public
+> memory.
 
-The demo needs to prove six things quickly:
+The sequence needs to make that visible, not merely stated.
 
-1. Coop has a real product surface, not a concept deck.
-2. Coop creates a real shared coordination space.
-3. Coop captures and synthesizes knowledge into opportunity locally.
-4. Coop requires human review before shared publication.
-5. Coop can create durable archive and proof.
-6. Coop can bridge from shared knowledge into bounded onchain action.
+## 2. Core Actions To Center
 
-If the viewer remembers one sentence, it should be:
+The demo is built around these actions:
 
-> Coop turns scattered knowledge into shared intelligence and coordinated action.
+1. show the landing page and create a coop live
+2. round up a messy browser state into chickens
+3. let synthesis recommend which chickens belong in which coops
+4. invite a member and explain the local-first, peer-to-peer trust model
+5. connect the coop to Green Goods
+6. show bounded onchain governance and capital-allocation behavior
+7. close with Filecoin backup and proof
 
-## 2. Recording Rules
+The point is not just "look at the features." The point is "look at the loop."
 
-### Tell the truth about the rails
+## 3. Required Pre-Demo State
 
-If Filecoin archive or Green Goods actions are running in mock or rehearsal mode, say that on
-camera. Do not let the video imply a stronger production posture than the product actually has.
+Set this up before recording.
 
-### Keep the local-first boundary visible
+### Coop setup
 
-Say explicitly that capture and synthesis happen before anything is shared. That is one of the most
-important product distinctions.
+- have two coops already created before the recording begins
+- create a third coop live during the recording
+- give the coops clearly different purposes so routing feels intentional
 
-### Show the product, not your tabs
+### Browser setup
 
-The tabs you round up should be legible examples, but the star of the sequence is the workflow:
-capture, synthesize, review, publish, archive, act.
+- prepare one obviously messy window with many open tabs
+- make sure those tabs naturally cluster into the three coop themes
+- avoid generic tabs that could belong anywhere
 
-## 3. Recommended Length
+### Member and trust setup
 
-Two cuts are worth preparing.
+- have the invite flow ready from `Nest` or the current membership surface
+- if possible, have a second browser profile or second device ready for the receiving side
 
-### Short cut: 3 to 4 minutes
+### Green Goods setup
 
-Use this for judges, social clips, or compact pitch contexts.
+- decide whether the demo shows creating a new garden or connecting to an existing garden
+- if showing an existing garden, be ready to narrate it as attaching the coop to an already
+  established onchain coordination surface
+- if showing session-key execution, decide in advance whether it is live or rehearsal
 
-### Full cut: 5 to 6 minutes
+### Archive setup
 
-Use this when you want the knowledge-to-action story to land clearly.
+- have the archive flow ready from `Coops`
+- if encrypted archive envelope behavior is enabled, call it out explicitly
+- if the archive path is mock or rehearsal, say that plainly
 
-The outline below assumes the full cut. The short cut should compress Beats 1, 2, and 8.
+## 4. Recommended Length
 
-## 4. Beat-By-Beat Flow
+The best cut is 5 to 7 minutes.
 
-### Beat 1. Opening Hook
+That gives enough room for:
 
-Suggested duration: 15 to 20 seconds
+- the multi-coop routing beat
+- the invite and trust beat
+- the Green Goods governance beat
+- the Filecoin close
 
-### On screen
+## 5. Beat-By-Beat Flow
 
-- open the landing page at `coop.town`
+### Beat 1. Landing And Framing
 
-### Talk track
+Suggested duration: 20 to 30 seconds
+
+#### On screen
+
+- open `coop.town`
+- scroll the hero and one core explanatory section
+
+#### Talk track
 
 > Communities do not have an information problem. They have a fragmentation problem. Coop helps a
-> group capture signal where it already works, refine it locally, review it deliberately, and turn
-> it into shared memory, opportunity, and coordinated action.
+> group turn messy knowledge into shared opportunity and coordinated action.
 
-### Proof point
+#### Proof point
 
-- the problem is fragmentation, not "we added AI to notes"
+- this is a real product surface, not a concept deck
 
-### Avoid
-
-- starting with architecture language
-- starting with crypto language
-- starting with future vision before the product loop
-
-### Beat 2. Landing Page Scroll
-
-Suggested duration: 30 to 40 seconds
-
-### On screen
-
-- scroll the hero
-- scroll the "How Coop Works" section
-- show the install path
-
-### Talk track
-
-> This is a real product page, not a slide deck. The core promise is browser-first, local-first,
-> passkey-first coordination. Capture stays local until a human decides to publish.
-
-### Proof point
-
-- the product has a legible user story and a trust posture before the extension opens
-
-### Beat 3. Generate A Coop
+### Beat 2. Create The Third Coop
 
 Suggested duration: 45 to 60 seconds
 
-### On screen
+#### On screen
 
 - open the extension sidepanel
-- create a coop
-- pick a preset and lens
-- land in `Coops`
+- show that two coops already exist
+- create a third coop live
 
-### Talk track
+#### Talk track
 
-> A coop is the shared coordination space. It gives a group a durable boundary for memory, review,
-> archive, and action.
+> We already have two coops here, and now we are creating a third live. That matters because Coop
+> is not only about collecting information. It is about routing knowledge into the right collective
+> context.
 
-### Proof point
+#### Proof point
 
-- Coop is not just private capture; it has real shared state
+- coop creation is real
+- multi-coop coordination is part of the story from the start
 
-### Avoid
-
-- spending too long on form details
-- narrating every field instead of the meaning of the flow
-
-### Beat 4. Capture And Local Synthesis
+### Beat 3. Round Up Messy Tabs Into Chickens
 
 Suggested duration: 60 to 75 seconds
 
-### On screen
+#### On screen
 
-- open a few relevant tabs
+- show the intentionally messy tab set
 - run manual round-up
-- show candidates appear in `Chickens`
-- open one candidate with synthesized output
+- show chickens appear in `Chickens`
 
-### Talk track
+#### Talk track
 
-> The agent is structuring knowledge in-browser. At this point nothing has been shared. The system
-> is helping the group interpret signal into opportunity before publication.
+> This is the raw material. A messy browser state becomes a review queue. At this point the system
+> is still local-first. Nothing has been shared yet.
 
-### Proof point
+#### Proof point
 
-- local synthesis is real
-- the local-first boundary is intact
+- the product can absorb chaotic real-world browsing context
+- the local-first boundary is still intact
 
-### Avoid
+### Beat 4. Multi-Coop Synthesis And Routing
 
-- over-explaining models or inference stacks in the video itself
+Suggested duration: 75 to 90 seconds
 
-### Beat 5. Review And Publish
+#### On screen
+
+- open the synthesized chickens
+- show the system recommending where they should go
+- route different chickens into different coops
+
+#### Talk track
+
+> This is where Coop turns knowledge into opportunity. It is not only summarizing pages. It is
+> helping decide which findings matter to which coop, so the right knowledge lands in the right
+> shared space.
+
+#### Proof point
+
+- synthesis is doing real routing work
+- the system is opinionated about context, not just generative for its own sake
+- the human still confirms the share decision
+
+### Beat 5. Invite A Member And Explain The Trust Model
 
 Suggested duration: 45 to 60 seconds
 
-### On screen
+#### On screen
 
-- promote a candidate to a draft
-- edit title, summary, or next step
-- publish it into the coop
-- show it appear in `Coops`
+- open `Nest` or the current membership controls
+- generate an invite
+- optionally show the receiving side joining
 
-### Talk track
+#### Talk track
 
-> This is the key human boundary. The agent proposes, the human decides. Coop does not
-> auto-publish generated output into shared memory.
+> Coop stays local-first and peer-to-peer in its posture. A trusted member can issue a scoped
+> invite, a new member joins through a passkey-first flow, and shared state syncs without turning
+> everything into a centralized cloud bucket.
 
-### Proof point
+#### Proof point
 
-- publication is explicit and review-based
+- membership is role-aware and trust-aware
+- the product can explain how sharing happens without breaking the local-first story
 
-### Beat 6. Archive To Filecoin
+### Beat 6. Connect The Coop To Green Goods
 
-Suggested duration: 30 to 45 seconds
+Suggested duration: 50 to 70 seconds
 
-### On screen
+#### On screen
 
-- trigger an archive snapshot
-- show the receipt or proof export
+- move into the sidepanel surfaces that show shared state and onchain controls
+- show the Green Goods path
+- demonstrate either:
+- creating a new garden
+- or connecting the coop to an existing garden / operator structure
 
-### Talk track
+#### Talk track
 
-> Shared knowledge is now durable. Instead of disappearing into chat history or note sprawl, the
-> coop can anchor a verifiable memory trail through its archive flow.
+> Green Goods is how Coop connects knowledge to onchain coordination. It gives the coop a path into
+> governance, capital formation, capital allocation, and impact reporting. You can start a new
+> garden with the coop, or attach the coop to an existing garden coordination surface.
 
-### Proof point
+#### Proof point
 
-- durable memory and proof are part of the product story
+- Green Goods is not an isolated add-on
+- it is the onchain coordination and capital layer tied to the coop
 
-### If mock mode
+### Beat 7. Show Governance Through A Bounded Session-Key Action
 
-Say:
+Suggested duration: 60 to 90 seconds
 
-> This is running in rehearsal mode for the demo, but the archive path is already part of the
-> product boundary.
+#### On screen
 
-### Beat 7. Green Goods Onchain Action
+- show the policy and session-aware operator path
+- have the coop agent propose a priority-aligned pool
+- execute the bounded action that creates the pool
+
+#### Talk track
+
+> This is the governance beat. The coop agent can synthesize the group's priorities and propose a
+> pool aligned with those priorities. Then a bounded session-key path can execute that action
+> without turning the system into open-ended autonomy. The point is scoped initiative, not silent
+> control.
+
+#### Product-language note
+
+The current runtime language is closest to `create garden pools`. If that is the surface you show,
+narrate it as the coop proactively creating a priority-aligned signaling or allocation pool inside
+Green Goods.
+
+#### Proof point
+
+- the system can take bounded initiative
+- session keys are scoped rather than universal
+- governance and capital allocation are tied back to synthesized coop priorities
+
+### Beat 8. Close With Filecoin Backup And Proof
 
 Suggested duration: 35 to 50 seconds
 
-### On screen
+#### On screen
 
-- open `Roost`
-- show member account or garden state
-- perform one bounded action
+- trigger the archive flow from `Coops`
+- show the receipt or proof export
 
-### Talk track
+#### Talk track
 
-> Coop does not stop at memory. It can connect shared knowledge to bounded onchain action and, over
-> time, to clearer capital-formation workflows. The important point is that high-stakes execution is
-> scoped by role, policy, and human confirmation.
+> Coop data stays local-first and syncs peer-to-peer where appropriate, but it can also be backed
+> up through a decentralized Filecoin archive path. That gives the group durable memory and proof
+> instead of leaving its knowledge trapped in ephemeral tools.
 
-### Proof point
-
-- onchain action is not open-ended agent autonomy
-- power and risk are bounded
-
-### If mock mode
+#### If encrypted archive is enabled
 
 Say:
 
-> We are showing the action path in controlled demo posture rather than pretending every rail is
-> already public-launch default.
+> This archive path can also use an encrypted envelope, so durability does not require giving up
+> control over the contents.
 
-### Beat 8. The Larger Vision
+#### If mock mode
 
-Suggested duration: 45 to 60 seconds
+Say:
 
-### On screen
+> We are showing the archive path in controlled demo posture rather than pretending every live rail
+> is already public-launch default.
 
-- keep the published artifact visible
-- optionally open the board route
+#### Proof point
 
-### Talk track
+- local-first and long-memory can coexist
+- the close lands on durable record, not only interface polish
 
-> The immediate loop is capture, synthesize, review, publish, archive, and act. The larger vision
-> is Coop as community-owned coordination infrastructure: a knowledge graph, an opportunity and
-> capital-formation layer, a policy layer, an archive layer, and an action layer that communities
-> can actually trust.
+### Beat 9. Future Coda
 
-### Mention briefly
+Suggested duration: 20 to 30 seconds
+
+#### Talk track
+
+> What comes next is deeper knowledge exploration, stronger Coop OS patterns, richer mobile and
+> call-based participation, and more ways for communities to turn what they know into coordinated
+> opportunity.
+
+#### Mention briefly
 
 - React Flow knowledge exploration
 - Coop OS
 - richer PWA participation
-- community coop calls with real-time knowledge sharing
+- community coop calls with knowledge sharing
 
-### Avoid
-
-- sounding like these are all already shipped
-
-### Beat 9. Join The Journey
-
-Suggested duration: 15 to 25 seconds
-
-### Talk track
-
-> We are building Coop in the open. We are looking for pilot communities, grant partners, design
-> collaborators, protocol thinkers, and early builders who care about local-first AI, durable
-> community memory, and coordination systems people can actually own.
-
-## 5. Demo Spine In One Paragraph
+## 6. Demo Spine In One Paragraph
 
 If you need a single uninterrupted narration pass:
 
-> Coop is a browser-first, local-first coordination system. We start on the landing page because
-> this is a real product, not a deck. We create a coop, round up real knowledge from the browser,
-> let the in-browser agent synthesize what matters, review it before anything becomes shared,
-> publish it into the coop, anchor that memory through the archive path, and then show how shared
-> knowledge can become bounded onchain action through Green Goods. The immediate demo is the working
-> loop. The larger vision is turning that loop into a community-owned coordination operating system.
+> Coop is a browser-first, local-first coordination system for turning messy knowledge into
+> opportunity. We start on the landing page, show that this is a real product, create a new coop
+> live inside an already multi-coop environment, round up a chaotic browser state into chickens, let
+> the in-browser agent structure and route those findings toward the right coops, invite a member
+> into that shared state, connect the coop to Green Goods for onchain governance and capital
+> coordination, show a bounded session-key action creating a priority-aligned pool, and then close
+> by backing the coop's memory up through the Filecoin archive path. The future story grows directly
+> out of this loop.
 
-## 6. Practical Preflight Checklist
+## 7. Practical Preflight Checklist
 
-- prepare three to five clean tabs for round-up
-- rehearse one successful coop creation flow
-- make sure the draft you plan to publish is short and legible
-- decide in advance whether archive and Green Goods are mock or live for the recording
-- keep one sentence ready for the local-first boundary
-- keep one sentence ready for the human review boundary
-- keep one sentence ready for the bounded onchain-action boundary
+- prepare two existing coops and one coop to create live
+- prepare one messy browser window with clearly clusterable tabs
+- rehearse the routing beat so each coop gets at least one clean example
+- prepare the invite flow and optional receiving-side join flow
+- decide whether the Green Goods beat shows new-garden setup or existing-garden connection
+- prepare the session-key governance action
+- decide whether the archive close includes encryption language
+- keep one sentence ready each for:
+- local-first boundary
+- peer-to-peer shared state
+- bounded session-key execution
+- Filecoin durability and proof
 
-## 7. Related Docs
+## 8. Related Docs
 
 - [Hackathon Narrative Suite](/reference/hackathon-demo-and-vision-outline)
+- [Hackathon Demo Voiceover Script](/reference/hackathon-demo-voiceover-script)
+- [Hackathon Demo Shot List](/reference/hackathon-demo-shot-list)
 - [Coop Vision](/reference/coop-vision)
 - [Coop Strategy](/reference/coop-strategy)
 - [Coop Monetization Path](/reference/coop-monetization-path)

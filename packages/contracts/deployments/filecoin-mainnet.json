@@ -1,0 +1,10 @@
+{
+  "registryAddress": "0x115819bCcaab03Be49107c69c00Bc4c21009839C",
+  "deployTxHash": "0xaa2c17b96f87ced3a0f73809ef93b5fb089cbafade0eeed58210187561e9df61",
+  "deployedAt": "2026-04-01T03:27:01.594Z",
+  "chainId": 314,
+  "network": "mainnet",
+  "rpcUrl": "https://api.node.glif.io/rpc/v1",
+  "deployerAddress": "0xFBAf2A9734eAe75497e1695706CC45ddfA346ad6",
+  "note": "Deployed via forge create --broadcast with keystore account green-goods-deployer"
+}

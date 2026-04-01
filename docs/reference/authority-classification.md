@@ -1,3 +1,8 @@
+---
+title: "Authority Classification"
+slug: /reference/authority-classification
+---
+
 # Authority Classification
 
 This document defines the four authority classes in the Coop on-chain architecture.

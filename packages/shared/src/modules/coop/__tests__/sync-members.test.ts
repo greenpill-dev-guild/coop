@@ -127,8 +127,11 @@ describe('per-member Y.Map migration (R2)', () => {
     for (const member of state.members) {
       const fieldMap = membersV2.get(member.id);
       expect(fieldMap).toBeDefined();
-      expect(JSON.parse(fieldMap!.get('displayName') ?? '')).toBe(member.displayName);
-      expect(JSON.parse(fieldMap!.get('role') ?? '')).toBe(member.role);
+      if (!fieldMap) {
+        throw new Error(`Expected member map for ${member.id}`);
+      }
+      expect(JSON.parse(fieldMap.get('displayName') ?? '')).toBe(member.displayName);
+      expect(JSON.parse(fieldMap.get('role') ?? '')).toBe(member.role);
     }
   });
 

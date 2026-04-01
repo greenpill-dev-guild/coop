@@ -1,5 +1,6 @@
 import type { ReceiverCapture, ReviewDraft } from '@coop/shared';
 import type {
+  ActiveTabCaptureResult,
   PopupPreparedCapture,
   RuntimeActionResponse,
   RuntimeRequest,
@@ -36,7 +37,9 @@ export async function dispatchCaptureRuntimeMessage(
   message: CaptureRuntimeMessage,
   handlers: {
     runCaptureCycle: () => Promise<number>;
-    captureActiveTab: () => Promise<number>;
+    captureActiveTab: (
+      options?: Extract<RuntimeRequest, { type: 'capture-active-tab' }>['payload'],
+    ) => Promise<ActiveTabCaptureResult>;
     prepareVisibleScreenshot: () => Promise<PopupPreparedCapture>;
     captureVisibleScreenshot: () => Promise<ReceiverCapture>;
     captureFile: (
@@ -57,7 +60,9 @@ export async function dispatchCaptureRuntimeMessage(
   message: RuntimeRequest,
   handlers: {
     runCaptureCycle: () => Promise<number>;
-    captureActiveTab: () => Promise<number>;
+    captureActiveTab: (
+      options?: Extract<RuntimeRequest, { type: 'capture-active-tab' }>['payload'],
+    ) => Promise<ActiveTabCaptureResult>;
     prepareVisibleScreenshot: () => Promise<PopupPreparedCapture>;
     captureVisibleScreenshot: () => Promise<ReceiverCapture>;
     captureFile: (
@@ -82,7 +87,10 @@ export async function dispatchCaptureRuntimeMessage(
     case 'manual-capture':
       return respond(handlers.runCaptureCycle, 'Roundup failed.');
     case 'capture-active-tab':
-      return respond(handlers.captureActiveTab, 'Could not capture this tab.');
+      return respond(
+        () => handlers.captureActiveTab(message.payload),
+        'Could not capture this tab.',
+      );
     case 'prepare-visible-screenshot':
       return respond(handlers.prepareVisibleScreenshot, 'Screenshot capture failed.');
     case 'capture-visible-screenshot':

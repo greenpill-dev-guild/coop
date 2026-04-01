@@ -23,10 +23,15 @@ if (command.length === 0) {
   printUsage();
   process.exit(1);
 }
+const [commandName, ...commandArgs] = command;
+if (!commandName) {
+  printUsage();
+  process.exit(1);
+}
 
 const resolvedEnv = resolveRootEnv(profile);
 const bunOptions = process.env.BUN_OPTIONS?.trim();
-const child = spawn(command[0]!, command.slice(1), {
+const child = spawn(commandName, commandArgs, {
   cwd: repoRoot,
   stdio: 'inherit',
   env: {

@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["output/playwright/*"]
+    "ignore": [".claude/worktrees/**", "output/playwright/*"]
   },
   "formatter": {
     "enabled": true,

@@ -127,6 +127,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx)$'; then PKG=$(echo \"$FILE\" | grep -oE 'packages/[^/]+' | head -1); if [ -n \"$PKG\" ]; then cd /Users/afo/Code/greenpill/coop && npx tsc --noEmit -p \"$PKG/tsconfig.json\" 2>&1 | tail -5; fi; fi; exit 0",
+            "statusMessage": "Typechecking edited file..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
             "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(css|tsx)$' && echo \"$FILE\" | grep -q 'views/'; then echo 'UI file modified — verify visually in Chrome before reporting done. Use Chrome MCP screenshot or manual check.'; fi; exit 0",
             "statusMessage": "Checking for UI impact..."
           }

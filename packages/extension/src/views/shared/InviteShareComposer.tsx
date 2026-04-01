@@ -103,7 +103,13 @@ export function InviteShareComposer({
     <div
       className={isPopup ? 'popup-dialog-backdrop' : 'invite-composer-backdrop'}
       onClick={onClose}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          onClose();
+        }
+      }}
       role="presentation"
+      tabIndex={-1}
     >
       <dialog
         aria-label={content.previewTitle}

@@ -1,3 +1,8 @@
+---
+title: "Extension UI Redesign Plan"
+slug: /reference/extension-ui-redesign-plan
+---
+
 # Extension UI Redesign Plan
 
 > Current-state note: this is a redesign plan, not the canonical current surface map. Use

@@ -158,8 +158,8 @@ import {
   handleArchiveReceiverIntake,
   handleConvertReceiverIntake,
   handleCreateInvite,
-  handleEnsureInviteCodes,
   handleCreateReceiverPairing,
+  handleEnsureInviteCodes,
   handleIngestReceiverCapture,
   handleRegenerateInviteCode,
   handleRevokeInvite,
@@ -168,6 +168,7 @@ import {
   handleSetReceiverIntakeArchiveWorthiness,
 } from './background/handlers/receiver';
 import {
+  handlePromoteSignalToDraft,
   handlePublishDraft,
   handleUpdateMeetingSettings,
   handleUpdateReviewDraft,
@@ -496,6 +497,9 @@ export function startBackground() {
           return;
         case 'update-review-draft':
           sendResponse(await handleUpdateReviewDraft(message));
+          return;
+        case 'promote-signal-to-draft':
+          sendResponse(await handlePromoteSignalToDraft(message));
           return;
         case 'update-meeting-settings':
           sendResponse(await handleUpdateMeetingSettings(message));

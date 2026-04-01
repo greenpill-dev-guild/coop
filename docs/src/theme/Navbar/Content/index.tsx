@@ -1,5 +1,5 @@
 import { ErrorCauseBoundary, ThemeClassNames, useThemeConfig } from '@docusaurus/theme-common';
-import type { NavbarItemConfig } from '@docusaurus/theme-common';
+import type { NavbarItem as NavbarItemType } from '@docusaurus/theme-common';
 import { splitNavbarItems, useNavbarMobileSidebar } from '@docusaurus/theme-common/internal';
 import AudienceTabs from '@site/src/components/AudienceTabs';
 import NavbarColorModeToggle from '@theme/Navbar/ColorModeToggle';
@@ -8,11 +8,11 @@ import NavbarMobileSidebarToggle from '@theme/Navbar/MobileSidebar/Toggle';
 import NavbarItem from '@theme/NavbarItem';
 import styles from './styles.module.css';
 
-function useNavbarItems(): NavbarItemConfig[] {
+function useNavbarItems(): NavbarItemType[] {
   return useThemeConfig().navbar.items;
 }
 
-function NavbarItems({ items }: { items: NavbarItemConfig[] }) {
+function NavbarItems({ items }: { items: NavbarItemType[] }) {
   return (
     <>
       {items.map((item) => (

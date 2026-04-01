@@ -236,26 +236,26 @@ async function seedPopupCoop(popupPage, coopName) {
     displayName: 'Popup Tester',
     role: 'creator',
   });
-  const authResponse = await popupPage.evaluate(
-    async (payload) => {
-      return chrome.runtime.sendMessage({
-        type: 'set-auth-session',
-        payload,
-      });
-    },
-    session,
-  );
+  const authResponse = await popupPage.evaluate(async (payload) => {
+    return chrome.runtime.sendMessage({
+      type: 'set-auth-session',
+      payload,
+    });
+  }, session);
 
   if (!authResponse?.ok) {
     throw new Error(authResponse?.error ?? 'Could not seed popup auth session.');
   }
 
-  const response = await popupPage.evaluate(async (payload) => {
-    return chrome.runtime.sendMessage({
-      type: 'create-coop',
-      payload,
-    });
-  }, { ...popupCoopPayload(coopName), creator });
+  const response = await popupPage.evaluate(
+    async (payload) => {
+      return chrome.runtime.sendMessage({
+        type: 'create-coop',
+        payload,
+      });
+    },
+    { ...popupCoopPayload(coopName), creator },
+  );
 
   if (!response?.ok) {
     throw new Error(response?.error ?? 'Could not create popup test coop.');

@@ -1,11 +1,11 @@
 import {
+  type Address,
   encodeAbiParameters,
   encodeFunctionData,
   keccak256,
   padHex,
   stringToHex,
   toHex,
-  type Address,
 } from 'viem';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SetupInsights } from '../../../contracts/schema';
@@ -36,14 +36,14 @@ vi.mock('viem', async (importOriginal) => {
   };
 });
 
+import { greenGoodsGardenTokenAbi } from '../greengoods-abis';
+import { getGreenGoodsDeployment } from '../greengoods-deployments';
 import {
   assertGreenGoodsGardenNameAvailable,
   buildGreenGoodsLiveMintConfig,
   createGreenGoodsGarden,
   preflightGreenGoodsGardenMint,
 } from '../greengoods-garden';
-import { greenGoodsGardenTokenAbi } from '../greengoods-abis';
-import { getGreenGoodsDeployment } from '../greengoods-deployments';
 import { createInitialGreenGoodsState, updateGreenGoodsState } from '../greengoods-state';
 
 const SAFE_ADDRESS = '0x4444444444444444444444444444444444444444' as Address;

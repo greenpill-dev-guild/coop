@@ -159,26 +159,26 @@ async function seedSyncCoop(popupPage, coopName) {
     displayName: 'Sync Tester',
     role: 'creator',
   });
-  const authResponse = await popupPage.evaluate(
-    async (payload) => {
-      return chrome.runtime.sendMessage({
-        type: 'set-auth-session',
-        payload,
-      });
-    },
-    session,
-  );
+  const authResponse = await popupPage.evaluate(async (payload) => {
+    return chrome.runtime.sendMessage({
+      type: 'set-auth-session',
+      payload,
+    });
+  }, session);
 
   if (!authResponse?.ok) {
     throw new Error(authResponse?.error ?? 'Could not seed sync resilience auth session.');
   }
 
-  const response = await popupPage.evaluate(async (payload) => {
-    return chrome.runtime.sendMessage({
-      type: 'create-coop',
-      payload,
-    });
-  }, { ...syncCoopPayload(coopName), creator });
+  const response = await popupPage.evaluate(
+    async (payload) => {
+      return chrome.runtime.sendMessage({
+        type: 'create-coop',
+        payload,
+      });
+    },
+    { ...syncCoopPayload(coopName), creator },
+  );
 
   if (!response?.ok) {
     throw new Error(response?.error ?? 'Could not create sync resilience test coop.');
@@ -229,7 +229,7 @@ test.describe('sync resilience', () => {
 
     try {
       await seedSyncCoop(profile.popupPage, `Sync Resilience ${Date.now()}`);
-      await expect(profile.popupPage.getByText('Healthy', { exact: true })).toBeVisible({
+      await expect(profile.popupPage.getByText('Idle', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
 
@@ -263,7 +263,7 @@ test.describe('sync resilience', () => {
       await reopenedPopup.reload();
       await reopenedPopup.waitForLoadState('domcontentloaded');
 
-      await expect(reopenedPopup.getByText('Healthy', { exact: true })).toBeVisible({
+      await expect(reopenedPopup.getByText('Idle', { exact: true })).toBeVisible({
         timeout: 30_000,
       });
       await expect

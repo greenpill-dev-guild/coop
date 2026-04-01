@@ -9,12 +9,12 @@
 @keyframes coop-rise {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.99);
+    transform: translateY(4px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -1281,17 +1281,18 @@ button.sidepanel-header__brand {
 .compact-card {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--coop-line);
-  border-radius: 16px;
+  gap: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
   background: var(--coop-surface-elevated);
-  animation: coop-rise 320ms ease both;
+  box-shadow: 0 1px 3px rgba(79, 46, 31, 0.06);
+  animation: coop-rise 400ms ease both;
 }
 
 .compact-card[data-focused="true"] {
-  border-color: rgba(253, 138, 1, 0.45);
-  box-shadow: 0 0 0 1px rgba(253, 138, 1, 0.18);
+  border-color: rgba(253, 138, 1, 0.35);
+  box-shadow: 0 0 0 1px rgba(253, 138, 1, 0.12);
 }
 
 .compact-card__body {
@@ -1320,7 +1321,7 @@ button.sidepanel-header__brand {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .compact-card__source-row {
@@ -1364,12 +1365,13 @@ button.sidepanel-header__brand {
 }
 
 .compact-card__category {
-  font-size: 0.7rem;
-  padding: 0.18rem 0.5rem;
+  font-size: 0.66rem;
+  padding: 0.14rem 0.4rem;
+  opacity: 0.8;
 }
 
 .compact-card__title {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1378,14 +1380,30 @@ button.sidepanel-header__brand {
 }
 
 .compact-card__insight {
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.4;
   color: var(--coop-brown-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0;
+  opacity: 0.85;
+}
+
+.compact-card__surface-tags {
+  display: flex;
+  gap: 0.2rem;
+  margin-top: 0.05rem;
+}
+
+.compact-card__surface-tag {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--coop-radius-pill);
+  background: rgba(66, 40, 24, 0.05);
+  color: var(--coop-brown-soft);
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .compact-card__tags {
@@ -1499,6 +1517,11 @@ button.sidepanel-header__brand {
   user-select: none;
 }
 
+.compact-card__more > summary:focus-visible {
+  outline: 2px solid var(--coop-green);
+  outline-offset: 2px;
+}
+
 .compact-card__more > summary::-webkit-details-marker {
   display: none;
 }
@@ -1595,7 +1618,92 @@ button.sidepanel-header__brand {
 .time-group__items {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
+}
+
+/* ---- Overflow toggle (time group collapse) ---- */
+
+.time-group__overflow-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: var(--coop-radius-pill);
+  background: var(--coop-brown-4);
+  color: var(--coop-brown-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--coop-ease);
+  align-self: center;
+}
+
+.time-group__overflow-toggle:hover {
+  background: var(--coop-brown-8);
+}
+
+.time-group__overflow-toggle:focus-visible {
+  outline: 2px solid var(--coop-green);
+  outline-offset: 2px;
+}
+
+/* ---- Orientation summary card (Shared segment) ---- */
+
+.orientation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--coop-radius-button);
+  background: var(--coop-brown-4);
+}
+
+.orientation-summary__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.orientation-summary__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--coop-brown-soft);
+  opacity: 0.7;
+}
+
+.orientation-summary__count {
+  font-size: 0.66rem;
+  color: var(--coop-brown-soft);
+  opacity: 0.6;
+}
+
+.orientation-summary__soul {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--coop-brown);
+  margin: 0;
+}
+
+.orientation-summary__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.4rem;
+}
+
+.orientation-summary__item {
+  font-size: 0.68rem;
+  color: var(--coop-brown-soft);
+  opacity: 0.7;
+}
+
+.orientation-summary__item::before {
+  content: "\2022 ";
+  opacity: 0.5;
 }
 
 /* ---- Stub card ---- */
@@ -1706,21 +1814,23 @@ button.sidepanel-header__brand {
 
 /* ---- Notification banners ---- */
 
-/* ---- Banner overlay (inline-sticky, pushes content down) ---- */
-
-.sidepanel-banner-overlay {
+.sidepanel-toast-anchor {
   position: sticky;
-  top: 0;
-  z-index: 2;
-  margin: 0 -0.75rem;
-  padding: 0.25rem 0.75rem;
-  background: var(--coop-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  top: 0.5rem;
+  z-index: var(--coop-z-toast);
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.sidepanel-banner-overlay:empty {
+.sidepanel-toast-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.sidepanel-toast-layer:empty {
   display: none;
 }
 
@@ -1737,6 +1847,7 @@ button.sidepanel-header__brand {
   font-size: 0.85rem;
   color: var(--coop-brown);
   animation: coop-rise 320ms ease both;
+  pointer-events: auto;
 }
 
 .notification-banner__message {

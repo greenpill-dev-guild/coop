@@ -4,7 +4,7 @@ import { dispatchCaptureRuntimeMessage } from '../runtime-capture-dispatch';
 function makeHandlers() {
   return {
     runCaptureCycle: vi.fn().mockResolvedValue(1),
-    captureActiveTab: vi.fn().mockResolvedValue(1),
+    captureActiveTab: vi.fn().mockResolvedValue({ capturedCount: 1 }),
     prepareVisibleScreenshot: vi.fn().mockResolvedValue({
       kind: 'photo' as const,
       dataBase64: 'aW1hZ2U=',
@@ -43,5 +43,16 @@ describe('dispatchCaptureRuntimeMessage', () => {
       ok: false,
       error: 'Active tab denied.',
     });
+  });
+
+  it('passes through an explicit recapture override for active-tab capture', async () => {
+    const handlers = makeHandlers();
+
+    await dispatchCaptureRuntimeMessage(
+      { type: 'capture-active-tab', payload: { allowRecentDuplicate: true } },
+      handlers,
+    );
+
+    expect(handlers.captureActiveTab).toHaveBeenCalledWith({ allowRecentDuplicate: true });
   });
 });

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePopupRecording } from '../usePopupRecording';
 
 const originalMediaDevices = navigator.mediaDevices;
+const originalPermissions = navigator.permissions;
 const originalMediaRecorder = globalThis.MediaRecorder;
 
 function installRecorderMocks(chunkText = 'voice note') {
@@ -50,6 +51,21 @@ function installRecorderMocks(chunkText = 'voice note') {
   return { getUserMedia, trackStop };
 }
 
+function installPermissionQueryMock(states: PermissionState | PermissionState[]) {
+  const queue = Array.isArray(states) ? [...states] : [states];
+  const query = vi.fn().mockImplementation(async () => {
+    const state = queue.length > 1 ? (queue.shift() ?? 'prompt') : (queue[0] ?? 'prompt');
+    return { state } as PermissionStatus;
+  });
+
+  Object.defineProperty(navigator, 'permissions', {
+    configurable: true,
+    value: { query },
+  });
+
+  return { query };
+}
+
 describe('usePopupRecording', () => {
   const onRecordingReady = vi.fn().mockResolvedValue(undefined);
   const onEmergencySave = vi.fn().mockResolvedValue(undefined);
@@ -67,6 +83,10 @@ describe('usePopupRecording', () => {
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
       value: originalMediaDevices,
+    });
+    Object.defineProperty(navigator, 'permissions', {
+      configurable: true,
+      value: originalPermissions,
     });
     Object.defineProperty(globalThis, 'MediaRecorder', {
       configurable: true,
@@ -100,9 +120,9 @@ describe('usePopupRecording', () => {
     });
 
     expect(result.current.isRecording).toBe(false);
-    expect(result.current.status).toBe('denied');
-    expect(result.current.permissionMessage).toBe('This browser cannot record audio.');
-    expect(setMessage).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('unsupported');
+    expect(result.current.permissionMessage).toBe('This browser cannot record audio in the popup.');
+    expect(setMessage).toHaveBeenCalledWith('This browser cannot record audio in the popup.');
 
     Object.defineProperty(navigator, 'mediaDevices', {
       value: originalNav,
@@ -150,6 +170,98 @@ describe('usePopupRecording', () => {
     });
 
     expect(result.current.partialSaveMessage).toBeNull();
+  });
+
+  it('does not call getUserMedia when microphone access is already blocked', async () => {
+    const { getUserMedia } = installRecorderMocks();
+    installPermissionQueryMock('denied');
+
+    const { result } = renderHook(() =>
+      usePopupRecording({ onEmergencySave, onRecordingReady, setMessage }),
+    );
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('denied');
+    expect(result.current.permissionMessage).toBe(
+      'Microphone access is blocked for Coop. Allow it in browser settings and try again.',
+    );
+    expect(setMessage).toHaveBeenLastCalledWith(
+      'Microphone access is blocked for Coop. Allow it in browser settings and try again.',
+    );
+  });
+
+  it('treats a still-promptable NotAllowedError as unavailable instead of denied', async () => {
+    const { getUserMedia } = installRecorderMocks();
+    getUserMedia.mockRejectedValueOnce(
+      new DOMException('Prompt stayed pending', 'NotAllowedError'),
+    );
+    installPermissionQueryMock(['prompt', 'prompt']);
+
+    const { result } = renderHook(() =>
+      usePopupRecording({ onEmergencySave, onRecordingReady, setMessage }),
+    );
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('unavailable');
+    expect(result.current.permissionMessage).toBe(
+      'Microphone access was not granted. Keep the popup open and allow access to record a voice note.',
+    );
+    expect(setMessage).toHaveBeenLastCalledWith(
+      'Microphone access was not granted. Keep the popup open and allow access to record a voice note.',
+    );
+  });
+
+  it('reports missing microphone hardware with specific unavailable copy', async () => {
+    const { getUserMedia } = installRecorderMocks();
+    getUserMedia.mockRejectedValueOnce(new DOMException('No device found', 'NotFoundError'));
+    installPermissionQueryMock('granted');
+
+    const { result } = renderHook(() =>
+      usePopupRecording({ onEmergencySave, onRecordingReady, setMessage }),
+    );
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    expect(result.current.status).toBe('unavailable');
+    expect(result.current.permissionMessage).toBe(
+      'No microphone is available right now. Connect one and try again.',
+    );
+    expect(setMessage).toHaveBeenLastCalledWith(
+      'No microphone is available right now. Connect one and try again.',
+    );
+  });
+
+  it('does not clear unrelated popup messages when microphone access is already granted', async () => {
+    installRecorderMocks();
+    installPermissionQueryMock('granted');
+
+    const { result, unmount } = renderHook(() =>
+      usePopupRecording({ onEmergencySave, onRecordingReady, setMessage }),
+    );
+
+    await act(async () => {
+      await result.current.startRecording();
+    });
+
+    expect(result.current.status).toBe('recording');
+    expect(setMessage).not.toHaveBeenCalledWith('');
+
+    unmount();
+    await act(async () => {
+      vi.runAllTimers();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
   });
 
   it('preserves buffered audio for emergency save during unmount', async () => {

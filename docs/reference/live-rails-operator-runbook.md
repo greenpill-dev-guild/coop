@@ -11,6 +11,8 @@ This is the canonical operator-only runbook for live Safe, session-capability, a
 Filecoin registry paths.
 
 Use this only for the second gate. Do not use it to describe the default public staged-launch bar.
+The stage-based release progression lives in
+[Production Release Checklist](/reference/production-release-checklist).
 
 ## When This Runbook Applies
 
@@ -53,7 +55,7 @@ Before you touch live env:
 ```bash
 bun run test
 bun run test:coverage
-bun build
+bun run build
 bun run validate:store-readiness
 bun run validate:production-readiness
 ```

@@ -8,8 +8,9 @@ slug: /reference/current-release-status
 Date: March 28, 2026
 
 This is the canonical current-state release posture for Coop. Keep `README.md`,
-[Testing & Validation](/reference/testing-and-validation), [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook),
-and Chrome Web Store docs aligned to this page.
+[Production Release Checklist](/reference/production-release-checklist), [Testing & Validation](/reference/testing-and-validation),
+[Demo & Deploy Runbook](/reference/demo-and-deploy-runbook), and Chrome Web Store docs aligned to
+this page.
 
 ## Current Status
 
@@ -28,7 +29,7 @@ These commands define the current automated green bar for a public mock-first re
 ```bash
 bun run test
 bun run test:coverage
-bun build
+bun run build
 bun run validate:store-readiness
 bun run validate:production-readiness
 ```
@@ -119,6 +120,7 @@ Not safe to blur together:
 ## Canonical Next Docs
 
 - [Testing & Validation](/reference/testing-and-validation)
+- [Production Release Checklist](/reference/production-release-checklist)
 - [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook)
 - [Extension Install & Distribution](/reference/extension-install-and-distribution)
 - [Receiver Pairing & Intake](/reference/receiver-pairing-and-intake)

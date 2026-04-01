@@ -19,7 +19,7 @@ function buildMockPasskeyCredential(input = {}) {
   const seed =
     typeof input === 'string'
       ? input
-      : input.address ?? input.displayName ?? input.passkeyCredentialId ?? 'coop-e2e-passkey';
+      : (input.address ?? input.displayName ?? input.passkeyCredentialId ?? 'coop-e2e-passkey');
   const digest = digestHex('mock-passkey', seed);
   return {
     id:

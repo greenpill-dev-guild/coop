@@ -7,7 +7,9 @@ import {
   createLocalEnhancementAdapter,
   detectLocalEnhancementAvailability,
   inferFromTranscript,
+  interpretExtractForCoop,
   runPassivePipeline,
+  shapeReviewDraft,
 } from '../pipeline';
 
 function buildSetupInsights() {
@@ -243,6 +245,162 @@ describe('pipeline', () => {
 
     expect(arePageExtractsNearDuplicates(fundingLead, reportingGuide)).toBe(false);
   });
+
+  describe('sports coop roundup ingestion', () => {
+    function buildSportsCoop() {
+      return createCoop({
+        coopName: 'Sports Central',
+        purpose: 'Track sports news, scores, and analysis for NBA, NFL, and soccer coverage.',
+        creatorDisplayName: 'Fan',
+        captureMode: 'manual',
+        seedContribution: 'I follow NBA and NFL closely and want to share game recaps.',
+        setupInsights: {
+          summary: 'We share sports coverage, game analysis, and league updates.',
+          crossCuttingPainPoints: ['Game recaps get lost in feeds'],
+          crossCuttingOpportunities: ['Surface key sports news for weekly review'],
+          lenses: [
+            {
+              lens: 'capital-formation',
+              currentState: 'We browse ESPN and The Athletic for scores.',
+              painPoints: 'Sports coverage arrives too late to discuss.',
+              improvements: 'Surface game recaps during weekly sports review.',
+            },
+            {
+              lens: 'impact-reporting',
+              currentState: 'Game analysis sits in personal bookmarks.',
+              painPoints: 'Key sports moments get missed by the group.',
+              improvements: 'Keep sports highlights visible in shared memory.',
+            },
+            {
+              lens: 'governance-coordination',
+              currentState: 'We discuss games in group chats.',
+              painPoints: 'Sports conversations disappear after game day.',
+              improvements: 'Keep sports discussion summaries in the coop feed.',
+            },
+            {
+              lens: 'knowledge-garden-resources',
+              currentState: 'Team stats and player news are spread across tabs.',
+              painPoints: 'People miss important trades and roster moves.',
+              improvements: 'Create a living sports resource commons.',
+            },
+          ],
+        },
+      });
+    }
+
+    it('routes an NBA article to a sports-focused coop', () => {
+      const created = buildSportsCoop();
+      const pipeline = runPassivePipeline({
+        candidate: buildCandidate({
+          id: 'candidate-nba',
+          url: 'https://espn.com/nba/story/lakers-celtics-game-5',
+          title: 'NBA Playoffs: Lakers vs Celtics Game 5 Recap',
+        }),
+        page: {
+          metaDescription:
+            'Full recap of the NBA playoff game between the Lakers and Celtics, including highlights and analysis.',
+          headings: ['Game 5 Recap', 'Box Score', 'Player Stats'],
+          paragraphs: [
+            'The Lakers defeated the Celtics 112-108 in a thrilling Game 5 of the NBA Finals.',
+            'LeBron James scored 38 points to lead the Lakers in a must-win sports game.',
+          ],
+        },
+        coops: [created.state],
+      });
+
+      expect(pipeline.drafts.length).toBeGreaterThanOrEqual(1);
+      expect(pipeline.drafts[0]?.confidence).toBeGreaterThanOrEqual(0.18);
+    });
+
+    it('routes an NFL draft article to a sports-focused coop', () => {
+      const created = buildSportsCoop();
+      const pipeline = runPassivePipeline({
+        candidate: buildCandidate({
+          id: 'candidate-nfl',
+          url: 'https://nfl.com/draft/2025/live-coverage',
+          title: 'NFL Draft 2025 Live Coverage and Analysis',
+        }),
+        page: {
+          metaDescription: 'Live coverage of the 2025 NFL Draft with picks, analysis, and grades.',
+          headings: ['Round 1 Picks', 'Draft Analysis', 'Team Grades'],
+          paragraphs: [
+            'The 2025 NFL Draft kicks off with several top prospects ready to make an impact.',
+            'NFL scouts grade each pick for sports fans following along at home.',
+          ],
+        },
+        coops: [created.state],
+      });
+
+      expect(pipeline.drafts.length).toBeGreaterThanOrEqual(1);
+      expect(pipeline.drafts[0]?.confidence).toBeGreaterThanOrEqual(0.18);
+    });
+
+    it('does not route a cooking article to a sports-focused coop', () => {
+      const created = buildSportsCoop();
+      const pipeline = runPassivePipeline({
+        candidate: buildCandidate({
+          id: 'candidate-cooking',
+          url: 'https://foodnetwork.com/recipes/chicken-parmesan',
+          title: 'Best Chicken Parmesan Recipe',
+        }),
+        page: {
+          metaDescription: 'A classic chicken parmesan recipe with marinara sauce and mozzarella.',
+          headings: ['Ingredients', 'Instructions'],
+          paragraphs: [
+            'This chicken parmesan recipe is crispy on the outside and tender on the inside.',
+            'Serve with spaghetti and garlic bread for a complete Italian dinner.',
+          ],
+        },
+        coops: [created.state],
+      });
+
+      expect(pipeline.drafts).toHaveLength(0);
+    });
+
+    it('routes a sports page even when "sports" does not appear in the title', () => {
+      const created = buildSportsCoop();
+      const pipeline = runPassivePipeline({
+        candidate: buildCandidate({
+          id: 'candidate-soccer',
+          url: 'https://theathletic.com/premier-league/match-review',
+          title: 'Premier League Match Review: Arsenal 3-1 Chelsea',
+        }),
+        page: {
+          metaDescription:
+            'Tactical analysis of the Premier League match between Arsenal and Chelsea.',
+          headings: ['Match Overview', 'Key Moments'],
+          paragraphs: [
+            'Arsenal dominated possession and scored three times in the second half.',
+            'This soccer coverage includes analysis of key plays and formation changes.',
+          ],
+        },
+        coops: [created.state],
+      });
+
+      expect(pipeline.drafts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not match "nba" as a substring inside "unbalanced"', () => {
+      const created = buildSportsCoop();
+      // Build a page where the ONLY potential sports keyword overlap is "nba" hidden
+      // inside "unbalanced" — if substring matching were used, this would be a false hit.
+      const extract = buildReadablePageExtract({
+        candidate: buildCandidate({
+          id: 'candidate-substring',
+          url: 'https://example.org/urban-planning',
+          title: 'Unbalanced Zoning Proposals in Barnaby Township',
+        }),
+        metaDescription: 'Barnaby township faces unbalanced zoning.',
+        headings: ['Zoning Proposals'],
+        paragraphs: ['The unbalanced zoning has raised concerns in Barnaby.'],
+      });
+
+      const interp = interpretExtractForCoop(extract, created.state);
+      // With word-boundary tokenization, "unbalanced" and "barnaby" do not match "nba".
+      // Score should be at the floor (0.08) since no real keyword overlap exists.
+      expect(interp.relevanceScore).toBeLessThan(0.18);
+    });
+  });
 });
 
 describe('inferFromTranscript', () => {
@@ -312,5 +470,126 @@ describe('inferFromTranscript', () => {
     });
 
     expect(result.tags.length).toBeGreaterThan(0);
+  });
+});
+
+describe('roundup ingestion end-to-end', () => {
+  function buildSportsCoopState() {
+    return createCoop({
+      coopName: 'Sports Central',
+      purpose: 'Track sports news, scores, and analysis for NBA, NFL, and soccer coverage.',
+      creatorDisplayName: 'Fan',
+      captureMode: 'manual',
+      seedContribution: 'I follow NBA and NFL closely and want to share game recaps.',
+      setupInsights: {
+        summary: 'We share sports coverage, game analysis, and league updates.',
+        crossCuttingPainPoints: ['Game recaps get lost in feeds'],
+        crossCuttingOpportunities: ['Surface key sports news for weekly review'],
+        lenses: [
+          {
+            lens: 'capital-formation',
+            currentState: 'We browse ESPN and The Athletic for scores.',
+            painPoints: 'Sports coverage arrives too late to discuss.',
+            improvements: 'Surface game recaps during weekly sports review.',
+          },
+          {
+            lens: 'impact-reporting',
+            currentState: 'Game analysis sits in personal bookmarks.',
+            painPoints: 'Key sports moments get missed by the group.',
+            improvements: 'Keep sports highlights visible in shared memory.',
+          },
+          {
+            lens: 'governance-coordination',
+            currentState: 'We discuss games in group chats.',
+            painPoints: 'Sports conversations disappear after game day.',
+            improvements: 'Keep sports discussion summaries in the coop feed.',
+          },
+          {
+            lens: 'knowledge-garden-resources',
+            currentState: 'Team stats and player news are spread across tabs.',
+            painPoints: 'People miss important trades and roster moves.',
+            improvements: 'Create a living sports resource commons.',
+          },
+        ],
+      },
+    });
+  }
+
+  it('produces a draft when a relevant page is routed to an aligned coop', () => {
+    const created = buildSportsCoopState();
+    const extract = buildReadablePageExtract({
+      candidate: buildCandidate({
+        id: 'candidate-e2e-1',
+        url: 'https://espn.com/nba/story/lakers-celtics-game-5',
+        title: 'NBA Playoffs: Lakers vs Celtics Game 5 Recap',
+      }),
+      metaDescription:
+        'Full recap of the NBA playoff game between the Lakers and Celtics, including highlights and analysis.',
+      headings: ['Game 5 Recap', 'Box Score', 'Player Stats'],
+      paragraphs: [
+        'The Lakers defeated the Celtics 112-108 in a thrilling Game 5 of the NBA Finals.',
+        'LeBron James scored 38 points to lead the Lakers in a must-win sports game.',
+      ],
+    });
+
+    const interpretation = interpretExtractForCoop(extract, created.state);
+    expect(interpretation.relevanceScore).toBeGreaterThanOrEqual(0.18);
+
+    const draft = shapeReviewDraft(extract, interpretation, created.state.profile);
+    expect(draft.suggestedTargetCoopIds).toContain(created.state.profile.id);
+    expect(draft.category).toBeDefined();
+    expect(draft.tags.length).toBeGreaterThan(0);
+    expect(draft.whyItMatters).toContain('Sports Central');
+  });
+
+  it('does not produce a draft for an unrelated page', () => {
+    const created = buildSportsCoopState();
+    const extract = buildReadablePageExtract({
+      candidate: buildCandidate({
+        id: 'candidate-e2e-2',
+        url: 'https://foodnetwork.com/recipes/chicken-parmesan',
+        title: 'Best Chicken Parmesan Recipe',
+      }),
+      metaDescription: 'A classic chicken parmesan recipe with marinara sauce and mozzarella.',
+      headings: ['Ingredients', 'Instructions'],
+      paragraphs: [
+        'This chicken parmesan recipe is crispy on the outside and tender on the inside.',
+        'Serve with spaghetti and garlic bread for a complete Italian dinner.',
+      ],
+    });
+
+    const interpretation = interpretExtractForCoop(extract, created.state);
+    expect(interpretation.relevanceScore).toBeLessThan(0.18);
+  });
+
+  it('routes to the most relevant coop when multiple coops exist', () => {
+    const sportsCoop = buildSportsCoopState();
+    const watershedCoop = createCoop({
+      coopName: 'River Coop',
+      purpose: 'Share evidence and funding-ready next steps for watershed work.',
+      creatorDisplayName: 'Ari',
+      captureMode: 'manual',
+      seedContribution: 'I track grants and river restoration programs.',
+      setupInsights: buildSetupInsights(),
+    });
+
+    const extract = buildReadablePageExtract({
+      candidate: buildCandidate({
+        id: 'candidate-e2e-3',
+        url: 'https://espn.com/nba/recap',
+        title: 'NBA Finals Recap and Sports Analysis',
+      }),
+      metaDescription: 'Sports coverage of the NBA Finals with analysis and highlights.',
+      headings: ['Game Recap', 'Analysis'],
+      paragraphs: [
+        'The NBA Finals featured incredible sports moments and playoff drama.',
+        'Sports fans across the country tuned in for this must-see basketball coverage.',
+      ],
+    });
+
+    const sportsScore = interpretExtractForCoop(extract, sportsCoop.state).relevanceScore;
+    const watershedScore = interpretExtractForCoop(extract, watershedCoop.state).relevanceScore;
+
+    expect(sportsScore).toBeGreaterThan(watershedScore);
   });
 });

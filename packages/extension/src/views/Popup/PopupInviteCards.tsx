@@ -20,7 +20,6 @@ function inviteStatusTone(status: PopupInviteCardItem['status']) {
       return 'warning';
     case 'revoked':
       return 'danger';
-    case 'missing':
     default:
       return 'muted';
   }
@@ -36,7 +35,6 @@ function inviteStatusLabel(status: PopupInviteCardItem['status']) {
       return 'Expired';
     case 'revoked':
       return 'Revoked';
-    case 'missing':
     default:
       return 'Missing';
   }
@@ -57,7 +55,8 @@ export function PopupInviteTypeCard(props: {
 }) {
   const { coopName, invite, onShare, onCopy, onRegenerate, onRevoke } = props;
   const label = inviteTypeLabel(invite.inviteType);
-  const hasCode = Boolean(invite.code);
+  const inviteCode = invite.code ?? null;
+  const hasCode = Boolean(inviteCode);
   const canShare =
     hasCode &&
     invite.status !== 'missing' &&
@@ -79,7 +78,7 @@ export function PopupInviteTypeCard(props: {
 
       {hasCode ? (
         <div className="popup-invite-card__code-row">
-          <code className="popup-invite-card__code">{truncateCode(invite.code!)}</code>
+          <code className="popup-invite-card__code">{truncateCode(inviteCode ?? '')}</code>
           <button
             aria-label={`Copy ${label.toLowerCase()} code for ${coopName}`}
             className="popup-invite-card__copy-btn"

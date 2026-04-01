@@ -195,6 +195,9 @@ function buildTabCapture(): ReturnType<typeof useTabCapture> {
     runManualCapture: vi.fn(),
     runActiveTabCapture: vi.fn(),
     captureVisibleScreenshotAction: vi.fn(),
+    requestRoundupAccess: vi.fn(),
+    requestingRoundupAccess: false,
+    roundupAccessStatus: 'granted',
   } as unknown as ReturnType<typeof useTabCapture>;
 }
 
@@ -217,6 +220,8 @@ function buildDraftEditor(): ReturnType<typeof useDraftEditor> {
     convertReceiverCapture: vi.fn(),
     archiveReceiverCapture: vi.fn(),
     toggleReceiverCaptureArchiveWorthiness: vi.fn(),
+    promoteSignalToDraft: vi.fn(),
+    promoteSignalAndPublish: vi.fn(),
   } as unknown as ReturnType<typeof useDraftEditor>;
 }
 
@@ -259,6 +264,51 @@ describe('ChickensTab interactions', () => {
     expect(onSelectSynthesisSegment).toHaveBeenCalledWith('shared');
   });
 
+  it('shows the passive roundup access prompt and lets the user dismiss it', async () => {
+    const user = userEvent.setup();
+    const onDismissRoundupAccessPrompt = vi.fn();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          roundupAccessPromptMode: 'passive',
+          onDismissRoundupAccessPrompt,
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Enable roundup site access')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Coop only needs this permission to inspect your open tabs locally when you ask it to round up chickens\./i,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Not now' }));
+
+    expect(onDismissRoundupAccessPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it('requests permission and runs roundup from the explicit popup follow-up flow', async () => {
+    const user = userEvent.setup();
+    const tabCapture = buildTabCapture();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          tabCapture,
+          roundupAccessPromptMode: 'grant-and-roundup',
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Enable access and round up' }));
+
+    expect(tabCapture.requestRoundupAccess).toHaveBeenCalledWith({
+      runRoundupAfterGrant: true,
+    });
+  });
+
   it('shows shared artifacts when the shared segment is active', () => {
     render(
       <ChickensTab
@@ -271,12 +321,32 @@ describe('ChickensTab interactions', () => {
     expect(screen.getByText('Shared watershed plan')).toBeInTheDocument();
   });
 
-  it('shows review items including signals and drafts on the review segment', () => {
+  it('merges signal+draft pairs into a single card when signal has a linked draftId', () => {
     render(<ChickensTab {...buildProps()} />);
 
-    // Signal from makeSignal()
-    expect(screen.getByText('River restoration signal')).toBeInTheDocument();
-    // Draft from makeDraft()
+    // Signal draftId matches draft id — merged into one card using draft title
+    expect(screen.getByText('Restore wetland corridor')).toBeInTheDocument();
+    // Signal title should NOT appear as a separate card
+    expect(screen.queryByText('River restoration signal')).not.toBeInTheDocument();
+  });
+
+  it('shows orphan signals as separate reviewable cards', () => {
+    render(
+      <ChickensTab
+        {...buildProps({
+          dashboard: buildDashboard({
+            proactiveSignals: [
+              makeSignal({ id: 'orphan-1', draftId: undefined, title: 'Orphan signal' }),
+            ],
+          }),
+          visibleDrafts: [makeDraft()],
+        })}
+      />,
+    );
+
+    // Orphan signal renders its own card
+    expect(screen.getByText('Orphan signal')).toBeInTheDocument();
+    // Draft still renders separately
     expect(screen.getByText('Restore wetland corridor')).toBeInTheDocument();
   });
 
@@ -314,7 +384,7 @@ describe('ChickensTab interactions', () => {
     expect(screen.getByText('Opportunity draft')).toBeInTheDocument();
   });
 
-  it('highlights the focused signal in the review segment', () => {
+  it('highlights a merged card when focused by signal ID', () => {
     render(
       <ChickensTab
         {...buildProps({
@@ -323,9 +393,10 @@ describe('ChickensTab interactions', () => {
       />,
     );
 
+    // Merged card carries both signal and draft; focused via signal ID shows draft title
     const focusedCard = document.querySelector('[data-focused]');
     expect(focusedCard).not.toBeNull();
-    expect(focusedCard?.textContent).toContain('River restoration signal');
+    expect(focusedCard?.textContent).toContain('Restore wetland corridor');
   });
 
   it('shows the empty state when there are no review items', () => {
@@ -353,5 +424,172 @@ describe('ChickensTab interactions', () => {
     );
 
     expect(screen.getByText(/nothing shared yet/i)).toBeInTheDocument();
+  });
+
+  it('groups orientation artifacts into a single summary card in the shared segment', () => {
+    render(
+      <ChickensTab
+        {...buildProps({
+          synthesisSegment: 'shared',
+          dashboard: buildDashboard({
+            coops: [
+              {
+                profile: { id: 'coop-1', name: 'Alpha Coop' },
+                artifacts: [
+                  makeArtifact({
+                    id: 'soul-1',
+                    title: 'Coop Soul',
+                    category: 'coop-soul',
+                    summary: 'Restoring watersheds together',
+                  }),
+                  makeArtifact({
+                    id: 'setup-1',
+                    title: 'Setup Insights',
+                    category: 'setup-insight',
+                  }),
+                  makeArtifact({ id: 'ritual-1', title: 'Rituals', category: 'ritual' }),
+                  makeArtifact({
+                    id: 'seed-1',
+                    title: "Ana's Seed Contribution",
+                    category: 'seed-contribution',
+                  }),
+                  makeArtifact({
+                    id: 'real-1',
+                    title: 'River restoration plan',
+                    category: 'insight',
+                  }),
+                ],
+              },
+            ],
+          }),
+        })}
+      />,
+    );
+
+    // Orientation summary card renders with soul text
+    expect(screen.getByText('Coop orientation')).toBeInTheDocument();
+    expect(screen.getByText('Restoring watersheds together')).toBeInTheDocument();
+
+    // Orientation item titles listed compactly
+    expect(screen.getByText('Setup Insights')).toBeInTheDocument();
+    expect(screen.getByText('Rituals')).toBeInTheDocument();
+
+    // Real artifact still renders as a separate card
+    expect(screen.getByText('River restoration plan')).toBeInTheDocument();
+  });
+
+  it('collapses time groups with more than 3 items behind a show-more toggle', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          dashboard: buildDashboard({ proactiveSignals: [] }),
+          visibleDrafts: [
+            makeDraft({ id: 'd1', title: 'Draft one', createdAt: '2026-03-31T10:00:00.000Z' }),
+            makeDraft({ id: 'd2', title: 'Draft two', createdAt: '2026-03-31T10:01:00.000Z' }),
+            makeDraft({ id: 'd3', title: 'Draft three', createdAt: '2026-03-31T10:02:00.000Z' }),
+            makeDraft({ id: 'd4', title: 'Draft four', createdAt: '2026-03-31T10:03:00.000Z' }),
+            makeDraft({ id: 'd5', title: 'Draft five', createdAt: '2026-03-31T10:04:00.000Z' }),
+          ],
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    // First 3 visible, last 2 hidden
+    expect(screen.getByText('Draft five')).toBeInTheDocument();
+    expect(screen.getByText('Draft four')).toBeInTheDocument();
+    expect(screen.getByText('Draft three')).toBeInTheDocument();
+    expect(screen.queryByText('Draft two')).not.toBeInTheDocument();
+    expect(screen.queryByText('Draft one')).not.toBeInTheDocument();
+
+    // Overflow toggle is visible
+    const toggle = screen.getByRole('button', { name: /show 2 more/i });
+    expect(toggle).toBeInTheDocument();
+
+    // Expand
+    await user.click(toggle);
+
+    expect(screen.getByText('Draft two')).toBeInTheDocument();
+    expect(screen.getByText('Draft one')).toBeInTheDocument();
+  });
+
+  it('shows subtle surface tags on the card and full tags in details', async () => {
+    const user = userEvent.setup();
+
+    render(<ChickensTab {...buildProps()} />);
+
+    // Surface tags are visible on the card (outside details)
+    const surfaceTags = document.querySelectorAll('.compact-card__surface-tag');
+    expect(surfaceTags.length).toBeGreaterThan(0);
+    for (const tag of surfaceTags) {
+      const details = tag.closest('details');
+      expect(details).toBeNull(); // surface tags are NOT inside <details>
+    }
+
+    // Detail tags are inside <details> (collapsed by default)
+    const detailTags = document.querySelectorAll('.compact-card__tag');
+    for (const tag of detailTags) {
+      const details = tag.closest('details');
+      expect(details).not.toBeNull();
+    }
+
+    // Open details and tags appear
+    const summaries = screen.getAllByText('Details');
+    await user.click(summaries[0]);
+
+    const visibleTag = document.querySelector('details[open] .compact-card__tag');
+    expect(visibleTag).not.toBeNull();
+  });
+
+  it('renders push controls on orphan signals via promoteSignalAndPublish', async () => {
+    const user = userEvent.setup();
+    const draftEditor = buildDraftEditor();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          draftEditor,
+          dashboard: buildDashboard({
+            proactiveSignals: [
+              makeSignal({ id: 'orphan-1', draftId: undefined, title: 'Orphan signal' }),
+            ],
+          }),
+          visibleDrafts: [],
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    // Orphan signal should have a push button
+    const pushBtn = screen.getByRole('button', { name: /push to alpha coop/i });
+    expect(pushBtn).toBeInTheDocument();
+
+    await user.click(pushBtn);
+
+    expect(draftEditor.promoteSignalAndPublish).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders push controls on merged signal+draft cards via publishDraft', async () => {
+    const user = userEvent.setup();
+    const draftEditor = buildDraftEditor();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          draftEditor,
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    // Merged card should have a push button
+    const pushBtn = screen.getByRole('button', { name: /push to alpha coop/i });
+    expect(pushBtn).toBeInTheDocument();
+
+    await user.click(pushBtn);
+
+    expect(draftEditor.publishDraft).toHaveBeenCalledTimes(1);
   });
 });

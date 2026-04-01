@@ -1,3 +1,8 @@
+---
+title: "Agentic Interface Architecture"
+slug: /reference/agentic-interface
+---
+
 # Agentic Interface Architecture
 
 > How Coop's agent communicates with the user through the UI.

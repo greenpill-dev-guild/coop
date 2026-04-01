@@ -108,11 +108,12 @@ export interface CoopBadgeSummary {
 }
 
 export type SidepanelIntentTab = 'roost' | 'chickens' | 'coops' | 'nest';
-export type SidepanelIntentSegment = 'review' | 'shared' | 'summary' | 'agent';
+export type SidepanelIntentSegment = 'review' | 'shared' | 'summary' | 'agent' | 'roundup-access';
 
 export interface SidepanelIntent {
   tab: SidepanelIntentTab;
   segment?: SidepanelIntentSegment;
+  roundupAccessMode?: 'prompt' | 'grant-and-roundup';
   coopId?: string;
   draftId?: string;
   signalId?: string;
@@ -232,6 +233,11 @@ export interface PopupPreparedCapture {
   durationSeconds?: number;
 }
 
+export interface ActiveTabCaptureResult {
+  capturedCount: number;
+  duplicateSuppressed?: boolean;
+}
+
 export interface AgentDashboardResponse {
   observations: AgentObservation[];
   plans: AgentPlan[];
@@ -260,7 +266,12 @@ export type RuntimeRequest =
   | { type: 'get-receiver-sync-config' }
   | { type: 'get-receiver-sync-runtime' }
   | { type: 'manual-capture' }
-  | { type: 'capture-active-tab' }
+  | {
+      type: 'capture-active-tab';
+      payload?: {
+        allowRecentDuplicate?: boolean;
+      };
+    }
   | { type: 'prepare-visible-screenshot' }
   | { type: 'capture-visible-screenshot' }
   | {
@@ -415,6 +426,28 @@ export type RuntimeRequest =
       type: 'update-review-draft';
       payload: {
         draft: ReviewDraft;
+      };
+    }
+  | {
+      type: 'promote-signal-to-draft';
+      payload: {
+        signalId: string;
+        title: string;
+        url: string;
+        domain: string;
+        favicon?: string;
+        category: string;
+        tags: string[];
+        extractId: string;
+        sourceCandidateId: string;
+        topRelevanceScore: number;
+        targetCoops: {
+          coopId: string;
+          coopName: string;
+          rationale: string;
+          suggestedNextStep: string;
+          matchedRitualLenses: string[];
+        }[];
       };
     }
   | {

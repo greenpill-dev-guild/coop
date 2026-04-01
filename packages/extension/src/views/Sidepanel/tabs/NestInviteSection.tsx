@@ -9,8 +9,8 @@ import {
 } from '@coop/shared';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InviteShareComposer } from '../../shared/InviteShareComposer';
-import type { InviteShareInput } from '../../shared/invite-share';
 import { Tooltip } from '../../shared/Tooltip';
+import type { InviteShareInput } from '../../shared/invite-share';
 import type { useCoopForm } from '../hooks/useCoopForm';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +106,7 @@ export function NestInviteSection({
   );
 
   useEffect(() => {
+    void focusRequest;
     if (controlsOpen) {
       memberRegenerateButtonRef.current?.focus();
     }

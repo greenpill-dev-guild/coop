@@ -14,8 +14,8 @@ import {
   sendRuntimeMessage,
 } from '../../../runtime/messages';
 import { resolveReceiverPairingMember } from '../../../runtime/receiver';
-import { useCaptureActions } from '../../shared/useCaptureActions';
 import type { InviteShareInput } from '../../shared/invite-share';
+import { useCaptureActions } from '../../shared/useCaptureActions';
 import { useCoopActions } from '../../shared/useCoopActions';
 import { useQuickDraftActions } from '../../shared/useQuickDraftActions';
 import type { YardItem } from '../PopupHomeScreen';
@@ -110,6 +110,7 @@ export interface PopupOrchestrationState {
   joinSubmitting: boolean;
   draftSaving: boolean;
   isCapturing: boolean;
+  isRoundupInFlight: boolean;
 
   // Toast message
   message: string;
@@ -214,6 +215,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
   const [inviteSuccessCoopId, setInviteSuccessCoopId] = useState<string | null>(null);
   const [joinSuccessCoopId, setJoinSuccessCoopId] = useState<string | null>(null);
   const [shareDialogInvite, setShareDialogInvite] = useState<InviteShareInput | null>(null);
+  const defaultWorkspaceCoopId = dashboard?.activeCoopId ?? coops[0]?.profile.id;
 
   // Sync draft text with persisted note when it first hydrates from storage
   const homeNoteHydrated = useRef(false);
@@ -252,7 +254,17 @@ export function usePopupOrchestration(): PopupOrchestrationState {
   const captureActions = useCaptureActions({
     setMessage,
     loadDashboard,
-    afterManualCapture: () => navigation.navigate('drafts'),
+    onManualCaptureNeedsPermission: async () => {
+      await openWorkspace({
+        targetCoopId: defaultWorkspaceCoopId,
+        intent: {
+          tab: 'chickens',
+          segment: 'roundup-access',
+          roundupAccessMode: 'grant-and-roundup',
+          coopId: defaultWorkspaceCoopId,
+        },
+      });
+    },
     afterActiveTabCapture: () => navigation.navigate('drafts'),
     soundPreferences: dashboard?.soundPreferences,
   });
@@ -452,7 +464,10 @@ export function usePopupOrchestration(): PopupOrchestrationState {
   );
 
   async function ensureInviteHubCodes() {
-    const invitableCoops = manageableInviteCoops.filter((coop) => coop.memberId);
+    const invitableCoops = manageableInviteCoops.filter(
+      (coop): coop is (typeof manageableInviteCoops)[number] & { memberId: string } =>
+        typeof coop.memberId === 'string' && coop.memberId.length > 0,
+    );
     if (!invitableCoops.length) {
       return;
     }
@@ -463,7 +478,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
           type: 'ensure-invite-codes',
           payload: {
             coopId: coop.coopId,
-            createdBy: coop.memberId!,
+            createdBy: coop.memberId,
           },
         }),
       ),
@@ -576,8 +591,17 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     }
 
     await loadDashboard();
+    const targetCoopId = inviteSuccessCoopId;
     setInviteSuccessCoopId(null);
-    navigation.goHome();
+    await openWorkspace({
+      targetCoopId,
+      intent: {
+        tab: 'chickens',
+        segment: 'roundup-access',
+        roundupAccessMode: 'prompt',
+        coopId: targetCoopId,
+      },
+    });
   }
 
   async function enterJoinedCoop() {
@@ -596,8 +620,17 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     }
 
     await loadDashboard();
+    const targetCoopId = joinSuccessCoopId;
     setJoinSuccessCoopId(null);
-    navigation.goHome();
+    await openWorkspace({
+      targetCoopId,
+      intent: {
+        tab: 'chickens',
+        segment: 'roundup-access',
+        roundupAccessMode: 'prompt',
+        coopId: targetCoopId,
+      },
+    });
   }
 
   // ── Derived data ──
@@ -1081,6 +1114,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     joinSubmitting: formHandlers.joinSubmitting,
     draftSaving: draftHandlers.draftSaving,
     isCapturing: captureActions.isCapturing,
+    isRoundupInFlight: captureActions.isRoundupInFlight,
     message,
     showProfileAction,
     showWorkspaceAction,

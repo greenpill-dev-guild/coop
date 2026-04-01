@@ -21,6 +21,7 @@ export function PopupDraftListScreen(props: {
   isCapturing?: boolean;
 }) {
   const { drafts, filterTags, onOpenDraft, onMarkReady, onShare, onRoundUp, isCapturing } = props;
+  const roundupLabel = isCapturing ? 'Rounding up…' : 'Roundup Chickens';
 
   return (
     <section className="popup-screen popup-screen--fill">
@@ -98,7 +99,7 @@ export function PopupDraftListScreen(props: {
               onClick={onRoundUp}
               type="button"
             >
-              Roundup Chickens
+              {roundupLabel}
             </button>
           </div>
         )}

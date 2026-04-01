@@ -190,7 +190,11 @@ export default defineConfig({
       config.plugins ??= [];
       (config.plugins as unknown[]).push({
         name: 'coop:rewrite-fs-to-src',
-        configureServer(server: { middlewares: { use: (fn: Function) => void } }) {
+        configureServer(server: {
+          middlewares: {
+            use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void;
+          };
+        }) {
           server.middlewares.use((req: { url?: string }, _res: unknown, next: () => void) => {
             if (req.url?.startsWith('/@fs/src/')) {
               req.url = req.url.replace('/@fs/src/', '/src/');

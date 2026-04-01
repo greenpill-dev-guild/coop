@@ -440,7 +440,11 @@ updated: 2026-03-26
 
     expect(result.memoryCreated).toBe(true);
     expect(result.memoryPath).toBeTruthy();
-    expect(readFileSync(result.memoryPath!, 'utf8')).toContain('selected for implementation');
+    const { memoryPath } = result;
+    if (!memoryPath) {
+      throw new Error('Expected reconcileQueue to create a memory file');
+    }
+    expect(readFileSync(memoryPath, 'utf8')).toContain('selected for implementation');
   });
 
   it('returns an inbox item when validation tooling is unavailable', () => {

@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { passkeyTrustLabel } from '../../shared/coop-copy';
 import {
   installDefaultRuntimeHandlers,
   makeArtifact,
   makeDashboard,
   makeDraft,
 } from '../../__test-utils__/popup-harness';
+import { passkeyTrustLabel } from '../../shared/coop-copy';
 
 const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } = vi.hoisted(
   () => ({
@@ -566,7 +566,7 @@ describe('PopupApp', () => {
     });
   });
 
-  it('keeps the popup on Home when active-tab capture returns zero new drafts', async () => {
+  it('keeps the popup on Home and invites recapture when active-tab capture was just run', async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
       if (message.type === 'get-dashboard') {
         return { ok: true, data: makeDashboard({ drafts: [] }) };
@@ -575,7 +575,7 @@ describe('PopupApp', () => {
         return { ok: true, data: { open: false, canClose: true } };
       }
       if (message.type === 'capture-active-tab') {
-        return { ok: true, data: 0 };
+        return { ok: true, data: { capturedCount: 0, duplicateSuppressed: true } };
       }
       return { ok: true };
     });
@@ -586,7 +586,7 @@ describe('PopupApp', () => {
     await user.click(await screen.findByRole('button', { name: 'Capture Tab' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'This tab did not produce a new capture.',
+      'Captured this tab a moment ago. Choose Capture Tab again to recapture it now.',
     );
     expect(screen.getByRole('button', { name: 'Roundup Chickens' })).toBeInTheDocument();
     expect(screen.queryByText('River restoration lead')).not.toBeInTheDocument();
@@ -609,7 +609,7 @@ describe('PopupApp', () => {
     fireEvent.change(contextInput, {
       target: { value: 'Needs follow-up in the next coop review.' },
     });
-    await user.click(screen.getByRole('button', { name: 'Save to Pocket Coop' }));
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
 
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
@@ -644,10 +644,16 @@ describe('PopupApp', () => {
     ).toBe(false);
   });
 
-  it('shows inline microphone recovery when popup audio permission is denied', async () => {
+  it('shows a non-blocking microphone toast when popup audio access is already blocked', async () => {
     installDefaultRuntimeHandlers(mockSendRuntimeMessage);
     const user = userEvent.setup();
 
+    Object.defineProperty(navigator, 'permissions', {
+      configurable: true,
+      value: {
+        query: vi.fn().mockResolvedValue({ state: 'denied' } satisfies Partial<PermissionStatus>),
+      },
+    });
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
       value: {
@@ -663,8 +669,13 @@ describe('PopupApp', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Audio' }));
 
-    expect(await screen.findByText('Microphone access needed')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Microphone access is blocked for Coop. Allow it in browser settings and try again.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry Audio' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try Again' })).not.toBeInTheDocument();
   });
 
   it('surfaces the unsupported-page screenshot message before calling runtime capture', async () => {
@@ -880,7 +891,7 @@ describe('PopupApp', () => {
     expect(await screen.findByText('No code yet')).toBeInTheDocument();
   });
 
-  it('shows post-create invite success and enters the new coop', async () => {
+  it('shows post-create invite success and opens the workspace onboarding flow', async () => {
     installDefaultRuntimeHandlers(
       mockSendRuntimeMessage,
       makeDashboard({
@@ -914,7 +925,16 @@ describe('PopupApp', () => {
 
     await user.click(screen.getByRole('button', { name: 'Enter Coop' }));
 
-    expect(await screen.findByRole('button', { name: 'Roundup Chickens' })).toBeInTheDocument();
+    expect(chrome.sidePanel.open).toHaveBeenCalled();
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      type: 'set-sidepanel-intent',
+      payload: expect.objectContaining({
+        tab: 'chickens',
+        segment: 'roundup-access',
+        roundupAccessMode: 'prompt',
+        coopId: 'coop-1',
+      }),
+    });
   });
 
   it('shows the illustrated feed empty state when no artifacts are shared', async () => {

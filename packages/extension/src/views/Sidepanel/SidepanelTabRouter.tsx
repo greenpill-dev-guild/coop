@@ -4,11 +4,15 @@ import type { SidepanelOrchestration } from './hooks/useSidepanelOrchestration';
 import type { SidepanelTab } from './sidepanel-tabs';
 import { ChickensTab, CoopsTab, NestTab, RoostTab } from './tabs/index';
 
+type ChickensSynthesisSegment = Extract<SidepanelIntentSegment, 'review' | 'shared'>;
+
 export interface SidepanelTabRouterProps {
   panelTab: SidepanelTab;
   orchestration: SidepanelOrchestration;
-  synthesisSegment: SidepanelIntentSegment;
-  onSelectSynthesisSegment: (segment: SidepanelIntentSegment) => void;
+  synthesisSegment: ChickensSynthesisSegment;
+  onSelectSynthesisSegment: (segment: ChickensSynthesisSegment) => void;
+  roundupAccessPromptMode?: 'passive' | 'prompt' | 'grant-and-roundup' | null;
+  onDismissRoundupAccessPrompt?: () => void;
   focusedDraftId?: string;
   focusedSignalId?: string;
   focusedObservationId?: string;
@@ -20,6 +24,8 @@ export function SidepanelTabRouter({
   orchestration,
   synthesisSegment,
   onSelectSynthesisSegment,
+  roundupAccessPromptMode,
+  onDismissRoundupAccessPrompt,
   focusedDraftId,
   focusedSignalId,
   focusedObservationId,
@@ -143,6 +149,8 @@ export function SidepanelTabRouter({
             tabCapture={tabCapture}
             synthesisSegment={synthesisSegment}
             onSelectSynthesisSegment={onSelectSynthesisSegment}
+            roundupAccessPromptMode={roundupAccessPromptMode}
+            onDismissRoundupAccessPrompt={onDismissRoundupAccessPrompt}
             focusedDraftId={focusedDraftId}
             focusedSignalId={focusedSignalId}
             focusedObservationId={focusedObservationId}

@@ -10,7 +10,7 @@ import { isArchiveWorthy, withArchiveWorthiness } from '@coop/shared';
 import { useState } from 'react';
 import { playCoopSound } from '../../../runtime/audio';
 import type { InferenceBridge } from '../../../runtime/inference-bridge';
-import { sendRuntimeMessage } from '../../../runtime/messages';
+import { type ProactiveSignal, sendRuntimeMessage } from '../../../runtime/messages';
 import type { SidepanelTab } from '../sidepanel-tabs';
 
 export function useDraftEditor(deps: {
@@ -298,6 +298,49 @@ export function useDraftEditor(deps: {
     await loadDashboard();
   }
 
+  async function promoteSignalToDraft(signal: ProactiveSignal): Promise<ReviewDraft | null> {
+    const response = await sendRuntimeMessage<ReviewDraft>({
+      type: 'promote-signal-to-draft',
+      payload: {
+        signalId: signal.id,
+        title: signal.title,
+        url: signal.url,
+        domain: signal.domain,
+        category: signal.category,
+        tags: signal.tags,
+        extractId: signal.extractId,
+        sourceCandidateId: signal.sourceCandidateId,
+        topRelevanceScore: signal.topRelevanceScore,
+        targetCoops: signal.targetCoops.map((t) => ({
+          coopId: t.coopId,
+          coopName: t.coopName,
+          rationale: t.rationale,
+          suggestedNextStep: t.suggestedNextStep,
+          matchedRitualLenses: t.matchedRitualLenses,
+        })),
+      },
+    });
+
+    if (!response.ok || !response.data) {
+      setMessage(response.error ?? 'Could not promote this signal to a draft.');
+      return null;
+    }
+
+    await loadDashboard();
+    return response.data;
+  }
+
+  async function promoteSignalAndPublish(signal: ProactiveSignal, coopId?: string) {
+    const draft = await promoteSignalToDraft(signal);
+    if (!draft) return;
+
+    if (coopId && !draft.suggestedTargetCoopIds.includes(coopId)) {
+      toggleDraftTargetCoop(draft, coopId);
+    }
+
+    await publishDraft(draft);
+  }
+
   return {
     draftEdits,
     refineResults,
@@ -317,6 +360,8 @@ export function useDraftEditor(deps: {
     toggleReceiverCaptureArchiveWorthiness,
     publishDraft,
     toggleDraftArchiveWorthiness,
+    promoteSignalToDraft,
+    promoteSignalAndPublish,
   };
 }
 

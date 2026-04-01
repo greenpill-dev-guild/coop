@@ -1,3 +1,8 @@
+---
+title: "UI Action Coverage Map"
+slug: /testing/ui-action-coverage
+---
+
 # UI Action Coverage Map
 
 This map tracks the real test surfaces that cover popup, sidepanel, persistence, sync, and

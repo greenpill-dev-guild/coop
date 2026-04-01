@@ -111,6 +111,11 @@ function resolveSourceUrl(item: ReviewItem): string | undefined {
 // ---------------------------------------------------------------------------
 // Unified review item — merges signals, drafts, and stale observations
 // ---------------------------------------------------------------------------
+//
+// When a signal has a linked draftId that matches an existing draft, we merge
+// them into a single ReviewItem so the user sees one card with push controls
+// and signal support data. Orphan signals (no draft) still get push controls
+// via the promote-and-publish path.
 
 type ReviewItemKind = 'signal' | 'draft' | 'stale';
 
@@ -139,22 +144,50 @@ function buildReviewItems(
 
   const items: ReviewItem[] = [];
 
+  // Track which drafts are consumed by signal merge so we don't double-emit them
+  const mergedDraftIds = new Set<string>();
+
   for (const signal of signals) {
     const primary = signal.targetCoops[0];
-    items.push({
-      id: `signal-${signal.id}`,
-      kind: 'signal',
-      title: signal.title,
-      insight: primary?.rationale ?? '',
-      tags: (signal.tags ?? []).slice(0, 3),
-      category: signal.category,
-      timestamp: signal.updatedAt,
-      targetCoops: signal.targetCoops.map((t) => ({ id: t.coopId, name: t.coopName })),
-      signal,
-    });
+    const linkedDraft = signal.draftId ? drafts.find((d) => d.id === signal.draftId) : undefined;
+
+    if (linkedDraft) {
+      // Merge: use draft as the actionable base but carry signal support data
+      mergedDraftIds.add(linkedDraft.id);
+      items.push({
+        id: `draft-${linkedDraft.id}`,
+        kind: 'draft',
+        title: linkedDraft.title,
+        insight: linkedDraft.whyItMatters,
+        tags: (linkedDraft.tags ?? []).slice(0, 3),
+        category: linkedDraft.category,
+        timestamp: linkedDraft.createdAt,
+        targetCoops: (linkedDraft.suggestedTargetCoopIds ?? []).map((id) => ({
+          id,
+          name: coopNameById.get(id) ?? 'Coop',
+        })),
+        draft: linkedDraft,
+        signal,
+      });
+    } else {
+      // Orphan signal — no draft yet, still reviewable and pushable
+      items.push({
+        id: `signal-${signal.id}`,
+        kind: 'signal',
+        title: signal.title,
+        insight: primary?.rationale ?? '',
+        tags: (signal.tags ?? []).slice(0, 3),
+        category: signal.category,
+        timestamp: signal.updatedAt,
+        targetCoops: signal.targetCoops.map((t) => ({ id: t.coopId, name: t.coopName })),
+        signal,
+      });
+    }
   }
 
+  // Emit remaining drafts that were not merged with a signal
   for (const draft of drafts) {
+    if (mergedDraftIds.has(draft.id)) continue;
     items.push({
       id: `draft-${draft.id}`,
       kind: 'draft',
@@ -192,7 +225,7 @@ function buildReviewItems(
 // Compact card component
 // ---------------------------------------------------------------------------
 
-/** Render push controls per spec: drafts only, coop count determines layout. */
+/** Render push controls for all review items — unified across signals and drafts. */
 function PushControls(props: {
   item: ReviewItem;
   coops: CoopSharedState[];
@@ -201,15 +234,19 @@ function PushControls(props: {
   const { item, coops, draftEditor } = props;
   const [showPicker, setShowPicker] = useState(false);
 
-  // Push controls are only for drafts
-  if (item.kind !== 'draft' || !item.draft || !draftEditor) return null;
+  // Stale observations have no push target
+  if (item.kind === 'stale' || !draftEditor) return null;
 
   const handlePush = (coopId: string) => {
-    if (item.draft && draftEditor) {
+    if (item.draft) {
+      // Draft exists — publish directly
       if (!item.draft.suggestedTargetCoopIds.includes(coopId)) {
         draftEditor.toggleDraftTargetCoop(item.draft, coopId);
       }
       void draftEditor.publishDraft(item.draft);
+    } else if (item.signal) {
+      // Orphan signal — promote to draft then publish
+      void draftEditor.promoteSignalAndPublish(item.signal, coopId);
     }
     setShowPicker(false);
   };
@@ -296,14 +333,19 @@ function CompactCard(props: {
   focused?: boolean;
 }) {
   const { item, coops, draftEditor, focused } = props;
-  const visibleTags = item.tags.slice(0, 3);
+  const surfaceTags = item.tags.slice(0, 2);
+  const allTags = item.tags.slice(0, 3);
   const previewImage = resolvePreviewImage(item);
   const sourceDomain = resolveSourceDomain(item);
   const sourceUrl = resolveSourceUrl(item);
   const favicon = faviconUrl(item);
 
+  // Unified detail fields — prefer draft data when present, fall back to signal
+  const summary = item.draft?.summary ?? item.signal?.targetCoops[0]?.rationale;
+  const nextMove = item.draft?.suggestedNextStep ?? item.signal?.targetCoops[0]?.suggestedNextStep;
+
   return (
-    <article className="compact-card" data-focused={focused || undefined} data-kind={item.kind}>
+    <article className="compact-card" data-focused={focused || undefined}>
       <div className="compact-card__body">
         {/* Left preview rail */}
         {previewImage ? (
@@ -323,6 +365,17 @@ function CompactCard(props: {
           <strong className="compact-card__title">{item.title}</strong>
 
           {item.insight ? <p className="compact-card__insight">{item.insight}</p> : null}
+
+          {/* Surface tags — subtle, max 2 */}
+          {surfaceTags.length > 0 ? (
+            <div className="compact-card__surface-tags">
+              {surfaceTags.map((tag) => (
+                <span className="compact-card__surface-tag" key={`${item.id}:s:${tag}`}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {/* Source row with favicon and domain */}
           {sourceDomain ? (
@@ -351,70 +404,40 @@ function CompactCard(props: {
               )}
             </div>
           ) : null}
+        </div>
+      </div>
 
-          {visibleTags.length > 0 ? (
+      {/* Push controls — unified across all actionable items */}
+      <PushControls item={item} coops={coops} draftEditor={draftEditor} />
+
+      <details className="compact-card__more">
+        <summary>Details</summary>
+        <div className="compact-card__expanded">
+          {allTags.length > 0 ? (
             <div className="compact-card__tags">
-              {visibleTags.map((tag) => (
+              {allTags.map((tag) => (
                 <span className="badge badge--neutral compact-card__tag" key={`${item.id}:${tag}`}>
                   #{tag}
                 </span>
               ))}
             </div>
           ) : null}
-        </div>
-      </div>
-
-      {/* Push controls — drafts only, layout depends on coop count */}
-      <PushControls item={item} coops={coops} draftEditor={draftEditor} />
-
-      <details className="compact-card__more">
-        <summary>Details</summary>
-        <div className="compact-card__expanded">
-          {item.signal ? (
-            <>
-              {item.signal.targetCoops[0]?.rationale ? (
-                <div className="compact-card__detail-row">
-                  <span className="compact-card__detail-label">Why it matters</span>
-                  <p>{item.signal.targetCoops[0].rationale}</p>
-                </div>
-              ) : null}
-              {item.signal.targetCoops[0]?.suggestedNextStep ? (
-                <div className="compact-card__detail-row">
-                  <span className="compact-card__detail-label">Next move</span>
-                  <p>{item.signal.targetCoops[0].suggestedNextStep}</p>
-                </div>
-              ) : null}
-              {item.signal.targetCoops.length > 0 ? (
-                <div className="badge-row">
-                  {item.signal.targetCoops.map((t) => (
-                    <span className="badge" key={t.coopId}>
-                      {t.coopName}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              {item.signal.support.length > 0 ? (
-                <ul className="list-reset compact-card__support-list">
-                  {item.signal.support.map((s) => (
-                    <li key={s.id}>
-                      <strong>{s.title}</strong>
-                      <span className="helper-text">{s.detail}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </>
+          {summary ? <p className="compact-card__detail-summary">{summary}</p> : null}
+          {nextMove ? (
+            <div className="compact-card__detail-row">
+              <span className="compact-card__detail-label">Next move</span>
+              <p>{nextMove}</p>
+            </div>
           ) : null}
-          {item.draft ? (
-            <>
-              <p className="compact-card__detail-summary">{item.draft.summary}</p>
-              {item.draft.suggestedNextStep ? (
-                <div className="compact-card__detail-row">
-                  <span className="compact-card__detail-label">Next move</span>
-                  <p>{item.draft.suggestedNextStep}</p>
-                </div>
-              ) : null}
-            </>
+          {item.signal?.support && item.signal.support.length > 0 ? (
+            <ul className="list-reset compact-card__support-list">
+              {item.signal.support.map((s) => (
+                <li key={s.id}>
+                  <strong>{s.title}</strong>
+                  <span className="helper-text">{s.detail}</span>
+                </li>
+              ))}
+            </ul>
           ) : null}
           {item.staleObservation ? (
             <div className="compact-card__detail-row">
@@ -495,7 +518,12 @@ function CompactSharedCard(props: { artifact: Artifact; coopName?: string }) {
               )}
             </div>
           ) : null}
+        </div>
+      </div>
 
+      <details className="compact-card__more">
+        <summary>Details</summary>
+        <div className="compact-card__expanded">
           {visibleTags.length > 0 ? (
             <div className="compact-card__tags">
               {visibleTags.map((tag) => (
@@ -508,12 +536,6 @@ function CompactSharedCard(props: { artifact: Artifact; coopName?: string }) {
               ))}
             </div>
           ) : null}
-        </div>
-      </div>
-
-      <details className="compact-card__more">
-        <summary>Details</summary>
-        <div className="compact-card__expanded">
           <p className="compact-card__detail-summary">{artifact.summary}</p>
           {artifact.suggestedNextStep ? (
             <div className="compact-card__detail-row">
@@ -528,19 +550,77 @@ function CompactSharedCard(props: { artifact: Artifact; coopName?: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Time group section
+// Orientation summary card (collapses seed artifacts in Shared segment)
 // ---------------------------------------------------------------------------
+
+const ORIENTATION_CATEGORIES = new Set([
+  'setup-insight',
+  'coop-soul',
+  'ritual',
+  'seed-contribution',
+]);
+
+function OrientationSummaryCard(props: { artifacts: Artifact[] }) {
+  const { artifacts } = props;
+  const soul = artifacts.find((a) => a.category === 'coop-soul');
+  const others = artifacts.filter((a) => a.category !== 'coop-soul');
+
+  return (
+    <article className="orientation-summary">
+      <div className="orientation-summary__header">
+        <span className="orientation-summary__label">Coop orientation</span>
+        <span className="orientation-summary__count">
+          {artifacts.length} item{artifacts.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      {soul ? <p className="orientation-summary__soul">{soul.summary}</p> : null}
+      {others.length > 0 ? (
+        <div className="orientation-summary__items">
+          {others.map((a) => (
+            <span className="orientation-summary__item" key={a.id}>
+              {a.title}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Time group section (with overflow collapse)
+// ---------------------------------------------------------------------------
+
+/** Max visible items before collapsing the rest behind "Show more". */
+const TIME_GROUP_VISIBLE_LIMIT = 3;
 
 function TimeGroupSection<T>(props: {
   group: TimeGroup<T>;
   renderItem: (item: T) => React.ReactNode;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = props.group.items;
+  const hasOverflow = items.length > TIME_GROUP_VISIBLE_LIMIT;
+  const visibleItems = hasOverflow && !expanded ? items.slice(0, TIME_GROUP_VISIBLE_LIMIT) : items;
+  const hiddenCount = items.length - TIME_GROUP_VISIBLE_LIMIT;
+
   return (
     <section className="time-group">
       <div className="time-group__header">
         <span>{props.group.label}</span>
       </div>
-      <div className="time-group__items">{props.group.items.map(props.renderItem)}</div>
+      <div className="time-group__items">
+        {visibleItems.map(props.renderItem)}
+        {hasOverflow && !expanded ? (
+          <button
+            className="time-group__overflow-toggle"
+            onClick={() => setExpanded(true)}
+            type="button"
+          >
+            Show {hiddenCount} more
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -566,6 +646,8 @@ export interface ChickensTabProps {
   tabCapture: TabCaptureReturn;
   synthesisSegment: Extract<SidepanelIntentSegment, 'review' | 'shared'>;
   onSelectSynthesisSegment: (segment: Extract<SidepanelIntentSegment, 'review' | 'shared'>) => void;
+  roundupAccessPromptMode?: 'passive' | 'prompt' | 'grant-and-roundup' | null;
+  onDismissRoundupAccessPrompt?: () => void;
   focusedDraftId?: string;
   focusedSignalId?: string;
   focusedObservationId?: string;
@@ -581,6 +663,8 @@ export function ChickensTab({
   tabCapture,
   synthesisSegment,
   onSelectSynthesisSegment,
+  roundupAccessPromptMode,
+  onDismissRoundupAccessPrompt,
   focusedDraftId,
   focusedSignalId,
   focusedObservationId,
@@ -620,10 +704,18 @@ export function ChickensTab({
     [filteredReviewItems],
   );
 
-  // Shared artifacts
-  const sharedItems = useMemo(
+  // Shared artifacts — separate orientation seed items from real captures
+  const allSharedItems = useMemo(
     () => (dashboard?.coops ?? []).flatMap((coop) => coop.artifacts),
     [dashboard?.coops],
+  );
+  const orientationItems = useMemo(
+    () => allSharedItems.filter((a) => ORIENTATION_CATEGORIES.has(a.category)),
+    [allSharedItems],
+  );
+  const sharedItems = useMemo(
+    () => allSharedItems.filter((a) => !ORIENTATION_CATEGORIES.has(a.category)),
+    [allSharedItems],
   );
   const sharedTimeGroups = useMemo(
     () => groupByTime(sharedItems, (item) => item.createdAt),
@@ -640,6 +732,17 @@ export function ChickensTab({
   }, [visibleDrafts]);
 
   const hasActiveFilter = isFilterActive(filters);
+  const roundupAccessPromptVisible = Boolean(roundupAccessPromptMode);
+  const roundupAccessPromptTitle =
+    roundupAccessPromptMode === 'grant-and-roundup'
+      ? 'Roundup needs site access'
+      : 'Enable roundup site access';
+  const roundupAccessPromptPrimaryLabel =
+    roundupAccessPromptMode === 'grant-and-roundup'
+      ? 'Enable access and round up'
+      : 'Enable site access';
+  const roundupAccessPromptSecondaryLabel =
+    roundupAccessPromptMode === 'grant-and-roundup' ? 'Back to Chickens' : 'Not now';
 
   const segmentTags: PopupSubheaderTag[] = [
     {
@@ -652,11 +755,17 @@ export function ChickensTab({
     {
       id: 'shared',
       label: 'Shared',
-      value: String(sharedItems.length),
+      value: String(sharedItems.length + (orientationItems.length > 0 ? 1 : 0)),
       active: synthesisSegment === 'shared',
       onClick: () => onSelectSynthesisSegment('shared'),
     },
   ];
+
+  async function handleGrantRoundupAccess() {
+    await tabCapture.requestRoundupAccess({
+      runRoundupAfterGrant: roundupAccessPromptMode === 'grant-and-roundup',
+    });
+  }
 
   return (
     <section className="stack">
@@ -684,6 +793,39 @@ export function ChickensTab({
         </div>
       </SidepanelSubheader>
 
+      {roundupAccessPromptVisible ? (
+        <article className="panel-card">
+          <div className="stack">
+            <div className="stack stack--tight">
+              <h3>{roundupAccessPromptTitle}</h3>
+              <p>
+                Coop only needs this permission to inspect your open tabs locally when you ask it to
+                round up chickens. Nothing is shared automatically.
+              </p>
+            </div>
+            <div className="action-row">
+              <button
+                className="primary-button"
+                disabled={tabCapture.requestingRoundupAccess}
+                onClick={() => void handleGrantRoundupAccess()}
+                type="button"
+              >
+                {tabCapture.requestingRoundupAccess
+                  ? 'Waiting for permission…'
+                  : roundupAccessPromptPrimaryLabel}
+              </button>
+              <button
+                className="secondary-button"
+                onClick={onDismissRoundupAccessPrompt}
+                type="button"
+              >
+                {roundupAccessPromptSecondaryLabel}
+              </button>
+            </div>
+          </div>
+        </article>
+      ) : null}
+
       {!dashboard ? (
         <SkeletonCards count={3} label="Loading chickens" />
       ) : synthesisSegment === 'review' ? (
@@ -700,9 +842,9 @@ export function ChickensTab({
                     coops={coops}
                     draftEditor={draftEditor}
                     focused={
-                      (item.kind === 'signal' && item.signal?.id === focusedSignalId) ||
-                      (item.kind === 'draft' && item.draft?.id === focusedDraftId) ||
-                      (item.kind === 'stale' && item.staleObservation?.id === focusedObservationId)
+                      item.signal?.id === focusedSignalId ||
+                      item.draft?.id === focusedDraftId ||
+                      item.staleObservation?.id === focusedObservationId
                     }
                   />
                 )}
@@ -717,8 +859,11 @@ export function ChickensTab({
             <span className="empty-state__text">Round up your loose chickens</span>
           </div>
         )
-      ) : sharedTimeGroups.length > 0 ? (
+      ) : sharedTimeGroups.length > 0 || orientationItems.length > 0 ? (
         <div className="stack">
+          {orientationItems.length > 0 ? (
+            <OrientationSummaryCard artifacts={orientationItems} />
+          ) : null}
           {sharedTimeGroups.map((group) => (
             <TimeGroupSection
               key={group.label}

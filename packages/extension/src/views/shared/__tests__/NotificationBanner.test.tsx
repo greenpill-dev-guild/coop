@@ -24,6 +24,18 @@ describe('NotificationBanner', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('does not persist dismissal when persistDismissal is false', () => {
+    const { unmount } = render(
+      <NotificationBanner id="test-2b" message="Transient toast." persistDismissal={false} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    unmount();
+
+    render(<NotificationBanner id="test-2b" message="Transient toast." persistDismissal={false} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Transient toast.');
+  });
+
   it('stays hidden for the same id after dismissal (sessionStorage)', () => {
     const { unmount } = render(<NotificationBanner id="test-3" message="Should not reappear." />);
 
@@ -75,5 +87,14 @@ describe('NotificationBanner', () => {
 
     expect(screen.queryByText('Banner A')).not.toBeInTheDocument();
     expect(screen.getByText('Banner B')).toBeInTheDocument();
+  });
+
+  it('calls onDismiss after the banner is dismissed', () => {
+    const handleDismiss = vi.fn();
+    render(<NotificationBanner id="banner-dismiss" message="Dismiss me" onDismiss={handleDismiss} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(handleDismiss).toHaveBeenCalledTimes(1);
   });
 });

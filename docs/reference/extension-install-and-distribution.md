@@ -9,8 +9,9 @@ Date: March 30, 2026
 
 This document covers extension-specific install and rollout. The full local demo, peer pairing, and
 production deployment flow lives in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook).
-The current public-release boundary lives in
-[Current Release Status](/reference/current-release-status).
+The canonical stage-based release checklist lives in
+[Production Release Checklist](/reference/production-release-checklist). The current
+public-release boundary lives in [Current Release Status](/reference/current-release-status).
 
 ## GitHub Releases
 

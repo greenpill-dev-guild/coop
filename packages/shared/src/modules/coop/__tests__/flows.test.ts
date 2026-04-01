@@ -697,17 +697,23 @@ describe('create, join, and publish flows', () => {
     });
     const memberInvite = getCurrentInviteForType(created.state, 'member');
     expect(memberInvite).toBeDefined();
+    if (!memberInvite) {
+      throw new Error('Expected a member invite for the created coop');
+    }
 
     const joined = joinCoop({
       state: created.state,
-      invite: memberInvite!,
+      invite: memberInvite,
       displayName: 'Mina',
       seedContribution: 'I bring member context.',
     });
 
     const currentInvite = getCurrentInviteForType(joined.state, 'member');
     expect(currentInvite?.id).toBe(memberInvite?.id);
-    expect(getComputedInviteStatus(currentInvite!)).toBe('used');
+    if (!currentInvite) {
+      throw new Error('Expected the current member invite to remain available');
+    }
+    expect(getComputedInviteStatus(currentInvite)).toBe('used');
   });
 
   it('only backfills invite types with zero history', () => {

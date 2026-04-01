@@ -17,7 +17,7 @@ cd packages/extension && bun run build  # Build extension only
 bun format && bun lint       # Format (Biome) and lint workspace
 bun run test                 # Run all unit tests (vitest)
 bun run test:e2e             # Run all Playwright E2E tests
-bun build                    # Build everything (shared -> app -> extension)
+bun run build                # Build everything (shared -> app -> extension)
 bun run validate smoke       # Quick confidence run
 bun run validate core-loop   # Main extension workflow validation
 bun run validate full        # Full local pass before demos or bigger merges
@@ -83,7 +83,7 @@ Coop captures scattered knowledge (browser tabs, audio, photos, files, links), r
 - Surface all errors to the user -- never swallow errors
 - Check existing components before creating new ones (see UI Component Reuse below)
 - Read code before answering questions about it
-- Prefer isolated package builds during iteration (`cd packages/extension && bun run build`, `cd packages/app && bun run build`) and only escalate to `bun build` for cross-package verification
+- Prefer isolated package builds during iteration (`cd packages/extension && bun run build`, `cd packages/app && bun run build`) and only escalate to `bun run build` for cross-package verification
 - Verify changes build before reporting done
 
 ### Never Do
@@ -107,7 +107,7 @@ Not every change needs a full build. Choose the lightest tier that covers your c
 | typecheck | `bun run validate typecheck` | Single-package, no shared export changes |
 | quick | `bun run validate quick` | Typecheck + lint, formatting/type fixes |
 | smoke | `bun run validate smoke` | Cross-package changes, shared module edits |
-| build | `bun build` | CSS tokens, new shared exports, pre-commit |
+| build | `bun run build` | CSS tokens, new shared exports, pre-commit |
 | core-loop | `bun run validate core-loop` | UI workflow changes needing E2E |
 
 ### Build Scope
@@ -115,7 +115,7 @@ Not every change needs a full build. Choose the lightest tier that covers your c
 - Default to the smallest build that matches the change.
 - Extension-only changes: `cd packages/extension && bun run build`
 - App-only changes: `cd packages/app && bun run build`
-- Use root `bun build` only when shared exports, shared styles/tokens, or other cross-package changes need downstream verification.
+- Use root `bun run build` only when shared exports, shared styles/tokens, or other cross-package changes need downstream verification.
 
 ### UI Component Reuse
 
@@ -198,7 +198,7 @@ Automation entrypoints:
 - Types: feat, fix, refactor, chore, docs, test, perf, ci
 - Scopes: shared, extension, app, claude
 
-**Validation before committing**: `bun format && bun lint && bun run test && bun build`
+**Validation before committing**: `bun format && bun lint && bun run test && bun run build`
 
 ## Domain Knowledge
 

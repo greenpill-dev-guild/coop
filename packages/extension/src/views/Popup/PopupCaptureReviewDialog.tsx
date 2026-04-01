@@ -16,6 +16,27 @@ function CloseIcon() {
   );
 }
 
+function FileIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 20 20" width="32" height="32">
+      <path
+        d="M11.5 2H5.5a1.5 1.5 0 0 0-1.5 1.5v13a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V6.5L11.5 2Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M11.5 2v4.5H16M13 11H7M13 14H7M8.5 8H7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
 function formatBytes(byteSize: number) {
   if (byteSize < 1024) {
     return `${byteSize} B`;
@@ -27,19 +48,34 @@ function formatBytes(byteSize: number) {
 }
 
 function formatDuration(durationSeconds?: number) {
-  if (!durationSeconds) {
+  if (durationSeconds == null) {
     return null;
   }
 
-  const minutes = Math.floor(durationSeconds / 60);
-  const seconds = durationSeconds % 60;
+  const total = Math.floor(durationSeconds);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function labelForKind(kind: PopupPendingCapture['kind']) {
   if (kind === 'photo') return 'Screenshot';
-  if (kind === 'audio') return 'Audio';
+  if (kind === 'audio') return 'Voice note';
   return 'File';
+}
+
+function isImageMime(mimeType: string) {
+  return mimeType.startsWith('image/');
+}
+
+function isAudioMime(mimeType: string) {
+  return mimeType.startsWith('audio/');
+}
+
+function fileExtension(fileName?: string) {
+  if (!fileName) return null;
+  const dot = fileName.lastIndexOf('.');
+  return dot > 0 ? fileName.slice(dot + 1).toUpperCase() : null;
 }
 
 export function PopupCaptureReviewDialog(props: {
@@ -60,6 +96,11 @@ export function PopupCaptureReviewDialog(props: {
   });
 
   const durationLabel = formatDuration(capture.durationSeconds);
+  const hasImagePreview = capture.previewUrl && isImageMime(capture.mimeType);
+  const hasAudioPreview = capture.previewUrl && isAudioMime(capture.mimeType);
+  const isNonImageFile =
+    capture.kind === 'file' && !isImageMime(capture.mimeType) && !isAudioMime(capture.mimeType);
+  const ext = fileExtension(capture.fileName);
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-dismiss is supplementary to the close button
@@ -103,13 +144,45 @@ export function PopupCaptureReviewDialog(props: {
               )}
             </Tooltip>
           </div>
-          <h2 id="popup-capture-review-title">Add context before saving</h2>
+          <h2 id="popup-capture-review-title">Review before saving</h2>
         </div>
 
         <div className="popup-dialog__body">
-          {capture.previewUrl ? (
+          {hasImagePreview ? (
             <div className="popup-preview-card">
-              <img alt="" className="popup-preview-card__image" src={capture.previewUrl} />
+              <img
+                alt="Capture preview"
+                className="popup-preview-card__image"
+                src={capture.previewUrl}
+              />
+            </div>
+          ) : hasAudioPreview ? (
+            <div className="popup-audio-preview">
+              <div className="popup-audio-preview__copy">
+                <strong>
+                  {capture.kind === 'audio' ? 'Voice note ready' : 'Audio file ready'}
+                </strong>
+                <span>Play it back before saving.</span>
+              </div>
+              {/* biome-ignore lint/a11y/useMediaCaption: Local draft previews do not have captions at capture time. */}
+              <audio
+                aria-label="Capture audio preview"
+                className="popup-audio-preview__player"
+                controls
+                preload="metadata"
+                src={capture.previewUrl}
+              />
+            </div>
+          ) : isNonImageFile ? (
+            <div className="popup-file-summary">
+              <FileIcon />
+              <div className="popup-file-summary__info">
+                <span className="popup-file-summary__name">{capture.fileName || 'File'}</span>
+                <span className="popup-file-summary__meta">
+                  {ext ? `${ext} · ` : ''}
+                  {formatBytes(capture.byteSize)}
+                </span>
+              </div>
             </div>
           ) : null}
 
@@ -129,26 +202,29 @@ export function PopupCaptureReviewDialog(props: {
                 disabled={saving}
                 onChange={(event) => onChange({ note: event.target.value })}
                 placeholder="What should Coop remember about this?"
-                rows={4}
+                rows={3}
                 value={capture.note}
               />
             </label>
           </section>
 
-          <section className="popup-dialog__section">
-            <strong>Details</strong>
-            <div className="popup-dialog__meta">
-              {capture.fileName ? (
-                <span className="popup-mini-pill popup-mini-pill--muted">{capture.fileName}</span>
-              ) : null}
-              <span className="popup-mini-pill popup-mini-pill--muted">{capture.mimeType}</span>
-              {capture.sourceUrl ? (
-                <a href={capture.sourceUrl} rel="noreferrer" target="_blank">
-                  Source page
-                </a>
-              ) : null}
-            </div>
-          </section>
+          {capture.fileName || capture.sourceUrl ? (
+            <section className="popup-dialog__section">
+              <strong>Details</strong>
+              <div className="popup-dialog__meta">
+                {capture.fileName ? (
+                  <span className="popup-mini-pill popup-mini-pill--muted popup-mini-pill--wrap">
+                    {capture.fileName}
+                  </span>
+                ) : null}
+                {capture.sourceUrl ? (
+                  <a href={capture.sourceUrl} rel="noreferrer" target="_blank">
+                    Source page
+                  </a>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
         </div>
 
         <div className="popup-dialog__footer">
@@ -166,7 +242,7 @@ export function PopupCaptureReviewDialog(props: {
             onClick={onSave}
             type="button"
           >
-            {saving ? 'Saving…' : 'Save to Pocket Coop'}
+            {saving ? 'Saving…' : 'Save as draft'}
           </button>
         </div>
       </dialog>

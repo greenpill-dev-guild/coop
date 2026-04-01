@@ -8,10 +8,11 @@ slug: /reference/testing-and-validation
 Date: March 28, 2026
 
 This document maps the release-facing validation commands to the actual suite graph in
-`scripts/validate.ts`. The canonical release boundary lives in
-[Current Release Status](/reference/current-release-status). The demo flow and deployment steps live
-in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook). Operator-only second-gate guidance
-lives in [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
+`scripts/validate.ts`. The canonical stage-based checklist lives in
+[Production Release Checklist](/reference/production-release-checklist). The current release
+boundary lives in [Current Release Status](/reference/current-release-status). The demo flow and
+deployment steps live in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook). Operator-only
+second-gate guidance lives in [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
 As of March 28, 2026, the automated mock-first release bar is green. The remaining staged-launch
 blocker is manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths.

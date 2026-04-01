@@ -8,10 +8,10 @@ slug: /reference/demo-and-deploy-runbook
 Date: March 28, 2026
 
 This is the canonical runbook for local demos, peer pairing, and production deployment. Keep the
-other readiness docs aligned to this one. For the current public-release boundary, read
-[Current Release Status](/reference/current-release-status). For the receiver protocol, read
-[Receiver Pairing & Intake](/reference/receiver-pairing-and-intake). For operator-only live rails,
-read [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
+stage-based checklist aligned to [Production Release Checklist](/reference/production-release-checklist).
+For the current public-release boundary, read [Current Release Status](/reference/current-release-status).
+For the receiver protocol, read [Receiver Pairing & Intake](/reference/receiver-pairing-and-intake).
+For operator-only live rails, read [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
 ## Demo Storyboard
 
@@ -230,7 +230,7 @@ bun run validate:public-release
 bun format && bun lint
 bun run test
 bun run test:coverage
-bun build
+bun run build
 bun run validate:store-readiness
 bun run validate:production-readiness
 ```
@@ -304,28 +304,25 @@ Human-confirmed only:
 
 ### Filecoin / FVM Registry
 
-The Filecoin registry contract currently lives in `packages/contracts/src/CoopRegistry.sol` and is
-published with Foundry from `packages/contracts/script/DeployRegistry.s.sol`.
+The Filecoin registry contract currently lives in `packages/contracts/src/CoopRegistry.sol`. Use
+the repo deploy helper so the contract build/test pass and the broadcast path stay consistent.
 
 Preferred deployment path using a Foundry keystore account:
 
 ```bash
-cd packages/contracts
-forge script script/DeployRegistry.s.sol:DeployRegistry \
-  --rpc-url filecoin_calibration \
-  --broadcast \
-  --account "GreenGoods deployer"
+bun run deploy:registry --broadcast
+bun run deploy:registry --network mainnet --broadcast
 ```
 
 Alternative deployment path using a raw private key:
 
 ```bash
-cd packages/contracts
 DEPLOYER_PRIVATE_KEY=0x... \
-forge script script/DeployRegistry.s.sol:DeployRegistry \
-  --rpc-url filecoin_calibration \
-  --broadcast
+bun run deploy:registry --broadcast
 ```
+
+The default keystore account on this machine is `green-goods-deployer`. Pass `--account <name>` if
+you need a different Foundry keystore alias.
 
 After deployment:
 
@@ -445,7 +442,7 @@ Use this before demos and before production launch.
 
 1. Set `VITE_COOP_RECEIVER_APP_URL` to the exact production HTTPS receiver origin.
 2. Clear the staged launch bar:
-   `bun format && bun lint`, `bun run test`, `bun run test:coverage`, `bun build`,
+   `bun format && bun lint`, `bun run test`, `bun run test:coverage`, `bun run build`,
    `bun run validate:store-readiness`, and `bun run validate:production-readiness`.
 3. If live Safe, session-key, or archive rails are enabled, wait until the staged launch bar is
    green and the live env contract is complete, then run
@@ -465,7 +462,7 @@ Use this before demo day and before packaging a staged release candidate:
 bun format && bun lint
 bun run test
 bun run test:coverage
-bun build
+bun run build
 bun run validate:store-readiness
 bun run validate:production-readiness
 ```

@@ -66,6 +66,13 @@ function makeMember(overrides: Partial<Member> = {}): Member {
   };
 }
 
+function requireDefined<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 describe('saveCoopState atomicity (R4)', () => {
   it('persists a new coop state to Dexie', async () => {
     const db = freshDb();
@@ -75,9 +82,10 @@ describe('saveCoopState atomicity (R4)', () => {
 
     const record = await db.coopDocs.get(state.profile.id);
     expect(record).toBeDefined();
-    expect(record!.id).toBe(state.profile.id);
+    const persistedRecord = requireDefined(record, 'Expected saved coop doc');
+    expect(persistedRecord.id).toBe(state.profile.id);
 
-    const doc = hydrateCoopDoc(record!.encodedState);
+    const doc = hydrateCoopDoc(persistedRecord.encodedState);
     const loaded = readCoopState(doc);
     expect(loaded.profile.name).toBe(state.profile.name);
     doc.destroy();
@@ -98,7 +106,7 @@ describe('saveCoopState atomicity (R4)', () => {
     await saveCoopState(db, updatedState);
 
     const record = await db.coopDocs.get(state.profile.id);
-    const doc = hydrateCoopDoc(record!.encodedState);
+    const doc = hydrateCoopDoc(requireDefined(record, 'Expected updated coop doc').encodedState);
     const loaded = readCoopState(doc);
     expect(loaded.profile.name).toBe('Updated Name');
     doc.destroy();
@@ -114,7 +122,12 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     await saveCoopState(db, state);
 
     // Create an incremental update (simulate remote peer adding a member)
-    const remoteDoc = hydrateCoopDoc((await db.coopDocs.get(state.profile.id))!.encodedState);
+    const remoteDoc = hydrateCoopDoc(
+      requireDefined(
+        await db.coopDocs.get(state.profile.id),
+        'Expected stored coop doc before merging remote update',
+      ).encodedState,
+    );
     const newMember = makeMember({ id: 'remote-member', displayName: 'Remote Peer' });
     const remoteState = readCoopState(remoteDoc);
     remoteState.members.push(newMember);
@@ -141,7 +154,9 @@ describe('mergeCoopStateUpdate Zod recovery (R7)', () => {
     // that results in a transient invalid state (e.g. during a migration
     // or concurrent edit that temporarily empties a required array).
     const record = await db.coopDocs.get(state.profile.id);
-    const doc = hydrateCoopDoc(record!.encodedState);
+    const doc = hydrateCoopDoc(
+      requireDefined(record, 'Expected stored coop doc before corruption test').encodedState,
+    );
     const root = doc.getMap<string>('coop');
 
     // Set rituals to empty array -- violates rituals: z.array(...).min(1)
@@ -182,7 +197,10 @@ describe('mergeCoopStateUpdate Zod recovery (R7)', () => {
     // The raw Yjs bytes should still be persisted (the CRDT merge is valid)
     const finalRecord = await db.coopDocs.get(state.profile.id);
     expect(finalRecord).toBeDefined();
-    expect(finalRecord!.encodedState.length).toBeGreaterThan(0);
+    expect(
+      requireDefined(finalRecord, 'Expected merged coop doc to remain persisted').encodedState
+        .length,
+    ).toBeGreaterThan(0);
 
     // The result should be defined (not thrown away) and carry a warning
     expect(result).toBeDefined();

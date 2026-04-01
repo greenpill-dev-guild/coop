@@ -275,15 +275,12 @@ async function seedCoop(page, input, creator) {
 
 async function seedAuthSession(page, creator) {
   const { session } = createMockMemberIdentity(creator);
-  const response = await page.evaluate(
-    async (payload) => {
-      return chrome.runtime.sendMessage({
-        type: 'set-auth-session',
-        payload,
-      });
-    },
-    session,
-  );
+  const response = await page.evaluate(async (payload) => {
+    return chrome.runtime.sendMessage({
+      type: 'set-auth-session',
+      payload,
+    });
+  }, session);
 
   if (!response?.ok) {
     throw new Error(response?.error ?? 'Could not seed the receiver-sync auth session.');

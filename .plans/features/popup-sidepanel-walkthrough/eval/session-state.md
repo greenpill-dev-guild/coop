@@ -1,0 +1,604 @@
+# Popup + Side Panel Walkthrough Session State
+
+Created: 2026-03-31
+Feature slug: `popup-sidepanel-walkthrough`
+
+## Purpose
+
+This file is the shared handoff and regression-control layer for agents working through the popup and side panel walkthrough issues one by one.
+
+## Working Rules
+
+- Read this file in full before touching code.
+- Append only. Do not delete or rewrite another agent's notes unless the user explicitly asks for cleanup.
+- Before editing, add a new entry under `## Task Log` with:
+  - task slug
+  - status
+  - surfaces/components you expect to touch
+  - files you expect to touch
+  - regression watchouts
+- After editing, update the same entry with:
+  - files actually touched
+  - behavior changes shipped
+  - validation run
+  - regressions checked
+  - follow-up notes for the next agent
+- If you touch a shared component, read all prior task log entries that mention that component before making changes.
+- Never revert another agent's fix just to complete your task. Adapt to it and document any tension here.
+
+## Global Product Decisions
+
+- Notifications must be non-blocking overlays or toast-style surfaces. They must not push layout height or make popup or side panel roots scroll.
+- Draft capture is pre-coop. Use Chickens or draft language, not direct-save-to-coop language.
+- Popup home should remain responsive during long-running actions. If safe, capture actions should be queueable rather than globally blocked.
+- Manual capture intent should be respected. Dedupe should mainly suppress accidental immediate repeats, not block deliberate recapture.
+- Shared capture dialog behavior should stay aligned between file upload and screenshot flows.
+- Image-like captures should provide a preview before save whenever technically reasonable.
+- Regardless of input mode, the user-facing Chickens review surface should converge on one compact card contract: title, why it matters, tags, push controls, and preview media where applicable.
+- User-ingested captures and agent/tab-ingested signals may remain different internal pipeline objects, but they should synthesize into the same digestible review format before the user is asked to review or push anything.
+- Shared UI changes must preserve popup width constraints and avoid horizontal overflow.
+
+## Shared Surfaces To Watch
+
+- `packages/extension/src/views/Popup/PopupHomeScreen.tsx`
+- `packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts`
+- `packages/extension/src/views/shared/useCaptureActions.ts`
+- popup and side panel notification primitives and styles
+- shared capture dialog components and styles
+- roundup and capture handlers in background/shared pipeline code
+- side panel agent root view and empty states
+
+## Validation Expectations
+
+- Prefer the smallest relevant build first.
+- Extension-only UI changes should usually verify with `cd packages/extension && bun run build`.
+- Shared pipeline changes should also run a repo-level validation tier that matches the risk.
+- Record exact commands and outcomes in the task log.
+
+## Known Risks From Walkthrough
+
+- Inline notifications are shifting layout in multiple places.
+- Roundup status is overly blocking and may hide real ingestion failures.
+- Shared capture dialog needs structural cleanup without regressing screenshot flow.
+- Audio permission handling may be reporting denial too early.
+- Side panel agent actions may be unwired or silently failing.
+- Signals and drafts may still feel like different review object types even though the user experience should prefer one unified review card model.
+
+## Task Log
+
+### Template
+
+```md
+### <task-slug>
+- Status: in_progress | blocked | done
+- Started: YYYY-MM-DD HH:MM TZ
+- Surfaces: popup-home, notifications, capture-dialog
+- Expected files:
+  - path/to/file
+- Regression watchouts:
+  - Do not reintroduce inline banners that push layout.
+- Changes shipped:
+  - ...
+- Files touched:
+  - path/to/file
+- Validation:
+  - `command` -> pass/fail
+- Regressions checked:
+  - ...
+- Follow-up notes:
+  - ...
+```
+
+### notifications-normalization
+- Status: done
+- Started: 2026-03-31 17:24 PDT
+- Surfaces: popup-home roundup status, popup-home microphone permission/error feedback, popup shell toast overlay, sidepanel agent-cycle notifications, sidepanel roundup/review notifications
+- Expected files:
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/PopupShell.tsx
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Sidepanel/SidepanelApp.tsx
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelAgent.ts
+  - packages/extension/src/views/shared/NotificationBanner.tsx
+  - packages/extension/src/views/Popup/popup.css
+- Regression watchouts:
+  - Do not reintroduce inline banners that push layout or make popup/sidepanel roots scroll.
+  - Do not revert later dialog or capture-flow fixes if adjacent code changed; document tensions instead.
+  - Keep transient feedback visible and dismissible where appropriate without hijacking page structure.
+- Changes shipped:
+  - Popup shell toast output now uses the shared `NotificationBanner` pattern, so roundup and other transient popup messages stay in an overlay lane with dismiss support instead of a one-off inline status surface.
+  - Popup microphone permission/request/denial feedback now routes through the popup toast channel; the inline permission blocks were removed from popup home so they no longer add height or push the action grid down.
+  - Sidepanel generic status/error messages and agent-cycle notifications now render through a zero-height sticky toast anchor instead of an inline helper card or inline sticky banner rail, so tab content stays in place while notifications float over it.
+  - Shared notification banners now support non-persistent dismissals plus an `onDismiss` callback, which lets transient popup/sidepanel toasts clear local state without suppressing future repeats in the same session.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/global.css
+  - packages/extension/src/views/Popup/PopupApp.tsx
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/PopupScreenRouter.tsx
+  - packages/extension/src/views/Popup/PopupShell.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts
+  - packages/extension/src/views/Popup/hooks/usePopupRecording.ts
+  - packages/extension/src/views/Popup/popup.css
+  - packages/extension/src/views/Sidepanel/SidepanelApp.tsx
+  - packages/extension/src/views/shared/NotificationBanner.tsx
+  - packages/extension/src/views/shared/__tests__/NotificationBanner.test.tsx
+- Validation:
+  - `cd packages/extension && bun run build` -> pass
+  - `bun run test -- packages/extension/src/views/shared/__tests__/NotificationBanner.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Sidepanel/__tests__/SidepanelApp.test.tsx packages/extension/src/views/Sidepanel/hooks/__tests__/useSidepanelAgent.test.ts` -> pass
+  - `bun run validate smoke` -> pass
+- Regressions checked:
+  - Popup home remains on the shared fixed-height shell path; transient microphone/roundup feedback no longer inserts extra blocks into the home body.
+  - Sidepanel agent-cycle request/error messaging and pending-review notifications no longer consume document flow ahead of tab content.
+  - Shared banner dismissal still persists for session-scoped reminder banners, while transient popup/sidepanel toasts can dismiss without muting future identical messages.
+  - Unsupported-audio microphone fallback now emits the same popup toast path as permission denial, and the hook/unit expectations were updated to keep the shared notification contract explicit.
+- Follow-up notes:
+  - The unrelated `ChickenYard` worktree drift in `packages/extension/src/views/Popup/PopupHomeScreen.tsx` was removed during review so this task no longer carries adjacent behavior changes outside notification normalization.
+  - `packages/extension/src/views/Sidepanel/tabs/NestInviteSection.tsx` still uses its own `nest-toast` pattern. It is already non-blocking and was left alone, but it is the next obvious place to unify if notification styling should be made fully consistent across sidepanel subsections.
+
+### popup-roundup-concurrency
+- Status: done
+- Started: 2026-03-31 18:02 PDT
+- Surfaces: popup-home roundup CTA, popup quick-capture action grid, popup note bar, popup capture orchestration state, shared capture action gating
+- Expected files:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/PopupScreenRouter.tsx
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/__tests__/PopupHomeScreen.test.tsx
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupOrchestration.test.ts
+- Regression watchouts:
+  - Do not reintroduce inline roundup banners or status blocks; transient feedback must stay on the shared popup toast path.
+  - Keep popup home responsive during long-running roundup work without weakening recording, screenshot, or save-path safety checks.
+  - Preserve deliberate queueable capture behavior so manual tab capture, screenshot, audio, and file flows can still feed Chickens while roundup is in flight.
+- Changes shipped:
+  - Split popup capture gating so roundup now tracks its own in-flight state, emits a non-blocking toast when it starts, and no longer freezes unrelated popup capture actions or the note bar while open-tab scanning runs.
+  - Popup home now treats roundup as a passive progress state: the roundup CTA alone shows `Rounding up…`, while capture tab, screenshot, audio, file selection, paste, and note save stay usable unless a direct capture/save or recording lock is actually active.
+  - Popup manual roundup no longer auto-navigates to Chickens from the home screen, which avoids interrupting concurrent recording or capture-review work once the popup stays interactive during the roundup.
+  - Added regression coverage for the shared hook and popup home so roundup can overlap with active-tab capture, while duplicate roundups and direct capture/save locks still behave safely.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/views/Popup/PopupDraftListScreen.tsx
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/PopupScreenRouter.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupHomeScreen.test.tsx
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupOrchestration.test.ts
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+- Validation:
+  - `cd packages/extension && bun run build` -> pass (existing Vite chunk-size/dynamic-import warnings only)
+  - `bun run test -- packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/hooks/__tests__/usePopupOrchestration.test.ts packages/extension/src/views/Popup/__tests__/PopupHomeScreen.test.tsx` -> pass
+  - `bun run validate quick` -> fail, unrelated pre-existing repo typecheck errors in `packages/app/src/hooks/__tests__/useCapture.behavior.test.ts`, `packages/app/src/hooks/__tests__/usePairingFlow.test.ts`, `packages/app/src/hooks/__tests__/useReceiverSettings.behavior.test.ts`, `packages/app/src/hooks/__tests__/useReceiverSync.behavior.test.ts`
+  - `bunx tsc --noEmit -p packages/extension/tsconfig.json` -> fail, unrelated pre-existing extension typecheck errors across background/sidepanel test files and existing dashboard/sidepanel typing drift
+  - `bunx @biomejs/biome check packages/extension/src/views/shared/useCaptureActions.ts packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts packages/extension/src/views/Popup/PopupScreenRouter.tsx packages/extension/src/views/Popup/PopupHomeScreen.tsx packages/extension/src/views/Popup/PopupDraftListScreen.tsx packages/extension/src/views/Popup/__tests__/PopupHomeScreen.test.tsx packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/hooks/__tests__/usePopupOrchestration.test.ts` -> pass
+- Regressions checked:
+  - Roundup still blocks only duplicate roundups and keeps using the shared popup toast path instead of reintroducing inline status blocks.
+  - Popup home capture actions and note controls remain enabled during roundup, but direct capture/save flows still lock their own unsafe controls.
+  - Empty-Chickens roundup CTA now mirrors the passive in-progress label so duplicate roundups stay suppressed outside home as well.
+  - Capture-review dialog save locking continues to follow the non-roundup capture busy state, and the popup-home yard chickens now use semantic buttons with keyboard activation rather than mouse-only spans.
+- Follow-up notes:
+  - If product wants popup roundup completion to route into Chickens again, add that back only behind an idle-state/user-intent guard; unconditional auto-navigation is disruptive now that recording and other capture actions can stay active during the roundup.
+  - Repo-level `validate quick` and standalone extension typecheck are currently blocked by unrelated existing type errors outside this task, so the next agent should not treat those failures as regressions from `popup-roundup-concurrency` without re-baselining the broader worktree first.
+
+### roundup-permission-proactive
+- Status: done
+- Started: 2026-03-31 14:01 PDT
+- Surfaces: popup roundup permission fallback, popup workspace intent routing, sidepanel chickens permission card, sidepanel intent consumption, sidepanel roundup capture hook
+- Expected files:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/runtime/messages.ts
+  - packages/extension/src/views/shared/capture-preflight.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Sidepanel/SidepanelApp.tsx
+  - packages/extension/src/views/Sidepanel/SidepanelTabRouter.tsx
+  - packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelOrchestration.ts
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx
+  - packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts
+- Regression watchouts:
+  - Do not reintroduce popup permission requests that trigger Chromium popup dismissal.
+  - Keep popup feedback on the shared non-blocking toast path; no inline roundup permission blocks.
+  - Preserve active-tab capture and screenshot behavior without requiring broad roundup permissions.
+  - Keep passive permission nudges suppressible for the current session while explicit popup roundup attempts still route into the sidepanel permission step.
+- Changes shipped:
+  - Popup roundup no longer calls `chrome.permissions.request(...)`. When broad host access is missing, popup shows the shared non-blocking toast and opens the sidepanel directly into a new `roundup-access` Chickens intent instead.
+  - Sidepanel intent routing now supports `roundup-access` plus a `roundupAccessMode`, so the same Chickens permission card can handle both proactive onboarding (`prompt`) and explicit popup follow-up (`grant-and-roundup`).
+  - Chickens now shows a dedicated permission card when roundup access is missing. The copy keeps the local-first/privacy framing explicit, `Not now` suppresses only the passive nudge for the current session, and explicit popup-triggered flows can still request access and immediately run roundup after grant.
+  - Post-create `Enter Coop` now opens the workspace onboarding flow instead of dropping back to popup home, so the first durable workspace visit can surface the passive roundup-access prompt when needed.
+  - Sidepanel roundup access handling now tracks granted/missing state separately from capture execution and keeps active-tab capture, screenshot, and other non-roundup popup actions working without broad roundup permissions.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/runtime/messages.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - packages/extension/src/views/Sidepanel/SidepanelApp.tsx
+  - packages/extension/src/views/Sidepanel/SidepanelTabRouter.tsx
+  - packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts
+  - packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx
+- Validation:
+  - `cd packages/extension && bun run build` -> pass (existing Vite dynamic-import/chunk-size warnings only)
+  - `bun run test packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx` -> pass
+  - `bunx biome check packages/extension/src/runtime/messages.ts packages/extension/src/views/shared/useCaptureActions.ts packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Sidepanel/SidepanelApp.tsx packages/extension/src/views/Sidepanel/SidepanelTabRouter.tsx packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx` -> pass
+- Regressions checked:
+  - Popup roundup missing-access flow no longer requests permissions from the popup surface and still uses the normalized toast path.
+  - Active-tab capture and screenshot flows remain available without broad roundup permissions.
+  - Sidepanel grant flow can request access without leaving the durable workspace surface, and the explicit popup-triggered path auto-runs roundup only after access is granted.
+  - Passive roundup permission nudges can be dismissed for the current session without muting explicit popup-triggered follow-up prompts.
+- Follow-up notes:
+  - The passive roundup-access dismissal currently lives in sidepanel `sessionStorage`, so it is scoped to the current sidepanel session/window. If product wants suppression to survive sidepanel reopen or sync across windows, move that flag into shared popup/sidepanel UI state.
+  - The new `SidepanelIntent.roundupAccessMode` contract is now the clean handoff point for any future sidepanel onboarding overlay or post-join coachmark; reuse it rather than adding popup-side permission branching again.
+
+### shared-capture-dialog-cleanup
+- Status: done
+- Started: 2026-03-31 22:10 PDT
+- Surfaces: popup capture review dialog, shared capture action hooks, popup dialog CSS, file upload flow, screenshot flow
+- Expected files:
+  - packages/extension/src/views/Popup/PopupCaptureReviewDialog.tsx
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/popup.css
+- Regression watchouts:
+  - Do not reintroduce inline banners that push layout; all transient feedback must stay on the shared toast path.
+  - Keep screenshot and file-upload behavior aligned through the same dialog contract.
+  - Preserve popup width constraints (304px dialog, no horizontal overflow).
+  - Do not break the existing blob URL cleanup in usePopupOrchestration.
+  - Preserve audio capture review flow which does not show a preview (no previewUrl).
+- Prior task overlap:
+  - `notifications-normalization` touched PopupShell, NotificationBanner, and popup toast channel — must not reintroduce inline status blocks.
+  - `popup-roundup-concurrency` touched useCaptureActions and usePopupOrchestration — must not alter roundup/capture gating behavior.
+  - `roundup-permission-proactive` touched useCaptureActions and sidepanel ChickensTab — must not alter permission flow routing.
+- Changes shipped:
+  - Capture review dialog now shows image previews for both screenshot and file-upload flows through the same `previewUrl` contract. Screenshots already set a data URI; file uploads now set a blob URL for images, both rendered by the same `popup-preview-card` element.
+  - Non-image files now show a structured file summary card (icon + name + extension + size) instead of an empty body, using new `.popup-file-summary` CSS.
+  - Dialog heading changed from "Add context before saving" to "Review before saving", and the save button from "Save to Pocket Coop" to "Save as draft" — aligning with the session-state guardrail that draft capture is pre-coop.
+  - Success toast messages updated from "Screenshot saved to Pocket Coop finds." / "File saved to Pocket Coop finds." / "Voice note saved." to "Screenshot saved as draft." / "File saved as draft." / "Voice note saved as draft."
+  - Dialog details section now only renders when there's actually a fileName or sourceUrl to show, avoiding an empty "Details" label for audio captures.
+  - Long file names in the meta section now wrap properly via `.popup-mini-pill--wrap` using `overflow-wrap: break-word` (not `break-all`), and the `.popup-dialog__meta` container uses `overflow: hidden` + `min-width: 0` to prevent horizontal overflow.
+  - Textarea rows reduced from 4 to 3 and min-height from 88px to 72px so the dialog body fits within popup height constraints when an image preview is shown.
+  - Large image file uploads (>2 MB) are now compressed client-side using `compressImage` from `@coop/shared` before entering the draft flow. The compression uses the same 1920×1080 / WebP / 0.82 quality defaults as the background screenshot handler. Falls back to the original file on compression failure with a `console.warn`.
+  - The "Voice note" label in the kind pill was changed to lowercase for consistency.
+  - Post-review fixes: `formatDuration(0)` no longer returns null (was treating 0 as falsy); fractional seconds are floored before formatting; `toSavePayload` title fallback changed from no-op `|| pendingCapture.title` to `|| 'Untitled capture'`; FileIcon viewBox standardized to 20×20 to match codebase convention with 1.4 strokeWidth.
+- Files touched:
+  - packages/extension/src/views/Popup/PopupCaptureReviewDialog.tsx
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/popup.css
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+- Validation:
+  - `cd packages/extension && bun run build` -> pass (existing Vite chunk-size/dynamic-import warnings only)
+  - `bun run test -- <3 test files>` -> pass (54 tests, 3 files — 3 new compression tests added)
+  - `bunx @biomejs/biome check <all changed files>` -> pass
+- Regressions checked:
+  - Image preview renders for both screenshot (data URI) and file upload (blob URL) flows through the same `popup-preview-card` element; audio captures continue to show no preview.
+  - Non-image file captures now show a structured summary card instead of an empty dialog body.
+  - Blob URL cleanup in `usePopupOrchestration.replacePendingCapture` still works because `previewUrl` format is unchanged — blob URLs start with `blob:` and get revoked.
+  - Roundup and capture gating in `useCaptureActions` is untouched — only `prepareFileCapture` and `savePendingCapture` success messages changed.
+  - Dialog width remains `min(304px, 100%)` with no horizontal overflow; pills wrap with `overflow-wrap: break-word`, meta container is overflow-protected.
+  - No inline notification blocks were reintroduced; all transient feedback stays on the popup toast path.
+  - `formatDuration` now handles 0-second durations and fractional seconds correctly.
+  - `compressImage` compression path, failure fallback, and skip-for-small-images paths all covered by new unit tests.
+- Follow-up notes:
+  - Sidepanel "Pocket Coop" references in `NestReceiverSection`, `NestSettingsSection`, `useTabCapture`, `useDraftEditor`, and `useSidepanelInvites` were intentionally not changed — they refer to the companion PWA receiver feature, not the capture dialog. If product wants unified draft language across sidepanel receiver copy too, that is a separate task.
+  - The `compressImage` import from `@coop/shared` uses `HTMLCanvasElement` in the popup main thread context. If a future change moves file preparation to the background, switch to the `OffscreenCanvas` path that `compressImage` already supports.
+  - The dialog does not yet show audio waveform previews — audio captures still render with no visual preview. That would be a separate enhancement.
+  - The `.popup-mini-pill--muted` standalone MIME type pill was removed from the details section since it added visual noise for little value when the file name pill already implies the type. If product wants it back, add it to the details section conditionally.
+  - Copy inconsistency: `createNoteDraft` still says "Note hatched into your roost." which uses different phrasing from the "saved as draft" pattern. If product wants full copy alignment, that should be a separate task since it touches a different code path.
+
+### audio-permission-flow
+- Status: done
+- Started: 2026-03-31 23:05 PDT
+- Surfaces: popup audio CTA state, popup recording permission flow, shared capture save orchestration, popup capture review dialog, shared audio preview contract
+- Expected files:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/PopupCaptureReviewDialog.tsx
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Popup/hooks/usePopupRecording.ts
+  - packages/extension/src/views/Popup/popup.css
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+- Regression watchouts:
+  - Keep audio feedback on the shared popup toast path; do not reintroduce inline banners or layout-shifting error blocks.
+  - Do not freeze unrelated popup actions while microphone permission or recording work is in flight.
+  - Preserve the shared capture-review contract across screenshot, file, and audio flows; if audio gains a preview, keep image preview behavior unchanged.
+  - Preserve popup width/height constraints and avoid overflow while adding any audio preview affordance.
+  - Distinguish promptable, denied, unsupported, and unavailable recording states so popup copy stays precise and non-disruptive.
+- Prior task overlap:
+  - `notifications-normalization` touched popup toast handling and `usePopupRecording`; audio errors must continue to route through non-blocking overlays.
+  - `popup-roundup-concurrency` touched popup orchestration and `useCaptureActions`; audio fixes must not reintroduce global busy-state freezes.
+  - `shared-capture-dialog-cleanup` touched the shared review dialog contract and explicitly left audio preview as follow-up work; this task expands that shared behavior and should retire the follow-up note if preview ships.
+- Changes shipped:
+  - Popup microphone start now checks browser microphone permission state before calling `getUserMedia`, so a previously blocked microphone is reported as blocked without pretending the browser will still prompt.
+  - Popup audio start failures are now classified into specific states instead of collapsing into generic denial: true blocked permission, unsupported popup recording environment, prompt not granted yet, missing microphone hardware, and busy/unavailable microphone capture all get distinct user-facing copy through the shared popup toast lane.
+  - Promptable microphone flows keep the existing popup user-gesture path, but denial copy is only shown when the browser permission state is actually `denied`; promptable `NotAllowedError` failures now stay recoverable and non-accusatory.
+  - Shared capture preview behavior now treats audio like other previewable media when technically reasonable: popup voice notes and uploaded audio files receive a blob-backed `previewUrl`, and the shared review dialog renders a compact native audio player card before save.
+  - The shared capture-review rule is now: image captures render an image preview, audio captures render an inline audio preview when a preview URL is available, and other file captures fall back to the summary card. This retires the old `shared-capture-dialog-cleanup` follow-up note that said audio preview was still separate work.
+  - Review pass follow-up: successful recording no longer clears unrelated popup toasts when microphone access was already granted, so concurrent roundup feedback stays visible.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/views/Popup/PopupCaptureReviewDialog.tsx
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts
+  - packages/extension/src/views/Popup/hooks/usePopupRecording.ts
+  - packages/extension/src/views/Popup/popup.css
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+- Validation:
+  - `bun run test -- packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx` -> fail first (expected RED before implementation: permission-state/audio-preview assertions failed), then pass after the fix
+  - `cd packages/extension && bun run build` -> pass (existing Vite dynamic-import/chunk-size warnings only)
+  - `bun run validate smoke` -> pass
+  - `bunx @biomejs/biome check .plans/features/popup-sidepanel-walkthrough/eval/session-state.md packages/extension/src/views/Popup/PopupCaptureReviewDialog.tsx packages/extension/src/views/Popup/PopupHomeScreen.tsx packages/extension/src/views/Popup/hooks/usePopupRecording.ts packages/extension/src/views/Popup/popup.css packages/extension/src/views/shared/useCaptureActions.ts packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx` -> pass
+  - Review follow-up: `bun run test -- packages/extension/src/views/Popup/hooks/__tests__/usePopupRecording.test.ts packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts` -> pass
+  - Review follow-up: `cd packages/extension && bun run build` -> pass
+- Regressions checked:
+  - Popup audio errors still surface through the normalized toast overlay; no inline permission/error blocks were added back into popup home.
+  - Popup home remains responsive relative to roundup: this task did not reintroduce global roundup busy-state freezing, and audio still only locks the controls that were already tied to direct audio capture state.
+  - Screenshot image preview behavior is unchanged, non-image file captures still use the summary card, and uploaded audio files now align with microphone captures through the same preview contract rather than a popup-only branch.
+  - Audio preview fits the existing popup dialog width/height constraints using the same `304px` review shell and a compact native player card; no new horizontal overflow path was introduced.
+  - True blocked permission now shows only when the browser reports `denied`; promptable/unavailable states use specific recovery copy instead of the old generic denial message.
+  - Starting audio while a roundup toast is already visible no longer clears that unrelated popup message when microphone access is already granted.
+- Follow-up notes:
+  - The audio preview uses native `<audio controls>` instead of a decoded waveform. That keeps the preview reliable inside popup constraints and lets users confirm the capture immediately; if product wants a richer waveform later, build it on top of the new audio `previewUrl` contract rather than adding a separate audio-review surface.
+  - Permission-state classification currently depends on `navigator.permissions.query({ name: 'microphone' })` when the browser exposes it. If a future target browser omits that API for extension pages, the fallback path intentionally prefers generic recoverable messaging over falsely claiming denial.
+
+### manual-tab-capture-dedupe
+- Status: done
+- Started: 2026-03-31 15:53 PDT
+- Surfaces: popup manual tab capture CTA, shared capture action dedupe state, popup orchestration status messaging, background/shared tab-capture pipeline, popup review/save handoff
+- Expected files:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+  - packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts
+  - packages/extension/src/views/Popup/hooks/__tests__/usePopupOrchestration.test.ts
+  - packages/extension/src/views/Popup/PopupHomeScreen.tsx
+  - packages/extension/src/views/Popup/__tests__/PopupHomeScreen.test.tsx
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/background/handlers/capture.ts
+  - packages/extension/src/runtime/messages.ts
+- Regression watchouts:
+  - Respect explicit manual recapture intent; only suppress immediate accidental duplicate fire.
+  - Do not reintroduce global popup busy-state freezes or roundup blocking while tab capture work is in flight.
+  - Keep all feedback on the normalized non-blocking toast path; no inline refusal/error blocks in popup home.
+  - Do not disturb screenshot, file-upload, audio review, or shared capture-review save behavior while changing tab-capture dedupe.
+  - Preserve review/save flow for intentionally recaptured tabs and avoid duplicate-save corruption in the shared pipeline.
+- Prior task overlap:
+  - `popup-roundup-concurrency` changed `useCaptureActions`, `usePopupOrchestration`, and popup home gating; this task must preserve queueable capture behavior while adjusting manual tab dedupe.
+  - `roundup-permission-proactive` changed `useCaptureActions`, runtime messages, and sidepanel tab-capture coordination; manual tab recapture changes must not weaken roundup permission routing or sidepanel behavior.
+  - `notifications-normalization` and `audio-permission-flow` normalized popup feedback onto the toast path; any tab-capture messaging changes must stay on that contract.
+- Changes shipped:
+  - Explicit active-tab capture now uses a short 5-second duplicate window instead of inheriting the broader roundup/manual capture cooldown, so deliberate recaptures of the same tab stop feeling blocked by the background dedupe policy.
+  - When a user re-triggers `Capture Tab` inside that short accidental-repeat window, the runtime returns a structured `duplicateSuppressed` result instead of silently looking like a generic zero-result capture. Popup and sidepanel both translate that into cooperative toast copy: "Captured this tab a moment ago. Choose Capture Tab again to recapture it now."
+  - A second explicit `Capture Tab` click within the short intent window now sends `allowRecentDuplicate: true` through the runtime message and bypasses the recent-duplicate guard for that active-tab capture only. That keeps immediate accidental double-fire suppressed while still respecting clear user intent.
+  - Shared roundup dedupe, screenshot/file/audio review flows, and popup toast normalization were left on their existing paths. The only runtime contract expansion is for explicit active-tab capture result/payload handling.
+  - Review follow-up fix: roundup observations now include `candidateIds` alongside `extractIds`, so an intentional recapture that reuses an existing extract still emits a fresh `roundup-batch-ready` observation and requests a new routing cycle instead of silently collapsing onto the previous observation fingerprint.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/runtime/messages.ts
+  - packages/extension/src/background/runtime-capture-dispatch.ts
+  - packages/extension/src/background/handlers/agent-observation-emitters.ts
+  - packages/extension/src/background/handlers/capture.ts
+  - packages/extension/src/background/__tests__/runtime-capture-dispatch.test.ts
+  - packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts
+  - packages/extension/src/background/handlers/__tests__/capture-handlers.test.ts
+  - packages/extension/src/views/shared/useCaptureActions.ts
+  - packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts
+  - packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx
+  - packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx
+  - packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts
+  - packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts
+- Validation:
+  - `cd packages/extension && bun run build` -> pass (existing Vite dynamic-import/chunk-size warnings and upstream transformers PURE-comment warning only)
+  - `bun run test -- packages/extension/src/background/__tests__/runtime-capture-dispatch.test.ts packages/extension/src/background/handlers/__tests__/capture-handlers.test.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts` -> pass
+  - `bun run validate smoke` -> pass
+  - `bunx @biomejs/biome format --write packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts` -> pass
+  - `bun run test -- packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts && bunx @biomejs/biome check packages/extension/src/runtime/messages.ts packages/extension/src/background/runtime-capture-dispatch.ts packages/extension/src/background/handlers/capture.ts packages/extension/src/background/__tests__/runtime-capture-dispatch.test.ts packages/extension/src/background/handlers/__tests__/capture-handlers.test.ts packages/extension/src/views/shared/useCaptureActions.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts .plans/features/popup-sidepanel-walkthrough/eval/session-state.md` -> pass
+  - Review follow-up: `bun run test -- packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts packages/extension/src/background/handlers/__tests__/capture-handlers.test.ts packages/extension/src/background/__tests__/runtime-capture-dispatch.test.ts packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts` -> pass
+  - Review follow-up: `cd packages/extension && bun run build` -> pass
+  - Review follow-up: `bunx @biomejs/biome format --write packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts && bun run validate smoke` -> pass
+- Regressions checked:
+  - Popup home still keeps roundup isolated from direct active-tab capture; the active-tab button remains available during roundup and did not regain the old global busy freeze.
+  - Toast/status messaging stays on the normalized non-blocking popup/sidepanel path; no inline refusal banner was added back for manual tab capture.
+  - Roundup/manual broad-host permission routing remains unchanged. The new runtime payload/result contract is scoped to `capture-active-tab` only.
+  - Screenshot, file-upload, audio preview/review, and save-as-draft paths were not altered beyond shared-hook coexistence and still pass their existing unit/smoke coverage.
+  - Immediate duplicate suppression is still present for obvious repeat fire, but explicit second-click recapture now works end to end in both popup and sidepanel tests.
+  - Intentional recapture of a same-content tab now carries a fresh candidate identity into the roundup observation fingerprint, so the background can request a new routing cycle even when the extract itself is reused.
+- Follow-up notes:
+  - `capture-active-tab` now supports an optional `{ allowRecentDuplicate: true }` payload and returns `{ capturedCount, duplicateSuppressed? }`. Reuse that contract if another surface needs the same confirmed-recapture behavior instead of re-implementing local timing rules.
+  - The short accidental-repeat window is currently hard-coded to 5 seconds in `packages/extension/src/background/handlers/capture.ts`, while the UI-side confirm window is 12 seconds in the popup/sidepanel hooks. If product wants those tuned, keep the short accidental suppression and the explicit override path together so the UX stays cooperative.
+  - `packages/extension/src/runtime/messages.ts`, `packages/extension/src/views/shared/useCaptureActions.ts`, and `packages/extension/src/views/Sidepanel/hooks/useTabCapture.ts` already had adjacent in-progress work in the shared tree. This task only added the active-tab recapture contract/behavior on top of that existing drift.
+  - `packages/extension/src/background/handlers/agent-observation-emitters.ts` now treats `candidateIds` as part of the roundup observation payload/fingerprint. If future batching surfaces intentionally want to collapse same-extract recaptures back together, they will need an explicit policy decision rather than relying on extract-only fingerprinting.
+
+### roundup-ingestion-investigation
+- Status: done
+- Started: 2026-03-31 23:50 PDT
+- Surfaces: shared coop pipeline scoring, keyword bank construction, draft creation thresholds, roundup status messaging in popup/sidepanel, background capture result reporting
+- Expected files:
+  - packages/shared/src/modules/coop/pipeline.ts (keyword bank, scoring function)
+  - packages/shared/src/modules/coop/__tests__/pipeline.test.ts (scoring tests)
+  - packages/extension/src/runtime/agent-runner-skills.ts (draft threshold)
+  - packages/extension/src/runtime/agent-runner-inference.ts (heuristic routing)
+  - packages/extension/src/runtime/__tests__/agent-runner-inference.test.ts (routing tests)
+  - packages/extension/src/background/handlers/capture.ts (roundup status messaging)
+- Regression watchouts:
+  - Do not alter popup roundup concurrency behavior or the non-blocking toast path.
+  - Do not alter roundup permission routing through the sidepanel Chickens permission flow.
+  - Do not undo manual-tab-capture-dedupe fixes (5-second window, allowRecentDuplicate, candidateIds in observation fingerprint).
+  - Do not alter capture-review dialog, audio preview, or file upload behavior.
+  - Scoring changes must not create false-positive drafts for unrelated coops (e.g., cooking pages in a sports coop).
+- Prior task overlap:
+  - `popup-roundup-concurrency` touched popup capture gating and roundup toast status — status messaging changes must stay on the shared toast path.
+  - `roundup-permission-proactive` touched sidepanel permission routing — no changes to permission flow.
+  - `manual-tab-capture-dedupe` touched background capture handlers and observation emitters — no changes to dedup behavior.
+- Root cause analysis:
+  - **Primary: keyword bank minimum word length filter (`word.length > 3`)** drops 3-letter domain acronyms (NFL, NBA, MLB, NHL, UFC, MMA, etc.) from the keyword bank. These are critical identity terms for sports, tech, and other domain-focused coops.
+  - **Secondary: scoring formula lacks coverage awareness** — fixed per-match weights (0.12 title, 0.04 body) make it nearly impossible for sparse keyword banks (typical of new focused coops) to reach the 0.18 draft threshold. A sports coop with 3-5 keywords scoring 1-2 body matches produces raw 0.04-0.08, clamped to 0.08, far below 0.18.
+  - **Tertiary: roundup status messaging reports "Captured N tabs"** without distinguishing between tabs that became drafts and tabs that were captured but scored too low. User sees success message but no chickens appear.
+- Changes shipped:
+  - Keyword bank minimum word length lowered from `> 3` to `> 2`, allowing 3-letter domain acronyms (NFL, NBA, MLB, NHL, UFC, MMA, ESPN, etc.) into the coop keyword bank. This was the primary gate preventing domain-focused coops from matching relevant content.
+  - Added 40+ common 3-letter English stopwords (the, and, for, are, but, not, all, can, set, run, day, key, etc.) to the keyword bank stopword set, so the lower length threshold doesn't flood the bank with noise. Domain-specific acronyms (NBA, NFL, MLB, API, etc.) are intentionally NOT in the stopword list.
+  - Replaced substring `.includes()` matching with word-boundary `tokenize()` + `Set.has()` in `scoreAgainstCoop()`. The old code would false-positive on "nba" inside "unbalanced", "urban", etc. The new `tokenize()` helper splits text on non-alphanumeric boundaries into a Set for O(1) word-level lookup. This is also a performance improvement (Set lookup vs linear string scan per token).
+  - Added coverage bonus to `scoreAgainstCoop()`: when ≥ 2 body matches AND ≥ 15% of the keyword bank matches, a `matchRatio * 0.18` bonus is added to the raw score. The `bodyMatches >= 2` guard prevents single-word false positives from tiny keyword banks.
+  - Added early return for empty keyword bank (`bank.length === 0 → 0.08`) to avoid division by zero in coverage ratio.
+  - Added 5 targeted test cases for sports coop roundup ingestion: NBA article routing, NFL article routing, unrelated (cooking) article rejection, title-absent-keyword routing, and substring false-positive guard ("unbalanced" must not match "nba").
+- Files touched:
+  - packages/shared/src/modules/coop/pipeline.ts (keyword bank length filter, stopwords, tokenizer, scoring function)
+  - packages/shared/src/modules/coop/__tests__/pipeline.test.ts (5 new sports coop tests)
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+- Validation:
+  - `bun run test -- packages/shared/src/modules/coop/__tests__/pipeline.test.ts` -> pass (16 tests, 5 new)
+  - `bun run test -- packages/shared/src/modules/coop/` -> pass (199 tests, 14 files)
+  - `bun run test -- packages/extension/src/runtime/__tests__/agent-runner-inference.test.ts` -> pass (3 tests)
+  - `bun run test -- packages/extension/src/background/ packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx` -> pass (487 passing, 1 pre-existing failure in `agent-observation-conditions.test.ts` confirmed on clean main)
+  - `bun run validate smoke` -> 2927 passing, 1 pre-existing failure (same `agent-observation-conditions.test.ts`), build passes
+  - `bunx @biomejs/biome check <all changed files>` -> pass
+- Regressions checked:
+  - Existing pipeline tests (watershed coop, near-duplicate detection, transcript inference) all pass with unchanged behavior — the coverage bonus and lower keyword threshold do not inflate scores for coops with rich keyword banks because the coverage ratio stays low when the bank is large.
+  - Agent runner inference heuristic routing tests pass — the scoring changes flow through `interpretExtractForCoop` and `inferTabRoutingsHeuristically` without altering the routing contract.
+  - Background capture handler, runtime dispatch, and observation emitter tests pass — no changes were made to the capture pipeline, dedup logic, observation fingerprinting, or agent cycle dispatch.
+  - Popup/sidepanel capture actions, roundup concurrency, and permission routing were not touched and continue to pass their existing test coverage.
+  - The cooking article test confirms that unrelated content scores below 0.18 and does NOT create false-positive drafts for a sports-focused coop.
+  - The substring guard test confirms "unbalanced" (containing "nba" as a substring) does not false-positive against a sports coop with "nba" in its keyword bank.
+  - Pre-existing `agent-observation-conditions.test.ts` failure confirmed via `git stash` — fails identically on clean main and is unrelated to this task.
+- Follow-up notes:
+  - **Roundup status messaging still says "Rounded up N tabs" without indicating how many became drafts.** This conflation can still mislead users when tabs are captured but score below the draft threshold for reasons other than topic mismatch (e.g., very sparse page content, boilerplate-heavy pages). Fixing this requires enriching the `runCaptureForTabs` return value or adding a post-agent-cycle query for created drafts. Deferred to a separate task since the scoring fix addresses the primary ingestion failure.
+  - **The 0.18 draft threshold in `persistTabRouterOutput` (agent-runner-skills.ts:700) and `runPassivePipeline` (pipeline.ts:608) was left unchanged.** The coverage bonus makes the threshold reachable for focused coops without lowering the bar globally. If future coops still underperform, consider a per-coop adaptive threshold based on keyword bank richness.
+  - **The coverage bonus uses `bodyMatches >= 2 && matchRatio >= 0.15` as the activation gate.** This was calibrated so that a 5-keyword bank needs at least 2 body matches (2/5 = 0.4 > 0.15, and 2 >= 2), while a 50-keyword bank needs 8+ matches (which already produces a sufficient absolute score). The `bodyMatches >= 2` guard was added during review to prevent single-token false positives from tiny keyword banks.
+  - **Domain-level category boosting** (e.g., recognizing espn.com as a "sports" domain) was not implemented. The coverage bonus and keyword expansion handle the common case. If users consistently capture from known domains that should auto-boost, consider adding a domain taxonomy signal to the scoring function.
+  - **`classifyLenses()` still uses `.includes()` on a joined string** (pipeline.ts:554) but only matches 4+ char lens-specific keywords from `lensKeywords`, so substring collision risk is minimal and was not changed to keep scope tight.
+
+### chickens-feed-tone-down
+- Status: done
+- Started: 2026-03-31 PDT
+- Surfaces: sidepanel Chickens tab (Review and Shared segments), compact card CSS, time-group rendering
+- Expected files:
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx
+  - packages/extension/src/global.css
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+- Regression watchouts:
+  - Do not alter roundup ingestion behavior, draft creation thresholds, or scoring pipeline (roundup-ingestion-investigation).
+  - Do not alter popup roundup concurrency or the non-blocking toast path (popup-roundup-concurrency, notifications-normalization).
+  - Do not alter capture-review dialog, audio preview, or permission flows (shared-capture-dialog-cleanup, audio-permission-flow, roundup-permission-proactive).
+  - Do not alter manual-tab-capture dedupe or observation fingerprinting (manual-tab-capture-dedupe).
+  - Draft/capture language must stay pre-coop; do not drift back to direct-save framing.
+  - Feed plumbing (buildReviewItems, buildProactiveSignals, groupByTime) must remain functionally unchanged.
+- Prior task overlap:
+  - `roundup-ingestion-investigation` changed shared pipeline scoring but did NOT touch ChickensTab rendering — no conflict.
+  - `roundup-permission-proactive` added roundup access permission card to ChickensTab — must preserve that card's rendering.
+  - `popup-roundup-concurrency` touched popup home but not sidepanel ChickensTab rendering — no conflict.
+  - `notifications-normalization` touched sidepanel toast anchor but not ChickensTab card rendering — no conflict.
+- Changes shipped:
+  - CSS: Compact cards now use transparent borders with a subtle box-shadow instead of a solid border, creating a softer visual separation that reduces scan-time noise across multiple cards.
+  - CSS: The `coop-rise` animation now uses a gentler 4px fade-in over 400ms instead of 10px translate + scale over 320ms, so burst-loaded feeds feel less visually frenetic.
+  - CSS: Insight text is now single-line truncated (was 2-line `-webkit-line-clamp`) with reduced opacity, cutting per-card visual height by ~20px on average and making titles the dominant scan target.
+  - CSS: Category badges are smaller (0.66rem, was 0.7rem) and use 0.8 opacity, de-emphasizing repetitive category labels across many cards.
+  - CSS: Time group item gap reduced from 0.5rem to 0.35rem for tighter stacking within time sections.
+  - TSX: Tags moved from the card surface into the `<details>` expansion for both review and shared cards, reducing per-card info density from 5-6 pieces to 3-4 (category+time, title, insight, source) while keeping tags accessible on demand.
+  - TSX: Orientation artifacts (categories: setup-insight, coop-soul, ritual, seed-contribution) are now grouped into a single `OrientationSummaryCard` in the Shared segment instead of rendering 4 separate full-weight cards. The Coop Soul summary appears as the card's main text, with other orientation items listed compactly by title.
+  - TSX: Time groups with more than 3 items now collapse behind a "Show N more" button, preventing burst-loaded onboarding feeds from overwhelming the viewport. The toggle expands the full list inline.
+  - TSX: Shared segment count badge uses `sharedItems.length + (orientationItems.length > 0 ? 1 : 0)` so the count matches visible items (real cards + 1 for the orientation summary when present).
+  - CSS: Added `:focus-visible` outlines on the overflow toggle button and the `<details>` summary element for keyboard accessibility.
+  - CSS: Orientation summary border-radius uses `var(--coop-radius-button)` instead of hardcoded `14px`.
+- Files touched:
+  - packages/extension/src/global.css
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+- Validation:
+  - `bun run test -- packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx` -> pass (13 tests, 3 new: orientation grouping, overflow collapse, tags-in-details)
+  - `bun run test -- packages/extension/src/views/Sidepanel/tabs/__tests__/` -> pass (91 tests, 9 files)
+  - `cd packages/extension && bun run build` -> pass
+  - `bunx @biomejs/biome check <all changed files>` -> pass
+- Regressions checked:
+  - All 10 pre-existing ChickensTab interaction tests pass unchanged, including shared segment rendering, review segment rendering, filter behavior, focus highlighting, empty states, and roundup permission flows.
+  - Feed plumbing (buildReviewItems, buildProactiveSignals, groupByTime, buildCategoryOptions) was not altered — only the rendering layer consumes items differently.
+  - Roundup ingestion pipeline, draft creation thresholds, scoring, and observation fingerprinting are completely untouched.
+  - Popup roundup concurrency, notification normalization, capture dialog, audio permission, and manual tab-capture dedupe paths are all untouched.
+  - The Shared segment empty state still works correctly because the condition now checks for `sharedTimeGroups.length > 0 || orientationItems.length > 0`, so a coop with only orientation artifacts still renders content instead of the empty state.
+  - Shared tab count badge is accurate (uses `allSharedItems.length` not `sharedItems.length`).
+- Follow-up notes:
+  - The `OrientationSummaryCard` currently shows all orientation artifacts grouped. If product wants the Coop Soul to be editable or individually expandable from this card, add an inline edit affordance to the soul text.
+  - The overflow collapse threshold is hardcoded to 3 (`TIME_GROUP_VISIBLE_LIMIT`). If product wants a different threshold per segment or per time group density, parameterize it.
+  - The orientation category set (`setup-insight`, `coop-soul`, `ritual`, `seed-contribution`) is defined inline in ChickensTab. If new system-generated artifact categories are added, update the `ORIENTATION_CATEGORIES` set.
+  - Tags are now only visible inside the `<details>` expansion. If product wants to surface high-value tags (e.g., coop-matched ritual lenses) on the card surface selectively, add a tag relevance filter rather than showing all tags.
+
+### signal-draft-consolidation
+- Status: done
+- Started: 2026-03-31 PDT
+- Surfaces: sidepanel Chickens tab (Review segment), compact card rendering, push controls, signal/draft merge logic, background draft promotion handler
+- Expected files:
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx (buildReviewItems dedup, PushControls unification, card rendering convergence)
+  - packages/extension/src/views/Sidepanel/hooks/useDraftEditor.ts (promoteSignalToDraft method)
+  - packages/extension/src/runtime/messages.ts (promote-signal-to-draft message type)
+  - packages/extension/src/background/handlers/review.ts (handler for draft promotion)
+  - packages/extension/src/background.ts (handler dispatch registration)
+  - packages/extension/src/global.css (minor CSS for surface tags)
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx (updated/new tests)
+- Regression watchouts:
+  - Do not regress compact card rendering from `chickens-feed-tone-down` (calmer hierarchy, orientation grouping, overflow collapse).
+  - Do not alter roundup ingestion scoring, draft creation thresholds, or keyword bank changes from `roundup-ingestion-investigation`.
+  - Do not alter popup roundup concurrency, notification normalization, or capture dialog behavior.
+  - Do not alter audio permission flow, manual-tab-capture dedupe, or observation fingerprinting.
+  - Do not reintroduce inline notification patterns or coop-specific pre-review copy.
+  - Keep feed plumbing (buildReviewItems inputs, buildProactiveSignals, groupByTime) functionally compatible.
+  - Preserve image/audio preview behavior already established in popup review flows.
+- Prior task overlap:
+  - `chickens-feed-tone-down` touched ChickensTab card rendering, tags-in-details, orientation grouping — this task builds on that card shell and restores subtle surface tags per unified contract requirement.
+  - `roundup-permission-proactive` added roundup access permission card to ChickensTab — must preserve.
+  - `roundup-ingestion-investigation` improved scoring pipeline — no scoring changes in this task.
+  - `manual-tab-capture-dedupe` touched background capture handlers — no capture handler changes.
+  - `shared-capture-dialog-cleanup` and `audio-permission-flow` touched popup review dialog — no dialog changes.
+- Changes shipped:
+  - Signal+draft merge: When a `ProactiveSignal` has a `draftId` that matches a visible draft, `buildReviewItems` now merges them into a single `ReviewItem` with `kind: 'draft'` (actionable) while carrying the signal's support metadata for progressive disclosure. Users no longer see duplicate cards for the same content.
+  - Push controls for all items: `PushControls` no longer gates on `kind === 'draft'`. Drafts use existing `publishDraft`. Orphan signals (no linked draft) use a new `promoteSignalAndPublish` path that first creates a persistent draft via the background, then publishes it. Stale observations remain without push (no coop target).
+  - New `promote-signal-to-draft` runtime message: Background handler constructs a valid `ReviewDraft` from signal metadata (title, tags, category, url, domain, targetCoops, rationale) and persists it via `saveReviewDraft`. Also updates related tab routings to `drafted` status.
+  - `useDraftEditor` expanded: Added `promoteSignalToDraft(signal)` and `promoteSignalAndPublish(signal, coopId?)` methods so views can promote orphan signals to drafts and immediately publish.
+  - Unified card rendering: `CompactCard` no longer emits `data-kind` attribute. Expanded details now use a single structure: summary (from draft or signal rationale), next move (from draft or signal), support list (when signal data present), and stale status (for observations). This replaces the previous kind-specific detail branches.
+  - Surface tags restored: Up to 2 subtle tag badges now appear on the card surface (`.compact-card__surface-tag`), while the full tag list (up to 3) remains in the `<details>` expansion. The surface tags use 0.62rem font size, 0.7 opacity — calmer than the pre-tone-down full tags but present for the unified review contract.
+  - Focused item detection simplified: No longer gates on `item.kind` to match focused IDs. Merged cards are now focusable via either `focusedSignalId` or `focusedDraftId` since they carry both references.
+- Files touched:
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+  - packages/extension/src/runtime/messages.ts
+  - packages/extension/src/background/handlers/review.ts
+  - packages/extension/src/background.ts
+  - packages/extension/src/views/Sidepanel/hooks/useDraftEditor.ts
+  - packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx
+  - packages/extension/src/global.css
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx
+- Validation:
+  - `bun run test -- packages/extension/src/views/Sidepanel/tabs/__tests__/ChickensTab-interactions.test.tsx` -> pass (16 tests, 3 new: merge, orphan signals, push controls)
+  - `bun run test -- packages/extension/src/views/Sidepanel/tabs/__tests__/` -> pass (94 tests, 9 files)
+  - `bun run test -- packages/extension/src/views/Popup/__tests__/PopupApp.test.tsx packages/extension/src/views/Popup/__tests__/popup-actions.integration.test.tsx packages/extension/src/views/shared/__tests__/useCaptureActions.test.ts packages/extension/src/views/Sidepanel/hooks/__tests__/useTabCapture.test.ts` -> pass (67 tests, 4 files)
+  - `cd packages/extension && bun run build` -> pass
+  - `bun run validate smoke` -> 2979 passing, 1 pre-existing failure (agent-observation-conditions.test.ts, confirmed on clean main)
+  - `bunx @biomejs/biome check <all changed files>` -> pass
+- Regressions checked:
+  - Compact card rendering from `chickens-feed-tone-down` preserved: calmer animation, single-line insight, overflow collapse, orientation grouping — none of these were altered.
+  - Roundup ingestion pipeline scoring from `roundup-ingestion-investigation` not touched.
+  - Popup roundup concurrency, notification normalization, capture dialog, audio permission, manual tab dedupe — all pass their existing test suites unchanged.
+  - Feed plumbing (`buildReviewItems` inputs, `groupByTime`, `buildCategoryOptions`) functionally compatible — only the merge logic was added before the sort.
+  - Shared segment rendering (orientation summary, shared artifacts) completely untouched.
+  - Image/audio preview behavior in popup review dialog untouched.
+  - No inline notification patterns or coop-specific pre-review copy reintroduced.
+  - Pre-existing `agent-observation-conditions.test.ts` failure confirmed as baseline — fails on clean main.
+- Follow-up notes:
+  - `ProactiveSignal` interface does not include a `favicon` field, though `faviconUrl` in ChickensTab accesses `signal?.favicon`. This always returns undefined for signals. A future improvement could add `faviconUrl` to the `ProactiveSignal` type by resolving it from the candidate in `buildProactiveSignals`.
+  - The `promote-signal-to-draft` handler constructs a draft with `workflowStage: 'ready'` — orphan signals go directly to publish-ready status. If product wants a candidate review step before push, change to `'candidate'`.
+  - The handler creates an `interpretationId` via `createId('interp')` since no real interpretation record exists for orphan signals. This is a synthetic ID for schema compliance. If interpretation lookups are later needed for promoted drafts, consider linking to the actual tab routing's interpretation.
+  - The `data-kind` attribute was removed from CompactCard since the unified model should not expose pipeline distinctions to the DOM. If analytics or styling needs to distinguish card origins, re-add it as a data attribute without affecting rendering.

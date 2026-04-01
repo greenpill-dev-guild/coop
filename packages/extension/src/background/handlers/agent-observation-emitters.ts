@@ -29,8 +29,12 @@ export async function emitAgentObservationIfMissing(
 export async function emitRoundupBatchObservation(input: {
   extractIds: string[];
   eligibleCoopIds: string[];
+  candidateIds?: string[];
 }) {
   const extractIds = [...new Set(input.extractIds.filter((value) => typeof value === 'string'))];
+  const candidateIds = [
+    ...new Set((input.candidateIds ?? []).filter((value) => typeof value === 'string')),
+  ];
 
   if (extractIds.length === 0 || input.eligibleCoopIds.length === 0) {
     return null;
@@ -42,6 +46,7 @@ export async function emitRoundupBatchObservation(input: {
     summary: `Route ${extractIds.length} freshly captured tab extracts into local coop contexts.`,
     payload: {
       extractIds,
+      candidateIds,
       eligibleCoopIds: input.eligibleCoopIds,
     },
   });

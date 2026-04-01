@@ -182,7 +182,7 @@ bun dev:api              # Start API server
 bun run test             # Run unit tests (vitest)
 bun run test:e2e         # Run Playwright E2E tests
 bun run test:visual      # Run visual regression tests
-bun build                # Build everything (shared -> app -> extension)
+bun run build            # Build everything (shared -> app -> extension)
 bun format && bun lint   # Format (Biome) and lint workspace
 bun run validate smoke   # Fast confidence pass
 bun run validate:store-readiness
@@ -214,7 +214,7 @@ For Playwright E2E runs, the repo starts its own local signaling server automati
 
 Coop's current release posture is mock-first.
 
-- Automated mock-first release bar: `bun run test`, `bun run test:coverage`, `bun build`,
+- Automated mock-first release bar: `bun run test`, `bun run test:coverage`, `bun run build`,
   `bun run validate:store-readiness`, and `bun run validate:production-readiness`
 - Remaining public-release blocker: manual Chrome popup QA for real-click `Capture Tab` and
   `Screenshot`

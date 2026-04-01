@@ -2,12 +2,14 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  hasBroadHostAccessMock,
   preflightActiveTabCaptureMock,
   preflightManualCaptureMock,
   preflightScreenshotCaptureMock,
   requestBroadHostAccessMock,
   sendRuntimeMessageMock,
 } = vi.hoisted(() => ({
+  hasBroadHostAccessMock: vi.fn(),
   preflightActiveTabCaptureMock: vi.fn(),
   preflightManualCaptureMock: vi.fn(),
   preflightScreenshotCaptureMock: vi.fn(),
@@ -20,6 +22,7 @@ vi.mock('../../../../runtime/messages', () => ({
 }));
 
 vi.mock('../../../shared/capture-preflight', () => ({
+  hasBroadHostAccess: hasBroadHostAccessMock,
   preflightActiveTabCapture: preflightActiveTabCaptureMock,
   preflightManualCapture: preflightManualCaptureMock,
   preflightScreenshotCapture: preflightScreenshotCaptureMock,
@@ -40,6 +43,7 @@ function makeDeps(overrides: Partial<Parameters<typeof useTabCapture>[0]> = {}) 
 describe('useTabCapture', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hasBroadHostAccessMock.mockResolvedValue(true);
     preflightManualCaptureMock.mockResolvedValue({ ok: true, needsPermission: false });
     preflightActiveTabCaptureMock.mockResolvedValue({ ok: true });
     preflightScreenshotCaptureMock.mockResolvedValue({ ok: true });
@@ -80,6 +84,59 @@ describe('useTabCapture', () => {
     expect(deps.loadDashboard).toHaveBeenCalledTimes(1);
   });
 
+  it('requests roundup access in the sidepanel and shows the success toast', async () => {
+    const deps = makeDeps();
+    hasBroadHostAccessMock.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useTabCapture(deps));
+
+    await act(async () => {
+      await result.current.requestRoundupAccess();
+    });
+
+    expect(requestBroadHostAccessMock).toHaveBeenCalledTimes(1);
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalledWith({ type: 'manual-capture' });
+    expect(deps.setMessage).toHaveBeenCalledWith(
+      'Roundup site access enabled. Coop can now inspect tabs locally on demand.',
+    );
+    expect(deps.loadDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs roundup immediately after access is granted from the sidepanel flow', async () => {
+    const deps = makeDeps();
+    hasBroadHostAccessMock.mockResolvedValue(false);
+    sendRuntimeMessageMock.mockResolvedValue({ ok: true, data: 1 });
+
+    const { result } = renderHook(() => useTabCapture(deps));
+
+    await act(async () => {
+      await result.current.requestRoundupAccess({ runRoundupAfterGrant: true });
+    });
+
+    expect(requestBroadHostAccessMock).toHaveBeenCalledTimes(1);
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({ type: 'manual-capture' });
+    expect(deps.setPanelTab).toHaveBeenCalledWith('chickens');
+    expect(deps.setMessage).toHaveBeenCalledWith('Round-up complete. Coop checked 1 tabs locally.');
+  });
+
+  it('keeps the user in a stable state when roundup access is denied', async () => {
+    const deps = makeDeps();
+    hasBroadHostAccessMock.mockResolvedValue(false);
+    requestBroadHostAccessMock.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useTabCapture(deps));
+
+    await act(async () => {
+      await result.current.requestRoundupAccess({ runRoundupAfterGrant: true });
+    });
+
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalledWith({ type: 'manual-capture' });
+    expect(deps.setPanelTab).not.toHaveBeenCalled();
+    expect(deps.setMessage).toHaveBeenCalledWith(
+      'Site access is needed to round up tabs. Please grant access and try again.',
+    );
+  });
+
   it('surfaces active-tab capture exceptions', async () => {
     const deps = makeDeps();
     sendRuntimeMessageMock.mockRejectedValue(new Error('capture blew up'));
@@ -93,6 +150,42 @@ describe('useTabCapture', () => {
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith({ type: 'capture-active-tab' });
     expect(deps.setMessage).toHaveBeenCalledWith('capture blew up');
     expect(deps.loadDashboard).not.toHaveBeenCalled();
+  });
+
+  it('lets the user confirm a recent duplicate before recapturing the active tab', async () => {
+    const deps = makeDeps();
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { capturedCount: 0, duplicateSuppressed: true },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { capturedCount: 1 },
+      });
+
+    const { result } = renderHook(() => useTabCapture(deps));
+
+    await act(async () => {
+      await result.current.runActiveTabCapture();
+    });
+
+    expect(deps.setMessage).toHaveBeenCalledWith(
+      'Captured this tab a moment ago. Choose Capture Tab again to recapture it now.',
+    );
+    expect(deps.setPanelTab).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.runActiveTabCapture();
+    });
+
+    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, { type: 'capture-active-tab' });
+    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
+      type: 'capture-active-tab',
+      payload: { allowRecentDuplicate: true },
+    });
+    expect(deps.setPanelTab).toHaveBeenCalledWith('chickens');
+    expect(deps.loadDashboard).toHaveBeenCalledTimes(2);
   });
 
   it('navigates to nest after a successful screenshot capture', async () => {

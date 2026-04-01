@@ -1,7 +1,7 @@
+import { Tooltip } from '../shared/Tooltip';
+import { passkeyTrustDetail, passkeyTrustLabel, purposeHelpDetail } from '../shared/coop-copy';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import type { PopupCreateFormState } from './popup-types';
-import { passkeyTrustDetail, passkeyTrustLabel, purposeHelpDetail } from '../shared/coop-copy';
-import { Tooltip } from '../shared/Tooltip';
 
 export function PopupCreateCoopScreen(props: {
   form: PopupCreateFormState;

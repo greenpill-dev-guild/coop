@@ -77,6 +77,7 @@ vi.mock('../../../../runtime/messages', () => ({
 vi.mock('../../../shared/useCaptureActions', () => ({
   useCaptureActions: () => ({
     isCapturing: false,
+    isRoundupInFlight: false,
     prepareVisibleScreenshot: prepareVisibleScreenshotMock,
     prepareFileCapture: prepareFileCaptureMock,
     savePendingCapture: savePendingCaptureMock,

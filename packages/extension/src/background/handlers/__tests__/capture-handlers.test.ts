@@ -114,8 +114,8 @@ const {
 describe('capture handlers', () => {
   it('returns 0 when no active tab is found', async () => {
     chromeTabsMock.query.mockResolvedValue([]);
-    const count = await captureActiveTab();
-    expect(count).toBe(0);
+    const result = await captureActiveTab();
+    expect(result).toEqual({ capturedCount: 0 });
   });
 
   it('skips tabs with unsupported urls', async () => {
@@ -128,6 +128,8 @@ describe('capture handlers', () => {
   });
 
   it('captures a valid http tab and returns count 1', async () => {
+    const { getCoops } = await import('../../context');
+    vi.mocked(getCoops).mockResolvedValue([{ profile: { id: 'coop-1', name: 'Coop' } }]);
     chromeTabsMock.query.mockResolvedValueOnce([
       { id: 10, url: 'https://example.com/page', windowId: 1, title: 'Example' },
     ]);
@@ -143,8 +145,17 @@ describe('capture handlers', () => {
       },
     ]);
 
-    const count = await captureActiveTab();
-    expect(count).toBe(1);
+    const result = await captureActiveTab();
+    expect(result).toEqual({ capturedCount: 1 });
+
+    const { emitRoundupBatchObservation } = await import('../agent');
+    expect(emitRoundupBatchObservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extractIds: expect.any(Array),
+        candidateIds: expect.arrayContaining([expect.stringMatching(/^candidate-/)]),
+        eligibleCoopIds: ['coop-1'],
+      }),
+    );
   });
 
   it('falls back to the most recently focused standard tab when the popup steals current-window focus', async () => {
@@ -186,9 +197,9 @@ describe('capture handlers', () => {
       },
     ]);
 
-    const count = await captureActiveTab();
+    const result = await captureActiveTab();
 
-    expect(count).toBe(1);
+    expect(result).toEqual({ capturedCount: 1 });
     expect(chromeTabsMock.query).toHaveBeenNthCalledWith(1, { active: true, currentWindow: true });
     expect(chromeTabsMock.query).toHaveBeenNthCalledWith(2, { active: true });
     expect(chromeScrMock.executeScript).toHaveBeenCalledWith({
@@ -237,9 +248,9 @@ describe('capture handlers', () => {
       },
     ]);
 
-    const count = await captureActiveTab();
+    const result = await captureActiveTab();
 
-    expect(count).toBe(1);
+    expect(result).toEqual({ capturedCount: 1 });
     expect(chromeTabsMock.query).toHaveBeenNthCalledWith(1, { active: true, currentWindow: true });
     expect(chromeTabsMock.query).toHaveBeenNthCalledWith(2, { active: true });
     expect(chromeTabsMock.query).toHaveBeenNthCalledWith(3, {});
@@ -261,6 +272,46 @@ describe('capture handlers', () => {
     expect(vi.mocked(setRuntimeHealth)).toHaveBeenCalledWith(
       expect.objectContaining({ syncError: true }),
     );
+  });
+
+  it('suppresses immediate duplicate explicit tab captures until the user confirms recapture intent', async () => {
+    const { wasRecentlyCaptured } = await import('../../context');
+    vi.mocked(wasRecentlyCaptured).mockReturnValue(true);
+    chromeTabsMock.query.mockResolvedValueOnce([
+      { id: 10, url: 'https://example.com/page', windowId: 1, title: 'Example' },
+    ]);
+
+    const result = await captureActiveTab();
+
+    expect(result).toEqual({ capturedCount: 0, duplicateSuppressed: true });
+    expect(chromeScrMock.executeScript).not.toHaveBeenCalled();
+  });
+
+  it('allows explicit tab recapture when the caller confirms recent-duplicate intent', async () => {
+    const { wasRecentlyCaptured } = await import('../../context');
+    vi.mocked(wasRecentlyCaptured).mockReturnValue(true);
+    chromeTabsMock.query.mockResolvedValueOnce([
+      { id: 10, url: 'https://example.com/page', windowId: 1, title: 'Example' },
+    ]);
+    chromeScrMock.executeScript.mockResolvedValue([
+      {
+        result: {
+          title: 'Example Page',
+          metaDescription: 'An example page',
+          headings: ['Welcome'],
+          paragraphs: ['Hello world'],
+          previewImageUrl: undefined,
+        },
+      },
+    ]);
+
+    const result = await captureActiveTab({ allowRecentDuplicate: true });
+
+    expect(result).toEqual({ capturedCount: 1 });
+    expect(chromeScrMock.executeScript).toHaveBeenCalledWith({
+      target: { tabId: 10 },
+      func: expect.any(Function),
+    });
   });
 
   it('captures screenshots from the most recently focused standard tab when current-window focus is the popup', async () => {

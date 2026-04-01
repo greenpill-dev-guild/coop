@@ -1,4 +1,5 @@
 import { type JSX, type PropsWithChildren, useEffect, useRef } from 'react';
+import { NotificationBanner } from '../shared/NotificationBanner';
 import type { PopupResolvedTheme } from './popup-types';
 
 export function PopupShell({
@@ -6,6 +7,7 @@ export function PopupShell({
   footer,
   header,
   message,
+  onDismissMessage,
   overlay,
   screenKey,
   theme,
@@ -13,6 +15,7 @@ export function PopupShell({
   footer?: JSX.Element | null;
   header?: JSX.Element | null;
   message?: string;
+  onDismissMessage?: () => void;
   overlay?: JSX.Element | null;
   screenKey?: string;
   theme: PopupResolvedTheme;
@@ -46,9 +49,12 @@ export function PopupShell({
       </div>
       {message ? (
         <div className="popup-toast-layer">
-          <output aria-live="polite" className="popup-toast">
-            {message}
-          </output>
+          <NotificationBanner
+            id={`popup-toast:${message}`}
+            message={message}
+            onDismiss={onDismissMessage}
+            persistDismissal={false}
+          />
         </div>
       ) : null}
       {overlay ? <div className="popup-overlay-layer">{overlay}</div> : null}

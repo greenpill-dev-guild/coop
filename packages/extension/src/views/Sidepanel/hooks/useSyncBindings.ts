@@ -1,10 +1,10 @@
 import {
   type BlobRelayTransport,
   type CoopSharedState,
+  ORIGIN_LOCAL,
   buildIceServers,
   connectSyncProviders,
   createBlobRelayTransport,
-  ORIGIN_LOCAL,
   createCoopDoc,
   hashJson,
   mergeCoopDocUpdates,
@@ -12,7 +12,7 @@ import {
   summarizeSyncTransportHealth,
   writeCoopState,
 } from '@coop/shared';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { sendRuntimeMessage } from '../../../runtime/messages';
 
 type SyncBinding = {
@@ -39,7 +39,7 @@ export function useSyncBindings(deps: {
   const syncBindings = useRef<Map<string, SyncBinding>>(new Map());
   const syncHealthByCoop = useRef<Map<string, SyncHealthState>>(new Map());
 
-  const reportAggregateSyncHealth = async () => {
+  const reportAggregateSyncHealth = useCallback(async () => {
     const healthStates = [...syncHealthByCoop.current.values()];
     const degraded = healthStates.find((health) => health.syncError);
     const healthy = healthStates.find((health) => health.note);
@@ -52,7 +52,7 @@ export function useSyncBindings(deps: {
         note: aggregate.note,
       },
     });
-  };
+  }, []);
 
   // Cleanup all sync bindings on unmount.
   useEffect(() => {
@@ -87,7 +87,10 @@ export function useSyncBindings(deps: {
           credential: import.meta.env.VITE_COOP_TURN_CREDENTIAL,
         });
         const providers = connectSyncProviders(doc, coop.syncRoom, iceServers, websocketSyncUrl);
-        let disposeSyncHealth: (() => void) | undefined;
+        const disposers: (() => void)[] = [];
+        const disposeSyncHealth = () => {
+          for (const dispose of disposers) dispose();
+        };
         const binding: SyncBinding = {
           doc,
           lastHash: nextHash,
@@ -124,7 +127,6 @@ export function useSyncBindings(deps: {
 
         const onProviderSignal = () => scheduleSyncHealthReport();
         const onProviderDisconnect = () => scheduleSyncHealthReport(1200);
-        const disposers: (() => void)[] = [];
 
         if (providers.webrtc) {
           const provider = providers.webrtc;
@@ -184,9 +186,6 @@ export function useSyncBindings(deps: {
         }
 
         scheduleSyncHealthReport(2500);
-        disposeSyncHealth = () => {
-          for (const dispose of disposers) dispose();
-        };
 
         if (!providers.webrtc && !providers.websocket) {
           void reportSyncHealth();
@@ -238,5 +237,5 @@ export function useSyncBindings(deps: {
         writeCoopState(existing.doc, coop);
       }
     }
-  }, [coops, loadDashboard]);
+  }, [coops, loadDashboard, reportAggregateSyncHealth, websocketSyncUrl]);
 }

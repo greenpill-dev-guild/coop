@@ -1,5 +1,5 @@
 import type { ArtifactCategory } from '@coop/shared';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PopupSubheader, type PopupSubheaderTag } from './PopupSubheader';
 import type { PopupRecordingStatus } from './hooks/usePopupRecording';
 
@@ -186,19 +186,36 @@ function ChickenYard({
   /* Stable key for the current item set — avoids resetting positions on referential changes */
   const itemKey = items.map((i) => i.id).join(',');
 
-  const chickenConfig = useMemo(() => {
-    return items.map((item) => {
-      const h = hashId(item.id);
-      const rng = seededRandom(h);
-      return {
-        initialX: 8 + rng() * 84,
-        initialY: 10 + rng() * 72,
-        initialFlip: rng() > 0.5,
-        roamDuration: 3 + rng() * 3,
-      };
-    });
-    // biome-ignore lint/correctness/useExhaustiveDependencies: itemKey tracks actual item set
-  }, [itemKey]);
+  const chickenConfigRef = useRef<{
+    key: string;
+    value: Array<{
+      initialX: number;
+      initialY: number;
+      initialFlip: boolean;
+      roamDuration: number;
+    }>;
+  }>({
+    key: '',
+    value: [],
+  });
+
+  if (chickenConfigRef.current.key !== itemKey) {
+    chickenConfigRef.current = {
+      key: itemKey,
+      value: items.map((item) => {
+        const h = hashId(item.id);
+        const rng = seededRandom(h);
+        return {
+          initialX: 8 + rng() * 84,
+          initialY: 10 + rng() * 72,
+          initialFlip: rng() > 0.5,
+          roamDuration: 3 + rng() * 3,
+        };
+      }),
+    };
+  }
+
+  const chickenConfig = chickenConfigRef.current.value;
 
   const [positions, setPositions] = useState(() =>
     chickenConfig.map((c) => ({
@@ -288,11 +305,17 @@ function ChickenYard({
           : 'popup-yard__chicken-body--idle';
 
         return (
-          <span
+          <button
             className={`popup-yard__chicken popup-yard__chicken--${item.type}${externalClass}`}
             data-category={catGroup}
             key={item.id}
             onClick={() => setClickedIndex(i)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setClickedIndex(i);
+              }
+            }}
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex(null)}
             style={{
@@ -303,6 +326,8 @@ function ChickenYard({
               animationDelay: `${i * 60}ms`,
               transitionDuration: `${pos.roamDuration}s, ${pos.roamDuration}s, 0.3s, 0.3s`,
             }}
+            tabIndex={0}
+            type="button"
           >
             <span
               className={`popup-yard__chicken-body ${bodyAnimClass}`}
@@ -327,7 +352,7 @@ function ChickenYard({
                 </span>
               </span>
             )}
-          </span>
+          </button>
         );
       })}
     </div>
@@ -348,9 +373,9 @@ export function PopupHomeScreen(props: {
   onScreenshot: () => void;
   onFileSelected: (file: File) => void;
   isCapturing: boolean;
+  isRoundupInFlight: boolean;
   isRecording: boolean;
   audioStatus: PopupRecordingStatus;
-  audioPermissionMessage: string | null;
   elapsedSeconds: number;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -368,9 +393,9 @@ export function PopupHomeScreen(props: {
     onScreenshot,
     onFileSelected,
     isCapturing,
+    isRoundupInFlight,
     isRecording,
     audioStatus,
-    audioPermissionMessage,
     elapsedSeconds,
     onStartRecording,
     onStopRecording,
@@ -380,6 +405,8 @@ export function PopupHomeScreen(props: {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const busy = isCapturing || isRecording || audioStatus === 'requesting-permission';
+  const roundupBusy =
+    isRoundupInFlight || isCapturing || isRecording || audioStatus === 'requesting-permission';
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -405,8 +432,14 @@ export function PopupHomeScreen(props: {
       <div className="popup-screen--home-body">
         <ChickenYard items={yardItems} />
 
-        <button className="popup-primary-action" disabled={busy} onClick={onRoundUp} type="button">
-          Roundup Chickens
+        <button
+          aria-busy={isRoundupInFlight}
+          className="popup-primary-action"
+          disabled={roundupBusy}
+          onClick={onRoundUp}
+          type="button"
+        >
+          {isRoundupInFlight ? 'Rounding up…' : 'Roundup Chickens'}
         </button>
 
         {isRecording ? (
@@ -436,26 +469,6 @@ export function PopupHomeScreen(props: {
           </div>
         ) : (
           <>
-            {audioStatus === 'requesting-permission' ? (
-              <div
-                className="popup-audio-permission popup-audio-permission--pending"
-                aria-live="polite"
-              >
-                <strong>Requesting microphone access</strong>
-                <p>Allow microphone access to record a voice note here in the popup.</p>
-              </div>
-            ) : null}
-
-            {audioStatus === 'denied' ? (
-              <div className="popup-audio-permission" aria-live="polite">
-                <strong>Microphone access needed</strong>
-                <p>{audioPermissionMessage ?? 'Allow microphone access to record a voice note.'}</p>
-                <button className="popup-secondary-action" onClick={onStartRecording} type="button">
-                  Try Again
-                </button>
-              </div>
-            ) : null}
-
             <div className="popup-action-grid" aria-label="Quick actions">
               <button
                 className="popup-handoff-button"
@@ -485,7 +498,11 @@ export function PopupHomeScreen(props: {
                 type="button"
               >
                 <MicrophoneIcon />
-                <span>{audioStatus === 'denied' ? 'Retry Audio' : 'Audio'}</span>
+                <span>
+                  {audioStatus === 'denied' || audioStatus === 'unavailable'
+                    ? 'Retry Audio'
+                    : 'Audio'}
+                </span>
               </button>
               <button
                 className="popup-handoff-button"

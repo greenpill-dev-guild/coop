@@ -3,7 +3,7 @@ feature: scoring-diagnostics
 title: Scoring diagnostics, automated stopwords, and test expansion
 lane: state
 agent: claude
-status: ready
+status: done
 source_branch: feature/scoring-diagnostics
 work_branch: claude/state/scoring-diagnostics
 depends_on:
@@ -28,14 +28,14 @@ updated: 2026-04-01
 ## Batch 1: Exports and Stopword Automation (Steps 1-3)
 
 ### Step 1: Export scoring internals from pipeline.ts
-- [ ] Add `export` to `keywordBank`, `scoreAgainstCoop`, `tokenize` in `pipeline.ts`
-- [ ] Verify they auto-flow through the barrel chain: `coop/index.ts` → `shared/index.ts`
-- [ ] Run `bun run validate typecheck` to confirm no type conflicts
+- [x] Add `export` to `keywordBank`, `scoreAgainstCoop`, `tokenize` in `pipeline.ts`
+- [x] Verify they auto-flow through the barrel chain: `coop/index.ts` → `shared/index.ts`
+- [x] Run `bun run validate typecheck` to confirm no type conflicts
 - Files: `packages/shared/src/modules/coop/pipeline.ts`
 - Verify: `bun run validate typecheck`
 
 ### Step 2: Build automated stopword generator
-- [ ] Add `buildTemplateCorpusStopwords()` in `pipeline.ts` that:
+- [x] Add `buildTemplateCorpusStopwords()` in `pipeline.ts` that:
   - Calls `deriveCoopSoul` with a dummy coop config for each of the 5 spaceTypes
   - Calls `createInitialArtifacts` with a dummy config
   - Calls `deriveRitualDefinition` with a dummy config for each spaceType
@@ -43,15 +43,15 @@ updated: 2026-04-01
   - Collects tokens that appear in ≥ 3 of the 5 spaceType variants (80% threshold adjusted for 5 variants)
   - Unions with a small base English 3-letter stopword list (the/and/for/are/but/not/etc.)
   - Returns a `Set<string>`
-- [ ] Export `buildTemplateCorpusStopwords` from pipeline.ts
-- [ ] Compute `TEMPLATE_CORPUS_STOPWORDS` as a module-level constant using the generator
-- [ ] Replace hand-curated `KEYWORD_BANK_STOPWORDS` with `TEMPLATE_CORPUS_STOPWORDS`
-- [ ] Verify existing pipeline tests still pass
+- [x] Export `buildTemplateCorpusStopwords` from pipeline.ts
+- [x] Compute `TEMPLATE_CORPUS_STOPWORDS` as a module-level constant using the generator
+- [x] Replace hand-curated `KEYWORD_BANK_STOPWORDS` with `TEMPLATE_CORPUS_STOPWORDS`
+- [x] Verify existing pipeline tests still pass
 - Files: `packages/shared/src/modules/coop/pipeline.ts`
 - Verify: `bun run test -- packages/shared/src/modules/coop/__tests__/pipeline.test.ts`
 
 ### Step 3: Build diagnoseKeywordBank() diagnostic export
-- [ ] Add `diagnoseKeywordBank(coop: CoopSharedState)` in `pipeline.ts` returning:
+- [x] Add `diagnoseKeywordBank(coop: CoopSharedState)` in `pipeline.ts` returning:
   ```typescript
   {
     tokens: string[];
@@ -67,22 +67,22 @@ updated: 2026-04-01
     boilerplateRatio: number;       // filtered / (filtered + kept)
   }
   ```
-- [ ] Implement by running each source layer through tokenize + stopword filter independently
-- [ ] Export from pipeline.ts
+- [x] Implement by running each source layer through tokenize + stopword filter independently
+- [x] Export from pipeline.ts
 - Files: `packages/shared/src/modules/coop/pipeline.ts`
 - Verify: `bun run validate typecheck`
 
 ## Batch 2: Tier 1 — Scoring Internals Tests (Steps 4-5)
 
 ### Step 4: Create scoring.test.ts with tokenize and keywordBank tests
-- [ ] Create `packages/shared/src/modules/coop/__tests__/scoring.test.ts`
-- [ ] `describe('tokenize')`:
+- [x] Create `packages/shared/src/modules/coop/__tests__/scoring.test.ts`
+- [x] `describe('tokenize')`:
   - `it('splits text into lowercase word tokens')` — "Hello World" → {"hello", "world"}
   - `it('handles empty and null-ish input')` — "" → empty set
   - `it('strips punctuation and special characters')` — "it's a test!" → {"its", "test"}
   - `it('preserves 3-letter acronyms')` — "NBA and NFL" → {"nba", "and", "nfl"}
   - `it('does not produce substring matches')` — "unbalanced" → {"unbalanced"}, not {"nba"}
-- [ ] `describe('keywordBank')`:
+- [x] `describe('keywordBank')`:
   - `it('includes user-supplied purpose terms')` — "Sports news" coop → bank includes "sports", "news"
   - `it('excludes template boilerplate stopwords')` — bank does NOT include "coop", "tabs", "loose", "tighten"
   - `it('preserves 3-letter domain acronyms')` — "NBA coverage" purpose → "nba" in bank
@@ -93,7 +93,7 @@ updated: 2026-04-01
 - Verify: `bun run test -- packages/shared/src/modules/coop/__tests__/scoring.test.ts`
 
 ### Step 5: Add scoreAgainstCoop tests
-- [ ] `describe('scoreAgainstCoop')` in scoring.test.ts:
+- [x] `describe('scoreAgainstCoop')` in scoring.test.ts:
   - `it('returns 0.08 floor for empty keyword bank')`
   - `it('scores title matches at 0.12 per keyword')`
   - `it('scores body matches at 0.04 per keyword')`
@@ -110,12 +110,12 @@ updated: 2026-04-01
 ## Batch 3: Tier 2 — Keyword Bank Composition + Diagnostics Tests (Steps 6-7)
 
 ### Step 6: Add diagnoseKeywordBank and composition tests
-- [ ] `describe('diagnoseKeywordBank')` in scoring.test.ts:
+- [x] `describe('diagnoseKeywordBank')` in scoring.test.ts:
   - `it('breaks down tokens by source layer')` — purpose tokens in sources.purpose, soul in sources.soul, etc.
   - `it('reports boilerplate ratio correctly')` — boilerplateRatio = filtered / (filtered + kept)
   - `it('lists filtered stopwords in boilerplateFiltered')`
   - `it('returns consistent results for the same coop')` — deterministic
-- [ ] `describe('keyword bank composition')`:
+- [x] `describe('keyword bank composition')`:
   - `it('minimal "Sports news" coop preserves domain intent')` — bank includes "sports", "news"
   - `it('rich watershed coop produces 40+ unique tokens')` — bank.length > 40
   - `it('coop with "NBA" in purpose preserves 3-letter acronym')` — "nba" in bank
@@ -126,7 +126,7 @@ updated: 2026-04-01
 - Verify: `bun run test -- packages/shared/src/modules/coop/__tests__/scoring.test.ts`
 
 ### Step 7: Add buildTemplateCorpusStopwords tests
-- [ ] `describe('buildTemplateCorpusStopwords')` in scoring.test.ts:
+- [x] `describe('buildTemplateCorpusStopwords')` in scoring.test.ts:
   - `it('includes base English stopwords')` — "the", "and", "for" present
   - `it('includes template boilerplate tokens')` — "tighten", "loose", "membrane" present
   - `it('excludes domain-specific acronyms')` — "nba", "nfl", "api" NOT present
@@ -138,12 +138,12 @@ updated: 2026-04-01
 ## Batch 4: Tier 3 — Observation Emission and Dedup Tests (Step 8)
 
 ### Step 8: Expand observation emitter tests
-- [ ] Add to `packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts`:
+- [x] Add to `packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts`:
   - `it('returns null when extractIds is empty')` — early exit check
   - `it('returns null when eligibleCoopIds is empty')` — early exit check
   - `it('deduplicates via fingerprint — same inputs produce same observation')` — emitAgentObservationIfMissing returns existing
   - `it('produces unique fingerprints for different extract sets')`
-- [ ] Optionally add to `packages/extension/src/runtime/__tests__/agent-runner-inference.test.ts`:
+- [x] Optionally add to `packages/extension/src/runtime/__tests__/agent-runner-inference.test.ts`:
   - `it('produces no routings when eligible coops list is empty')`
   - `it('scores sports-focused extract higher for sports coop than generic coop')`
 - Files: `packages/extension/src/background/handlers/__tests__/agent-observation-emitters.test.ts`, `packages/extension/src/runtime/__tests__/agent-runner-inference.test.ts`
@@ -152,7 +152,7 @@ updated: 2026-04-01
 ## Batch 5: Tier 4 — End-to-End Integration Test (Step 9)
 
 ### Step 9: End-to-end roundup → observation → routing → draft test
-- [ ] Add `describe('roundup ingestion end-to-end')` in `pipeline.test.ts`:
+- [x] Add `describe('roundup ingestion end-to-end')` in `pipeline.test.ts`:
   - `it('produces a draft when a relevant page is routed to an aligned coop')`:
     - Create a sports coop via `createCoop()`
     - Build a sports page extract via `buildReadablePageExtract()`
@@ -173,9 +173,9 @@ updated: 2026-04-01
 ## Batch 6: Final Validation (Step 10)
 
 ### Step 10: Full regression check and cleanup
-- [ ] Run `bun run validate smoke` — all tests pass
-- [ ] Run `bunx @biomejs/biome check` on all changed files
-- [ ] Verify no pre-existing test regressions introduced
-- [ ] Remove any temporary debug logging
-- [ ] Update spec.md status to `Implemented`
+- [x] Run `bun run validate smoke` — all tests pass
+- [x] Run `bunx @biomejs/biome check` on all changed files
+- [x] Verify no pre-existing test regressions introduced
+- [x] Remove any temporary debug logging
+- [x] Update spec.md status to `Implemented`
 - Verify: `bun run validate smoke`

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInviteShareContent, type InviteShareInput } from '../invite-share';
+import { type InviteShareInput, buildInviteShareContent } from '../invite-share';
 
 const FIXED_EXPIRY = '2026-06-15T00:00:00.000Z';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInviteShareContent, type InviteShareInput } from '../../shared/invite-share';
+import { type InviteShareInput, buildInviteShareContent } from '../../shared/invite-share';
 import type { PopupInviteCardItem } from '../popup-types';
 
 const FIXED_EXPIRY = '2026-06-15T00:00:00.000Z';
@@ -144,8 +144,12 @@ describe('invite share: buildInviteShareContent', () => {
   describe('trustedWarning', () => {
     it('includes a trusted warning string for trusted invites', () => {
       const content = buildInviteShareContent(makeShareInput({ inviteType: 'trusted' }));
-      expect(content.trustedWarning).toBeTypeOf('string');
-      expect(content.trustedWarning!.length).toBeGreaterThan(0);
+      const { trustedWarning } = content;
+      expect(trustedWarning).toBeTypeOf('string');
+      if (!trustedWarning) {
+        throw new Error('Expected trusted invite share content to include a warning');
+      }
+      expect(trustedWarning.length).toBeGreaterThan(0);
     });
 
     it('returns null trusted warning for member invites', () => {

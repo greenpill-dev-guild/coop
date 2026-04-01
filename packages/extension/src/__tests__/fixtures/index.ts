@@ -9,10 +9,10 @@
  */
 
 import {
-  createCoop,
   type CoopSharedState,
   type ReceiverCapture,
   type ReceiverPairingRecord,
+  createCoop,
 } from '@coop/shared';
 import { vi } from 'vitest';
 import { makeArtifact, makeSetupInsights } from '../../../../shared/src/__tests__/fixtures';

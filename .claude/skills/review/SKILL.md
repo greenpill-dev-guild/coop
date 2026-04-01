@@ -27,6 +27,7 @@ Code review workflow: request reviews, perform 6-pass analysis, process feedback
 | `/review` | Perform 6-pass code review |
 | `/review --mode verify_only --scope cross-package` | Cross-package verification pass |
 | `/review --mode apply_fixes` | Explicit review-and-fix pass |
+| `/review --mode post_agent` | Post-agent regression review (mandatory after parallel agent runs) |
 | After implementation | Request review |
 | PR feedback received | Process and respond |
 
@@ -51,6 +52,7 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 - **Default mode**: `report_only`
 - **Fix mode**: switch to `apply_fixes` only when explicitly requested (for example: `"apply fixes"`)
 - **Cross-package verify**: `/review --mode verify_only --scope cross-package` — runs checks in dependency order (shared → app → extension), reports by severity. Use after migrations, dependency upgrades, or changes spanning multiple packages.
+- **Post-agent review**: `/review --mode post_agent` — mandatory after parallel sub-agent runs. See Part 5b below.
 
 ---
 
@@ -166,6 +168,55 @@ bun format && bun lint && bun run test && bun build
 - New behavior has test coverage
 - No TypeScript errors introduced
 - Build succeeds for affected packages
+
+### Pass 5b: Post-Agent Regression Review (`/review --mode post_agent`)
+
+**MANDATORY** after parallel sub-agent runs that modify code. Run this before committing any agent output.
+
+#### Step 1: Scope Audit
+```bash
+# List all files changed since agents started
+git diff --name-only HEAD
+```
+For each changed file, verify it falls within the agent's assigned scope. Flag any out-of-scope modifications as **must-fix** (revert or justify).
+
+#### Step 2: Multi-Agent Conflict Detection
+```bash
+# If using worktrees, check for files touched by multiple agents
+# Compare each agent's diff for overlapping files
+git diff --name-only
+```
+Files modified by more than one agent need manual review — agents may have made conflicting changes.
+
+#### Step 3: Build + Test Gate
+```bash
+# Minimum: quick validation
+bun run validate quick
+
+# For cross-package agent changes: smoke
+bun run validate smoke
+
+# Capture test baseline comparison
+bun run test 2>&1 | tail -20
+```
+Compare test counts before vs. after agent runs. Any regression = **must-fix** before committing.
+
+#### Step 4: Regression Summary
+Output a summary table before committing:
+
+```markdown
+## Post-Agent Review
+
+| Agent | Files Changed | In Scope | Regressions | Status |
+|-------|--------------|----------|-------------|--------|
+| [name] | N | Y/N | N | PASS/FAIL |
+
+**Build**: PASS/FAIL
+**Tests**: N passing (was M) | N failing (was M)
+**Verdict**: COMMIT / FIX REQUIRED
+```
+
+Do NOT commit until the verdict is `COMMIT`.
 
 ### Pass 6: Synthesis
 

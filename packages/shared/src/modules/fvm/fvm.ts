@@ -40,7 +40,8 @@ const fvmChainConfigs = {
  * Updated after each deployment.
  */
 export const FVM_REGISTRY_DEPLOYMENTS: Partial<Record<FvmChainKey, Address>> = {
-  // Populated after deployment to Calibration testnet
+  filecoin: '0x115819bCcaab03Be49107c69c00Bc4c21009839C',
+  'filecoin-calibration': '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
 };
 
 export function resolveFvmRegistryAddress(

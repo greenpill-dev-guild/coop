@@ -220,4 +220,90 @@ describe('agent-runner inference heuristics', () => {
     expect(scores[0]?.score).toBeGreaterThan(scores[1]?.score ?? 0);
     expect(scores[0]?.recommendedTargetCoopId).toBe(coop.profile.id);
   });
+
+  it('falls back to all coops when eligible coops list is empty', () => {
+    const river = buildCoop({
+      name: 'River Coop',
+      purpose: 'Share watershed funding leads and restoration evidence.',
+      seedContribution: 'I track river restoration grants and evidence packets.',
+      topTag: 'watershed',
+      topDomain: 'example.org',
+    });
+    const extract = buildExtract();
+    const observation = createAgentObservation({
+      trigger: 'roundup-batch-ready',
+      title: 'Captured tabs ready for routing',
+      summary: 'Route the latest roundup into coop contexts.',
+      payload: {
+        extractIds: [extract.id],
+        eligibleCoopIds: [],
+      },
+    });
+
+    const output = inferTabRoutingsHeuristically({
+      observation,
+      extracts: [extract],
+      coops: [river],
+    });
+
+    // Empty eligibleCoopIds falls back to all coops
+    expect(output.routings).toHaveLength(1);
+    expect(output.routings[0]?.coopId).toBe(river.profile.id);
+  });
+
+  it('scores sports-focused extract higher for sports coop than generic coop', () => {
+    const sports = buildCoop({
+      name: 'Sports Central',
+      purpose: 'Track sports news, scores, and analysis for NBA, NFL, and soccer coverage.',
+      seedContribution: 'I follow NBA and NFL closely and share game recaps.',
+      topTag: 'sports',
+      topDomain: 'espn.com',
+    });
+    const generic = buildCoop({
+      name: 'River Coop',
+      purpose: 'Share watershed funding leads and restoration evidence.',
+      seedContribution: 'I track river restoration grants and evidence packets.',
+      topTag: 'watershed',
+      topDomain: 'example.org',
+    });
+
+    const sportsExtract = buildReadablePageExtract({
+      candidate: {
+        id: 'candidate-sports',
+        tabId: 1,
+        windowId: 1,
+        url: 'https://espn.com/nba/game-recap',
+        canonicalUrl: 'https://espn.com/nba/game-recap',
+        title: 'NBA Playoffs: Lakers vs Celtics Game 5',
+        domain: 'espn.com',
+        capturedAt: nowIso(),
+      },
+      metaDescription: 'Full recap of the NBA playoff game with sports highlights and analysis.',
+      headings: ['Game 5 Recap', 'Box Score'],
+      paragraphs: [
+        'The Lakers defeated the Celtics in a thrilling NBA Finals game.',
+        'Sports fans enjoyed a competitive matchup with highlight plays.',
+      ],
+    });
+
+    const observation = createAgentObservation({
+      trigger: 'roundup-batch-ready',
+      title: 'Captured tabs ready for routing',
+      summary: 'Route the latest roundup.',
+      payload: {
+        extractIds: [sportsExtract.id],
+      },
+    });
+
+    const output = inferTabRoutingsHeuristically({
+      observation,
+      extracts: [sportsExtract],
+      coops: [sports, generic],
+    });
+
+    const byCoop = new Map(output.routings.map((r) => [r.coopId, r]));
+    const sportsScore = byCoop.get(sports.profile.id)?.relevanceScore ?? 0;
+    const genericScore = byCoop.get(generic.profile.id)?.relevanceScore ?? 0;
+    expect(sportsScore).toBeGreaterThan(genericScore);
+  });
 });

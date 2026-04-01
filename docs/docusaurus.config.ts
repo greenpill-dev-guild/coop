@@ -8,7 +8,7 @@ const config: Config = {
   favicon: 'branding/coop-mark-watching.png',
   url: 'https://docs.coop.town',
   baseUrl: '/',
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
   markdown: {
     mermaid: true,
     hooks: {

@@ -5,6 +5,8 @@ interface NotificationBannerProps {
   message: string;
   onAction?: () => void;
   actionLabel?: string;
+  onDismiss?: () => void;
+  persistDismissal?: boolean;
 }
 
 function getDismissedBanners(): Set<string> {
@@ -31,17 +33,22 @@ export function NotificationBanner({
   message,
   onAction,
   actionLabel,
+  onDismiss,
+  persistDismissal = true,
 }: NotificationBannerProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(!getDismissedBanners().has(id));
-  }, [id]);
+    setVisible(persistDismissal ? !getDismissedBanners().has(id) : true);
+  }, [id, persistDismissal]);
 
   const handleDismiss = useCallback(() => {
-    dismissBanner(id);
+    if (persistDismissal) {
+      dismissBanner(id);
+    }
     setVisible(false);
-  }, [id]);
+    onDismiss?.();
+  }, [id, onDismiss, persistDismissal]);
 
   if (!visible) return null;
 

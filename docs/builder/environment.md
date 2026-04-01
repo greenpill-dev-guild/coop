@@ -56,17 +56,16 @@ These variables configure the Filecoin Virtual Machine integration for on-chain 
 | `VITE_COOP_FVM_REGISTRY_ADDRESS` | `0x...` (40-char hex) | -- | ERC-8004 registry contract address |
 | `VITE_COOP_FVM_OPERATOR_KEY` | `0x...` (64-char hex) | -- | Operator signing key for registry transactions |
 
-Deploy the registry contract from `packages/contracts/` with Foundry:
+Deploy the registry contract with the repo helper, which runs a clean Foundry build/test pass first
+and then broadcasts with `forge create --broadcast`:
 
 ```bash
-cd packages/contracts
-forge script script/DeployRegistry.s.sol:DeployRegistry \
-  --rpc-url filecoin_calibration \
-  --broadcast \
-  --account "GreenGoods deployer"
+bun run deploy:registry --broadcast
+bun run deploy:registry --network mainnet --broadcast
 ```
 
-The deploy script also accepts `DEPLOYER_PRIVATE_KEY=0x...` when you do not want to use a Foundry
+By default the helper uses the local Foundry keystore account `green-goods-deployer`. Override that
+with `--account <name>` or supply `DEPLOYER_PRIVATE_KEY=0x...` when you do not want to use a
 keystore signer.
 
 ## Green Goods

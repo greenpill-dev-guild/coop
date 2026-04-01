@@ -257,7 +257,7 @@ describe('Popup action integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('reloads the dashboard after roundup and shows the new draft in Chickens', async () => {
+  it('reloads the dashboard after roundup and keeps the popup responsive', async () => {
     installPopupActionRuntime({
       dashboard: makeDashboard({ drafts: [] }),
     });
@@ -267,8 +267,36 @@ describe('Popup action integration', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Roundup Chickens' }));
 
-    expect(await screen.findByText('Roundup generated draft')).toBeInTheDocument();
     expect(await screen.findByRole('status')).toHaveTextContent('Rounded up 1 tab.');
+    expect(screen.getByRole('button', { name: 'Capture Tab' })).toBeInTheDocument();
+  });
+
+  it('routes missing roundup permission into the workspace instead of requesting from the popup', async () => {
+    installPopupActionRuntime({
+      dashboard: makeDashboard({ drafts: [] }),
+    });
+    const user = userEvent.setup();
+    vi.mocked(chrome.permissions.contains).mockResolvedValue(false);
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Roundup Chickens' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Roundup needs site access. Finish setup in the workspace.',
+    );
+    expect(chrome.permissions.request).not.toHaveBeenCalled();
+    expect(chrome.sidePanel.open).toHaveBeenCalled();
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalledWith({ type: 'manual-capture' });
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      type: 'set-sidepanel-intent',
+      payload: expect.objectContaining({
+        tab: 'chickens',
+        segment: 'roundup-access',
+        roundupAccessMode: 'grant-and-roundup',
+        coopId: 'coop-1',
+      }),
+    });
   });
 
   it('opens the file review modal and saves the file capture', async () => {
@@ -294,12 +322,12 @@ describe('Popup action integration', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Context' }), {
       target: { value: 'Remember why this file matters.' },
     });
-    await user.click(screen.getByRole('button', { name: 'Save to Pocket Coop' }));
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('File saved to Pocket Coop finds.');
+    expect(await screen.findByRole('status')).toHaveTextContent('File saved as draft.');
   });
 
   it('opens the audio review modal after recording and saves the voice note', async () => {
@@ -328,17 +356,18 @@ describe('Popup action integration', () => {
     await user.click(screen.getByRole('button', { name: 'Save Voice Note' }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Capture audio preview')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Voice note');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Context' }), {
       target: { value: 'Shared after the walk.' },
     });
-    await user.click(screen.getByRole('button', { name: 'Save to Pocket Coop' }));
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('Voice note saved.');
+    expect(await screen.findByRole('status')).toHaveTextContent('Voice note saved as draft.');
     expect(stopTrack).toHaveBeenCalled();
   });
 
@@ -377,12 +406,29 @@ describe('Popup action integration', () => {
 
     resolveCapture?.({ ok: true, data: 1 });
 
-    expect(await screen.findByText('Deferred roundup draft')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(roundupButton).not.toBeDisabled();
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('Rounded up 1 tab.');
   }, 30_000);
 
-  it('keeps Home visible when active-tab capture returns zero new results', async () => {
+  it('lets the user confirm an immediate duplicate and recapture the active tab', async () => {
     installPopupActionRuntime({
-      captureActiveTabHandler: async () => ({ ok: true, data: 0 }),
+      captureActiveTabHandler: async ({ addDraft, message }) => {
+        const allowRecentDuplicate =
+          (message.payload as { allowRecentDuplicate?: boolean } | undefined)
+            ?.allowRecentDuplicate === true;
+
+        if (!allowRecentDuplicate) {
+          return {
+            ok: true,
+            data: { capturedCount: 0, duplicateSuppressed: true },
+          };
+        }
+
+        addDraft('Captured active tab again');
+        return { ok: true, data: { capturedCount: 1 } };
+      },
     });
     const user = userEvent.setup();
 
@@ -391,10 +437,24 @@ describe('Popup action integration', () => {
     await user.click(await screen.findByRole('button', { name: 'Capture Tab' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'This tab did not produce a new capture.',
+      'Captured this tab a moment ago. Choose Capture Tab again to recapture it now.',
     );
     expect(screen.getByRole('button', { name: 'Roundup Chickens' })).toBeInTheDocument();
-    expect(screen.queryByText('Captured active tab')).not.toBeInTheDocument();
+    expect(screen.queryByText('Captured active tab again')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Capture Tab' }));
+
+    await waitFor(() => {
+      expect(
+        mockSendRuntimeMessage.mock.calls.filter(
+          ([message]) => (message as { type: string }).type === 'capture-active-tab',
+        ),
+      ).toEqual([
+        [{ type: 'capture-active-tab' }],
+        [{ type: 'capture-active-tab', payload: { allowRecentDuplicate: true } }],
+      ]);
+    });
+    expect(await screen.findByText('Captured active tab again')).toBeInTheDocument();
   });
 
   it('surfaces precise screenshot permission errors without opening the review modal', async () => {

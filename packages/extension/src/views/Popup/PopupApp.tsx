@@ -104,6 +104,7 @@ export function PopupApp() {
       footer={footer}
       header={header}
       message={state.message}
+      onDismissMessage={() => state.showToast('')}
       overlay={shareComposerOverlay ?? captureOverlay ?? artifactOverlay ?? blockingOverlay}
       screenKey={state.currentScreen}
       theme={state.theme.resolvedTheme}

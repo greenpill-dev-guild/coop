@@ -92,6 +92,8 @@ const sidebars: SidebarsConfig = {
           items: [
             'reference/hackathon-demo-and-vision-outline',
             'reference/hackathon-demo-video-outline',
+            'reference/hackathon-demo-voiceover-script',
+            'reference/hackathon-demo-shot-list',
             'reference/coop-vision',
             'reference/coop-strategy',
             'reference/coop-monetization-path',
@@ -108,6 +110,7 @@ const sidebars: SidebarsConfig = {
             'reference/agent-harness',
             'reference/receiver-pairing-and-intake',
             'reference/agent-os-roadmap',
+            'reference/agentic-interface',
             'reference/knowledge-sharing-and-scaling',
             'reference/privacy-and-stealth',
             'reference/policy-session-permit',
@@ -139,6 +142,8 @@ const sidebars: SidebarsConfig = {
             'reference/extension-install-and-distribution',
             'reference/chrome-web-store-checklist',
             'reference/chrome-web-store-reviewer-notes',
+            'reference/production-release-checklist',
+            'testing/ui-action-coverage',
           ],
         },
         {
@@ -160,6 +165,7 @@ const sidebars: SidebarsConfig = {
             'reference/alibaba-page-agent-comparison',
             'reference/authority-classification',
             'reference/coop-greengoods-onchain-research-2026-03-20',
+            'reference/claude-code-vs-coop-harness',
             'reference/grant-landscape-2026-03',
           ],
         },

@@ -1,5 +1,10 @@
 {
-  "deployedAt": "2026-03-31T05:42:07.797Z",
+  "registryAddress": "0x80a906C175ea875af8a2afcA8F91F60b201dc824",
+  "deployTxHash": "0xfbaf62ec96f602c557e821287d259a1261abeac8c68e4951d70ccb43e8c85628",
+  "deployedAt": "2026-04-01T03:24:32.467Z",
   "chainId": 314159,
-  "note": "Deployed via forge create with keystore account green-goods-deployer"
+  "network": "calibration",
+  "rpcUrl": "https://api.calibration.node.glif.io/rpc/v1",
+  "deployerAddress": "0xFBAf2A9734eAe75497e1695706CC45ddfA346ad6",
+  "note": "Deployed via forge create --broadcast with keystore account green-goods-deployer"
 }

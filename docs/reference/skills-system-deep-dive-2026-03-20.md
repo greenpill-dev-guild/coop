@@ -1,3 +1,8 @@
+---
+title: "Coop Skills System Deep Dive"
+slug: /reference/skills-system-deep-dive-2026-03-20
+---
+
 # Coop Skills System Deep Dive
 
 Date: 2026-03-20

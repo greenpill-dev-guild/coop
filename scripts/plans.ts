@@ -2,9 +2,9 @@
 
 import { spawnSync } from 'node:child_process';
 import {
+  constants,
   accessSync,
   appendFileSync,
-  constants,
   cpSync,
   existsSync,
   mkdirSync,
@@ -876,7 +876,8 @@ export function reconcileQueue(options: ReconcileOptions = {}): ReconcileResult 
     }
 
     if (assessment.classification === 'ambiguous') {
-      const note = `Marked blocked by automation; partial done_when evidence found under owned_paths.`;
+      const note =
+        'Marked blocked by automation; partial done_when evidence found under owned_paths.';
       result.action = 'blocked';
       result.inboxItem = buildInboxItem(plan, 'ambiguous');
       result.inspected.push({

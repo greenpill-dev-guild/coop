@@ -129,8 +129,16 @@ describe('fvm module', () => {
       ).toBe('0xabcdef1234567890abcdef1234567890abcdef12');
     });
 
-    it('returns undefined when no configured or known deployment exists', () => {
-      expect(resolveFvmRegistryAddress('filecoin-calibration')).toBeUndefined();
+    it('returns the canonical deployment when no configured registry address is provided', () => {
+      expect(resolveFvmRegistryAddress('filecoin-calibration')).toBe(
+        '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+      );
+    });
+
+    it('returns the canonical mainnet deployment when no configured registry address is provided', () => {
+      expect(resolveFvmRegistryAddress('filecoin')).toBe(
+        '0x115819bCcaab03Be49107c69c00Bc4c21009839C',
+      );
     });
   });
 

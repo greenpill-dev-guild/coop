@@ -26,7 +26,11 @@ import {
   transcribeAudio,
   updateReceiverCapture,
 } from '@coop/shared';
-import type { PopupPreparedCapture, SidepanelIntent } from '../../runtime/messages';
+import type {
+  ActiveTabCaptureResult,
+  PopupPreparedCapture,
+  SidepanelIntent,
+} from '../../runtime/messages';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import {
   type CaptureSnapshot,
@@ -58,6 +62,8 @@ import {
   emitAudioTranscriptObservation,
   emitRoundupBatchObservation,
 } from './agent';
+
+const EXPLICIT_ACTIVE_TAB_DEDUP_COOLDOWN_MS = 5_000;
 
 export async function collectCandidate(
   tab: chrome.tabs.Tab,
@@ -111,10 +117,15 @@ export async function collectCandidate(
 
 export async function runCaptureForTabs(
   tabs: chrome.tabs.Tab[],
-  options: { drainAgent?: boolean } = {},
+  options: {
+    drainAgent?: boolean;
+    dedupCooldownMs?: number;
+    bypassRecentDuplicateCheck?: boolean;
+  } = {},
 ) {
   const coops = await getCoops();
   const candidates: TabCandidate[] = [];
+  const candidateIds: string[] = [];
   const newExtractIds: string[] = [];
   const capturedDomains = new Set<string>();
   let skippedCount = 0;
@@ -123,7 +134,7 @@ export async function runCaptureForTabs(
 
   const captureMode = await getLocalSetting<string>(stateKeys.captureMode, 'manual');
   const periodMinutes = getCapturePeriodMinutes(captureMode);
-  const dedupCooldownMs = (periodMinutes ?? 5) * 60_000;
+  const dedupCooldownMs = options.dedupCooldownMs ?? (periodMinutes ?? 5) * 60_000;
 
   for (const tab of tabs) {
     if (!isSupportedUrl(tab.url)) {
@@ -138,7 +149,7 @@ export async function runCaptureForTabs(
     }
 
     // Fast path: in-memory dedup (survives within a single SW lifetime)
-    if (wasRecentlyCaptured(tab.url, dedupCooldownMs)) {
+    if (!options.bypassRecentDuplicateCheck && wasRecentlyCaptured(tab.url, dedupCooldownMs)) {
       skippedCount++;
       continue;
     }
@@ -150,6 +161,7 @@ export async function runCaptureForTabs(
     const urlHash = hashText(canonical);
     const existingCandidate = await findRecentCandidateByUrlHash(db, urlHash);
     if (
+      !options.bypassRecentDuplicateCheck &&
       existingCandidate &&
       Date.now() - new Date(existingCandidate.capturedAt).getTime() < dedupCooldownMs
     ) {
@@ -164,6 +176,7 @@ export async function runCaptureForTabs(
       }
       const { candidate, snapshot } = collected;
       candidates.push(candidate);
+      candidateIds.push(candidate.id);
       capturedDomains.add(candidate.domain);
       markUrlCaptured(tab.url);
       await saveTabCandidate(db, candidate);
@@ -195,6 +208,7 @@ export async function runCaptureForTabs(
   if (coops.length > 0) {
     await emitRoundupBatchObservation({
       extractIds: newExtractIds,
+      candidateIds,
       eligibleCoopIds: coops.map((coop) => coop.profile.id),
     });
     if (options.drainAgent && newExtractIds.length > 0) {
@@ -274,12 +288,30 @@ export async function runCaptureCycle() {
   return runCaptureForTabs(await chrome.tabs.query({}), { drainAgent: true });
 }
 
+async function wasTabCapturedWithinCooldown(tab: chrome.tabs.Tab, cooldownMs: number) {
+  if (!tab.url) {
+    return false;
+  }
+
+  if (wasRecentlyCaptured(tab.url, cooldownMs)) {
+    return true;
+  }
+
+  const canonical = canonicalizeUrl(tab.url);
+  const urlHash = hashText(canonical);
+  const existingCandidate = await findRecentCandidateByUrlHash(db, urlHash);
+
+  return (
+    !!existingCandidate &&
+    Date.now() - new Date(existingCandidate.capturedAt).getTime() < cooldownMs
+  );
+}
+
 async function resolveMostRecentStandardActiveTab() {
   const selectMostRecentSupportedTab = (tabs: chrome.tabs.Tab[]) =>
     tabs
-      .filter(
-        (tab): tab is chrome.tabs.Tab & { url: string } =>
-          Boolean(tab.url && isSupportedUrl(tab.url)),
+      .filter((tab): tab is chrome.tabs.Tab & { url: string } =>
+        Boolean(tab.url && isSupportedUrl(tab.url)),
       )
       .sort((left, right) => (right.lastAccessed ?? 0) - (left.lastAccessed ?? 0))[0] ?? null;
 
@@ -298,12 +330,32 @@ async function resolveMostRecentStandardActiveTab() {
   return selectMostRecentSupportedTab(allTabs);
 }
 
-export async function captureActiveTab() {
+export async function captureActiveTab(options?: {
+  allowRecentDuplicate?: boolean;
+}): Promise<ActiveTabCaptureResult> {
   const tab = await resolveMostRecentStandardActiveTab();
   if (!tab) {
-    return 0;
+    return { capturedCount: 0 };
   }
-  return runCaptureForTabs([tab], { drainAgent: true });
+
+  const allowRecentDuplicate = options?.allowRecentDuplicate === true;
+  if (
+    !allowRecentDuplicate &&
+    (await wasTabCapturedWithinCooldown(tab, EXPLICIT_ACTIVE_TAB_DEDUP_COOLDOWN_MS))
+  ) {
+    return {
+      capturedCount: 0,
+      duplicateSuppressed: true,
+    };
+  }
+
+  return {
+    capturedCount: await runCaptureForTabs([tab], {
+      drainAgent: true,
+      dedupCooldownMs: EXPLICIT_ACTIVE_TAB_DEDUP_COOLDOWN_MS,
+      bypassRecentDuplicateCheck: allowRecentDuplicate,
+    }),
+  };
 }
 
 function decodeBase64(dataBase64: string) {
@@ -574,6 +626,7 @@ export async function handleTabRemoved(tabId: number) {
     if (coops.length > 0) {
       await emitRoundupBatchObservation({
         extractIds: [extractIdForObservation],
+        candidateIds: [candidate.id],
         eligibleCoopIds: coops.map((coop) => coop.profile.id),
       });
     }

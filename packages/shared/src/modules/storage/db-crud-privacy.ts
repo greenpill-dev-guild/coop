@@ -1,8 +1,8 @@
 import {
-  privacyIdentityRecordSchema,
-  stealthKeyPairRecordSchema,
   type PrivacyIdentityRecord,
   type StealthKeyPairRecord,
+  privacyIdentityRecordSchema,
+  stealthKeyPairRecordSchema,
 } from '../../contracts/schema';
 import {
   buildEncryptedLocalPayloadRecord,
