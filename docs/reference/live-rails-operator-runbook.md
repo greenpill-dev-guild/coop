@@ -38,12 +38,11 @@ Why the separation matters:
 
 - Coop's frontend `VITE_` env values are baked into the built extension bundle
 - live integration config therefore belongs only in controlled operator builds
-- public Chrome Web Store candidates should not carry live archive or registry signing material
+- public Chrome Web Store candidates should not carry trusted-node archive signing material
 
 Do not ship these values in a public Chrome Web Store candidate:
 
 - `VITE_COOP_TRUSTED_NODE_ARCHIVE_*`
-- `VITE_COOP_FVM_OPERATOR_KEY`
 
 Treat any build enabling live rails as operator-controlled until that secret boundary changes in
 code.
@@ -209,20 +208,20 @@ live readiness from a skipped rehearsal.
 
 ## Filecoin / FVM Registry Boundary
 
-The Filecoin registry path is still operator-controlled.
+The Filecoin registry path is now member-directed.
 
 Relevant env:
 
 - `VITE_COOP_FVM_CHAIN`
 - `VITE_COOP_FVM_REGISTRY_ADDRESS`
-- `VITE_COOP_FVM_OPERATOR_KEY`
 
 Current constraint:
 
 - deployment can use a Foundry keystore or private key from `packages/contracts`
-- runtime registry actions in the extension still depend on `VITE_COOP_FVM_OPERATOR_KEY`
-- because that value is baked into the bundle, it is not appropriate for a standard public Chrome
-  Web Store build
+- runtime registry actions in the extension use a member-local Filecoin signer that is provisioned
+  on first use for the authenticated passkey member
+- members must fund that local signer address on the selected FVM network before registry writes
+  can succeed
 
 ## Operator Discipline
 

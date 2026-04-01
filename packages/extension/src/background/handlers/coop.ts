@@ -21,6 +21,7 @@ import {
   predictMemberAccountAddress,
   saveLocalMemberSignerBinding,
   setAnchorCapability,
+  updateCoopDetails,
   verifyInviteCodeProof,
 } from '@coop/shared';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
@@ -437,30 +438,34 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
   } satisfies RuntimeActionResponse;
 }
 
-export async function handleUpdateCoopProfile(
-  message: Extract<RuntimeRequest, { type: 'update-coop-profile' }>,
+export async function handleUpdateCoopDetails(
+  message: Extract<RuntimeRequest, { type: 'update-coop-details' }>,
 ) {
   const coops = await getCoops();
   const coop = coops.find((c) => c.profile.id === message.payload.coopId);
   if (!coop) {
     return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
   }
-  const patch = message.payload;
-  const nextState: CoopSharedState = {
-    ...coop,
-    profile: {
-      ...coop.profile,
-      ...(patch.name !== undefined ? { name: patch.name } : {}),
-      ...(patch.purpose !== undefined ? { purpose: patch.purpose } : {}),
-      ...(patch.captureMode !== undefined ? { captureMode: patch.captureMode } : {}),
-    },
-  };
-  await saveState(nextState);
-  if (patch.captureMode !== undefined) {
-    await setLocalSetting(stateKeys.captureMode, patch.captureMode);
+
+  try {
+    const nextState = updateCoopDetails({
+      state: coop,
+      profile: message.payload.profile,
+      soul: message.payload.soul,
+      setupInsights: message.payload.setupInsights,
+    });
+    await saveState(nextState);
+    if (message.payload.profile?.captureMode !== undefined) {
+      await setLocalSetting(stateKeys.captureMode, message.payload.profile.captureMode);
+    }
+    await refreshBadge();
+    return { ok: true, data: nextState } satisfies RuntimeActionResponse<CoopSharedState>;
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Could not update coop details.',
+    } satisfies RuntimeActionResponse;
   }
-  await refreshBadge();
-  return { ok: true, data: nextState } satisfies RuntimeActionResponse<CoopSharedState>;
 }
 
 export async function handleLeaveCoop(message: Extract<RuntimeRequest, { type: 'leave-coop' }>) {

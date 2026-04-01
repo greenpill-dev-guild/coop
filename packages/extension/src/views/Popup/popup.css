@@ -664,6 +664,13 @@ button:focus-visible,
   gap: 5px;
 }
 
+.popup-field__helper {
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--coop-text-soft);
+}
+
 .popup-form__footer {
   position: fixed;
   bottom: 0;

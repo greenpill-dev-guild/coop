@@ -290,7 +290,6 @@ This is a separate second gate. It is never the default public release bar.
 Do not ship these values in a public candidate:
 
 - [ ] `VITE_COOP_TRUSTED_NODE_ARCHIVE_*`
-- [ ] `VITE_COOP_FVM_OPERATOR_KEY`
 
 Required live env is kept in repo-root `.env.local`, not in profile files.
 
@@ -357,7 +356,7 @@ If the release also includes Filecoin registry behavior:
 - [ ] Set `VITE_COOP_FVM_CHAIN`.
 - [ ] Set `VITE_COOP_FVM_REGISTRY_ADDRESS`.
 - [ ] Update the deployment map in `packages/shared/src/modules/fvm/fvm.ts`.
-- [ ] Keep `VITE_COOP_FVM_OPERATOR_KEY` out of public builds.
+- [ ] Confirm no embedded Filecoin or operator private key is present in the shipped bundle.
 
 ## Stage 6: Post-Deploy Acceptance
 

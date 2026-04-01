@@ -185,9 +185,9 @@ Release note for manual verification:
 - Remote knowledge-skill import remains quarantined from the shipped build and should stay that way
   unless the dedicated re-enable checklist is completed.
 
-Do not ship `VITE_COOP_FVM_OPERATOR_KEY` in a public Chrome Web Store build. The current Filecoin
-registry registration path is suitable only for operator-controlled builds because `VITE_` env vars
-are baked into the extension bundle.
+Do not ship any embedded Filecoin or operator private key in a public Chrome Web Store build. The
+current Filecoin registry path uses a member-local signer that is provisioned on-device for the
+authenticated passkey member at runtime.
 
 ## Coop-Specific Review Notes
 

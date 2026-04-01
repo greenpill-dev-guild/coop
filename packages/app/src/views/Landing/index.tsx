@@ -1,5 +1,9 @@
 import type { SetupInsightsInput } from '@coop/shared';
-import { getRitualLenses } from '@coop/shared';
+import {
+  clipboardPasteFallbackMessage,
+  getRitualLenses,
+  pasteClipboardText,
+} from '@coop/shared';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { DevTunnelBadge } from '../../components/DevTunnelBadge';
 import type { DevEnvironmentState } from '../../dev-environment';
@@ -129,6 +133,7 @@ export function App({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [recordingLens, setRecordingLens] = useState<TranscriptKey | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState(defaultTranscriptStatus);
+  const [transcriptStatusCardId, setTranscriptStatusCardId] = useState<TranscriptKey | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [heroScrollHintOpacity, setHeroScrollHintOpacity] = useState(1);
 
@@ -704,6 +709,11 @@ export function App({
     }));
   }
 
+  function setScopedTranscriptStatus(cardId: TranscriptKey, message: string) {
+    setTranscriptStatus(message);
+    setTranscriptStatusCardId(cardId);
+  }
+
   function stopRecognitionNow() {
     const recognition = recognitionRef.current;
 
@@ -730,13 +740,14 @@ export function App({
 
     recognitionStoppedIntentionallyRef.current = true;
     const lensTitle = ritualLenses.find((l) => l.id === recordingLens)?.title ?? recordingLens;
-    setTranscriptStatus(`Saving the ${lensTitle.toLowerCase()} notes...`);
+    setScopedTranscriptStatus(recordingLens, `Saving the ${lensTitle.toLowerCase()} notes...`);
     recognitionRef.current.stop();
   }
 
   function startRecording(cardId: TranscriptKey) {
     if (!speechRecognition) {
-      setTranscriptStatus(
+      setScopedTranscriptStatus(
+        cardId,
         'This browser does not expose live transcript here yet. Type notes directly into the card.',
       );
       return;
@@ -760,7 +771,7 @@ export function App({
     recognition.onstart = () => {
       setRecordingLens(cardId);
       const lensTitle = ritualLenses.find((l) => l.id === cardId)?.title ?? cardId;
-      setTranscriptStatus(`${lensTitle} is listening on this device.`);
+      setScopedTranscriptStatus(cardId, `${lensTitle} is listening on this device.`);
     };
 
     recognition.onresult = (event) => {
@@ -796,7 +807,7 @@ export function App({
       recognitionHadErrorRef.current = true;
       setRecordingLens(null);
       recognitionRef.current = null;
-      setTranscriptStatus(resolveSpeechError(event.error));
+      setScopedTranscriptStatus(cardId, resolveSpeechError(event.error));
     };
 
     recognition.onend = () => {
@@ -835,9 +846,9 @@ export function App({
 
       const endTitle = ritualLenses.find((l) => l.id === cardId)?.title ?? cardId;
       if (!recognitionStoppedIntentionallyRef.current && recognitionRestartCountRef.current >= 3) {
-        setTranscriptStatus('Recording paused \u2014 tap Record to try again');
+        setScopedTranscriptStatus(cardId, 'Recording paused \u2014 tap Record to try again');
       } else {
-        setTranscriptStatus(`${endTitle} transcript is ready to edit.`);
+        setScopedTranscriptStatus(cardId, `${endTitle} transcript is ready to edit.`);
       }
     };
 
@@ -915,6 +926,7 @@ export function App({
     setOpenCardId(null);
     setSharedNotes('');
     setTranscriptStatus(defaultTranscriptStatus);
+    setTranscriptStatusCardId(null);
     setCopyState('idle');
 
     if (typeof window !== 'undefined') {
@@ -989,16 +1001,16 @@ export function App({
           <button
             className="button button-secondary button-small"
             onClick={async () => {
-              try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                  updateTranscript(
-                    openCardLens.id,
-                    [transcripts[openCardLens.id], text].filter(Boolean).join('\n'),
-                  );
-                }
-              } catch {
-                setTranscriptStatus('Clipboard access unavailable. Use Cmd+V to paste.');
+              const result = await pasteClipboardText({
+                currentValue: transcripts[openCardLens.id],
+                mode: 'append',
+              });
+              if (result.status === 'success') {
+                updateTranscript(openCardLens.id, result.value);
+                return;
+              }
+              if (result.status === 'unavailable') {
+                setScopedTranscriptStatus(openCardLens.id, clipboardPasteFallbackMessage);
               }
             }}
             type="button"
@@ -1007,7 +1019,10 @@ export function App({
           </button>
         </div>
 
-        {recordingLens === openCardLens.id || transcripts[openCardLens.id] ? (
+        {recordingLens === openCardLens.id ||
+        transcripts[openCardLens.id] ||
+        (transcriptStatusCardId === openCardLens.id &&
+          transcriptStatus !== defaultTranscriptStatus) ? (
           <output aria-live="polite" className="ritual-transcript-status">
             {transcriptStatus}
           </output>

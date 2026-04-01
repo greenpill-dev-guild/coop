@@ -33,6 +33,7 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
         <PopupCreateCoopScreen
           form={state.navigation.state.createForm}
           onChange={state.navigation.setCreateForm}
+          onPastePurpose={state.handlePasteCreatePurpose}
           onSubmit={state.handleCreateSubmit}
           submitting={state.createSubmitting}
         />
@@ -46,6 +47,7 @@ export function PopupScreenRouter({ state }: { state: PopupOrchestrationState })
         <PopupJoinCoopScreen
           form={state.navigation.state.joinForm}
           onChange={state.navigation.setJoinForm}
+          onPasteInviteCode={state.handlePasteJoinInviteCode}
           onSubmit={state.handleJoinSubmit}
           submitting={state.joinSubmitting}
         />

@@ -16,6 +16,12 @@ import {
   setWebAuthnCredentialGetFnOverride,
 } from '../auth';
 
+const permissionlessMocks = vi.hoisted(() => ({
+  toSafeSmartAccount: vi.fn(async () => ({
+    address: `0x${'34'.repeat(20)}`,
+  })),
+}));
+
 vi.mock('viem/account-abstraction', () => ({
   createWebAuthnCredential: vi.fn(async () => ({
     id: 'credential-1',
@@ -30,9 +36,7 @@ vi.mock('viem/account-abstraction', () => ({
 }));
 
 vi.mock('permissionless/accounts', () => ({
-  toSafeSmartAccount: vi.fn(async () => ({
-    address: `0x${'34'.repeat(20)}`,
-  })),
+  toSafeSmartAccount: permissionlessMocks.toSafeSmartAccount,
 }));
 
 vi.mock('permissionless/clients', () => ({
@@ -201,7 +205,22 @@ describe('auth and onchain helpers', () => {
       expect(state.senderAddress).toBe(session.primaryAddress);
       expect(state.safeAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
       expect(state.deploymentTxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+      expect(state.safeSupports7579).toBe(true);
       expect(state.statusNote).toContain(statusLabel);
+    }
+
+    expect(permissionlessMocks.toSafeSmartAccount).toHaveBeenCalledTimes(2);
+    const safeAccountCalls = permissionlessMocks.toSafeSmartAccount.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
+    for (const [call] of safeAccountCalls) {
+      expect(call).toEqual(
+        expect.objectContaining({
+          version: '1.4.1',
+          safe4337ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
+          erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+        }),
+      );
     }
   });
 

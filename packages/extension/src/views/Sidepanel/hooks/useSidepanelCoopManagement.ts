@@ -1,4 +1,4 @@
-import type { CaptureMode, SoundPreferences } from '@coop/shared';
+import type { CaptureMode, CoopSoul, SetupInsights, SoundPreferences } from '@coop/shared';
 import { playCoopSound } from '../../../runtime/audio';
 import type { InferenceBridge } from '../../../runtime/inference-bridge';
 import type { AgentDashboardResponse } from '../../../runtime/messages';
@@ -33,21 +33,53 @@ export function useSidepanelCoopManagement(deps: SidepanelCoopManagementDeps) {
     inferenceBridgeRef,
   } = deps;
 
-  async function updateCoopProfile(patch: {
-    name?: string;
-    purpose?: string;
-    captureMode?: CaptureMode;
+  async function updateCoopDetails(patch: {
+    profile?: {
+      name?: string;
+      purpose?: string;
+      captureMode?: CaptureMode;
+    };
+    soul?: Partial<
+      Pick<
+        CoopSoul,
+        | 'purposeStatement'
+        | 'whyThisCoopExists'
+        | 'usefulSignalDefinition'
+        | 'toneAndWorkingStyle'
+        | 'artifactFocus'
+      >
+    >;
+    setupInsights?: SetupInsights;
   }) {
     if (!activeCoop) return;
     const response = await sendRuntimeMessage({
-      type: 'update-coop-profile',
+      type: 'update-coop-details',
       payload: { coopId: activeCoop.profile.id, ...patch },
     });
     if (!response.ok) {
-      setMessage(response.error ?? 'Could not update coop profile.');
+      setMessage(response.error ?? 'Could not update coop details.');
       return;
     }
-    setMessage('Coop profile updated.');
+    setMessage('Coop details updated.');
+    await loadDashboard();
+  }
+
+  async function updateMeetingSettings(patch: {
+    weeklyReviewCadence: string;
+    namedMoments: string[];
+    facilitatorExpectation: string;
+    defaultCapturePosture: string;
+  }) {
+    if (!activeCoop) return;
+    const response = await sendRuntimeMessage({
+      type: 'update-meeting-settings',
+      payload: { coopId: activeCoop.profile.id, ...patch },
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update meeting settings.');
+      return;
+    }
+    setMessage('Meeting settings updated.');
     await loadDashboard();
   }
 
@@ -152,7 +184,8 @@ export function useSidepanelCoopManagement(deps: SidepanelCoopManagementDeps) {
   }
 
   return {
-    updateCoopProfile,
+    updateCoopDetails,
+    updateMeetingSettings,
     handleLeaveCoop,
     selectActiveCoop,
     toggleLocalInferenceOptIn,

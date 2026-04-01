@@ -10,6 +10,7 @@ loadRootEnv();
 const pimlicoApiKey = process.env.VITE_PIMLICO_API_KEY;
 const probePrivateKey = process.env.COOP_ONCHAIN_PROBE_PRIVATE_KEY as `0x${string}` | undefined;
 const chainKey = process.env.COOP_ONCHAIN_PROBE_CHAIN === 'arbitrum' ? 'arbitrum' : 'sepolia';
+const rpcUrl = process.env.COOP_ONCHAIN_PROBE_RPC_URL;
 
 if (!pimlicoApiKey || !probePrivateKey) {
   console.log(
@@ -29,6 +30,7 @@ const state = await deployCoopSafeAccount({
   pimlicoApiKey,
   chainKey,
   coopSeed: `validate:${chainKey}:${Date.now()}`,
+  rpcUrl,
 });
 
 console.log(`[probe:onchain-live] ${state.statusNote}`);

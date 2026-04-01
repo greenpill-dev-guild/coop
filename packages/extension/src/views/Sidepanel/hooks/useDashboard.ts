@@ -315,11 +315,17 @@ export function useDashboard() {
       }
       if (msg.type === 'AGENT_CYCLE_FINISHED') {
         setAgentRunning(false);
-        // Dashboard refresh is handled by the DASHBOARD_UPDATED event
-        // that the background always emits alongside AGENT_CYCLE_FINISHED.
+        if (msg.processedCount > 0) {
+          setMessage(
+            `Helpers processed ${msg.processedCount} observation${msg.processedCount !== 1 ? 's' : ''}, created ${msg.draftCount} draft${msg.draftCount !== 1 ? 's' : ''}.`,
+          );
+        } else {
+          setMessage('Helpers checked in. Nothing new right now.');
+        }
       }
       if (msg.type === 'AGENT_CYCLE_ERROR') {
         setAgentRunning(false);
+        setMessage(msg.error ?? 'Helper cycle encountered an error.');
       }
       if (msg.type === 'AGENT_STATE_DELTA') {
         setAgentDelta(msg);

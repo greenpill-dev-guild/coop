@@ -9,8 +9,10 @@ import {
   createArchiveBundle,
   createArchiveReceiptFromUpload,
   createArchiveRecoveryRecord,
+  createLocalFvmSignerMaterial,
   createMockArchiveReceipt,
   createStorachaArchiveClient,
+  describeFvmLocalSignerFundingHint,
   describeFvmRegistryRegistrationGate,
   doesArchiveReceiptNeedOnChainSealWitness,
   encodeArchiveAnchorCalldata,
@@ -25,7 +27,11 @@ import {
   getAuthSession,
   getCoopBlob,
   getFvmChainConfig,
+  getLocalFvmSigner,
+  getLocalFvmSignerBinding,
+  inspectFvmRegistryDeployment,
   isArchiveReceiptRefreshable,
+  isFvmInsufficientFundsError,
   issueArchiveDelegation,
   listArchiveRecoveryRecords,
   nowIso,
@@ -36,6 +42,7 @@ import {
   requestArchiveOnChainSealWitness,
   requestArchiveReceiptFilecoinInfo,
   retrieveArchiveBundle,
+  saveLocalFvmSigner,
   setArchiveRecoveryRecord,
   setCoopArchiveSecrets,
   updateArchiveReceipt,
@@ -51,7 +58,6 @@ import {
   configuredArchiveMode,
   configuredChain,
   configuredFvmChain,
-  configuredFvmOperatorKey,
   configuredFvmRegistryAddress,
   configuredOnchainMode,
   configuredPimlicoApiKey,
@@ -106,6 +112,27 @@ async function resolveArchiveBundleBlobBytes(input: {
   }
 
   return blobBytes.size > 0 ? blobBytes : undefined;
+}
+
+async function ensureLocalMemberFvmSigner(passkeyCredentialId: string) {
+  const existingSigner = await getLocalFvmSigner(db, configuredFvmChain, passkeyCredentialId);
+  if (existingSigner) {
+    return existingSigner;
+  }
+
+  const existingBinding = await getLocalFvmSignerBinding(db, configuredFvmChain, passkeyCredentialId);
+  if (existingBinding) {
+    throw new Error(
+      'Local Filecoin signer data is incomplete on this device. Restore the original browser profile or clear the saved signer binding before retrying.',
+    );
+  }
+
+  const signer = createLocalFvmSignerMaterial({
+    chainKey: configuredFvmChain,
+    passkeyCredentialId,
+  });
+  await saveLocalFvmSigner(db, signer);
+  return signer;
 }
 
 async function createArchiveBundleForCoop(input: {
@@ -1270,24 +1297,29 @@ export async function handleFvmRegistration(
     return {
       ok: false,
       error:
-        'Only live archive receipts can be registered on Filecoin. Re-run the archive step from an operator-controlled live build first.',
-    } satisfies RuntimeActionResponse;
-  }
-
-  if (configuredOnchainMode !== 'live') {
-    return {
-      ok: false,
-      error:
-        'Filecoin registry registration stays gated until live onchain mode is enabled for an operator-controlled build.',
+        'Only live archive receipts can be registered on Filecoin. Re-run the archive step with live archiving enabled first.',
     } satisfies RuntimeActionResponse;
   }
 
   const authSession = await getAuthSession(db);
+  if (!authSession?.passkey) {
+    return {
+      ok: false,
+      error: 'A stored passkey session is required before a member can register proofs on Filecoin.',
+    } satisfies RuntimeActionResponse;
+  }
+
   const member = resolveReceiverPairingMember(coop, authSession);
+  if (!member) {
+    return {
+      ok: false,
+      error: 'Only the authenticated coop member can register this proof on Filecoin.',
+    } satisfies RuntimeActionResponse;
+  }
+
   const registryGate = describeFvmRegistryRegistrationGate({
     chainKey: configuredFvmChain,
     configuredRegistryAddress: configuredFvmRegistryAddress,
-    operatorKey: configuredFvmOperatorKey,
   });
 
   if (!registryGate.available || !registryGate.registryAddress) {
@@ -1309,19 +1341,15 @@ export async function handleFvmRegistration(
     } satisfies RuntimeActionResponse;
   }
 
-  // Verify anchor mode
-  try {
-    requireAnchorModeForFeature({
-      capability: await getAnchorCapability(db),
-      authSession,
-      feature: 'Filecoin registry registration',
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Anchor mode is required.';
+  const registryInspection = await inspectFvmRegistryDeployment({
+    chainKey: configuredFvmChain,
+    registryAddress: registryGate.registryAddress,
+  });
+  if (!registryInspection.ok) {
     await logPrivilegedAction({
       actionType: 'fvm-register-archive',
       status: 'failed',
-      detail,
+      detail: registryInspection.detail,
       coop,
       memberId: member?.id,
       memberDisplayName: member?.displayName,
@@ -1329,13 +1357,16 @@ export async function handleFvmRegistration(
       receiptId: input.receiptId,
       archiveScope: receipt.scope,
     });
-    return { ok: false, error: detail } satisfies RuntimeActionResponse;
+    return {
+      ok: false,
+      error: registryInspection.detail,
+    } satisfies RuntimeActionResponse;
   }
 
   await logPrivilegedAction({
     actionType: 'fvm-register-archive',
     status: 'attempted',
-    detail: `Registering CID ${receipt.rootCid} on FVM CoopRegistry.`,
+    detail: `Registering CID ${receipt.rootCid} on FVM CoopRegistry as member ${member.displayName}.`,
     coop,
     memberId: member?.id,
     memberDisplayName: member?.displayName,
@@ -1344,9 +1375,13 @@ export async function handleFvmRegistration(
     archiveScope: receipt.scope,
   });
 
+  let localSigner:
+    | Awaited<ReturnType<typeof ensureLocalMemberFvmSigner>>
+    | undefined;
   try {
+    localSigner = await ensureLocalMemberFvmSigner(authSession.passkey.id);
     const fvmConfig = getFvmChainConfig(configuredFvmChain);
-    const account = privateKeyToAccount(configuredFvmOperatorKey as `0x${string}`);
+    const account = privateKeyToAccount(localSigner.privateKey);
     const walletClient = createWalletClient({
       account,
       chain: fvmConfig.chain,
@@ -1373,7 +1408,7 @@ export async function handleFvmRegistration(
     await logPrivilegedAction({
       actionType: 'fvm-register-archive',
       status: 'succeeded',
-      detail: `CID ${receipt.rootCid} registered on FVM via tx ${txHash}.`,
+      detail: `CID ${receipt.rootCid} registered on FVM via tx ${txHash} from ${localSigner.accountAddress}.`,
       coop,
       memberId: member?.id,
       memberDisplayName: member?.displayName,
@@ -1394,7 +1429,15 @@ export async function handleFvmRegistration(
 
     return { ok: true, data: { txHash, status: 'registered' } } satisfies RuntimeActionResponse;
   } catch (error) {
-    const detail = error instanceof Error ? error.message : 'Filecoin registration failed.';
+    const rawDetail = error instanceof Error ? error.message : 'Filecoin registration failed.';
+    const detail =
+      localSigner && isFvmInsufficientFundsError(error)
+        ? describeFvmLocalSignerFundingHint({
+            chainKey: configuredFvmChain,
+            signerAddress: localSigner.accountAddress as Address,
+            detail: rawDetail,
+          })
+        : rawDetail;
     await logPrivilegedAction({
       actionType: 'fvm-register-archive',
       status: 'failed',

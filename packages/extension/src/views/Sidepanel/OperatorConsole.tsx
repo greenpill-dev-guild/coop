@@ -86,6 +86,7 @@ type OperatorConsoleProps = {
   onRevokeSessionCapability(capabilityId: string): void | Promise<void>;
   agentObservations: AgentObservation[];
   agentPlans: AgentPlan[];
+  agentRunning?: boolean;
   skillRuns: SkillRun[];
   skillManifests: SkillManifest[];
   autoRunSkillIds: string[];
@@ -126,6 +127,7 @@ export function OperatorConsole(props: OperatorConsoleProps) {
       <SkillManifestSection
         skillManifests={props.skillManifests}
         autoRunSkillIds={props.autoRunSkillIds}
+        agentRunning={props.agentRunning}
         onRunAgentCycle={props.onRunAgentCycle}
         onToggleSkillAutoRun={props.onToggleSkillAutoRun}
       />

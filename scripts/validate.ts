@@ -199,6 +199,28 @@ const suites: Record<string, Suite> = {
       'Archive probe that requires real trusted-node delegation material from repo-root env; optional fallback wiring checks require COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true.',
     steps: [{ label: 'probe:archive-live', command: ['bun', 'run', 'probe:archive-live'] }],
   },
+  'probe:greengoods-sim': {
+    description:
+      'Green Goods create-garden rehearsal against a real coop Safe and chain RPC, including the wrapped Safe execution path when an owner key is provided.',
+    steps: [{ label: 'probe:greengoods-sim', command: ['bun', 'run', 'probe:greengoods-sim'] }],
+  },
+  'probe:greengoods-admin-sim': {
+    description:
+      'Green Goods post-mint admin rehearsal for profile sync, domain sync, pool creation, gardener membership, and GAP admin changes.',
+    steps: [
+      {
+        label: 'probe:greengoods-admin-sim',
+        command: ['bun', 'run', 'probe:greengoods-admin-sim'],
+      },
+    ],
+  },
+  'probe:fvm-registry-live': {
+    description:
+      'Filecoin registry deployment probe that verifies the configured CoopRegistry address has contract code and a readable ABI surface.',
+    steps: [
+      { label: 'probe:fvm-registry-live', command: ['bun', 'run', 'probe:fvm-registry-live'] },
+    ],
+  },
   quick: {
     description: 'Fastest useful validation: typecheck + lint (~15s). No build or tests.',
     includes: ['typecheck', 'lint'],
@@ -287,7 +309,7 @@ const suites: Record<string, Suite> = {
   },
   'session-key-live': {
     description:
-      'Smart Session validation: lint, targeted onchain/session-key tests, build, then an opt-in live Sepolia-first Smart Session rehearsal.',
+      'Smart Session validation: lint, targeted onchain/session-key tests, build, then a chain-selectable live Smart Session rehearsal.',
     includes: [
       'lint',
       'unit:onchain-config',
@@ -300,6 +322,16 @@ const suites: Record<string, Suite> = {
     description:
       'Archive live-path validation: lint, targeted archive tests, build, then a trusted-node delegation probe that requires operator archive env.',
     includes: ['lint', 'unit:archive-live', 'build', 'probe:archive-live'],
+  },
+  'greengoods-live': {
+    description:
+      'Green Goods live rehearsal: create-garden and post-mint admin dry-runs against a real coop Safe and non-rate-limited RPC.',
+    includes: ['probe:greengoods-sim', 'probe:greengoods-admin-sim'],
+  },
+  'fvm-registry-live': {
+    description:
+      'Filecoin registry deployment validation: confirm the handoff registry address is deployed and readable before a live demo.',
+    includes: ['probe:fvm-registry-live'],
   },
   'unit:local-inference': {
     description:
@@ -405,8 +437,15 @@ const suites: Record<string, Suite> = {
   },
   'production-live-readiness': {
     description:
-      'Production-readiness plus opt-in live probes for shared-wallet, session-key, and archive rails.',
-    includes: ['production-readiness', 'arbitrum-safe-live', 'session-key-live', 'archive-live'],
+      'Production-readiness plus opt-in live probes for shared-wallet, session-key, archive, and Filecoin registry rails.',
+    includes: [
+      'production-readiness',
+      'arbitrum-safe-live',
+      'session-key-live',
+      'greengoods-live',
+      'archive-live',
+      'fvm-registry-live',
+    ],
   },
   full: {
     description:

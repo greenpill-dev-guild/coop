@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   getAuthSession: vi.fn(),
   getCoopBlob: vi.fn(),
   getCoops: vi.fn(),
+  inspectFvmRegistryDeployment: vi.fn(),
   issueArchiveDelegation: vi.fn(),
   listArchiveRecoveryRecords: vi.fn(),
   logPrivilegedAction: vi.fn(),
@@ -37,6 +38,13 @@ const mocks = vi.hoisted(() => ({
   setCoopArchiveSecrets: vi.fn(),
   setRuntimeHealth: vi.fn(),
   uploadArchiveBundleToStoracha: vi.fn(),
+}));
+
+const fvmSignerMocks = vi.hoisted(() => ({
+  createLocalFvmSignerMaterial: vi.fn(),
+  getLocalFvmSigner: vi.fn(),
+  getLocalFvmSignerBinding: vi.fn(),
+  saveLocalFvmSigner: vi.fn(),
 }));
 
 const viemMocks = vi.hoisted(() => ({
@@ -126,9 +134,13 @@ vi.mock('@coop/shared', async (importOriginal) => {
   return {
     ...actual,
     createStorachaArchiveClient: mocks.createStorachaArchiveClient,
+    createLocalFvmSignerMaterial: fvmSignerMocks.createLocalFvmSignerMaterial,
     getAnchorCapability: mocks.getAnchorCapability,
     getAuthSession: mocks.getAuthSession,
     getCoopBlob: mocks.getCoopBlob,
+    inspectFvmRegistryDeployment: mocks.inspectFvmRegistryDeployment,
+    getLocalFvmSigner: fvmSignerMocks.getLocalFvmSigner,
+    getLocalFvmSignerBinding: fvmSignerMocks.getLocalFvmSignerBinding,
     issueArchiveDelegation: mocks.issueArchiveDelegation,
     listArchiveRecoveryRecords: mocks.listArchiveRecoveryRecords,
     provisionStorachaSpace: mocks.provisionStorachaSpace,
@@ -137,6 +149,7 @@ vi.mock('@coop/shared', async (importOriginal) => {
     requestArchiveOnChainSealWitness: mocks.requestArchiveOnChainSealWitness,
     requestArchiveReceiptFilecoinInfo: mocks.requestArchiveReceiptFilecoinInfo,
     retrieveArchiveBundle: mocks.retrieveArchiveBundle,
+    saveLocalFvmSigner: fvmSignerMocks.saveLocalFvmSigner,
     setArchiveRecoveryRecord: mocks.setArchiveRecoveryRecord,
     setCoopArchiveSecrets: mocks.setCoopArchiveSecrets,
     uploadArchiveBundleToStoracha: mocks.uploadArchiveBundleToStoracha,
@@ -320,6 +333,13 @@ beforeEach(() => {
   mocks.resolveReceiverPairingMember.mockImplementation((coop: { members: unknown[] }) => {
     return coop.members[0];
   });
+  mocks.inspectFvmRegistryDeployment.mockResolvedValue({
+    ok: true,
+    registryAddress: '0x7777777777777777777777777777777777777777',
+    archiveCount: 0n,
+    detail:
+      'Filecoin Calibration registry 0x7777777777777777777777777777777777777777 is deployed and readable.',
+  });
   mocks.listArchiveRecoveryRecords.mockResolvedValue([]);
   mocks.requireAnchorModeForFeature.mockImplementation(() => undefined);
   mocks.removeArchiveRecoveryRecord.mockResolvedValue(undefined);
@@ -331,6 +351,18 @@ beforeEach(() => {
   mocks.saveState.mockResolvedValue(undefined);
   mocks.setArchiveRecoveryRecord.mockResolvedValue(undefined);
   mocks.setCoopArchiveSecrets.mockResolvedValue(undefined);
+  fvmSignerMocks.createLocalFvmSignerMaterial.mockReturnValue({
+    id: 'fvm-signer:filecoin-calibration:passkey-1',
+    chainKey: 'filecoin-calibration',
+    accountAddress: '0x9999999999999999999999999999999999999999',
+    passkeyCredentialId: 'passkey-1',
+    privateKey: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    createdAt: '2026-03-31T10:00:00.000Z',
+    lastUsedAt: '2026-03-31T10:00:00.000Z',
+  });
+  fvmSignerMocks.getLocalFvmSigner.mockResolvedValue(null);
+  fvmSignerMocks.getLocalFvmSignerBinding.mockResolvedValue(null);
+  fvmSignerMocks.saveLocalFvmSigner.mockResolvedValue(undefined);
   mocks.createOwnerSafeExecutionContext.mockResolvedValue({
     smartClient: {
       sendTransaction: vi.fn(async () => '0xanchorhash'),
@@ -990,10 +1022,7 @@ describe('archive handlers', () => {
   });
 
   it('blocks Filecoin registration for mock archive receipts', async () => {
-    configState.configuredOnchainMode = 'live';
     configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
-    configState.configuredFvmOperatorKey =
-      '0x8888888888888888888888888888888888888888888888888888888888888888';
 
     const { coop, artifactId } = buildCoopWithAttachment();
     const receipt = createMockArchiveReceipt({
@@ -1013,6 +1042,7 @@ describe('archive handlers', () => {
     ]);
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
+      passkey: { id: 'passkey-1' },
     });
 
     const result = await handleFvmRegistration({
@@ -1023,75 +1053,46 @@ describe('archive handlers', () => {
     expect(result).toEqual({
       ok: false,
       error:
-        'Only live archive receipts can be registered on Filecoin. Re-run the archive step from an operator-controlled live build first.',
+        'Only live archive receipts can be registered on Filecoin. Re-run the archive step with live archiving enabled first.',
     });
     expect(mocks.saveState).not.toHaveBeenCalled();
     expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
   });
 
-  it('returns a typed failure when live onchain mode is not enabled', async () => {
-    const { coop, artifactId } = buildCoopWithAttachment();
-    const receipt = buildLiveArchiveReceipt(coop, artifactId);
-    mocks.getCoops.mockResolvedValue([
-      {
-        ...coop,
-        archiveReceipts: [receipt],
-      },
-    ]);
-
-    const result = await handleFvmRegistration({
-      coopId: coop.profile.id,
-      receiptId: receipt.id,
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error:
-        'Filecoin registry registration stays gated until live onchain mode is enabled for an operator-controlled build.',
-    });
-    expect(mocks.saveState).not.toHaveBeenCalled();
-    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
-  });
-
-  it('returns a typed failure when live registry material is not configured', async () => {
-    configState.configuredOnchainMode = 'live';
-
-    const { coop, artifactId } = buildCoopWithAttachment();
-    const receipt = buildLiveArchiveReceipt(coop, artifactId);
-    mocks.getCoops.mockResolvedValue([
-      {
-        ...coop,
-        archiveReceipts: [receipt],
-      },
-    ]);
-    mocks.getAuthSession.mockResolvedValue({
-      primaryAddress: coop.members[0]?.address,
-    });
-
-    const result = await handleFvmRegistration({
-      coopId: coop.profile.id,
-      receiptId: receipt.id,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain('Live Filecoin registry registration is blocked');
-    expect(result.error).toContain('VITE_COOP_FVM_OPERATOR_KEY');
-    expect(result.error).toContain('Deploy packages/contracts/src/CoopRegistry.sol');
-    expect(mocks.saveState).not.toHaveBeenCalled();
-    expect(mocks.logPrivilegedAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        actionType: 'fvm-register-archive',
-        status: 'failed',
-      }),
-    );
-    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
-  });
-
-  it('registers an archive receipt on the live Filecoin registry and stores the tx hash', async () => {
-    configState.configuredOnchainMode = 'live';
+  it('requires a stored passkey session before registering on Filecoin', async () => {
     configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
-    configState.configuredFvmOperatorKey =
-      '0x8888888888888888888888888888888888888888888888888888888888888888';
+
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
+    mocks.getCoops.mockResolvedValue([
+      {
+        ...coop,
+        archiveReceipts: [receipt],
+      },
+    ]);
+    mocks.getAuthSession.mockResolvedValue(null);
+
+    const result = await handleFvmRegistration({
+      coopId: coop.profile.id,
+      receiptId: receipt.id,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'A stored passkey session is required before a member can register proofs on Filecoin.',
+    });
+    expect(mocks.saveState).not.toHaveBeenCalled();
+    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
+  });
+
+  it('fails clearly when the configured registry deployment has no readable contract code', async () => {
+    configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
+    mocks.inspectFvmRegistryDeployment.mockResolvedValueOnce({
+      ok: false,
+      registryAddress: '0x7777777777777777777777777777777777777777',
+      detail:
+        'No contract code was found at 0x7777777777777777777777777777777777777777 on Filecoin Calibration.',
+    });
 
     const { coop, artifactId } = buildCoopWithAttachment();
     const receipt = buildLiveArchiveReceipt(coop, artifactId);
@@ -1103,6 +1104,35 @@ describe('archive handlers', () => {
     ]);
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
+      passkey: { id: 'passkey-1' },
+    });
+
+    const result = await handleFvmRegistration({
+      coopId: coop.profile.id,
+      receiptId: receipt.id,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'No contract code was found at 0x7777777777777777777777777777777777777777 on Filecoin Calibration.',
+    });
+    expect(viemMocks.createWalletClient).not.toHaveBeenCalled();
+    expect(mocks.saveState).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the canonical registry deployment when no env override is configured', async () => {
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
+    mocks.getCoops.mockResolvedValue([
+      {
+        ...coop,
+        archiveReceipts: [receipt],
+      },
+    ]);
+    mocks.getAuthSession.mockResolvedValue({
+      primaryAddress: coop.members[0]?.address,
+      passkey: { id: 'passkey-1' },
     });
 
     const result = await handleFvmRegistration({
@@ -1117,8 +1147,65 @@ describe('archive handlers', () => {
         status: 'registered',
       },
     });
+    expect(mocks.saveState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archiveReceipts: [
+          expect.objectContaining({
+            id: receipt.id,
+            fvmRegistryTxHash: '0xfvmhash',
+            fvmChainKey: 'filecoin-calibration',
+          }),
+        ],
+      }),
+    );
+    expect(viemMocks.createWalletClient).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers an archive receipt on the live Filecoin registry and stores the tx hash', async () => {
+    configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
+
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const receipt = buildLiveArchiveReceipt(coop, artifactId);
+    mocks.getCoops.mockResolvedValue([
+      {
+        ...coop,
+        archiveReceipts: [receipt],
+      },
+    ]);
+    mocks.getAuthSession.mockResolvedValue({
+      primaryAddress: coop.members[0]?.address,
+      passkey: { id: 'passkey-1' },
+    });
+
+    const result = await handleFvmRegistration({
+      coopId: coop.profile.id,
+      receiptId: receipt.id,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        txHash: '0xfvmhash',
+        status: 'registered',
+      },
+    });
+    expect(fvmSignerMocks.getLocalFvmSigner).toHaveBeenCalledWith(
+      {},
+      'filecoin-calibration',
+      'passkey-1',
+    );
+    expect(fvmSignerMocks.createLocalFvmSignerMaterial).toHaveBeenCalledWith({
+      chainKey: 'filecoin-calibration',
+      passkeyCredentialId: 'passkey-1',
+    });
+    expect(fvmSignerMocks.saveLocalFvmSigner).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({
+        id: 'fvm-signer:filecoin-calibration:passkey-1',
+      }),
+    );
     expect(viemMocks.privateKeyToAccount).toHaveBeenCalledWith(
-      '0x8888888888888888888888888888888888888888888888888888888888888888',
+      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     );
     expect(viemMocks.createWalletClient).toHaveBeenCalledTimes(1);
     expect(mocks.saveState).toHaveBeenCalledWith(
@@ -1140,11 +1227,8 @@ describe('archive handlers', () => {
     );
   });
 
-  it('returns a typed failure when live Filecoin registration fails', async () => {
-    configState.configuredOnchainMode = 'live';
+  it('returns a funding hint when the member-local Filecoin signer has no FIL', async () => {
     configState.configuredFvmRegistryAddress = '0x7777777777777777777777777777777777777777';
-    configState.configuredFvmOperatorKey =
-      '0x8888888888888888888888888888888888888888888888888888888888888888';
 
     const { coop, artifactId } = buildCoopWithAttachment();
     const receipt = buildLiveArchiveReceipt(coop, artifactId);
@@ -1156,10 +1240,11 @@ describe('archive handlers', () => {
     ]);
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
+      passkey: { id: 'passkey-1' },
     });
     viemMocks.createWalletClient.mockReturnValueOnce({
       sendTransaction: vi.fn(async () => {
-        throw new Error('Filecoin registry rejected the transaction.');
+        throw new Error('insufficient funds for gas * price + value');
       }),
     });
 
@@ -1170,20 +1255,23 @@ describe('archive handlers', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'Filecoin registry rejected the transaction.',
+      error:
+        'insufficient funds for gas * price + value Fund the member-local Filecoin signer 0x9999999999999999999999999999999999999999 on Filecoin Calibration and retry.',
     });
     expect(mocks.notifyExtensionEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventKind: 'fvm-register-archive',
         state: 'failed',
-        message: 'Filecoin registry rejected the transaction.',
+        message:
+          'insufficient funds for gas * price + value Fund the member-local Filecoin signer 0x9999999999999999999999999999999999999999 on Filecoin Calibration and retry.',
       }),
     );
     expect(mocks.logPrivilegedAction).toHaveBeenCalledWith(
       expect.objectContaining({
         actionType: 'fvm-register-archive',
         status: 'failed',
-        detail: 'Filecoin registry rejected the transaction.',
+        detail:
+          'insufficient funds for gas * price + value Fund the member-local Filecoin signer 0x9999999999999999999999999999999999999999 on Filecoin Calibration and retry.',
       }),
     );
   });

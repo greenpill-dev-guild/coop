@@ -54,7 +54,6 @@ These variables configure the Filecoin Virtual Machine integration for on-chain 
 | --- | --- | --- | --- |
 | `VITE_COOP_FVM_CHAIN` | `filecoin`, `filecoin-calibration` | `filecoin-calibration` | Target FVM network |
 | `VITE_COOP_FVM_REGISTRY_ADDRESS` | `0x...` (40-char hex) | -- | ERC-8004 registry contract address |
-| `VITE_COOP_FVM_OPERATOR_KEY` | `0x...` (64-char hex) | -- | Operator signing key for registry transactions |
 
 Deploy the registry contract with the repo helper, which runs a clean Foundry build/test pass first
 and then broadcasts with `forge create --broadcast`:
@@ -127,9 +126,9 @@ VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
   exposed as a user-set frontend env var.
 - TURN credentials are only needed when peers cannot establish direct WebRTC connections.
 - Trusted-node archive variables are only needed by operators running with live archive enabled.
-- FVM variables are only needed when interacting with the ERC-8004 agent registry on Filecoin.
-- `VITE_COOP_FVM_OPERATOR_KEY` is only appropriate for operator-controlled builds. Because all `VITE_`
-  variables are baked into the extension bundle, do not set it in a public Chrome Web Store release.
+- FVM variables are only needed when interacting with the ERC-8004 agent registry on Filecoin. The
+  extension now provisions a member-local Filecoin signer on first use, so no FVM private-key env
+  var is required for runtime registry writes.
 - Green Goods schema UIDs are EAS (Ethereum Attestation Service) identifiers required for the Green Goods work submission flow. Work approval and assessment UIDs ship from the canonical deployment map.
 - Green Goods impact reporting is not a direct EAS attestation flow in Coop. The protocol packages impact through Hypercert/Karma GAP workflows instead.
 - For current public release status, staged-launch blockers, and the live-rails second gate, read

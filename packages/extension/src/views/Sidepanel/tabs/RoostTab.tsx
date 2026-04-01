@@ -66,6 +66,7 @@ export interface RoostTabProps {
   greenGoodsActionQueue: ActionBundle[];
   summary: RuntimeSummary | null;
   agentDashboard: AgentDashboardResponse | null;
+  agentRunning?: boolean;
   onProvisionMemberOnchainAccount: () => Promise<void>;
   onSubmitGreenGoodsWorkSubmission: (input: {
     actionUid: number;
@@ -90,6 +91,7 @@ export function RoostTab({
   agentDashboard,
   onProvisionMemberOnchainAccount,
   onSubmitGreenGoodsWorkSubmission,
+  agentRunning,
   onRunAgentCycle,
   onApproveAgentPlan,
   onRejectAgentPlan,
@@ -261,6 +263,7 @@ export function RoostTab({
           summary={summary}
           pendingPlans={pendingPlans}
           recentArtifacts={recentArtifacts}
+          agentRunning={agentRunning}
           onOpenSynthesisSegment={onOpenSynthesisSegment}
           onRunAgentCycle={onRunAgentCycle}
         />
@@ -276,6 +279,7 @@ export function RoostTab({
           pendingPlans={pendingPlans}
           recentObservations={recentObservations}
           recentMemories={recentMemories}
+          agentRunning={agentRunning}
           onRunAgentCycle={onRunAgentCycle}
           onApproveAgentPlan={onApproveAgentPlan}
           onRejectAgentPlan={onRejectAgentPlan}
@@ -310,12 +314,14 @@ function FocusSection({
   summary,
   pendingPlans,
   recentArtifacts,
+  agentRunning,
   onOpenSynthesisSegment,
   onRunAgentCycle,
 }: {
   summary: RuntimeSummary | null;
   pendingPlans: AgentPlan[];
   recentArtifacts: CoopSharedState['artifacts'];
+  agentRunning?: boolean;
   onOpenSynthesisSegment: (segment: 'review') => void;
   onRunAgentCycle: () => Promise<void>;
 }) {
@@ -352,10 +358,11 @@ function FocusSection({
                 </span>
                 <button
                   className="secondary-button"
+                  disabled={agentRunning}
                   onClick={() => void onRunAgentCycle()}
                   type="button"
                 >
-                  Run Agent
+                  {agentRunning ? 'Running...' : 'Run Agent'}
                 </button>
               </div>
             ) : null}
@@ -438,6 +445,7 @@ function AgentSection({
   pendingPlans,
   recentObservations,
   recentMemories,
+  agentRunning,
   onRunAgentCycle,
   onApproveAgentPlan,
   onRejectAgentPlan,
@@ -447,6 +455,7 @@ function AgentSection({
   pendingPlans: AgentPlan[];
   recentObservations: AgentObservation[];
   recentMemories: AgentMemory[];
+  agentRunning?: boolean;
   onRunAgentCycle: () => Promise<void>;
   onApproveAgentPlan: (planId: string) => Promise<void>;
   onRejectAgentPlan: (planId: string, reason?: string) => Promise<void>;
@@ -468,8 +477,13 @@ function AgentSection({
             <span className="roost-activity-item__meta">Runs every ~{cadence} min</span>
           </div>
         </div>
-        <button className="primary-button" onClick={() => void onRunAgentCycle()} type="button">
-          Run Now
+        <button
+          className="primary-button"
+          disabled={agentRunning}
+          onClick={() => void onRunAgentCycle()}
+          type="button"
+        >
+          {agentRunning ? 'Running...' : 'Run Now'}
         </button>
       </article>
 

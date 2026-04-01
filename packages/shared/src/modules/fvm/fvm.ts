@@ -2,13 +2,13 @@ import {
   http,
   type Address,
   createPublicClient,
-  decodeFunctionResult,
   encodeFunctionData,
 } from 'viem';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { filecoin, filecoinCalibration } from 'viem/chains';
-import type { FvmChainKey, FvmRegistryState } from '../../contracts/schema';
-import { fvmRegistryStateSchema } from '../../contracts/schema';
-import { toDeterministicAddress } from '../../utils';
+import type { FvmChainKey, FvmRegistryState, LocalFvmSignerBinding } from '../../contracts/schema';
+import { fvmRegistryStateSchema, localFvmSignerBindingSchema } from '../../contracts/schema';
+import { nowIso, toDeterministicAddress } from '../../utils';
 import { COOP_REGISTRY_ABI } from './abi';
 
 const fvmChainConfigs = {
@@ -44,6 +44,17 @@ export const FVM_REGISTRY_DEPLOYMENTS: Partial<Record<FvmChainKey, Address>> = {
   'filecoin-calibration': '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
 };
 
+export type LocalFvmSignerMaterial = LocalFvmSignerBinding & {
+  privateKey: `0x${string}`;
+};
+
+export type FvmRegistryInspectionResult = {
+  ok: boolean;
+  registryAddress: Address;
+  detail: string;
+  archiveCount?: bigint;
+};
+
 export function resolveFvmRegistryAddress(
   chainKey: FvmChainKey,
   configuredAddress?: string,
@@ -58,21 +69,18 @@ export function resolveFvmRegistryAddress(
 export function describeFvmRegistryRegistrationGate(input: {
   chainKey: FvmChainKey;
   configuredRegistryAddress?: string;
-  operatorKey?: string;
 }) {
   const config = getFvmChainConfig(input.chainKey);
   const registryAddress = resolveFvmRegistryAddress(
     input.chainKey,
     input.configuredRegistryAddress,
   );
-  const hasOperatorKey =
-    typeof input.operatorKey === 'string' && /^0x[a-fA-F0-9]{64}$/.test(input.operatorKey);
 
-  if (registryAddress && hasOperatorKey) {
+  if (registryAddress) {
     return {
       available: true,
       registryAddress,
-      detail: `Live Filecoin registry registration is ready on ${config.label}.`,
+      detail: `Live Filecoin registry registration is ready on ${config.label}. Members will sign with a local Filecoin account on this device.`,
       checklist: [] as string[],
     };
   }
@@ -81,24 +89,80 @@ export function describeFvmRegistryRegistrationGate(input: {
   if (!registryAddress) {
     missing.push(`a registry address for ${config.label}`);
   }
-  if (!hasOperatorKey) {
-    missing.push('VITE_COOP_FVM_OPERATOR_KEY');
-  }
 
   return {
     available: false,
     registryAddress,
     detail: `Live Filecoin registry registration is blocked because ${missing.join(
       ' and ',
-    )} is missing. Deploy packages/contracts/src/CoopRegistry.sol, set the operator-only FVM env in .env.local, and rebuild before retrying.`,
+    )} is missing. Deploy packages/contracts/src/CoopRegistry.sol, set the FVM registry env in .env.local, and rebuild before retrying.`,
     checklist: [
       `Deploy packages/contracts/src/CoopRegistry.sol to ${config.label}.`,
-      'Set VITE_COOP_FVM_REGISTRY_ADDRESS in the operator-only root .env.local.',
-      'Set VITE_COOP_FVM_OPERATOR_KEY in the operator-only root .env.local.',
+      'Set VITE_COOP_FVM_REGISTRY_ADDRESS in the root .env.local.',
       'Update packages/shared/src/modules/fvm/fvm.ts once the deployment is canonical.',
-      'Rebuild the operator bundle before retrying Filecoin registration.',
+      'Rebuild the extension bundle before retrying Filecoin registration.',
     ],
   };
+}
+
+export function buildLocalFvmSignerBindingId(input: {
+  chainKey: FvmChainKey;
+  passkeyCredentialId: string;
+}) {
+  return `fvm-signer:${input.chainKey}:${input.passkeyCredentialId}`;
+}
+
+export function createLocalFvmSignerBinding(input: {
+  chainKey: FvmChainKey;
+  accountAddress: `0x${string}`;
+  passkeyCredentialId: string;
+  createdAt?: string;
+}): LocalFvmSignerBinding {
+  const timestamp = input.createdAt ?? nowIso();
+  return localFvmSignerBindingSchema.parse({
+    id: buildLocalFvmSignerBindingId({
+      chainKey: input.chainKey,
+      passkeyCredentialId: input.passkeyCredentialId,
+    }),
+    chainKey: input.chainKey,
+    accountAddress: input.accountAddress,
+    passkeyCredentialId: input.passkeyCredentialId,
+    createdAt: timestamp,
+    lastUsedAt: timestamp,
+  });
+}
+
+export function createLocalFvmSignerMaterial(input: {
+  chainKey: FvmChainKey;
+  passkeyCredentialId: string;
+  createdAt?: string;
+}): LocalFvmSignerMaterial {
+  const privateKey = generatePrivateKey();
+  const account = privateKeyToAccount(privateKey);
+  return {
+    ...createLocalFvmSignerBinding({
+      chainKey: input.chainKey,
+      accountAddress: account.address,
+      passkeyCredentialId: input.passkeyCredentialId,
+      createdAt: input.createdAt,
+    }),
+    privateKey,
+  };
+}
+
+export function isFvmInsufficientFundsError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /insufficient funds|insufficient balance|not enough funds|balance too low/i.test(message);
+}
+
+export function describeFvmLocalSignerFundingHint(input: {
+  chainKey: FvmChainKey;
+  signerAddress: Address;
+  detail?: string;
+}) {
+  const config = getFvmChainConfig(input.chainKey);
+  const prefix = input.detail ? `${input.detail} ` : '';
+  return `${prefix}Fund the member-local Filecoin signer ${input.signerAddress} on ${config.label} and retry.`;
 }
 
 export function getFvmChainConfig(chainKey: FvmChainKey) {
@@ -113,12 +177,79 @@ export function getFvmExplorerTxUrl(txHash: string, chainKey: FvmChainKey): stri
   return getFvmChainConfig(chainKey).explorerTxUrl(txHash);
 }
 
-export function createFvmPublicClient(chainKey: FvmChainKey) {
+export function createFvmPublicClient(
+  chainKey: FvmChainKey,
+  options: {
+    rpcUrl?: string;
+  } = {},
+) {
   const config = getFvmChainConfig(chainKey);
   return createPublicClient({
     chain: config.chain,
-    transport: http(),
+    transport: http(options.rpcUrl),
   });
+}
+
+export async function inspectFvmRegistryDeployment(input: {
+  chainKey: FvmChainKey;
+  registryAddress: string;
+  rpcUrl?: string;
+  client?: {
+    getCode: (args: { address: Address }) => Promise<`0x${string}` | undefined>;
+    readContract: (args: {
+      address: Address;
+      abi: typeof COOP_REGISTRY_ABI;
+      functionName: 'getArchiveCount';
+      args: [Address];
+    }) => Promise<bigint>;
+  };
+}): Promise<FvmRegistryInspectionResult> {
+  const config = getFvmChainConfig(input.chainKey);
+  if (!/^0x[a-fA-F0-9]{40}$/.test(input.registryAddress)) {
+    return {
+      ok: false,
+      registryAddress: toDeterministicAddress(
+        `invalid-fvm-registry:${input.chainKey}:${input.registryAddress}`,
+      ),
+      detail: `The configured ${config.label} registry address is invalid.`,
+    };
+  }
+
+  const registryAddress = input.registryAddress as Address;
+  const client = input.client ?? createFvmPublicClient(input.chainKey, { rpcUrl: input.rpcUrl });
+  const code = await client.getCode({
+    address: registryAddress,
+  });
+
+  if (!code || code === '0x') {
+    return {
+      ok: false,
+      registryAddress,
+      detail: `No contract code was found at ${registryAddress} on ${config.label}.`,
+    };
+  }
+
+  try {
+    const archiveCount = await client.readContract({
+      address: registryAddress,
+      abi: COOP_REGISTRY_ABI,
+      functionName: 'getArchiveCount',
+      args: ['0x0000000000000000000000000000000000000000'],
+    });
+    return {
+      ok: true,
+      registryAddress,
+      archiveCount,
+      detail: `${config.label} registry ${registryAddress} is deployed and readable.`,
+    };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown registry ABI failure.';
+    return {
+      ok: false,
+      registryAddress,
+      detail: `Contract code exists at ${registryAddress} on ${config.label}, but the registry ABI check failed: ${detail}`,
+    };
+  }
 }
 
 export function encodeFvmRegisterArchiveCalldata(input: {

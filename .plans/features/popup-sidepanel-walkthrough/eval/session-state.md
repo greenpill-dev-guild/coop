@@ -48,6 +48,18 @@ This file is the shared handoff and regression-control layer for agents working 
 - roundup and capture handlers in background/shared pipeline code
 - side panel agent root view and empty states
 
+## Current Uncommitted Work Outside This Walkthrough
+
+- Treat the current worktree as live and partially dirty beyond this walkthrough. Do not reset or normalize unrelated edits while completing walkthrough tasks.
+- Unrelated or adjacent uncommitted work is currently present in:
+  - popup/create-join flow: `packages/extension/src/views/Popup/PopupCreateCoopScreen.tsx`, `packages/extension/src/views/Popup/PopupJoinCoopScreen.tsx`, `packages/extension/src/views/Popup/hooks/usePopupFormHandlers.ts`, `packages/extension/src/views/Popup/hooks/usePopupNoteHandlers.ts`
+  - coop/review/background flow: `packages/extension/src/background.ts`, `packages/extension/src/background/handlers/coop.ts`, `packages/extension/src/background/handlers/review.ts`, `packages/shared/src/modules/coop/flows.ts`
+  - sidepanel coop/draft management: `packages/extension/src/views/Sidepanel/hooks/useDraftEditor.ts`, `packages/extension/src/views/Sidepanel/hooks/useSidepanelCoopManagement.ts`, `packages/extension/src/views/Sidepanel/hooks/useSidepanelOrchestration.ts`, `packages/extension/src/views/Sidepanel/tabs/NestTab.tsx`
+  - shared runtime/contracts/onchain: `packages/extension/src/runtime/messages.ts`, `packages/shared/src/contracts/schema-onchain.ts`, `packages/shared/src/contracts/schema-session.ts`, `packages/shared/src/modules/fvm/fvm.ts`
+  - app/landing and shared app utilities: `packages/app/src/views/Landing/index.tsx`, `packages/shared/src/modules/app/index.ts`, plus uncommitted clipboard work in `packages/shared/src/modules/app/clipboard.ts` and `packages/shared/src/modules/app/__tests__/clipboard.test.ts`
+- Overlap hotspots for walkthrough agents: `packages/extension/src/runtime/messages.ts`, `packages/extension/src/views/Popup/PopupScreenRouter.tsx`, `packages/extension/src/views/Popup/hooks/usePopupOrchestration.ts`, and `packages/extension/src/views/Sidepanel/tabs/ChickensTab.tsx` may contain both walkthrough changes and unrelated in-flight edits. Read carefully and adapt instead of reverting.
+- `.claude/worktrees/*` also contains active local drift. Ignore it unless the user explicitly asks about Claude worktrees.
+
 ## Validation Expectations
 
 - Prefer the smallest relevant build first.
@@ -602,3 +614,73 @@ This file is the shared handoff and regression-control layer for agents working 
   - The `promote-signal-to-draft` handler constructs a draft with `workflowStage: 'ready'` — orphan signals go directly to publish-ready status. If product wants a candidate review step before push, change to `'candidate'`.
   - The handler creates an `interpretationId` via `createId('interp')` since no real interpretation record exists for orphan signals. This is a synthetic ID for schema compliance. If interpretation lookups are later needed for promoted drafts, consider linking to the actual tab routing's interpretation.
   - The `data-kind` attribute was removed from CompactCard since the unified model should not expose pipeline distinctions to the DOM. If analytics or styling needs to distinguish card origins, re-add it as a data attribute without affecting rendering.
+  - Post-review fixes applied:
+    - **Zod crash fix**: `provenance.interpretationId` now uses the generated `syntheticInterpretationId` instead of `undefined`, satisfying `z.string().min(1)`. Added `try/catch` around `saveReviewDraft` with structured error return.
+    - **State race fix**: `promoteSignalAndPublish` no longer calls `toggleDraftTargetCoop` (React state setter). Instead, it builds the final draft object imperatively with the target coop added, then passes that directly to `publishDraft`. The `draftValue` fallback (`draftEdits[id] ?? draft`) ensures correctness regardless of React batching.
+    - **Duplicate merge fix**: `buildReviewItems` now skips subsequent signals that link to an already-merged `draftId`, preventing duplicate cards when multiple signals share the same draft.
+    - **draftEdits registration**: `promoteSignalToDraft` now registers the promoted draft in `draftEdits` state via `setDraftEdits`, consistent with `convertReceiverCapture` and `saveDraft` patterns.
+    - **Variable shadow fix**: Renamed catch-block `message` to `reason` to avoid shadowing the handler's `message` parameter.
+
+### sidepanel-agent-actions-wiring
+- Status: in_progress
+- Started: 2026-03-31 PDT
+- Surfaces: sidepanel Nest > Agent sub-tab ("Check the helpers" button), sidepanel Roost > Agent sub-tab ("Run Now" button), sidepanel Roost > Focus section ("Run Agent" button for stale observations), sidepanel toast layer (agent cycle outcome feedback)
+- Expected files:
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelOrchestration.ts (add `agentRunning` to interface + return)
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelAgent.ts (remove vague success toast, map pre-flight errors to friendly copy)
+  - packages/extension/src/views/Sidepanel/hooks/useDashboard.ts (compose outcome-specific toast from AGENT_CYCLE_FINISHED/ERROR events)
+  - packages/extension/src/views/Sidepanel/SidepanelTabRouter.tsx (pass `agentRunning` to RoostTab)
+  - packages/extension/src/views/Sidepanel/tabs/RoostTab.tsx (add `agentRunning` prop, disable/relabel buttons while running)
+  - packages/extension/src/views/Sidepanel/tabs/NestAgentSection.tsx (thread `agentRunning` to OperatorConsole)
+  - packages/extension/src/views/Sidepanel/OperatorConsole.tsx (thread `agentRunning` to SkillManifestSection)
+  - packages/extension/src/views/Sidepanel/operator-sections/SkillManifestSection.tsx (disable/relabel button while running)
+  - packages/extension/src/views/Sidepanel/hooks/__tests__/useSidepanelAgent.test.ts (update success toast assertion, add error mapping test)
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/RoostTab-interactions.test.tsx (add disabled-button-during-run test)
+- Regression watchouts:
+  - Do not reintroduce inline banners or layout-shifting status blocks; all agent feedback must stay on the normalized toast path.
+  - Do not alter popup roundup concurrency, permission routing, Chickens compact card rendering, or signal-draft consolidation.
+  - Do not modify `runtime/messages.ts` (agent event types are already correct).
+  - Do not modify `background/handlers/agent.ts` or `background/operator.ts` (background wiring is correct).
+  - Shared files `useSidepanelOrchestration.ts`, `SidepanelTabRouter.tsx`, and `NestTab.tsx` have in-flight changes from other walkthrough tasks; adapt rather than revert.
+- Prior task overlap:
+  - `notifications-normalization` established the sidepanel toast anchor and `setMessage` path — agent feedback must continue routing through `setMessage`, not add new notification surfaces.
+  - `signal-draft-consolidation` and `chickens-feed-tone-down` touched ChickensTab and global.css — no changes to those files in this task.
+  - `roundup-permission-proactive` touched `useSidepanelOrchestration.ts` — only adding `agentRunning` to the interface, no conflict.
+- Changes shipped:
+  - Threaded `agentRunning` (already computed in `useDashboard` from `AGENT_CYCLE_STARTED/FINISHED` background events) through `useSidepanelOrchestration` → `SidepanelTabRouter` → `RoostTab` (Focus + Agent sub-sections) and → `NestTab` → `NestAgentSection` → `OperatorConsole` → `SkillManifestSection`. All three agent-cycle buttons now disable and show "Running..." / "Checking..." while the agent cycle is in progress.
+  - `AGENT_CYCLE_FINISHED` background events now compose an outcome-specific toast: "Helpers processed N observation(s), created N draft(s)." when work was done, or "Helpers checked in. Nothing new right now." when idle. Replaces the old vague "Agent cycle requested." message.
+  - `AGENT_CYCLE_ERROR` background events now surface the error message through the same sidepanel toast path.
+  - `handleRunAgentCycle` success path no longer emits its own toast (was "Agent cycle requested."); the background event handles it, avoiding double toasts and making the message reflect actual outcomes.
+  - Pre-flight errors from `getTrustedNodeContext` are now mapped to friendlier messages: "Sign in with your passkey first." / "Select a coop first." / "Only trusted members can run helpers." instead of the operator-jargon originals.
+  - Added new test for error message mapping in `useSidepanelAgent.test.ts` (3 assertion cases).
+  - Added new test for disabled button state in `RoostTab-interactions.test.tsx`.
+- Files touched:
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelOrchestration.ts
+  - packages/extension/src/views/Sidepanel/hooks/useSidepanelAgent.ts
+  - packages/extension/src/views/Sidepanel/hooks/useDashboard.ts
+  - packages/extension/src/views/Sidepanel/SidepanelTabRouter.tsx
+  - packages/extension/src/views/Sidepanel/tabs/RoostTab.tsx
+  - packages/extension/src/views/Sidepanel/tabs/NestAgentSection.tsx
+  - packages/extension/src/views/Sidepanel/tabs/NestTab.tsx
+  - packages/extension/src/views/Sidepanel/OperatorConsole.tsx
+  - packages/extension/src/views/Sidepanel/operator-sections/SkillManifestSection.tsx
+  - packages/extension/src/views/Sidepanel/hooks/__tests__/useSidepanelAgent.test.ts
+  - packages/extension/src/views/Sidepanel/tabs/__tests__/RoostTab-interactions.test.tsx
+  - .plans/features/popup-sidepanel-walkthrough/eval/session-state.md
+- Validation:
+  - `bun run test -- packages/extension/src/views/Sidepanel/hooks/__tests__/useSidepanelAgent.test.ts packages/extension/src/views/Sidepanel/tabs/__tests__/RoostTab-interactions.test.tsx` -> pass (15 tests, 2 new)
+  - `cd packages/extension && bun run build` -> pass
+  - `bunx @biomejs/biome check <all 11 changed files>` -> pass
+  - `bun run validate smoke` -> 3010 passing, 1 pre-existing failure (`agent-observation-conditions.test.ts`, confirmed on clean main)
+- Regressions checked:
+  - All pre-existing RoostTab interaction tests (11 total) pass unchanged including coop switching, sub-tab navigation, What's Next items, and Garden progressive onboarding.
+  - All pre-existing `useSidepanelAgent` tests pass (4 total including success/failure paths), with the success toast assertion updated to reflect the new behavior.
+  - Sidepanel toast system stays non-blocking/non-layout-shifting — no inline banners or status blocks introduced; all feedback routes through the existing `setMessage` → `NotificationBanner` path in the sticky toast anchor.
+  - Popup roundup concurrency, permission routing, Chickens compact cards, signal-draft consolidation, capture dialog, and audio permission flows are completely untouched.
+  - `runtime/messages.ts` and `background/handlers/agent.ts` were not modified — background wiring is unchanged.
+  - The pre-existing `agent-observation-conditions.test.ts` failure is confirmed baseline (fails on clean main per prior task logs).
+- Follow-up notes:
+  - The `agentRunning` state reflects background `AGENT_CYCLE_STARTED/FINISHED/ERROR` events which fire during `runAgentCycle` execution in the agent-runner. If a manual `handleRunAgentCycle` call fails at the `getTrustedNodeContext` pre-flight stage (before the background runner is invoked), `agentRunning` never transitions to `true`, so the button stays enabled and the error toast fires immediately. This is correct behavior.
+  - The `AGENT_CYCLE_FINISHED` toast fires from the background event listener in `useDashboard`, not from `handleRunAgentCycle`. If the background event arrives before the handler's `sendRuntimeMessage` response resolves, the toast may briefly precede the dashboard refresh. This is acceptable — the toast is informational and the dashboard updates within the same render cycle.
+  - If product wants the toast to show richer detail (e.g., "routed 3 tabs, created 1 review digest"), the `AGENT_STATE_DELTA` event already carries that breakdown and already renders a separate notification banner with an "Open" action. The `AGENT_CYCLE_FINISHED` toast is intentionally a simpler summary.
+  - The `friendlyAgentError` function in `useSidepanelAgent.ts` uses `includes()` for substring matching on the backend error strings. If those backend error messages change, the friendly mappings will fall back to showing the raw error, which is safe but not ideal. Consider using error codes instead of string matching if the error contract stabilizes.

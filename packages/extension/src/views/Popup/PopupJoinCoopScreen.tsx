@@ -7,23 +7,12 @@ export function PopupJoinCoopScreen(props: {
   form: PopupJoinFormState;
   submitting: boolean;
   onChange: (patch: Partial<PopupJoinFormState>) => void;
+  onPasteInviteCode: () => void | Promise<void>;
   onSubmit: () => void | Promise<void>;
 }) {
-  const { form, submitting, onChange, onSubmit } = props;
+  const { form, submitting, onChange, onPasteInviteCode, onSubmit } = props;
 
   const disabled = submitting || !form.inviteCode.trim() || !form.displayName.trim();
-
-  async function handlePasteInviteCode() {
-    try {
-      const value = await navigator.clipboard.readText();
-      if (!value.trim()) {
-        return;
-      }
-      onChange({ inviteCode: value });
-    } catch {
-      // Ignore clipboard failures in the popup.
-    }
-  }
 
   return (
     <section className="popup-screen popup-screen--onboarding">
@@ -46,7 +35,7 @@ export function PopupJoinCoopScreen(props: {
             <button
               aria-label="Paste invite code"
               className="popup-field-action"
-              onClick={() => void handlePasteInviteCode()}
+              onClick={() => void onPasteInviteCode()}
               type="button"
             >
               Paste

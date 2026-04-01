@@ -1,3 +1,4 @@
+import { clipboardPasteFallbackMessage, pasteClipboardText } from '@coop/shared';
 import type { useCaptureActions } from '../../shared/useCaptureActions';
 import type { PopupHomeNoteState } from '../popup-types';
 
@@ -25,16 +26,16 @@ export function usePopupNoteHandlers(deps: PopupNoteHandlersDeps) {
   }
 
   async function handlePasteNote() {
-    try {
-      const pasted = await navigator.clipboard.readText();
-      if (!pasted.trim()) {
-        return;
-      }
-      setNoteDraftText((current: string) =>
-        current.trim() ? `${current.trim()}\n${pasted.trim()}` : pasted.trim(),
-      );
-    } catch {
-      setMessage('Could not paste into the note.');
+    const result = await pasteClipboardText({
+      currentValue: noteDraftText,
+      mode: 'append',
+    });
+    if (result.status === 'success') {
+      setNoteDraftText(result.value);
+      return;
+    }
+    if (result.status === 'unavailable') {
+      setMessage(clipboardPasteFallbackMessage);
     }
   }
 

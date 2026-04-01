@@ -124,6 +124,8 @@ export interface PopupOrchestrationState {
   // Handlers
   handleCreateSubmit: () => Promise<void>;
   handleJoinSubmit: () => Promise<void>;
+  handlePasteCreatePurpose: () => Promise<void>;
+  handlePasteJoinInviteCode: () => Promise<void>;
   handleSaveSelectedDraft: () => Promise<void>;
   handleToggleSelectedDraftReady: () => Promise<void>;
   handleShareSelectedDraft: () => Promise<void>;
@@ -422,6 +424,7 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     navigation,
     coopActions,
     subscreenReturnTab,
+    setMessage,
     onCreateSuccess: (coopId) => {
       setInviteSuccessCoopId(coopId);
       navigation.navigate('invite-success');
@@ -1122,6 +1125,8 @@ export function usePopupOrchestration(): PopupOrchestrationState {
     showInviteHubInHeader,
     handleCreateSubmit: formHandlers.handleCreateSubmit,
     handleJoinSubmit: formHandlers.handleJoinSubmit,
+    handlePasteCreatePurpose: formHandlers.handlePasteCreatePurpose,
+    handlePasteJoinInviteCode: formHandlers.handlePasteJoinInviteCode,
     handleSaveSelectedDraft: draftHandlers.handleSaveSelectedDraft,
     handleToggleSelectedDraftReady: draftHandlers.handleToggleSelectedDraftReady,
     handleShareSelectedDraft: draftHandlers.handleShareSelectedDraft,

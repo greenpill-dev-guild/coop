@@ -24,6 +24,7 @@ import {
   saveEncryptedSessionMaterial,
 } from '../../storage/db';
 import {
+  buildSessionModuleAccount,
   buildSmartSession,
   createSessionCapability,
   createSessionSignerMaterial,
@@ -457,6 +458,33 @@ function makeUnsupportedGreenGoodsSessionBundle(actionClass: UnsupportedGreenGoo
 }
 
 describe('session capability helpers', () => {
+  it('routes 7579-enabled Safes through the ERC-7579 module account path', () => {
+    expect(
+      buildSessionModuleAccount({
+        safeAddress: SAFE_ADDRESS as `0x${string}`,
+        chainId: 11155111,
+        safeSupports7579: true,
+      }),
+    ).toEqual({
+      address: SAFE_ADDRESS,
+      type: 'erc7579-implementation',
+      deployedOnChains: [11155111],
+    });
+  });
+
+  it('keeps legacy Safes on the Safe module account path', () => {
+    expect(
+      buildSessionModuleAccount({
+        safeAddress: SAFE_ADDRESS as `0x${string}`,
+        chainId: 11155111,
+      }),
+    ).toEqual({
+      address: SAFE_ADDRESS,
+      type: 'safe',
+      deployedOnChains: [11155111],
+    });
+  });
+
   it('tracks active, exhausted, expired, and revoked states', () => {
     const capability = makeCapability({ maxUses: 1 });
     expect(capability.status).toBe('active');

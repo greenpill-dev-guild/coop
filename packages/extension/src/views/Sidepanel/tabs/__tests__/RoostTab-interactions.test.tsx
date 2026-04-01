@@ -271,6 +271,18 @@ describe('RoostTab interactions', () => {
     expect(onRunAgentCycle).toHaveBeenCalledOnce();
   });
 
+  it('disables Run Now button and shows Running label while agent is running', async () => {
+    const user = userEvent.setup();
+
+    render(<RoostTab {...buildProps({ agentRunning: true })} />);
+
+    await user.click(screen.getByRole('button', { name: /^agent$/i }));
+
+    const runButton = screen.getByRole('button', { name: /running/i });
+    expect(runButton).toBeDisabled();
+    expect(runButton).toHaveTextContent('Running...');
+  });
+
   it('shows progressive onboarding on Garden tab when garden is requested', async () => {
     const user = userEvent.setup();
     render(

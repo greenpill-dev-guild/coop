@@ -1,4 +1,3 @@
-import { toSafeSmartAccount } from 'permissionless/accounts';
 import { type Address, encodeFunctionData } from 'viem';
 import type {
   AuthSession,
@@ -13,6 +12,8 @@ import {
   type CoopOnchainMode,
   createCoopSmartAccountClient,
   sendSmartAccountTransactionWithCoopGasFallback,
+  toCoopSafeSmartAccount,
+  usesCoopSafeErc7579,
 } from '../onchain/onchain';
 import { createCoopPublicClient } from '../onchain/provider';
 import { greenGoodsEasAbi } from './greengoods-abis';
@@ -183,11 +184,12 @@ export async function sendViaCoopSafe(input: {
 }) {
   const sender = restorePasskeyAccount(input.authSession);
   const publicClient = await createCoopPublicClient(input.onchainState.chainKey);
-  const account = await toSafeSmartAccount({
+  const account = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [sender],
+    chainKey: input.onchainState.chainKey,
     address: assertHexString(input.onchainState.safeAddress, 'safeAddress'),
-    version: '1.4.1',
+    useErc7579: usesCoopSafeErc7579(input.onchainState),
   });
   const { smartClient } = createCoopSmartAccountClient({
     account,

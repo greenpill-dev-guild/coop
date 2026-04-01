@@ -1,5 +1,6 @@
 import {
   type Session,
+  type Account as SessionModuleAccount,
   SmartSessionMode,
   encodeSmartSessionSignature,
   getEnableSessionsAction,
@@ -393,6 +394,18 @@ export function buildSmartSession(input: { capability: SessionCapability }): {
       validator: getSmartSessionsValidator({}),
       fallback: getSmartSessionsCompatibilityFallback(),
     },
+  };
+}
+
+export function buildSessionModuleAccount(input: {
+  safeAddress: Address;
+  chainId: number;
+  safeSupports7579?: boolean;
+}): SessionModuleAccount {
+  return {
+    address: input.safeAddress,
+    type: input.safeSupports7579 ? 'erc7579-implementation' : 'safe',
+    deployedOnChains: [input.chainId],
   };
 }
 

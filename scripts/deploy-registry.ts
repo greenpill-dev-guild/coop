@@ -307,10 +307,8 @@ async function main() {
     `    1. Set VITE_COOP_FVM_CHAIN=${network === 'mainnet' ? 'filecoin' : 'filecoin-calibration'}`,
   );
   console.log(`    2. Set VITE_COOP_FVM_REGISTRY_ADDRESS=${registryAddress}`);
-  console.log('    3. Set VITE_COOP_FVM_OPERATOR_KEY in the operator-only root .env.local');
-  console.log(
-    '    4. Update packages/shared/src/modules/fvm/fvm.ts if this deployment is canonical.\n',
-  );
+  console.log('    3. Update packages/shared/src/modules/fvm/fvm.ts if this deployment is canonical.');
+  console.log('    4. Members will need FIL on their local Filecoin signer address before registering proofs.\n');
 }
 
 main().catch((err) => {

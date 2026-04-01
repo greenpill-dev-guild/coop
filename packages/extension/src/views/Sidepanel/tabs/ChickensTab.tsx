@@ -152,6 +152,9 @@ function buildReviewItems(
     const linkedDraft = signal.draftId ? drafts.find((d) => d.id === signal.draftId) : undefined;
 
     if (linkedDraft) {
+      // Skip if another signal already merged this draft
+      if (mergedDraftIds.has(linkedDraft.id)) continue;
+
       // Merge: use draft as the actionable base but carry signal support data
       mergedDraftIds.add(linkedDraft.id);
       items.push({

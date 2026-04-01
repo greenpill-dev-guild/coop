@@ -1,4 +1,3 @@
-import { toSafeSmartAccount } from 'permissionless/accounts';
 import { http, type Address, createPublicClient, encodeFunctionData, toHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { type CoopChainKey, greenGoodsGardenStateSchema } from '../packages/shared/src/contracts';
@@ -14,6 +13,7 @@ import {
 import {
   buildCoopUserOperationGasOverrides,
   getCoopChainConfig,
+  toCoopSafeSmartAccount,
 } from '../packages/shared/src/modules/onchain/onchain';
 import { loadRootEnv } from './load-root-env';
 
@@ -88,6 +88,13 @@ function resolveProbeOwnerPrivateKey() {
     : undefined;
 }
 
+function parseSafeSupports7579(value: string | undefined) {
+  if (value === undefined) {
+    return true;
+  }
+  return value === '1' || value === 'true';
+}
+
 async function main() {
   const chainKey = parseChainKey();
   const safeAddress = process.env.COOP_GREENGOODS_SIM_SAFE_ADDRESS as Address | undefined;
@@ -157,12 +164,16 @@ async function main() {
     hasPaymaster: true,
   });
   const probeOwnerPrivateKey = resolveProbeOwnerPrivateKey();
+  const safeSupports7579 = parseSafeSupports7579(
+    process.env.COOP_GREENGOODS_SIM_SAFE_SUPPORTS_7579,
+  );
   const safeAccount = probeOwnerPrivateKey
-    ? await toSafeSmartAccount({
+    ? await toCoopSafeSmartAccount({
         client: publicClient,
         owners: [privateKeyToAccount(probeOwnerPrivateKey)],
+        chainKey,
         address: safeAddress,
-        version: '1.4.1',
+        useErc7579: safeSupports7579,
       })
     : null;
   const safeWrapperData = safeAccount
@@ -195,6 +206,9 @@ async function main() {
   console.log(`[probe:greengoods-sim] Safe: ${safeAddress}`);
   if (safeAccount) {
     console.log(`[probe:greengoods-sim] EntryPoint: ${safeAccount.entryPoint.address}`);
+    console.log(
+      `[probe:greengoods-sim] Safe wrapper mode: ${safeSupports7579 ? 'erc-7579 launchpad' : 'standard safe4337'}`,
+    );
   } else {
     console.log(
       '[probe:greengoods-sim] Safe wrapper simulation skipped. Set COOP_GREENGOODS_SIM_OWNER_PRIVATE_KEY or COOP_ONCHAIN_PROBE_PRIVATE_KEY to the Safe owner key to exercise the wrapped Safe path.',

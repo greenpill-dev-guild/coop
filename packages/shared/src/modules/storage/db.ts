@@ -2,6 +2,7 @@ export * from './db-schema';
 export * from './db-encryption';
 export * from './db-crud-content';
 export * from './db-crud-coop';
+export * from './db-crud-fvm';
 export * from './db-crud-receiver';
 export * from './db-crud-policy';
 export * from './db-crud-session';

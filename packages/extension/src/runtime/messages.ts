@@ -10,6 +10,7 @@ import type {
   AuthSession,
   CaptureMode,
   CaptureRunRecord,
+  CoopSoul,
   CoopKnowledgeSkillOverride,
   CoopSharedState,
   CoopSpaceType,
@@ -44,6 +45,7 @@ import type {
   SkillRun,
   SoundEvent,
   SoundPreferences,
+  SetupInsights,
   TabCandidate,
   TabRouting,
   UiPreferences,
@@ -368,12 +370,25 @@ export type RuntimeRequest =
       payload: { coopId: string; inviteType: InviteType; revokedBy: string };
     }
   | {
-      type: 'update-coop-profile';
+      type: 'update-coop-details';
       payload: {
         coopId: string;
-        name?: string;
-        purpose?: string;
-        captureMode?: CaptureMode;
+        profile?: {
+          name?: string;
+          purpose?: string;
+          captureMode?: CaptureMode;
+        };
+        soul?: Partial<
+          Pick<
+            CoopSoul,
+            | 'purposeStatement'
+            | 'whyThisCoopExists'
+            | 'usefulSignalDefinition'
+            | 'toneAndWorkingStyle'
+            | 'artifactFocus'
+          >
+        >;
+        setupInsights?: SetupInsights;
       };
     }
   | {
@@ -455,6 +470,7 @@ export type RuntimeRequest =
       payload: {
         coopId: string;
         weeklyReviewCadence: string;
+        namedMoments: string[];
         facilitatorExpectation: string;
         defaultCapturePosture: string;
       };

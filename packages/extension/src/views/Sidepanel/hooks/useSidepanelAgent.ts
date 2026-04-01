@@ -1,6 +1,14 @@
 import { type AgentDashboardResponse, sendRuntimeMessage } from '../../../runtime/messages';
 import type { useDashboard } from './useDashboard';
 
+function friendlyAgentError(raw: string | undefined): string {
+  if (!raw) return 'Could not run the agent cycle.';
+  if (raw.includes('passkey session')) return 'Sign in with your passkey first.';
+  if (raw.includes('Select a coop')) return 'Select a coop first.';
+  if (raw.includes('limited to creator or trusted')) return 'Only trusted members can run helpers.';
+  return raw;
+}
+
 export interface SidepanelAgentDeps {
   setMessage: (msg: string) => void;
   setAgentDashboard: (data: AgentDashboardResponse | null) => void;
@@ -16,11 +24,12 @@ export function useSidepanelAgent(deps: SidepanelAgentDeps) {
       type: 'run-agent-cycle',
     });
     if (!response.ok || !response.data) {
-      setMessage(response.error ?? 'Could not run the agent cycle.');
+      setMessage(friendlyAgentError(response.error));
       return;
     }
     setAgentDashboard(response.data);
-    setMessage('Agent cycle requested.');
+    // Success toast is handled by the AGENT_CYCLE_FINISHED background event
+    // in useDashboard, so we don't set a message here.
     await loadDashboard();
   }
 

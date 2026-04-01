@@ -62,7 +62,6 @@ export function SidepanelTabRouter({
     handleSubmitGreenGoodsWorkSubmission,
     createInvite,
     revokeInvite,
-    updateCoopProfile,
     handleLeaveCoop,
     createReceiverPairing,
     selectReceiverPairing,
@@ -120,6 +119,7 @@ export function SidepanelTabRouter({
             greenGoodsActionQueue={dashboard?.operator.policyActionQueue ?? []}
             summary={dashboard?.summary ?? null}
             agentDashboard={agentDashboard}
+            agentRunning={orchestration.agentRunning}
             onProvisionMemberOnchainAccount={handleProvisionMemberOnchainAccount}
             onSubmitGreenGoodsWorkSubmission={handleSubmitGreenGoodsWorkSubmission}
             onRunAgentCycle={handleRunAgentCycle}

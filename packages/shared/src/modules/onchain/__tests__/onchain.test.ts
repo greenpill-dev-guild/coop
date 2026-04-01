@@ -116,6 +116,13 @@ describe('onchain chain support', () => {
 
   it('builds supported chain labels, summaries, and Pimlico URLs', () => {
     expect(getCoopChainConfig('arbitrum').chain.id).toBe(42161);
+    expect(getCoopChainConfig('arbitrum').safe.version).toBe('1.4.1');
+    expect(getCoopChainConfig('arbitrum').safe.safe7579ModuleAddress).toBe(
+      '0x7579EE8307284F293B1927136486880611F20002',
+    );
+    expect(getCoopChainConfig('arbitrum').safe.erc7579LaunchpadAddress).toBe(
+      '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+    );
     expect(getCoopChainLabel('arbitrum')).toBe('Arbitrum One');
     expect(getCoopChainLabel('sepolia', 'short')).toBe('Sepolia');
     expect(describeOnchainModeSummary({ mode: 'live', chainKey: 'sepolia' })).toBe(

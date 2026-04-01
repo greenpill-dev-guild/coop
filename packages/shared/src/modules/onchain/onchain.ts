@@ -30,18 +30,31 @@ import { createCoopPublicClient } from './provider';
 
 export type CoopOnchainMode = 'live' | 'mock';
 
+const coopSafe7579Config = {
+  version: '1.4.1',
+  // Legacy Safe7579 adapter/launchpad pair used by permissionless 0.3.x.
+  safe7579ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
+  erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+} as const satisfies {
+  version: '1.4.1';
+  safe7579ModuleAddress: Address;
+  erc7579LaunchpadAddress: Address;
+};
+
 const chainConfigs = {
   arbitrum: {
     chain: arbitrum,
     bundlerSegment: 'arbitrum',
     label: 'Arbitrum One',
     shortLabel: 'Arbitrum',
+    safe: coopSafe7579Config,
   },
   sepolia: {
     chain: sepolia,
     bundlerSegment: 'sepolia',
     label: 'Ethereum Sepolia',
     shortLabel: 'Sepolia',
+    safe: coopSafe7579Config,
   },
 } as const satisfies Record<
   CoopChainKey,
@@ -50,6 +63,7 @@ const chainConfigs = {
     chain: typeof arbitrum | typeof sepolia;
     label: string;
     shortLabel: string;
+    safe: typeof coopSafe7579Config;
   }
 >;
 
@@ -72,6 +86,41 @@ export function describeOnchainModeSummary(input: {
 export function buildPimlicoRpcUrl(chainKey: CoopChainKey, pimlicoApiKey: string) {
   const config = getCoopChainConfig(chainKey);
   return `https://api.pimlico.io/v2/${config.bundlerSegment}/rpc?apikey=${pimlicoApiKey}`;
+}
+
+export function usesCoopSafeErc7579(input: { safeSupports7579?: boolean } | null | undefined) {
+  return input?.safeSupports7579 === true;
+}
+
+export async function toCoopSafeSmartAccount(input: {
+  client: Awaited<ReturnType<typeof createCoopPublicClient>>;
+  owners: [Account | WebAuthnAccount, ...(Account | WebAuthnAccount)[]];
+  chainKey: CoopChainKey;
+  address?: Address;
+  saltNonce?: bigint;
+  useErc7579?: boolean;
+}) {
+  const safeConfig = getCoopChainConfig(input.chainKey).safe;
+
+  if (input.useErc7579) {
+    return toSafeSmartAccount({
+      client: input.client,
+      owners: input.owners,
+      address: input.address,
+      saltNonce: input.saltNonce,
+      version: safeConfig.version,
+      safe4337ModuleAddress: safeConfig.safe7579ModuleAddress,
+      erc7579LaunchpadAddress: safeConfig.erc7579LaunchpadAddress,
+    });
+  }
+
+  return toSafeSmartAccount({
+    client: input.client,
+    owners: input.owners,
+    address: input.address,
+    saltNonce: input.saltNonce,
+    version: safeConfig.version,
+  });
 }
 
 type BundlerPrepareClient = Client<Transport, Chain | undefined, SmartAccount | undefined> & {
@@ -433,16 +482,20 @@ export async function deployCoopSafeAccount(input: {
   pimlicoApiKey: string;
   chainKey?: CoopChainKey;
   coopSeed: string;
+  rpcUrl?: string;
   sponsorshipPolicyId?: string;
 }) {
   const chainKey = input.chainKey ?? 'sepolia';
   const config = getCoopChainConfig(chainKey);
-  const publicClient = await createCoopPublicClient(chainKey);
-  const account = await toSafeSmartAccount({
+  const publicClient = await createCoopPublicClient(chainKey, {
+    rpcUrl: input.rpcUrl,
+  });
+  const account = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [input.sender],
-    version: '1.4.1',
+    chainKey,
     saltNonce: createCoopSaltNonce(input.coopSeed),
+    useErc7579: true,
   });
   const { smartClient } = createCoopSmartAccountClient({
     account,
@@ -476,6 +529,7 @@ export async function deployCoopSafeAccount(input: {
     safeAddress: account.address,
     senderAddress: input.senderAddress,
     safeCapability: 'executed',
+    safeSupports7579: true,
     statusNote: `${describeOnchainModeSummary({ mode: 'live', chainKey })} was deployed via Pimlico account abstraction.`,
     deploymentTxHash,
     userOperationHash: undefined,

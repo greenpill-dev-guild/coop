@@ -1,4 +1,5 @@
 export * from './capabilities';
+export * from './clipboard';
 export * from './haptics';
 export * from './icon-state';
 export * from './playback';

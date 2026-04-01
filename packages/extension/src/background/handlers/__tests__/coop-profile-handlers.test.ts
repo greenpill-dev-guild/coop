@@ -80,7 +80,7 @@ vi.mock('../agent', () => ({
   requestAgentCycle: agentMocks.requestAgentCycle,
 }));
 
-const { handleJoinCoop, handleLeaveCoop, handleUpdateCoopProfile } = await import('../coop');
+const { handleJoinCoop, handleLeaveCoop, handleUpdateCoopDetails } = await import('../coop');
 
 function makeBaseCoop(): CoopSharedState {
   return makeCoopState({
@@ -254,14 +254,53 @@ describe('coop profile and membership handlers', () => {
     expect(sharedMocks.joinCoop).not.toHaveBeenCalled();
   });
 
-  it('updates a coop profile and persists capture-mode changes', async () => {
-    const result = await handleUpdateCoopProfile({
-      type: 'update-coop-profile',
+  it('updates coop details, mirrors purpose into the soul, and persists capture-mode changes', async () => {
+    const result = await handleUpdateCoopDetails({
+      type: 'update-coop-details',
       payload: {
         coopId: 'coop-1',
-        name: 'Renamed Coop',
-        purpose: 'Coordinate archive follow-up.',
-        captureMode: '10-min',
+        profile: {
+          name: 'Renamed Coop',
+          purpose: 'Coordinate archive follow-up.',
+          captureMode: '10-min',
+        },
+        soul: {
+          whyThisCoopExists: 'Help the coop act on the strongest leads.',
+          usefulSignalDefinition: 'Signals point to clear next steps.',
+          toneAndWorkingStyle: 'Direct, kind, and evidence-first.',
+          artifactFocus: ['Funding leads', 'Decision records'],
+        },
+        setupInsights: {
+          summary: 'Updated setup summary for a more focused coop workflow.',
+          crossCuttingPainPoints: ['Work is split across too many tools'],
+          crossCuttingOpportunities: ['Keep decisions and leads in one shared place'],
+          lenses: [
+            {
+              lens: 'capital-formation',
+              currentState: 'Funding leads live in chat.',
+              painPoints: 'They disappear quickly.',
+              improvements: 'Track them in the coop.',
+            },
+            {
+              lens: 'impact-reporting',
+              currentState: 'Evidence is gathered at the end.',
+              painPoints: 'The story feels incomplete.',
+              improvements: 'Collect evidence steadily.',
+            },
+            {
+              lens: 'governance-coordination',
+              currentState: 'Decisions are made on calls.',
+              painPoints: 'Follow-ups slip.',
+              improvements: 'Keep actions visible.',
+            },
+            {
+              lens: 'knowledge-garden-resources',
+              currentState: 'Research sits in tabs.',
+              painPoints: 'People repeat work.',
+              improvements: 'Save reusable references.',
+            },
+          ],
+        },
       },
     });
 
@@ -274,6 +313,14 @@ describe('coop profile and membership handlers', () => {
           purpose: 'Coordinate archive follow-up.',
           captureMode: '10-min',
         }),
+        soul: expect.objectContaining({
+          purposeStatement: 'Coordinate archive follow-up.',
+          whyThisCoopExists: 'Help the coop act on the strongest leads.',
+          artifactFocus: ['Funding leads', 'Decision records'],
+        }),
+        setupInsights: expect.objectContaining({
+          summary: 'Updated setup summary for a more focused coop workflow.',
+        }),
       }),
     });
     expect(contextMocks.saveState).toHaveBeenCalledWith(
@@ -281,9 +328,30 @@ describe('coop profile and membership handlers', () => {
         profile: expect.objectContaining({
           name: 'Renamed Coop',
         }),
+        soul: expect.objectContaining({
+          purposeStatement: 'Coordinate archive follow-up.',
+        }),
       }),
     );
     expect(contextMocks.setLocalSetting).toHaveBeenCalledWith('capture-mode', '10-min');
+  });
+
+  it('rejects invalid coop detail payloads instead of saving broken state', async () => {
+    const result = await handleUpdateCoopDetails({
+      type: 'update-coop-details',
+      payload: {
+        coopId: 'coop-1',
+        soul: {
+          artifactFocus: [],
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.any(String),
+    });
+    expect(contextMocks.saveState).not.toHaveBeenCalled();
   });
 
   it('updates the active coop when leaving deactivates the current coop', async () => {

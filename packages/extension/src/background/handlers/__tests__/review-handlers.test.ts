@@ -199,6 +199,7 @@ describe('review handlers', () => {
       payload: {
         coopId: 'nonexistent-coop',
         weeklyReviewCadence: 'Weekly',
+        namedMoments: ['Roundup'],
         facilitatorExpectation: 'Mina leads',
         defaultCapturePosture: 'Capture everything',
       },
@@ -218,6 +219,7 @@ describe('review handlers', () => {
       payload: {
         coopId: coopState.profile.id,
         weeklyReviewCadence: 'Bi-weekly sync',
+        namedMoments: ['Check-in', 'Harvest'],
         facilitatorExpectation: 'Mina leads, Ari takes notes',
         defaultCapturePosture: 'Capture only highlights',
       },
@@ -227,6 +229,7 @@ describe('review handlers', () => {
     if (result.ok && result.data) {
       const data = result.data as typeof coopState;
       expect(data.rituals[0]?.weeklyReviewCadence).toBe('Bi-weekly sync');
+      expect(data.rituals[0]?.namedMoments).toEqual(['Check-in', 'Harvest']);
       expect(data.rituals[0]?.facilitatorExpectation).toBe('Mina leads, Ari takes notes');
     }
   });

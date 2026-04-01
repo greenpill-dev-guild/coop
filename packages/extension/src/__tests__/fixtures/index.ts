@@ -51,6 +51,23 @@ export function installChromeMock() {
 }
 
 export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSharedState {
+  const {
+    profile: profileOverrides,
+    members,
+    rituals,
+    artifacts,
+    reviewBoard,
+    archiveReceipts,
+    invites,
+    memberAccounts,
+    memberCommitments,
+    setupInsights,
+    soul,
+    onchainState: onchainStateOverrides,
+    syncRoom: syncRoomOverrides,
+    memoryProfile: memoryProfileOverrides,
+    ...rest
+  } = overrides;
   const coopId = overrides.profile?.id ?? 'coop-1';
   const coopName = overrides.profile?.name ?? 'Starter Coop';
   const creatorAddress =
@@ -68,6 +85,7 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
 
   return {
     ...baseState,
+    ...rest,
     profile: {
       ...baseState.profile,
       id: coopId,
@@ -79,9 +97,9 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
       captureMode: 'manual',
       safeAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       active: true,
-      ...overrides.profile,
+      ...profileOverrides,
     },
-    members: overrides.members ?? [
+    members: members ?? [
       {
         ...baseState.members[0],
         id: 'member-1',
@@ -93,13 +111,15 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
         identityWarning: 'Device bound.',
       },
     ],
-    rituals: [],
-    artifacts: [],
-    reviewBoard: [],
-    archiveReceipts: [],
-    invites: [],
-    memberAccounts: overrides.memberAccounts ?? [],
-    memberCommitments: overrides.memberCommitments ?? [],
+    rituals: rituals ?? baseState.rituals,
+    artifacts: artifacts ?? [],
+    reviewBoard: reviewBoard ?? [],
+    archiveReceipts: archiveReceipts ?? [],
+    invites: invites ?? [],
+    memberAccounts: memberAccounts ?? [],
+    memberCommitments: memberCommitments ?? [],
+    setupInsights: setupInsights ?? baseState.setupInsights,
+    soul: soul ?? baseState.soul,
     onchainState: {
       ...baseState.onchainState,
       chainId: 11155111,
@@ -107,7 +127,7 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
       safeAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       safeCapability: 'ready',
       statusNote: 'Ready',
-      ...overrides.onchainState,
+      ...onchainStateOverrides,
     },
     syncRoom: {
       ...baseState.syncRoom,
@@ -115,7 +135,7 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
       signalingUrls: ['wss://api.coop.town'],
       roomSecret: `room-secret-${coopId}`,
       inviteSigningSecret: `invite-secret-${coopId}`,
-      ...overrides.syncRoom,
+      ...syncRoomOverrides,
     },
     memoryProfile: {
       ...baseState.memoryProfile,
@@ -130,9 +150,8 @@ export function makeCoopState(overrides: Partial<CoopSharedState> = {}): CoopSha
         archivedDomainCounts: {},
       },
       updatedAt: '2026-03-20T00:00:00.000Z',
-      ...overrides.memoryProfile,
+      ...memoryProfileOverrides,
     },
-    ...overrides,
   } as CoopSharedState;
 }
 

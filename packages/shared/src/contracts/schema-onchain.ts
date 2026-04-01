@@ -59,6 +59,7 @@ export const onchainStateSchema = z
       .string()
       .regex(/^0x[a-fA-F0-9]+$/)
       .optional(),
+    safeSupports7579: z.boolean().optional(),
     safeOwners: z.array(z.string().regex(/^0x[a-fA-F0-9]{40}$/)).optional(),
     safeThreshold: z.number().int().positive().optional(),
   })
@@ -135,6 +136,16 @@ export const localMemberSignerBindingSchema = z.object({
   lastError: z.string().optional(),
 });
 
+export const localFvmSignerBindingSchema = z.object({
+  id: z.string().min(1),
+  chainKey: fvmChainKeySchema,
+  accountAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  passkeyCredentialId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  lastUsedAt: z.string().datetime(),
+  lastError: z.string().optional(),
+});
+
 // Authority classification — distinguishes signer roles in the Coop architecture
 export const authorityClassSchema = z.enum([
   'safe-owner', // Treasury/governance controller on the Coop Safe
@@ -156,5 +167,6 @@ export type MemberAccountType = z.infer<typeof memberAccountTypeSchema>;
 export type MemberAccountStatus = z.infer<typeof memberAccountStatusSchema>;
 export type MemberOnchainAccount = z.infer<typeof memberOnchainAccountSchema>;
 export type LocalMemberSignerBinding = z.infer<typeof localMemberSignerBindingSchema>;
+export type LocalFvmSignerBinding = z.infer<typeof localFvmSignerBindingSchema>;
 export type AuthorityClass = z.infer<typeof authorityClassSchema>;
 export type AuthorityActionMapping = z.infer<typeof authorityActionMappingSchema>;

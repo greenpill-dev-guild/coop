@@ -47,6 +47,7 @@ describe('landing page', () => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
+        readText: vi.fn().mockResolvedValue('Pasted transcript'),
         writeText: vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -358,6 +359,44 @@ describe('landing page', () => {
       'We keep grant links in chat. We also keep follow-ups in calls.',
     );
     expect(screen.getByText(/transcript is ready to edit/i)).toBeInTheDocument();
+  });
+
+  it('appends pasted clipboard text into the open flashcard transcript', async () => {
+    render(<App />);
+
+    openCard('Collective Intelligence');
+    const transcriptField = screen.getByRole('textbox', { name: /collective intelligence notes/i });
+    fireEvent.change(transcriptField, { target: { value: 'Existing line' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^paste$/i }));
+      await Promise.resolve();
+    });
+
+    expect(transcriptField).toHaveValue('Existing line\nPasted transcript');
+  });
+
+  it('shows the clipboard fallback hint when explicit paste is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: vi.fn().mockRejectedValue(new Error('Clipboard blocked')),
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    render(<App />);
+
+    openCard('Collective Intelligence');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^paste$/i }));
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.getByText('Clipboard access unavailable. Use Cmd/Ctrl+V to paste.'),
+    ).toBeInTheDocument();
   });
 
   it('renders a static story stage when reduced motion is preferred', () => {

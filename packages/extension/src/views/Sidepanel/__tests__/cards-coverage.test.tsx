@@ -347,7 +347,7 @@ describe('sidepanel cards coverage', () => {
     expect(onFvmRegister).toHaveBeenCalledWith('receipt-1');
   });
 
-  it('hides Filecoin registration until live onchain mode is enabled', () => {
+  it('shows Filecoin registration for live archive receipts even when Arbitrum onchain mode is mock', () => {
     render(
       <ArchiveReceiptCard
         receipt={
@@ -375,7 +375,7 @@ describe('sidepanel cards coverage', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Register on Filecoin' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register on Filecoin' })).toBeInTheDocument();
   });
 
   it('renders skeleton helpers with the requested labels and counts', () => {

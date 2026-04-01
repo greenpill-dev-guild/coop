@@ -5,6 +5,7 @@ import {
   type CoopSpaceType,
   type OnchainState,
   type SoundPreferences,
+  createDefaultSeedContribution,
   createPasskeySession,
   getCoopSpacePreset,
   listCoopSpacePresets,
@@ -115,7 +116,9 @@ export function useCoopForm(deps: {
           spaceType: createForm.spaceType,
           creatorDisplayName: createForm.creatorDisplayName,
           captureMode: createForm.captureMode,
-          seedContribution: createForm.seedContribution,
+          seedContribution:
+            createForm.seedContribution.trim() ||
+            createDefaultSeedContribution(createForm.coopName),
           setupInsights: toSetupInsights(createForm, createForm.spaceType),
           signalingUrls: configuredSignalingUrls,
           creator,

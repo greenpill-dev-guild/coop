@@ -18,6 +18,7 @@ import {
   revokeInviteType,
   verifyInviteCodeProof,
 } from '../flows';
+import { synthesizeCoopFromPurpose } from '../synthesis';
 import {
   publishDraftAcrossCoops,
   publishDraftToCoops,
@@ -59,6 +60,37 @@ function buildSetupInsights() {
 }
 
 describe('create, join, and publish flows', () => {
+  it('synthesizes soul and rituals from purpose text', () => {
+    const synthesized = synthesizeCoopFromPurpose({
+      coopName: 'Forest Coop',
+      purpose:
+        'Coordinate forest stewardship, funding opportunities, and impact reporting for regional crews.',
+      spaceType: 'community',
+      captureMode: 'manual',
+    });
+
+    expect(synthesized.soul.whyThisCoopExists).toMatch(
+      /Forest Coop exists to coordinate forest stewardship/i,
+    );
+    expect(synthesized.soul.artifactFocus).toEqual(
+      expect.arrayContaining(['funding leads', 'evidence']),
+    );
+    expect(synthesized.rituals[0]?.namedMoments).toContain('Funding scan');
+  });
+
+  it('keeps purpose-based synthesis stable for short inputs', () => {
+    const synthesized = synthesizeCoopFromPurpose({
+      coopName: 'Personal Coop',
+      purpose: 'Organize things.',
+      spaceType: 'personal',
+      captureMode: 'manual',
+    });
+
+    expect(synthesized.soul.purposeStatement).toBe('Organize things.');
+    expect(synthesized.soul.artifactFocus.length).toBeGreaterThan(0);
+    expect(synthesized.rituals[0]?.weeklyReviewCadence).toBe('Weekly self-review');
+  });
+
   it('creates a coop with initial artifacts and a Safe address', () => {
     const created = createCoop({
       coopName: 'Forest Coop',
@@ -73,6 +105,10 @@ describe('create, join, and publish flows', () => {
     expect(created.state.profile.spaceType).toBe('community');
     expect(created.state.artifacts).toHaveLength(4);
     expect(created.state.members[0]?.role).toBe('creator');
+    expect(created.state.artifacts.find((artifact) => artifact.category === 'coop-soul')?.summary)
+      .toMatch(/Forest Coop exists to coordinate forest stewardship/i);
+    expect(created.state.artifacts.find((artifact) => artifact.category === 'ritual')?.summary)
+      .toMatch(/Weekly review circle/i);
   });
 
   it('seeds canonical member and trusted invites when a coop is created', () => {
@@ -107,6 +143,10 @@ describe('create, join, and publish flows', () => {
     const soul = created.state.soul;
     expect(soul.purposeStatement).toBe('Coordinate forest stewardship and shared funding context.');
     expect(soul.agentPersona).toBeUndefined();
+    expect(soul.artifactFocus).toEqual(expect.arrayContaining(['funding leads']));
+    expect(soul.whyThisCoopExists).toMatch(
+      /Forest Coop exists to coordinate forest stewardship and shared funding context/i,
+    );
     expect(soul.vocabularyTerms).toEqual([]);
     expect(soul.prohibitedTopics).toEqual([]);
     expect(soul.confidenceThreshold).toBe(0.72);

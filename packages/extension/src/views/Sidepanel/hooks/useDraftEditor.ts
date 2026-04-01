@@ -326,19 +326,35 @@ export function useDraftEditor(deps: {
       return null;
     }
 
+    const promotedDraft = response.data;
+    setDraftEdits((current) => ({
+      ...current,
+      [promotedDraft.id]: promotedDraft,
+    }));
     await loadDashboard();
-    return response.data;
+    return promotedDraft;
   }
 
   async function promoteSignalAndPublish(signal: ProactiveSignal, coopId?: string) {
     const draft = await promoteSignalToDraft(signal);
     if (!draft) return;
 
+    // Build the final draft imperatively to avoid React state race —
+    // toggleDraftTargetCoop writes to state that publishDraft can't read
+    // in the same async tick.
+    let publishableDraft = draft;
     if (coopId && !draft.suggestedTargetCoopIds.includes(coopId)) {
-      toggleDraftTargetCoop(draft, coopId);
+      publishableDraft = {
+        ...draft,
+        suggestedTargetCoopIds: [...draft.suggestedTargetCoopIds, coopId],
+      };
+      setDraftEdits((current) => ({
+        ...current,
+        [publishableDraft.id]: publishableDraft,
+      }));
     }
 
-    await publishDraft(draft);
+    await publishDraft(publishableDraft);
   }
 
   return {

@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createLocalFvmSignerBinding,
+  createLocalFvmSignerMaterial,
   createMockFvmRegistryState,
+  describeFvmLocalSignerFundingHint,
   describeFvmRegistryRegistrationGate,
   encodeFvmRegisterArchiveCalldata,
   encodeFvmRegisterMembershipCalldata,
   encodeFvmRegisterMembershipsCalldata,
   getFvmChainConfig,
   getFvmExplorerTxUrl,
+  inspectFvmRegistryDeployment,
+  isFvmInsufficientFundsError,
   resolveFvmRegistryAddress,
 } from '../fvm';
 
@@ -143,11 +148,10 @@ describe('fvm module', () => {
   });
 
   describe('describeFvmRegistryRegistrationGate', () => {
-    it('reports readiness when registry address and operator key are present', () => {
+    it('reports readiness when a registry address is present', () => {
       const gate = describeFvmRegistryRegistrationGate({
         chainKey: 'filecoin-calibration',
         configuredRegistryAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
-        operatorKey: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       });
 
       expect(gate.available).toBe(true);
@@ -156,21 +160,111 @@ describe('fvm module', () => {
       expect(gate.checklist).toEqual([]);
     });
 
-    it('returns an operator checklist when live registry material is missing', () => {
+    it('falls back to the canonical deployment when no env override is configured', () => {
       const gate = describeFvmRegistryRegistrationGate({
         chainKey: 'filecoin-calibration',
       });
 
-      expect(gate.available).toBe(false);
-      expect(gate.detail).toContain('blocked');
-      expect(gate.detail).toContain('VITE_COOP_FVM_OPERATOR_KEY');
-      expect(gate.checklist).toEqual(
-        expect.arrayContaining([
-          expect.stringContaining('Deploy packages/contracts/src/CoopRegistry.sol'),
-          expect.stringContaining('VITE_COOP_FVM_REGISTRY_ADDRESS'),
-          expect.stringContaining('VITE_COOP_FVM_OPERATOR_KEY'),
-        ]),
-      );
+      expect(gate.available).toBe(true);
+      expect(gate.registryAddress).toBe('0x80a906C175ea875af8a2afcA8F91F60b201dc824');
+      expect(gate.detail).toContain('Members will sign');
+      expect(gate.checklist).toEqual([]);
+    });
+  });
+
+  describe('inspectFvmRegistryDeployment', () => {
+    it('reports success when contract code exists and the ABI responds', async () => {
+      const inspection = await inspectFvmRegistryDeployment({
+        chainKey: 'filecoin-calibration',
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        client: {
+          getCode: async () => '0x60016000',
+          readContract: async () => 3n,
+        },
+      });
+
+      expect(inspection).toEqual({
+        ok: true,
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        archiveCount: 3n,
+        detail:
+          'Filecoin Calibration registry 0x80a906C175ea875af8a2afcA8F91F60b201dc824 is deployed and readable.',
+      });
+    });
+
+    it('reports failure when no contract code exists at the registry address', async () => {
+      const inspection = await inspectFvmRegistryDeployment({
+        chainKey: 'filecoin-calibration',
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        client: {
+          getCode: async () => '0x',
+          readContract: async () => 0n,
+        },
+      });
+
+      expect(inspection).toEqual({
+        ok: false,
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        detail:
+          'No contract code was found at 0x80a906C175ea875af8a2afcA8F91F60b201dc824 on Filecoin Calibration.',
+      });
+    });
+
+    it('reports failure when the contract does not answer the expected CoopRegistry ABI', async () => {
+      const inspection = await inspectFvmRegistryDeployment({
+        chainKey: 'filecoin-calibration',
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        client: {
+          getCode: async () => '0x60016000',
+          readContract: async () => {
+            throw new Error('execution reverted');
+          },
+        },
+      });
+
+      expect(inspection).toEqual({
+        ok: false,
+        registryAddress: '0x80a906C175ea875af8a2afcA8F91F60b201dc824',
+        detail:
+          'Contract code exists at 0x80a906C175ea875af8a2afcA8F91F60b201dc824 on Filecoin Calibration, but the registry ABI check failed: execution reverted',
+      });
+    });
+  });
+
+  describe('local FVM signer helpers', () => {
+    it('creates a deterministic local binding id for a passkey credential on a chain', () => {
+      const binding = createLocalFvmSignerBinding({
+        chainKey: 'filecoin',
+        accountAddress: '0x1234567890abcdef1234567890abcdef12345678',
+        passkeyCredentialId: 'passkey-1',
+        createdAt: '2026-03-31T10:00:00.000Z',
+      });
+
+      expect(binding.id).toBe('fvm-signer:filecoin:passkey-1');
+      expect(binding.lastUsedAt).toBe('2026-03-31T10:00:00.000Z');
+    });
+
+    it('creates a signer with a private key and address', () => {
+      const signer = createLocalFvmSignerMaterial({
+        chainKey: 'filecoin-calibration',
+        passkeyCredentialId: 'passkey-1',
+      });
+
+      expect(signer.privateKey).toMatch(/^0x[a-fA-F0-9]{64}$/);
+      expect(signer.accountAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(signer.chainKey).toBe('filecoin-calibration');
+    });
+
+    it('detects insufficient-funds failures and formats a funding hint', () => {
+      const error = new Error('insufficient funds for gas * price + value');
+      expect(isFvmInsufficientFundsError(error)).toBe(true);
+      expect(
+        describeFvmLocalSignerFundingHint({
+          chainKey: 'filecoin',
+          signerAddress: '0x1234567890abcdef1234567890abcdef12345678',
+          detail: error.message,
+        }),
+      ).toContain('Fund the member-local Filecoin signer');
     });
   });
 });

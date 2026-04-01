@@ -1,5 +1,10 @@
 import { Tooltip } from '../shared/Tooltip';
-import { passkeyTrustDetail, passkeyTrustLabel, purposeHelpDetail } from '../shared/coop-copy';
+import {
+  passkeyTrustDetail,
+  passkeyTrustLabel,
+  purposeCreateHelperText,
+  purposeHelpDetail,
+} from '../shared/coop-copy';
 import { PopupOnboardingHero } from './PopupOnboardingHero';
 import type { PopupCreateFormState } from './popup-types';
 
@@ -7,24 +12,13 @@ export function PopupCreateCoopScreen(props: {
   form: PopupCreateFormState;
   submitting: boolean;
   onChange: (patch: Partial<PopupCreateFormState>) => void;
+  onPastePurpose: () => void | Promise<void>;
   onSubmit: () => void | Promise<void>;
 }) {
-  const { form, submitting, onChange, onSubmit } = props;
+  const { form, submitting, onChange, onPastePurpose, onSubmit } = props;
 
   const disabled =
     submitting || !form.coopName.trim() || !form.creatorName.trim() || !form.purpose.trim();
-
-  async function handlePastePurpose() {
-    try {
-      const value = await navigator.clipboard.readText();
-      if (!value.trim()) {
-        return;
-      }
-      onChange({ purpose: value });
-    } catch {
-      // Ignore clipboard failures in the popup.
-    }
-  }
 
   return (
     <section className="popup-screen popup-screen--onboarding">
@@ -62,7 +56,7 @@ export function PopupCreateCoopScreen(props: {
         <label className="popup-field">
           <div className="popup-field__label-row">
             <span className="popup-field__label-with-help">
-              Curate your coop's focus
+              Purpose
               <Tooltip content={purposeHelpDetail} placement="below">
                 {({ targetProps }) => (
                   <button
@@ -83,7 +77,7 @@ export function PopupCreateCoopScreen(props: {
             <button
               aria-label="Paste purpose"
               className="popup-field-action"
-              onClick={() => void handlePastePurpose()}
+              onClick={() => void onPastePurpose()}
               type="button"
             >
               Paste
@@ -94,36 +88,10 @@ export function PopupCreateCoopScreen(props: {
             placeholder="What will your coop gather and act on?"
             value={form.purpose}
           />
+          <span className="popup-field__helper">{purposeCreateHelperText}</span>
         </label>
 
         <div className="popup-form__footer">
-          <label className="popup-toggle-field">
-            <input
-              checked={form.enableGreenGoods ?? false}
-              onChange={(event) => onChange({ enableGreenGoods: event.target.checked })}
-              type="checkbox"
-            />
-            <span>Enable Green Goods</span>
-            <Tooltip
-              content="Green Goods lets your coop route shared work into verifiable real-world actions."
-              placement="above"
-            >
-              {({ targetProps }) => (
-                <button
-                  {...targetProps}
-                  aria-label="Green Goods info"
-                  className="popup-info-bubble"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.open('https://docs.greengoods.app', '_blank');
-                  }}
-                  type="button"
-                >
-                  ?
-                </button>
-              )}
-            </Tooltip>
-          </label>
           <button className="popup-primary-action" disabled={disabled} type="submit">
             {submitting ? 'Creating...' : 'Create Coop'}
           </button>

@@ -640,8 +640,8 @@ describe('buildTemplateCorpusStopwords', () => {
   it('includes template boilerplate tokens', () => {
     const stopwords = buildTemplateCorpusStopwords();
     // These words appear across multiple space type templates
-    expect(stopwords.has('tighten')).toBe(true);
-    expect(stopwords.has('loose')).toBe(true);
+    expect(stopwords.has('manual')).toBe(true);
+    expect(stopwords.has('shared')).toBe(true);
   });
 
   it('excludes domain-specific acronyms', () => {

@@ -6,6 +6,7 @@ import {
   type SessionCapableActionClass,
   buildEnableSessionExecution,
   buildRemoveSessionExecution,
+  buildSessionModuleAccount,
   buildSmartSession,
   checkSessionCapabilityEnabled,
   createCoopPublicClient,
@@ -31,15 +32,15 @@ import {
   saveEncryptedSessionMaterial,
   saveSessionCapability,
   saveSessionCapabilityLogEntry,
+  toCoopSafeSmartAccount,
+  usesCoopSafeErc7579,
   validateSessionCapabilityForBundle,
   wrapUseSessionSignature,
 } from '@coop/shared';
 import {
-  type Account as SessionModuleAccount,
   installModule as buildModuleInstallExecutions,
   isModuleInstalled as checkModuleInstalled,
 } from '@rhinestone/module-sdk/account';
-import { toSafeSmartAccount } from 'permissionless/accounts';
 import type { Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { RuntimeActionResponse } from '../../runtime/messages';
@@ -61,16 +62,6 @@ import {
   logPrivilegedAction,
   requireCreatorGrantManager,
 } from '../operator';
-
-// ---- Session Module Account Helper ----
-
-function buildSessionModuleAccount(state: CoopSharedState['onchainState']): SessionModuleAccount {
-  return {
-    address: state.safeAddress as Address,
-    type: 'safe',
-    deployedOnChains: [state.chainId],
-  };
-}
 
 // ---- Green Goods Session Targets ----
 
@@ -155,11 +146,12 @@ export async function createOwnerSafeExecutionContext(input: {
 
   const owner = restorePasskeyAccount(input.authSession);
   const publicClient = await createCoopPublicClient(input.onchainState.chainKey);
-  const account = await toSafeSmartAccount({
+  const account = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [owner],
+    chainKey: input.onchainState.chainKey,
     address: input.onchainState.safeAddress as Address,
-    version: '1.4.1',
+    useErc7579: usesCoopSafeErc7579(input.onchainState),
   });
   const { smartClient } = createCoopSmartAccountClient({
     account,
@@ -171,7 +163,11 @@ export async function createOwnerSafeExecutionContext(input: {
   return {
     publicClient,
     smartClient,
-    moduleAccount: buildSessionModuleAccount(input.onchainState),
+    moduleAccount: buildSessionModuleAccount({
+      safeAddress: input.onchainState.safeAddress as Address,
+      chainId: input.onchainState.chainId,
+      safeSupports7579: usesCoopSafeErc7579(input.onchainState),
+    }),
   };
 }
 
@@ -286,11 +282,12 @@ export async function createSessionExecutionContext(input: {
   });
   const owner = privateKeyToAccount(privateKey);
   const publicClient = await createCoopPublicClient(input.onchainState.chainKey);
-  const baseAccount = await toSafeSmartAccount({
+  const baseAccount = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [owner],
+    chainKey: input.onchainState.chainKey,
     address: input.onchainState.safeAddress as Address,
-    version: '1.4.1',
+    useErc7579: usesCoopSafeErc7579(input.onchainState),
   });
   const account = {
     ...baseAccount,

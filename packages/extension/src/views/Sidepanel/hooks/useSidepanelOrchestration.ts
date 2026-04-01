@@ -1,5 +1,6 @@
 import type {
   CaptureMode,
+  CoopSoul,
   DelegatedActionClass,
   GreenGoodsAssessmentRequest,
   GreenGoodsHypercertMintRequest,
@@ -8,6 +9,7 @@ import type {
   PolicyActionClass,
   ReceiverPairingRecord,
   SessionCapableActionClass,
+  SetupInsights,
   SoundPreferences,
 } from '@coop/shared';
 import { useEffect, useRef, useState } from 'react';
@@ -48,6 +50,7 @@ export interface SidepanelOrchestration {
   refreshableArchiveReceipts: ReturnType<typeof useDashboard>['refreshableArchiveReceipts'];
   browserUxCapabilities: ReturnType<typeof useDashboard>['browserUxCapabilities'];
   boardUrl: ReturnType<typeof useDashboard>['boardUrl'];
+  agentRunning: ReturnType<typeof useDashboard>['agentRunning'];
   agentDelta: ReturnType<typeof useDashboard>['agentDelta'];
   clearAgentDelta: ReturnType<typeof useDashboard>['clearAgentDelta'];
   message: string;
@@ -140,10 +143,29 @@ export interface SidepanelOrchestration {
     request: GreenGoodsHypercertMintRequest,
   ) => Promise<void>;
   handleQueueGreenGoodsMemberSync: (coopId: string) => Promise<void>;
-  updateCoopProfile: (patch: {
-    name?: string;
-    purpose?: string;
-    captureMode?: CaptureMode;
+  updateCoopDetails: (patch: {
+    profile?: {
+      name?: string;
+      purpose?: string;
+      captureMode?: CaptureMode;
+    };
+    soul?: Partial<
+      Pick<
+        CoopSoul,
+        | 'purposeStatement'
+        | 'whyThisCoopExists'
+        | 'usefulSignalDefinition'
+        | 'toneAndWorkingStyle'
+        | 'artifactFocus'
+      >
+    >;
+    setupInsights?: SetupInsights;
+  }) => Promise<void>;
+  updateMeetingSettings: (patch: {
+    weeklyReviewCadence: string;
+    namedMoments: string[];
+    facilitatorExpectation: string;
+    defaultCapturePosture: string;
   }) => Promise<void>;
   handleLeaveCoop: () => Promise<void>;
   exportSnapshot: (format: 'json' | 'text') => Promise<void>;
@@ -181,6 +203,7 @@ export function useSidepanelOrchestration(
     refreshableArchiveReceipts,
     browserUxCapabilities,
     boardUrl,
+    agentRunning,
     agentDelta,
     clearAgentDelta,
     message,
@@ -346,6 +369,7 @@ export function useSidepanelOrchestration(
     refreshableArchiveReceipts,
     browserUxCapabilities,
     boardUrl,
+    agentRunning,
     agentDelta,
     clearAgentDelta,
     message,

@@ -2,7 +2,6 @@ import {
   installModule as buildModuleInstallExecutions,
   isModuleInstalled,
 } from '@rhinestone/module-sdk/account';
-import { toSafeSmartAccount } from 'permissionless/accounts';
 import { createSmartAccountClient } from 'permissionless/clients';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
 import { http, type Address, createPublicClient } from 'viem';
@@ -16,6 +15,7 @@ import {
   buildGreenGoodsSyncGardenProfilePayload,
   buildPimlicoRpcUrl,
   buildRemoveSessionExecution,
+  buildSessionModuleAccount,
   buildSmartSession,
   checkSessionCapabilityEnabled,
   createActionBundle,
@@ -30,7 +30,9 @@ import {
   revokeSessionCapability,
   setGreenGoodsGardenDomains,
   syncGreenGoodsGardenProfile,
+  toCoopSafeSmartAccount,
   updateGreenGoodsState,
+  usesCoopSafeErc7579,
   validateSessionCapabilityForBundle,
   wrapUseSessionSignature,
 } from '../packages/shared/src';
@@ -43,6 +45,7 @@ const pimlicoApiKey = process.env.VITE_PIMLICO_API_KEY;
 const probePrivateKey = process.env.COOP_SESSION_PROBE_PRIVATE_KEY as `0x${string}` | undefined;
 const chainKey = process.env.COOP_SESSION_PROBE_CHAIN === 'arbitrum' ? 'arbitrum' : 'sepolia';
 const existingSafeAddress = process.env.COOP_SESSION_PROBE_SAFE_ADDRESS as Address | undefined;
+const rpcUrl = process.env.COOP_SESSION_PROBE_RPC_URL;
 
 if (!pimlicoApiKey || !probePrivateKey) {
   console.log(
@@ -56,7 +59,7 @@ const bundlerUrl = buildPimlicoRpcUrl(chainKey, pimlicoApiKey);
 const owner = privateKeyToAccount(probePrivateKey);
 const publicClient = createPublicClient({
   chain: chainConfig.chain,
-  transport: http(chainConfig.chain.rpcUrls.default.http[0]),
+  transport: http(rpcUrl ?? chainConfig.chain.rpcUrls.default.http[0]),
 });
 const pimlicoClient = createPimlicoClient({
   chain: chainConfig.chain,
@@ -68,7 +71,8 @@ const probeGardenSlug = process.env.COOP_SESSION_PROBE_SLUG ?? `probe-garden-${D
 const probeGardenDescription =
   process.env.COOP_SESSION_PROBE_DESCRIPTION ??
   'Live Smart Session validation garden routed through the canonical Green Goods config.';
-const probeGardenLocation = process.env.COOP_SESSION_PROBE_LOCATION ?? 'Sepolia coop yard';
+const probeGardenLocation =
+  process.env.COOP_SESSION_PROBE_LOCATION ?? `${chainConfig.shortLabel} coop yard`;
 const probeGardenBannerImage =
   process.env.COOP_SESSION_PROBE_BANNER_IMAGE ?? 'ipfs://session-probe-banner';
 const probeGardenMetadata =
@@ -150,6 +154,7 @@ const onchainState = existingSafeAddress
       safeAddress: existingSafeAddress,
       senderAddress: owner.address,
       safeCapability: 'executed' as const,
+      safeSupports7579: true,
       statusNote: 'Attached to an existing probe Safe for Smart Session rehearsal.',
     }
   : await (async () => {
@@ -162,6 +167,7 @@ const onchainState = existingSafeAddress
         pimlicoApiKey,
         chainKey,
         coopSeed: `session-probe:${chainKey}:${Date.now()}`,
+        rpcUrl,
       });
       console.log(
         `[probe:session-key-live] Safe deployed at ${deployed.safeAddress} (${deployed.deploymentTxHash}).`,
@@ -175,11 +181,12 @@ if (existingSafeAddress) {
   );
 }
 
-const ownerAccount = await toSafeSmartAccount({
+const ownerAccount = await toCoopSafeSmartAccount({
   client: publicClient,
   owners: [owner],
+  chainKey,
   address: onchainState.safeAddress as Address,
-  version: '1.4.1',
+  useErc7579: usesCoopSafeErc7579(onchainState),
 });
 const ownerSmartClient = createSmartAccountClient({
   account: ownerAccount,
@@ -233,11 +240,12 @@ async function createSessionSmartClientForCapability(input: {
   signerMaterial: ReturnType<typeof createSessionSignerMaterial>;
 }) {
   const sessionSigner = privateKeyToAccount(input.signerMaterial.privateKey);
-  const sessionBaseAccount = await toSafeSmartAccount({
+  const sessionBaseAccount = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [sessionSigner],
+    chainKey,
     address: onchainState.safeAddress as Address,
-    version: '1.4.1',
+    useErc7579: usesCoopSafeErc7579(onchainState),
   });
 
   const sessionAccount = {
@@ -308,16 +316,17 @@ async function revokeCapability(capability: ReturnType<typeof createProbeCapabil
 
 async function ensureSessionModulesInstalled(capability: ReturnType<typeof createProbeCapability>) {
   const { modules } = buildSmartSession({ capability });
+  const moduleAccount = buildSessionModuleAccount({
+    safeAddress: onchainState.safeAddress as Address,
+    chainId: chainConfig.chain.id,
+    safeSupports7579: usesCoopSafeErc7579(onchainState),
+  });
   for (const module of [modules.validator, modules.fallback]) {
     let installed = false;
     try {
       installed = await isModuleInstalled({
         client: publicClient,
-        account: {
-          address: onchainState.safeAddress as Address,
-          type: 'safe',
-          deployedOnChains: [chainConfig.chain.id],
-        },
+        account: moduleAccount,
         module,
       });
     } catch {
@@ -330,11 +339,7 @@ async function ensureSessionModulesInstalled(capability: ReturnType<typeof creat
     try {
       const executions = await buildModuleInstallExecutions({
         client: publicClient,
-        account: {
-          address: onchainState.safeAddress as Address,
-          type: 'safe',
-          deployedOnChains: [chainConfig.chain.id],
-        },
+        account: moduleAccount,
         module,
       });
       for (const execution of executions) {

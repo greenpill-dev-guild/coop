@@ -42,7 +42,9 @@ describe('useSidepanelAgent', () => {
 
     expect(deps.setAgentDashboard).toHaveBeenNthCalledWith(1, dashboard);
     expect(deps.setAgentDashboard).toHaveBeenNthCalledWith(2, dashboard);
-    expect(deps.setMessage).toHaveBeenCalledWith('Agent cycle requested.');
+    // Success toast is now handled by AGENT_CYCLE_FINISHED background event,
+    // so handleRunAgentCycle no longer calls setMessage on success.
+    expect(deps.setMessage).not.toHaveBeenCalled();
     expect(deps.loadDashboard).toHaveBeenCalledTimes(2);
   });
 
@@ -88,5 +90,36 @@ describe('useSidepanelAgent', () => {
     });
 
     expect(deps.setMessage).toHaveBeenCalledWith('agent failed');
+  });
+
+  it('maps trusted-node pre-flight errors to friendly messages', async () => {
+    const deps = makeDeps();
+
+    const cases = [
+      {
+        raw: 'A passkey session is required for trusted-node controls.',
+        friendly: 'Sign in with your passkey first.',
+      },
+      {
+        raw: 'Select a coop before using trusted-node controls.',
+        friendly: 'Select a coop first.',
+      },
+      {
+        raw: 'Trusted-node controls are limited to creator or trusted members.',
+        friendly: 'Only trusted members can run helpers.',
+      },
+    ];
+
+    for (const { raw, friendly } of cases) {
+      vi.clearAllMocks();
+      sendRuntimeMessageMock.mockResolvedValue({ ok: false, error: raw });
+
+      const { result } = renderHook(() => useSidepanelAgent(deps));
+      await act(async () => {
+        await result.current.handleRunAgentCycle();
+      });
+
+      expect(deps.setMessage).toHaveBeenCalledWith(friendly);
+    }
   });
 });

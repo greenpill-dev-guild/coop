@@ -148,7 +148,7 @@ import {
   handleLeaveCoop,
   handleResolveOnchainState,
   handleSetAnchorMode,
-  handleUpdateCoopProfile,
+  handleUpdateCoopDetails,
 } from './background/handlers/coop';
 import {
   handleProvisionMemberOnchainAccount,
@@ -471,8 +471,8 @@ export function startBackground() {
         case 'revoke-invite-type':
           sendResponse(await handleRevokeInviteType(message));
           return;
-        case 'update-coop-profile':
-          sendResponse(await handleUpdateCoopProfile(message));
+        case 'update-coop-details':
+          sendResponse(await handleUpdateCoopDetails(message));
           return;
         case 'leave-coop':
           sendResponse(await handleLeaveCoop(message));

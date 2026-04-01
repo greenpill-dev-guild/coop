@@ -334,10 +334,10 @@ After deployment:
 Current implementation note:
 
 - Deployment can use a Foundry keystore account.
-- Runtime archive registration in the extension still expects `VITE_COOP_FVM_OPERATOR_KEY`.
-- Because `VITE_` variables are baked into the extension bundle, that key should only exist in
-  operator-controlled builds, not public Chrome Web Store releases, until signing moves out of the
-  bundle.
+- Runtime archive registration in the extension now uses a member-local Filecoin signer that is
+  created on first use for the authenticated passkey member.
+- No runtime FVM private-key env var is required in the extension bundle. Members must fund their
+  local Filecoin signer address before they can submit registry writes on the selected FVM network.
 
 ## Local Demo Script
 

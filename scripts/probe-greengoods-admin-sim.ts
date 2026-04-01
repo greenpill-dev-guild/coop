@@ -1,4 +1,3 @@
-import { toSafeSmartAccount } from 'permissionless/accounts';
 import {
   http,
   type Address,
@@ -23,7 +22,10 @@ import {
   syncGreenGoodsGapAdmins,
   syncGreenGoodsGardenProfile,
 } from '../packages/shared/src/modules/greengoods/greengoods';
-import { getCoopChainConfig } from '../packages/shared/src/modules/onchain/onchain';
+import {
+  getCoopChainConfig,
+  toCoopSafeSmartAccount,
+} from '../packages/shared/src/modules/onchain/onchain';
 import { loadRootEnv } from './load-root-env';
 
 loadRootEnv();
@@ -122,6 +124,13 @@ function formatRpcValue(value: unknown) {
   }
 }
 
+function parseSafeSupports7579(value: string | undefined) {
+  if (value === undefined) {
+    return true;
+  }
+  return value === '1' || value === 'true';
+}
+
 async function captureCalls(
   producer: (
     liveExecutor: (input: {
@@ -152,7 +161,7 @@ async function captureCalls(
 
 async function simulatePreparedCall(input: {
   publicClient: ReturnType<typeof createPublicClient>;
-  safeAccount: Awaited<ReturnType<typeof toSafeSmartAccount>>;
+  safeAccount: Awaited<ReturnType<typeof toCoopSafeSmartAccount>>;
   safeAddress: Address;
   blockTag: string;
   call: PreparedCall;
@@ -249,14 +258,17 @@ async function main() {
     (process.env.COOP_GREENGOODS_ADMIN_SIM_SAFE_ADDRESS as Address | undefined) ??
     (process.env.COOP_GREENGOODS_SIM_SAFE_ADDRESS as Address | undefined);
   if (!safeAddress || !/^0x[a-fA-F0-9]{40}$/.test(safeAddress)) {
-    console.log(
-      '[probe:greengoods-admin-sim] Skipping fork admin probe. Set COOP_GREENGOODS_ADMIN_SIM_SAFE_ADDRESS (or COOP_GREENGOODS_SIM_SAFE_ADDRESS) to a real coop Safe address to rehearse post-mint Green Goods admin actions.',
+    throw new Error(
+      'Set COOP_GREENGOODS_ADMIN_SIM_SAFE_ADDRESS (or COOP_GREENGOODS_SIM_SAFE_ADDRESS) to a real coop Safe address to rehearse post-mint Green Goods admin actions.',
     );
-    process.exit(0);
   }
   const chainConfig = getCoopChainConfig(chainKey);
   const rpcUrl =
     process.env.COOP_GREENGOODS_ADMIN_SIM_RPC_URL ?? process.env.COOP_GREENGOODS_SIM_RPC_URL;
+  const safeSupports7579 = parseSafeSupports7579(
+    process.env.COOP_GREENGOODS_ADMIN_SIM_SAFE_SUPPORTS_7579 ??
+      process.env.COOP_GREENGOODS_SIM_SAFE_SUPPORTS_7579,
+  );
   const blockTag = parseBlockTag(
     process.env.COOP_GREENGOODS_ADMIN_SIM_BLOCK ?? process.env.COOP_GREENGOODS_SIM_BLOCK,
   );
@@ -265,11 +277,12 @@ async function main() {
     transport: http(rpcUrl ?? chainConfig.chain.rpcUrls.default.http[0]),
   });
   const probeOwner = privateKeyToAccount(PROBE_OWNER_PRIVATE_KEY);
-  const safeAccount = await toSafeSmartAccount({
+  const safeAccount = await toCoopSafeSmartAccount({
     client: publicClient,
     owners: [probeOwner],
+    chainKey,
     address: safeAddress,
-    version: '1.4.1',
+    useErc7579: safeSupports7579,
   });
   const safeCode = await publicClient.getCode({
     address: safeAddress,
@@ -345,6 +358,9 @@ async function main() {
   );
   console.log(`[probe:greengoods-admin-sim] Block: ${formatBlockLabel(blockTag)}`);
   console.log(`[probe:greengoods-admin-sim] Safe: ${safeAddress}`);
+  console.log(
+    `[probe:greengoods-admin-sim] Safe wrapper mode: ${safeSupports7579 ? 'erc-7579 launchpad' : 'standard safe4337'}`,
+  );
   console.log(
     `[probe:greengoods-admin-sim] Safe code present: ${safeCode && safeCode !== '0x' ? 'yes' : 'no'}`,
   );
@@ -487,6 +503,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,
@@ -515,6 +532,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,
@@ -535,6 +553,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,
@@ -554,6 +573,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,
@@ -574,6 +594,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,
@@ -594,6 +615,7 @@ async function main() {
             chainKey,
             safeAddress,
             safeCapability: 'executed',
+            safeSupports7579,
             statusNote: 'Probe Safe attached for dry-runs.',
           },
           gardenAddress: rehearsalGardenAddress,

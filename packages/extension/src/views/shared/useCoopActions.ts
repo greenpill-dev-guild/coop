@@ -2,6 +2,7 @@ import {
   type AuthSession,
   type OnchainState,
   type SoundPreferences,
+  createDefaultSeedContribution,
   createPasskeySession,
   sessionToMember,
 } from '@coop/shared';
@@ -13,11 +14,6 @@ import {
   initialCreateForm,
   toSetupInsights,
 } from '../Sidepanel/setup-insights';
-
-function createDefaultSeedContribution(coopName: string) {
-  const trimmedName = coopName.trim() || 'this coop';
-  return `I want ${trimmedName} to keep useful context, loose research, and next steps visible.`;
-}
 
 function toCreateFormState(form: PopupCreateFormState): CreateFormState {
   return {

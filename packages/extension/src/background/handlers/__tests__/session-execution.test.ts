@@ -218,6 +218,7 @@ function makeCoop(): CoopSharedState {
       chainId: 11155111,
       chainKey: 'sepolia',
       safeAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      safeSupports7579: true,
       safeOwners: ['0xcccccccccccccccccccccccccccccccccccccccc'],
       safeThreshold: 1,
     },
@@ -353,6 +354,24 @@ describe('session execution paths', () => {
     });
 
     expect(rhinestoneMocks.installModule).toHaveBeenCalledTimes(1);
+    expect(rhinestoneMocks.checkModuleInstalled).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({
+          address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          type: 'erc7579-implementation',
+          deployedOnChains: [11155111],
+        }),
+      }),
+    );
+    expect(rhinestoneMocks.installModule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({
+          address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          type: 'erc7579-implementation',
+          deployedOnChains: [11155111],
+        }),
+      }),
+    );
     expect(sendTransaction).toHaveBeenCalledTimes(2);
     expect(sendTransaction).toHaveBeenNthCalledWith(
       1,
@@ -468,6 +487,13 @@ describe('session execution paths', () => {
       },
       wrappingSecret: 'wrap-secret',
     });
+    expect(permissionlessMocks.toSafeSmartAccount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: '1.4.1',
+        safe4337ModuleAddress: '0x7579EE8307284F293B1927136486880611F20002',
+        erc7579LaunchpadAddress: '0x7579011aB74c46090561ea277Ba79D510c6C00ff',
+      }),
+    );
   });
 
   it('selects a usable session capability and persists any refreshed status change', async () => {

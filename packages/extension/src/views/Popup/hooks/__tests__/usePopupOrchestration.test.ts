@@ -140,6 +140,8 @@ vi.mock('../usePopupFormHandlers', () => ({
     joinSubmitting: false,
     handleCreateSubmit: vi.fn(async () => undefined),
     handleJoinSubmit: vi.fn(async () => undefined),
+    handlePasteCreatePurpose: vi.fn(async () => undefined),
+    handlePasteJoinInviteCode: vi.fn(async () => undefined),
   }),
 }));
 

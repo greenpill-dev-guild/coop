@@ -3,6 +3,7 @@ import type { SkillManifest } from '@coop/shared';
 export type SkillManifestSectionProps = {
   skillManifests: SkillManifest[];
   autoRunSkillIds: string[];
+  agentRunning?: boolean;
   onRunAgentCycle(): void | Promise<void>;
   onToggleSkillAutoRun(skillId: string, enabled: boolean): void | Promise<void>;
 };
@@ -20,10 +21,11 @@ export function SkillManifestSection(props: SkillManifestSectionProps) {
         <div className="action-row">
           <button
             className="primary-button"
+            disabled={props.agentRunning}
             onClick={() => void props.onRunAgentCycle()}
             type="button"
           >
-            Check the helpers
+            {props.agentRunning ? 'Checking...' : 'Check the helpers'}
           </button>
         </div>
         {props.skillManifests.map((manifest) => (

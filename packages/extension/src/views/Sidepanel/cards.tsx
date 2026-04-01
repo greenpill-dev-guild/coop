@@ -819,7 +819,6 @@ export function ArchiveReceiptCard({
         </a>
       ) : onFvmRegister &&
         receipt.delegationMode === 'live' &&
-        runtimeConfig.onchainMode === 'live' &&
         !receipt.fvmRegistryTxHash ? (
         <div className="action-row">
           <button

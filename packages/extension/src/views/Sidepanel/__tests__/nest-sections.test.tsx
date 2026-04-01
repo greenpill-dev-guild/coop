@@ -8,7 +8,7 @@ import type {
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { passkeyTrustLabel } from '../../shared/coop-copy';
+import { passkeyTrustLabel, purposeCreateHelperText } from '../../shared/coop-copy';
 import type { SidepanelOrchestration } from '../hooks/useSidepanelOrchestration';
 import type { NestArchiveSectionProps } from '../tabs/NestArchiveSection';
 import { NestArchiveSection } from '../tabs/NestArchiveSection';
@@ -92,11 +92,59 @@ function makeActiveCoop(overrides?: Partial<CoopSharedState>): CoopSharedState {
         joinedAt: '2026-01-02T00:00:00.000Z',
       },
     ],
-    rituals: [],
+    rituals: [
+      {
+        weeklyReviewCadence: 'Weekly review',
+        namedMoments: ['Check-in', 'Harvest'],
+        facilitatorExpectation: 'Rotate facilitator each week.',
+        defaultCapturePosture: 'Capture decisions, evidence, and blockers.',
+      },
+    ],
     artifacts: [],
     reviewBoard: [],
     archiveReceipts: [],
     invites: [],
+    setupInsights: {
+      summary: 'A clear default setup story for the Nest editing tests.',
+      crossCuttingPainPoints: ['Context is scattered across tools'],
+      crossCuttingOpportunities: ['Shared coop memory can keep work visible'],
+      lenses: [
+        {
+          lens: 'capital-formation',
+          currentState: 'Funding links live in chat.',
+          painPoints: 'Leads disappear quickly.',
+          improvements: 'Track them in one shared queue.',
+        },
+        {
+          lens: 'impact-reporting',
+          currentState: 'Evidence arrives near reporting deadlines.',
+          painPoints: 'The story stays incomplete.',
+          improvements: 'Capture proof continuously.',
+        },
+        {
+          lens: 'governance-coordination',
+          currentState: 'Decisions happen in calls and DMs.',
+          painPoints: 'Follow-up gets lost.',
+          improvements: 'Keep actions visible after meetings.',
+        },
+        {
+          lens: 'knowledge-garden-resources',
+          currentState: 'Research sits in open tabs.',
+          painPoints: 'People repeat earlier work.',
+          improvements: 'Save references into shared coop memory.',
+        },
+      ],
+    },
+    soul: {
+      purposeStatement: 'Test purpose',
+      whyThisCoopExists: 'Help members turn scattered knowledge into action.',
+      usefulSignalDefinition: 'Useful signals point to concrete next steps.',
+      toneAndWorkingStyle: 'Direct, warm, and evidence-first.',
+      artifactFocus: ['Funding leads', 'Research notes'],
+      vocabularyTerms: [],
+      prohibitedTopics: [],
+      confidenceThreshold: 0.72,
+    },
     onchainState: {
       safeAddress: '0x1111111111111111111111111111111111111111',
       chainKey: 'sepolia',
@@ -140,6 +188,16 @@ function makeInvite(overrides?: Partial<InviteCode>): InviteCode {
     usedByMemberIds: [],
     ...overrides,
   } as InviteCode;
+}
+
+function openNestSection(title: string) {
+  const heading = screen.getByRole('heading', { name: title });
+  const details = heading.closest('details') as HTMLDetailsElement | null;
+  if (!details) {
+    throw new Error(`Could not find section for ${title}`);
+  }
+  details.open = true;
+  return details;
 }
 
 function makePairingRecord(overrides?: Partial<ReceiverPairingRecord>): ReceiverPairingRecord {
@@ -1006,7 +1064,8 @@ describe('NestTab', () => {
       toggleLocalInferenceOptIn: vi.fn(),
       clearSensitiveLocalData: vi.fn(),
       updateUiPreferences: vi.fn(async () => null),
-      updateCoopProfile: vi.fn(),
+      updateCoopDetails: vi.fn(),
+      updateMeetingSettings: vi.fn(),
       handleLeaveCoop: vi.fn(),
       loadDashboard: vi.fn(async () => undefined),
       setMessage: vi.fn(),
@@ -1070,6 +1129,138 @@ describe('NestTab', () => {
 
     expect(screen.getByText(/start a coop/i)).toBeInTheDocument();
     expect(screen.getAllByText(passkeyTrustLabel).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Coop name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Your display name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Purpose')).toBeInTheDocument();
+    expect(screen.getByText(purposeCreateHelperText)).toBeInTheDocument();
+    expect(screen.getByLabelText('Big picture')).not.toBeVisible();
+    expect(screen.queryByLabelText(/your starter note/i)).not.toBeInTheDocument();
+  });
+
+  it('saves profile edits through updateCoopDetails', async () => {
+    const user = userEvent.setup();
+    const base = baseOrchestration();
+
+    render(<NestTab {...base} />);
+    openNestSection('Edit Profile');
+
+    await user.clear(screen.getByLabelText('Coop name'));
+    await user.type(screen.getByLabelText('Coop name'), 'River Coop');
+    await user.clear(screen.getByLabelText('Purpose'));
+    await user.type(screen.getByLabelText('Purpose'), 'Keep the strongest leads in view.');
+    await user.selectOptions(screen.getByLabelText('Round-up timing'), '10-min');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(base.orchestration.updateCoopDetails).toHaveBeenCalledWith({
+      profile: {
+        name: 'River Coop',
+        purpose: 'Keep the strongest leads in view.',
+        captureMode: '10-min',
+      },
+    });
+  });
+
+  it('saves soul edits with artifact focus normalized to a list', async () => {
+    const user = userEvent.setup();
+    const base = baseOrchestration();
+
+    render(<NestTab {...base} />);
+    openNestSection('Edit Soul');
+
+    await user.clear(screen.getByLabelText('Purpose statement'));
+    await user.type(screen.getByLabelText('Purpose statement'), 'Spot the best next moves.');
+    await user.clear(screen.getByLabelText('Artifact focus'));
+    await user.type(screen.getByLabelText('Artifact focus'), 'Decision logs{enter}Field notes');
+    await user.click(screen.getByRole('button', { name: 'Save soul' }));
+
+    expect(base.orchestration.updateCoopDetails).toHaveBeenCalledWith({
+      soul: {
+        purposeStatement: 'Spot the best next moves.',
+        whyThisCoopExists: 'Help members turn scattered knowledge into action.',
+        usefulSignalDefinition: 'Useful signals point to concrete next steps.',
+        toneAndWorkingStyle: 'Direct, warm, and evidence-first.',
+        artifactFocus: ['Decision logs', 'Field notes'],
+      },
+    });
+  });
+
+  it('saves ritual edits with named moments as individual entries', async () => {
+    const user = userEvent.setup();
+    const base = baseOrchestration();
+
+    render(<NestTab {...base} />);
+    openNestSection('Edit Ritual');
+
+    await user.clear(screen.getByLabelText('Named moments'));
+    await user.type(screen.getByLabelText('Named moments'), 'Check-in{enter}Retro');
+    await user.click(screen.getByRole('button', { name: 'Save ritual' }));
+
+    expect(base.orchestration.updateMeetingSettings).toHaveBeenCalledWith({
+      weeklyReviewCadence: 'Weekly review',
+      namedMoments: ['Check-in', 'Retro'],
+      facilitatorExpectation: 'Rotate facilitator each week.',
+      defaultCapturePosture: 'Capture decisions, evidence, and blockers.',
+    });
+  });
+
+  it('saves setup edits through updateCoopDetails', async () => {
+    const user = userEvent.setup();
+    const base = baseOrchestration();
+
+    render(<NestTab {...base} />);
+    openNestSection('Edit Setup');
+
+    await user.clear(screen.getByLabelText('Big picture'));
+    await user.type(screen.getByLabelText('Big picture'), 'A tighter operating picture for the coop.');
+    await user.click(screen.getByRole('button', { name: 'Save setup' }));
+
+    expect(base.orchestration.updateCoopDetails).toHaveBeenCalledWith({
+      setupInsights: expect.objectContaining({
+        summary: 'A tighter operating picture for the coop.',
+      }),
+    });
+  });
+
+  it('reloads edit forms when the active coop changes', async () => {
+    const user = userEvent.setup();
+    const firstCoop = makeActiveCoop({
+      profile: {
+        ...makeActiveCoop().profile,
+        purpose: 'Old purpose',
+      },
+    });
+    const secondCoop = makeActiveCoop({
+      profile: {
+        ...makeActiveCoop().profile,
+        purpose: 'New purpose',
+      },
+    });
+    const first = baseOrchestration({
+      activeCoop: firstCoop,
+      dashboard: {
+        ...baseOrchestration().orchestration.dashboard,
+        activeCoopId: firstCoop.profile.id,
+        coops: [firstCoop],
+      },
+    });
+    const { rerender } = render(<NestTab {...first} />);
+    openNestSection('Edit Profile');
+
+    await user.clear(screen.getByLabelText('Purpose'));
+    await user.type(screen.getByLabelText('Purpose'), 'Unsaved local edit');
+
+    const second = baseOrchestration({
+      activeCoop: secondCoop,
+      dashboard: {
+        ...first.orchestration.dashboard,
+        activeCoopId: secondCoop.profile.id,
+        coops: [secondCoop],
+      },
+    });
+    rerender(<NestTab {...second} />);
+    openNestSection('Edit Profile');
+
+    expect(screen.getByLabelText('Purpose')).toHaveValue('New purpose');
   });
 
   describe('subheader actions', () => {

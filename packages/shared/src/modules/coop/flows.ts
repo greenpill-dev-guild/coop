@@ -2,6 +2,8 @@ import type * as Y from 'yjs';
 import {
   type Artifact,
   type CaptureMode,
+  type CoopProfile,
+  type CoopSoul,
   type CoopSharedState,
   type CoopSpaceType,
   type GreenGoodsGardenState,
@@ -11,7 +13,9 @@ import {
   type Member,
   type MemberRole,
   type OnchainState,
+  type RitualDefinition,
   type SoundEvent,
+  type SetupInsights,
   coopBootstrapSnapshotSchema,
   coopSharedStateSchema,
   inviteCodeSchema,
@@ -35,6 +39,7 @@ import { createUnavailableOnchainState } from '../onchain/onchain';
 import { buildMemoryProfileSeed } from './pipeline';
 import { formatCoopSpaceTypeLabel } from './presets';
 import { buildReviewBoard, updateMemoryProfileFromArtifacts } from './publish';
+import { summarizeRitualArtifact, summarizeSoulArtifact, synthesizeCoopFromPurpose } from './synthesis';
 import {
   createBootstrapSyncRoomConfig,
   createCoopDoc,
@@ -209,75 +214,14 @@ export function verifyInviteCodeProof(invite: InviteCode, inviteSigningSecret: s
   );
 }
 
-function deriveCoopSoul(input: CreateCoopInput) {
-  const spaceType = input.spaceType ?? 'community';
-  const focusByType: Record<CoopSpaceType, string> = {
-    community: 'shared intelligence and coordinated follow-through',
-    project: 'project memory and clearer delivery follow-through',
-    friends: 'shared plans, recommendations, and small acts of follow-through',
-    family: 'household memory, coordination, and care follow-through',
-    personal: 'durable personal memory and clearer next steps',
-  };
-
-  return {
-    purposeStatement: input.purpose,
-    toneAndWorkingStyle: 'Warm, observant, playful on the surface, serious in the shared work.',
-    usefulSignalDefinition:
-      'Artifacts that tighten shared context, surface opportunities, and reduce repeated research.',
-    artifactFocus: ['insights', 'funding leads', 'evidence', 'next steps'],
-    whyThisCoopExists: `${input.coopName} exists to turn loose tabs into ${focusByType[spaceType]}.`,
-    vocabularyTerms: [],
-    prohibitedTopics: [],
-    confidenceThreshold: 0.72,
-  };
-}
-
-function deriveRitualDefinition(
-  coopName: string,
-  captureMode: CaptureMode,
-  spaceType: CoopSpaceType,
-) {
-  const cadenceByType: Record<CoopSpaceType, string> = {
-    community: 'Weekly review circle',
-    project: 'Weekly working review',
-    friends: 'Weekly check-in',
-    family: 'Weekly family check-in',
-    personal: 'Weekly self-review',
-  };
-  const facilitatorByType: Record<CoopSpaceType, string> = {
-    community: 'A trusted member hosts the review and flags what should be actioned.',
-    project: 'A project lead or trusted operator keeps the working review focused and actionable.',
-    friends: 'One friend lightly steers the check-in so plans and useful finds do not disappear.',
-    family: 'A household organizer keeps the review practical and legible for everyone involved.',
-    personal:
-      'You review your own queue and decide what should stay private, be shared, or be archived.',
-  };
-  const namedMomentsByType: Record<CoopSpaceType, string[]> = {
-    community: ['Coop updates', `${coopName} weekly review`, 'Manual round-up'],
-    project: ['Project sync', `${coopName} working review`, 'Manual round-up'],
-    friends: ['Friend check-in', `${coopName} weekly check-in`, 'Manual round-up'],
-    family: ['Family check-in', `${coopName} weekly review`, 'Manual round-up'],
-    personal: ['Personal checkpoint', `${coopName} self-review`, 'Manual round-up'],
-  };
-
-  return {
-    weeklyReviewCadence: cadenceByType[spaceType],
-    namedMoments: namedMomentsByType[spaceType],
-    facilitatorExpectation: facilitatorByType[spaceType],
-    defaultCapturePosture:
-      captureMode === 'manual'
-        ? 'Manual round-up is primary; scheduled scans stay silent.'
-        : 'Scheduled scans create drafts, but members still explicitly push into shared memory.',
-  };
-}
-
 function createInitialArtifacts(input: {
   coopId: string;
   creator: Member;
   setupInsights: ReturnType<typeof setupInsightsSchema.parse>;
   coopName: string;
-  purpose: string;
   spaceType: CoopSpaceType;
+  soul: CoopSoul;
+  rituals: RitualDefinition[];
   seedContribution: string;
 }): Artifact[] {
   const createdAt = nowIso();
@@ -321,7 +265,7 @@ function createInitialArtifacts(input: {
       originId: originBase,
       targetCoopId: input.coopId,
       title: 'Coop Soul',
-      summary: truncateWords(input.purpose, 28),
+      summary: summarizeSoulArtifact(input.soul),
       sources: [
         {
           label: 'Coop purpose',
@@ -345,7 +289,14 @@ function createInitialArtifacts(input: {
       originId: originBase,
       targetCoopId: input.coopId,
       title: 'Rituals',
-      summary: 'Weekly review and explicit push define the shared-memory membrane.',
+      summary: summarizeRitualArtifact(
+        input.rituals[0] ?? {
+          weeklyReviewCadence: 'Weekly review',
+          namedMoments: ['Manual round-up'],
+          facilitatorExpectation: 'Review the queue together.',
+          defaultCapturePosture: 'Manual round-up is primary.',
+        },
+      ),
       sources: [
         {
           label: 'Coop rituals',
@@ -426,15 +377,20 @@ export function createCoop(input: CreateCoopInput) {
     safeAddress: onchainState.safeAddress,
     active: true,
   };
-  const soul = deriveCoopSoul({ ...input, spaceType });
-  const rituals = [deriveRitualDefinition(input.coopName, input.captureMode, spaceType)];
+  const { soul, rituals } = synthesizeCoopFromPurpose({
+    coopName: input.coopName,
+    purpose: input.purpose,
+    spaceType,
+    captureMode: input.captureMode,
+  });
   const artifacts = createInitialArtifacts({
     coopId,
     creator,
     setupInsights,
     coopName: input.coopName,
-    purpose: input.purpose,
     spaceType,
+    soul,
+    rituals,
     seedContribution: input.seedContribution,
   });
   creator.seedContributionId = artifacts[3]?.id;
@@ -956,6 +912,74 @@ export function applyRevokeInviteToDoc(doc: Y.Doc, inviteId: string, revokedBy: 
   return updateCoopState(doc, (current) =>
     revokeInviteCode({ state: current, inviteId, revokedBy }),
   );
+}
+
+export function updateCoopDetails(input: {
+  state: CoopSharedState;
+  profile?: Partial<Pick<CoopProfile, 'name' | 'purpose' | 'captureMode'>>;
+  soul?: Partial<
+    Pick<
+      CoopSoul,
+      | 'purposeStatement'
+      | 'whyThisCoopExists'
+      | 'usefulSignalDefinition'
+      | 'toneAndWorkingStyle'
+      | 'artifactFocus'
+    >
+  >;
+  setupInsights?: SetupInsights;
+}) {
+  const nextProfile = {
+    ...input.state.profile,
+    ...(input.profile ?? {}),
+  };
+  const nextSoul = {
+    ...input.state.soul,
+    ...(input.soul ?? {}),
+  };
+
+  if (input.profile?.purpose !== undefined && input.soul?.purposeStatement === undefined) {
+    nextSoul.purposeStatement = input.profile.purpose;
+  }
+  if (input.soul?.purposeStatement !== undefined && input.profile?.purpose === undefined) {
+    nextProfile.purpose = input.soul.purposeStatement;
+  }
+
+  return coopSharedStateSchema.parse({
+    ...input.state,
+    profile: nextProfile,
+    soul: nextSoul,
+    ...(input.setupInsights ? { setupInsights: input.setupInsights } : {}),
+  });
+}
+
+export function updateCoopMeetingSettings(input: {
+  state: CoopSharedState;
+  weeklyReviewCadence: string;
+  namedMoments: string[];
+  facilitatorExpectation: string;
+  defaultCapturePosture: string;
+}) {
+  const [currentRitual, ...remainingRituals] = input.state.rituals;
+  if (!currentRitual) {
+    throw new Error('Meeting settings are unavailable for this coop.');
+  }
+
+  const namedMoments = input.namedMoments.map((value) => value.trim()).filter(Boolean);
+
+  return coopSharedStateSchema.parse({
+    ...input.state,
+    rituals: [
+      {
+        ...currentRitual,
+        weeklyReviewCadence: input.weeklyReviewCadence,
+        namedMoments,
+        facilitatorExpectation: input.facilitatorExpectation,
+        defaultCapturePosture: input.defaultCapturePosture,
+      },
+      ...remainingRituals,
+    ],
+  });
 }
 
 // ---------------------------------------------------------------------------

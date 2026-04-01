@@ -48,4 +48,4 @@ last staged-launch blocker after the automated bar passes.
 4. Confirm built bundles still avoid `eval` and `new Function`.
 5. Confirm sensitive local browsing payloads can be cleared from the UI.
 6. Confirm release notes mention that remote knowledge-skill import is quarantined from the shipped build.
-7. Confirm no operator signing material such as `VITE_COOP_FVM_OPERATOR_KEY` is embedded in a public user release.
+7. Confirm no embedded private key or trusted-node signing material is present in a public user release.

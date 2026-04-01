@@ -59,7 +59,7 @@ describe('useSidepanelCoopManagement', () => {
     vi.clearAllMocks();
   });
 
-  it('updates coop profile, leaves coops, and switches the active coop', async () => {
+  it('updates coop details, leaves coops, and switches the active coop', async () => {
     const deps = makeDeps();
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ ok: true })
@@ -69,14 +69,16 @@ describe('useSidepanelCoopManagement', () => {
     const { result } = renderHook(() => useSidepanelCoopManagement(deps));
 
     await act(async () => {
-      await result.current.updateCoopProfile({ name: 'New River Coop' });
+      await result.current.updateCoopDetails({
+        profile: { name: 'New River Coop' },
+      });
       await result.current.handleLeaveCoop();
       await result.current.selectActiveCoop('coop-2');
     });
 
     expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, {
-      type: 'update-coop-profile',
-      payload: { coopId: 'coop-1', name: 'New River Coop' },
+      type: 'update-coop-details',
+      payload: { coopId: 'coop-1', profile: { name: 'New River Coop' } },
     });
     expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
       type: 'leave-coop',
@@ -86,10 +88,39 @@ describe('useSidepanelCoopManagement', () => {
       type: 'set-active-coop',
       payload: { coopId: 'coop-2' },
     });
-    expect(deps.setMessage).toHaveBeenCalledWith('Coop profile updated.');
+    expect(deps.setMessage).toHaveBeenCalledWith('Coop details updated.');
     expect(deps.setMessage).toHaveBeenCalledWith('You left River Coop.');
     expect(deps.loadDashboard).toHaveBeenCalledTimes(3);
     expect(deps.loadAgentDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates meeting settings with named moments', async () => {
+    const deps = makeDeps();
+    sendRuntimeMessageMock.mockResolvedValueOnce({ ok: true });
+
+    const { result } = renderHook(() => useSidepanelCoopManagement(deps));
+
+    await act(async () => {
+      await result.current.updateMeetingSettings({
+        weeklyReviewCadence: 'Weekly',
+        namedMoments: ['Check-in', 'Harvest'],
+        facilitatorExpectation: 'Rotate the facilitator',
+        defaultCapturePosture: 'Capture decisions and blockers',
+      });
+    });
+
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+      type: 'update-meeting-settings',
+      payload: {
+        coopId: 'coop-1',
+        weeklyReviewCadence: 'Weekly',
+        namedMoments: ['Check-in', 'Harvest'],
+        facilitatorExpectation: 'Rotate the facilitator',
+        defaultCapturePosture: 'Capture decisions and blockers',
+      },
+    });
+    expect(deps.setMessage).toHaveBeenCalledWith('Meeting settings updated.');
+    expect(deps.loadDashboard).toHaveBeenCalledTimes(1);
   });
 
   it('toggles local inference and clears sensitive local data', async () => {

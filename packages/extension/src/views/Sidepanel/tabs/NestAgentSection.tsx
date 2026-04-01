@@ -11,6 +11,7 @@ export interface NestAgentSectionProps {
   activeCoop: CoopSharedState | undefined;
   runtimeConfig: DashboardResponse['runtimeConfig'];
   agentDashboard: AgentDashboardResponse | null;
+  agentRunning?: boolean;
   actionPolicies: ActionPolicy[];
   refreshableArchiveReceipts: CoopSharedState['archiveReceipts'];
   refreshArchiveStatus: (receiptId?: string) => Promise<void>;
@@ -76,6 +77,7 @@ export function NestAgentSection({
   activeCoop,
   runtimeConfig,
   agentDashboard,
+  agentRunning,
   actionPolicies,
   refreshableArchiveReceipts,
   refreshArchiveStatus,
@@ -107,6 +109,7 @@ export function NestAgentSection({
       actionLog={dashboard?.operator.actionLog ?? []}
       agentObservations={agentDashboard?.observations ?? []}
       agentPlans={agentDashboard?.plans ?? []}
+      agentRunning={agentRunning}
       anchorActive={dashboard?.operator.anchorActive ?? false}
       anchorCapability={dashboard?.operator.anchorCapability ?? null}
       anchorDetail={

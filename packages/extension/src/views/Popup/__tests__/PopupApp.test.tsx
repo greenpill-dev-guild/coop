@@ -7,7 +7,7 @@ import {
   makeDashboard,
   makeDraft,
 } from '../../__test-utils__/popup-harness';
-import { passkeyTrustLabel } from '../../shared/coop-copy';
+import { passkeyTrustLabel, purposeCreateHelperText } from '../../shared/coop-copy';
 
 const { mockSendRuntimeMessage, mockPlayCoopSound, mockPlayRandomChickenSound } = vi.hoisted(
   () => ({
@@ -23,6 +23,17 @@ vi.mock('../../../runtime/audio', () => ({
 }));
 
 const { PopupApp } = await import('../PopupApp');
+
+function mockClipboardReadText(value: string | ReturnType<typeof vi.fn>) {
+  const readText = typeof value === 'string' ? vi.fn().mockResolvedValue(value) : value;
+  Object.defineProperty(window.navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText,
+    },
+  });
+  return readText;
+}
 
 describe('PopupApp', () => {
   beforeEach(() => {
@@ -46,12 +57,7 @@ describe('PopupApp', () => {
       })),
     });
 
-    Object.defineProperty(window.navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        readText: vi.fn().mockResolvedValue('Fresh note from clipboard'),
-      },
-    });
+    mockClipboardReadText('Fresh note from clipboard');
 
     Object.defineProperty(globalThis, 'chrome', {
       configurable: true,
@@ -130,8 +136,11 @@ describe('PopupApp', () => {
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
     expect(screen.getByText(passkeyTrustLabel)).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /enable green goods/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Coop name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Your name')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /purpose/i })).toBeInTheDocument();
+    expect(screen.getByText(purposeCreateHelperText)).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /enable green goods/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Popup navigation' })).not.toBeInTheDocument();
   });
 
@@ -194,6 +203,43 @@ describe('PopupApp', () => {
     expect(screen.queryByRole('button', { name: 'Social' })).not.toBeInTheDocument();
   });
 
+  it('appends pasted clipboard text into the home note field', async () => {
+    installDefaultRuntimeHandlers(mockSendRuntimeMessage);
+    const user = userEvent.setup();
+    mockClipboardReadText('Fresh note from clipboard');
+
+    render(<PopupApp />);
+
+    const noteInput = await screen.findByLabelText('Note');
+    fireEvent.change(noteInput, { target: { value: 'Existing note' } });
+
+    await user.click(screen.getByRole('button', { name: 'Paste' }));
+
+    await waitFor(() => {
+      expect(noteInput).toHaveValue('Existing note\nFresh note from clipboard');
+    });
+  });
+
+  it('surfaces the clipboard fallback hint when explicit paste is unavailable', async () => {
+    installDefaultRuntimeHandlers(mockSendRuntimeMessage);
+    const user = userEvent.setup();
+
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: vi.fn().mockRejectedValue(new Error('Clipboard blocked')),
+      },
+    });
+
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Paste' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Clipboard access unavailable. Use Cmd/Ctrl+V to paste.',
+    );
+  });
+
   it('saves notes via the compact input and persists them', async () => {
     installDefaultRuntimeHandlers(mockSendRuntimeMessage);
     const user = userEvent.setup();
@@ -210,6 +256,87 @@ describe('PopupApp', () => {
     // Save via button
     await user.click(screen.getByRole('button', { name: 'Save note' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Note hatched into your roost.');
+  });
+
+  it('appends pasted clipboard text into the create-coop purpose field', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return {
+          ok: true,
+          data: makeDashboard({
+            coops: [],
+            activeCoopId: undefined,
+            coopBadges: [],
+            summary: {
+              ...makeDashboard().summary,
+              coopCount: 0,
+              iconLabel: 'No coop yet',
+              activeCoopId: undefined,
+            },
+          }),
+        };
+      }
+      return { ok: true };
+    });
+
+    const user = userEvent.setup();
+    mockClipboardReadText('Fresh note from clipboard');
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Create a Coop' }));
+
+    const purposeField = screen.getByRole('textbox', { name: /purpose/i });
+    fireEvent.change(purposeField, { target: { value: 'Existing purpose' } });
+
+    await user.click(screen.getByRole('button', { name: 'Paste purpose' }));
+
+    await waitFor(() => {
+      expect(purposeField).toHaveValue('Existing purpose\nFresh note from clipboard');
+    });
+  });
+
+  it('keeps only the latest pasted invite code in the join flow', async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-dashboard') {
+        return {
+          ok: true,
+          data: makeDashboard({
+            coops: [],
+            activeCoopId: undefined,
+            coopBadges: [],
+            summary: {
+              ...makeDashboard().summary,
+              coopCount: 0,
+              iconLabel: 'No coop yet',
+              activeCoopId: undefined,
+            },
+          }),
+        };
+      }
+      return { ok: true };
+    });
+
+    const user = userEvent.setup();
+    const readText = vi
+      .fn()
+      .mockResolvedValueOnce('FIRST-CODE')
+      .mockResolvedValueOnce('SECOND-CODE');
+    mockClipboardReadText(readText);
+    render(<PopupApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Join with Code' }));
+
+    const inviteField = screen.getByRole('textbox', { name: /invite code/i });
+
+    await user.click(screen.getByRole('button', { name: 'Paste invite code' }));
+    await waitFor(() => {
+      expect(inviteField).toHaveValue('FIRST-CODE');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Paste invite code' }));
+    await waitFor(() => {
+      expect(inviteField).toHaveValue('SECOND-CODE');
+    });
   });
 
   it('renders the playful header mark without disturbing the popup flow', async () => {

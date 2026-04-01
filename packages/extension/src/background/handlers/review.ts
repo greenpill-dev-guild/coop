@@ -14,6 +14,7 @@ import {
   publishDraftAcrossCoops,
   saveReviewDraft,
   saveTabRouting,
+  updateCoopMeetingSettings,
 } from '@coop/shared';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { validateReviewDraftPublish, validateReviewDraftUpdate } from '../../runtime/review';
@@ -253,29 +254,22 @@ export async function handleUpdateMeetingSettings(
     return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
   }
 
-  const [currentRitual, ...remainingRituals] = coop.rituals;
-  if (!currentRitual) {
+  try {
+    const nextState = updateCoopMeetingSettings({
+      state: coop,
+      weeklyReviewCadence: message.payload.weeklyReviewCadence,
+      namedMoments: message.payload.namedMoments,
+      facilitatorExpectation: message.payload.facilitatorExpectation,
+      defaultCapturePosture: message.payload.defaultCapturePosture,
+    });
+    await saveState(nextState);
+    return { ok: true, data: nextState } satisfies RuntimeActionResponse<CoopSharedState>;
+  } catch (error) {
     return {
       ok: false,
-      error: 'Meeting settings are unavailable for this coop.',
+      error: error instanceof Error ? error.message : 'Could not update meeting settings.',
     } satisfies RuntimeActionResponse;
   }
-
-  const nextState = {
-    ...coop,
-    rituals: [
-      {
-        ...currentRitual,
-        weeklyReviewCadence: message.payload.weeklyReviewCadence,
-        facilitatorExpectation: message.payload.facilitatorExpectation,
-        defaultCapturePosture: message.payload.defaultCapturePosture,
-      },
-      ...remainingRituals,
-    ],
-  } satisfies CoopSharedState;
-  await saveState(nextState);
-
-  return { ok: true, data: nextState } satisfies RuntimeActionResponse<CoopSharedState>;
 }
 
 export async function handlePublishDraft(
@@ -303,16 +297,16 @@ export async function handlePromoteSignalToDraft(
     return { ok: false, error: 'Signal has no target coops.' } satisfies RuntimeActionResponse;
   }
 
-  const coops = await getCoops();
   const coopNames = payload.targetCoops.map((t) => t.coopName).join(', ');
   const lenses = primaryTarget.matchedRitualLenses.join(', ');
   const whyItMatters = lenses
     ? `${primaryTarget.rationale} Relevant to ${coopNames}'s ${lenses} lane.`
     : primaryTarget.rationale;
 
-  const draft: ReviewDraft = {
+  const syntheticInterpretationId = createId('interp');
+  const draft = {
     id: createId('draft'),
-    interpretationId: createId('interp'),
+    interpretationId: syntheticInterpretationId,
     extractId: payload.extractId,
     sourceCandidateId: payload.sourceCandidateId,
     title: payload.title,
@@ -332,19 +326,27 @@ export async function handlePromoteSignalToDraft(
     suggestedTargetCoopIds: payload.targetCoops.map((t) => t.coopId),
     confidence: payload.topRelevanceScore,
     rationale: primaryTarget.rationale,
-    status: 'draft',
-    workflowStage: 'ready',
+    status: 'draft' as const,
+    workflowStage: 'ready' as const,
     attachments: [],
     provenance: {
-      type: 'tab',
-      interpretationId: undefined,
+      type: 'tab' as const,
+      interpretationId: syntheticInterpretationId,
       extractId: payload.extractId,
       sourceCandidateId: payload.sourceCandidateId,
     },
     createdAt: nowIso(),
-  } as ReviewDraft;
+  };
 
-  await saveReviewDraft(db, draft);
+  try {
+    await saveReviewDraft(db, draft as ReviewDraft);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'Draft validation failed.';
+    return {
+      ok: false,
+      error: `Could not create draft from signal: ${reason}`,
+    } satisfies RuntimeActionResponse;
+  }
 
   // Update related tab routings to 'drafted' status
   const routings = await listTabRoutings(db, {
