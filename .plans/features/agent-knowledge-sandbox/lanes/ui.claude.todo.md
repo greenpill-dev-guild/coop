@@ -26,82 +26,242 @@ skills:
   - react
   - ui-compliance
   - testing
-updated: 2026-04-05
+updated: 2026-04-06
 ---
 
-# UI Lane — Claude
+# UI Lane — Claude (TDD: Red → Green → Refactor)
 
 Owner: Claude
 Branch: `claude/ui/agent-knowledge-sandbox`
-Depends on: State lane (schemas, source registry, graph retrieval APIs)
+Depends on: State lane schemas (can start with mock data before state lane completes)
 
-## Phase 1: Nest > Sources Section
+UI tests use @testing-library/react (render, screen, userEvent) with the existing
+popup-harness test utilities. All UI work must pass the design skill 4-lens review.
 
-- [ ] Create `NestSourcesSection.tsx` — collapsible card with source list
-- [ ] Source type tabs: YouTube, GitHub, RSS, Reddit, NPM
-- [ ] Source card component using `.operator-log-entry` pattern (icon, name, freshness, entity count, active toggle)
-- [ ] Add Source modal/inline form with type selector + URL/identifier input
-- [ ] Source health indicator (green/yellow/red dot) based on lastFetchedAt
-- [ ] Footer stats: total sources, entities, relationships, graph size
-- [ ] Cascade warning on source removal ("47 entities from this source. 3 recent drafts reference it.")
-- [ ] Wire to background handlers via RuntimeRequest messages
-- [ ] Unit tests: render states, add/remove/toggle, cascade display
-- [ ] Design review: 4-lens checklist (Command Surface / Parchment material)
+---
 
-## Phase 2: Shared Components
+## Phase 1: Shared Components (can start immediately — mock data)
 
-- [ ] `SourceBadge.tsx` — pill with type icon + name (YouTube/GitHub/RSS/Reddit/NPM icons)
-- [ ] `PrecedentIndicator.tsx` — one-line: "Similar draft approved 2w ago → acted on" or "No precedent"
-- [ ] `TopicBar.tsx` — horizontal fill bar with topic, depth %, source count
-- [ ] `ConfidenceTooltip.tsx` — wraps existing confidence badge with hover breakdown (schema + content + precedent delta)
-- [ ] CSS additions to global.css: `.draft-card__provenance`, `.source-card`, `.topic-bar`, source type icons
-- [ ] Unit tests: each component renders all states
-- [ ] Snapshot tests for visual regression
+### 1.1 RED — Write failing component tests
+
+- [ ] Create `packages/extension/src/views/shared/__tests__/SourceBadge.test.tsx`
+  - Renders YouTube icon for type='youtube'
+  - Renders GitHub icon for type='github'
+  - Renders RSS icon for type='rss'
+  - Renders Reddit icon for type='reddit'
+  - Renders NPM icon for type='npm'
+  - Shows source name text
+  - Applies correct CSS class per type
+
+- [ ] Create `packages/extension/src/views/shared/__tests__/TopicBar.test.tsx`
+  - Renders topic label
+  - Fill width matches depth percentage (e.g., 80% → style.width = '80%')
+  - Shows source count text "(4 sources)"
+  - Handles 0% and 100% edge cases
+  - Uses `--coop-green` for fill color
+
+- [ ] Create `packages/extension/src/views/shared/__tests__/PrecedentIndicator.test.tsx`
+  - Renders positive precedent: "Similar draft approved 2w ago → acted on"
+  - Renders negative precedent: "Similar draft rejected 1w ago"
+  - Renders null: "No precedent" or nothing
+  - Uses `--coop-green` for positive, muted for negative
+
+- [ ] Create `packages/extension/src/views/shared/__tests__/ConfidenceTooltip.test.tsx`
+  - Renders confidence percentage as badge text
+  - Shows tooltip on hover with breakdown: schema %, content %, precedent delta
+  - Hides tooltip when not hovered
+  - Uses existing Tooltip component internally
+
+> All tests FAIL — components don't exist.
+
+### 1.2 GREEN — Create components
+
+- [ ] Create `packages/extension/src/views/shared/SourceBadge.tsx`
+  - Props: `{ type: KnowledgeSourceType, name: string }`
+  - Renders `.badge` with source icon + name
+
+- [ ] Create `packages/extension/src/views/shared/TopicBar.tsx`
+  - Props: `{ topic: string, depth: number, sourceCount: number }`
+  - Renders `.topic-bar` with `.topic-bar__fill` at depth%
+
+- [ ] Create `packages/extension/src/views/shared/PrecedentIndicator.tsx`
+  - Props: `{ precedent: { decision: string, outcome: string, timeAgo: string } | null }`
+  - Renders `.draft-card__track-record`
+
+- [ ] Create `packages/extension/src/views/shared/ConfidenceTooltip.tsx`
+  - Props: `{ confidence: number, breakdown: { schema, content, precedentDelta } }`
+  - Wraps existing Tooltip component
+
+- [ ] Add CSS to `packages/extension/src/global.css`:
+  - `.topic-bar`, `.topic-bar__fill`
+  - `.source-icon`, `.source-icon--youtube`, etc.
+  - `.draft-card__provenance`, `.draft-card__source-ref`, `.draft-card__track-record`
+  - `.source-card`, `.source-card__health`, `.source-card__health--stale`
+
+> Run tests: all component tests PASS.
+
+### 1.3 REFACTOR + Design Review
+
+- [ ] 4-lens design review on all components:
+  - Lens 1 (Regen): No gamification, ambient indicators, observant language
+  - Lens 2 (Spatial): Materials match paradigm, hit targets >= 44px
+  - Lens 3 (Ecosystem): Agent state components visible
+  - Lens 4 (Compliance): Semantic HTML, focus states, color + text, token discipline
+
+---
+
+## Phase 2: Nest > Sources Section
+
+### 2.1 RED — Write failing tests
+
+- [ ] Create `packages/extension/src/views/Sidepanel/tabs/__tests__/NestSourcesSection.test.tsx`
+  - Renders empty state when no sources configured
+  - Renders source list grouped by type
+  - Each source shows: name, type icon, freshness, entity count, active toggle
+  - "Add source" button opens add form
+  - Add form shows type selector tabs (YouTube/GitHub/RSS/Reddit/NPM)
+  - Add form submits correct RuntimeRequest message
+  - Remove button shows cascade warning ("47 entities from this source")
+  - Active toggle sends update message
+  - Footer shows total stats (sources, entities, relationships)
+  - Source health dot: green (fresh), yellow (stale > 7d), red (error)
+
+> All tests FAIL — component doesn't exist.
+
+### 2.2 GREEN — Create section
+
+- [ ] Create `packages/extension/src/views/Sidepanel/tabs/NestSourcesSection.tsx`
+  - Uses `.collapsible-card` pattern from OperatorConsole
+  - Source list using `.operator-log-entry` pattern
+  - SourceBadge for type display
+  - Health dot component
+  - Add source inline form with type tabs
+
+- [ ] Add RuntimeRequest types to `packages/extension/src/runtime/messages.ts`
+  - `'add-knowledge-source'` with payload
+  - `'remove-knowledge-source'` with payload + cascade confirmation
+  - `'toggle-knowledge-source'` with payload
+  - `'refresh-knowledge-source'` with payload
+
+- [ ] Wire into Nest tab: modify `packages/extension/src/views/Sidepanel/tabs/NestTab.tsx`
+  - Add Sources section alongside Members/Agent/Settings
+
+> Run tests: all NestSourcesSection tests PASS.
+
+### 2.3 REFACTOR
+
+- [ ] Extract common patterns shared with KnowledgeSkillsSection
+- [ ] Verify popup-width rendering (400px)
+
+---
 
 ## Phase 3: DraftCard Provenance Enhancement
 
-- [ ] Add "Sourced from" section to DraftCard (between meta strip and "Why now")
-- [ ] Only show for agent-generated drafts (provenance === 'agent')
-- [ ] Show 1-3 source references with specific content (video title, file name, article title)
-- [ ] Add "Track record" line showing most relevant precedent
-- [ ] Wrap confidence badge with ConfidenceTooltip
-- [ ] Collapsible on ChickensCompactCard (source icon only, no full section)
-- [ ] Unit tests: DraftCard with/without provenance data
-- [ ] Design review: progressive disclosure (Scan → Engage layers)
+### 3.1 RED — Write failing tests
+
+- [ ] Modify `packages/extension/src/views/Sidepanel/cards/__tests__/DraftCard.test.tsx`
+  - Agent-generated draft with provenance: shows "Sourced from" section
+  - Agent-generated draft without provenance: hides section
+  - Tab-captured draft: never shows "Sourced from"
+  - "Sourced from" shows 1-3 source references with SourceBadge
+  - "Track record" line shows PrecedentIndicator
+  - Confidence badge wrapped in ConfidenceTooltip
+
+- [ ] Add test for ChickensCompactCard:
+  - Shows source type icon next to provenance badge (compact view)
+  - No "Sourced from" section (too much for compact)
+
+> Tests FAIL — provenance section not implemented.
+
+### 3.2 GREEN — Modify DraftCard
+
+- [ ] Modify `packages/extension/src/views/Sidepanel/cards/DraftCard.tsx`
+  - Add `.draft-card__provenance` section after meta strip, before "Why now"
+  - Condition: only show when `value.provenance === 'agent'` AND sourceRefs exist
+  - Render SourceBadge for each source reference
+  - Render PrecedentIndicator below sources
+  - Wrap confidence badge with ConfidenceTooltip
+
+- [ ] Modify `packages/extension/src/views/Sidepanel/cards/card-shared.ts`
+  - Add `formatSourceRef()` helper for source reference display
+
+> Run tests: DraftCard tests PASS.
+
+---
 
 ## Phase 4: Roost > Agent Enhancements
 
-- [ ] Add "Knowledge" subsection below Heartbeat card
-- [ ] TopicBar list showing agent's top topics with depth + source count
-- [ ] Summary stats: entity count, relationship count, source count
-- [ ] Add "Decision History" subsection below Observations
-- [ ] Decision entries using `.operator-log-entry` pattern
-- [ ] Each entry: draft title, badges (provenance, confidence, timestamp), "Based on" source list, "Similar to" precedent line
-- [ ] Show skipped decisions too (builds trust through restraint)
-- [ ] Unit tests: Knowledge section renders topic data, Decision History renders traces
+### 4.1 RED — Write failing tests
+
+- [ ] Create `packages/extension/src/views/Sidepanel/tabs/__tests__/RoostKnowledge.test.tsx`
+  - Renders "Knowledge" section with topic bars
+  - Topic bars sorted by depth descending
+  - Shows summary stats (entities, relationships, sources)
+  - Empty state when no graph data
+
+- [ ] Create `packages/extension/src/views/Sidepanel/tabs/__tests__/RoostDecisionHistory.test.tsx`
+  - Renders decision entries with badges (provenance, confidence, timestamp)
+  - Each entry shows "Based on" source list
+  - Each entry shows "Similar to" precedent line
+  - Shows skipped decisions (agent restraint)
+  - Max 12 items shown (consistent with existing observation list)
+
+> Tests FAIL.
+
+### 4.2 GREEN — Create subsections
+
+- [ ] Modify `packages/extension/src/views/Sidepanel/tabs/RoostAgentSection.tsx`
+  - Add Knowledge subsection after Heartbeat, using TopicBar components
+  - Add Decision History subsection after Observations, using `.operator-log-entry` pattern
+  - Wire to RuntimeRequest for graph data retrieval
+
+> Run tests: PASS.
+
+---
 
 ## Phase 5: Popup Source Health
 
-- [ ] Add source health indicator line to PopupProfilePanel area
-- [ ] "Sources: 12 active · all fresh" with green dot
-- [ ] "Sources: 11 active · 1 stale" with yellow dot
-- [ ] "Sources: 0 configured" with neutral state
-- [ ] Click opens Nest > Sources in sidepanel
-- [ ] Unit tests: each health state renders correctly
+### 5.1 RED — Write failing test
 
-## Phase 6: E2E Tests
+- [ ] Create `packages/extension/src/views/Popup/__tests__/SourceHealthIndicator.test.tsx`
+  - "Sources: 12 active · all fresh" with green dot
+  - "Sources: 11 active · 1 stale" with yellow dot
+  - "Sources: 0 configured" with neutral state (no dot)
+  - Click triggers sidepanel open to Nest > Sources
 
-- [ ] Playwright: Member adds source in Nest → source appears in list
-- [ ] Playwright: Agent creates draft → draft card shows source references
-- [ ] Playwright: Member hovers confidence → tooltip with breakdown
-- [ ] Playwright: Roost Agent shows knowledge topics
-- [ ] Playwright: Source removal → cascade warning displayed
-- [ ] Visual snapshots: DraftCard provenance, source cards, topic bars, empty states
+> Tests FAIL.
 
-## Design Compliance
+### 5.2 GREEN — Create indicator
 
-All UI work must pass the 4-lens review checklist (`.claude/skills/design/review-checklist.md`):
-- Lens 1 (Regenerative): Growth-agnostic stats, observant language, regen aesthetic
-- Lens 2 (Spatial): Correct paradigm + material per surface, hit targets, progressive disclosure
-- Lens 3 (Ecosystem): Agent as autonomic actor surfaced, cascade visibility on governing actions
-- Lens 4 (Compliance): Labels, focus, color+text, token discipline, existing components reused
+- [ ] Create source health indicator in Popup area
+  - One line in PopupProfilePanel or header area
+  - Uses `.source-card__health` dot classes
+
+> Run tests: PASS.
+
+---
+
+## Phase 6: E2E Tests + Visual Snapshots
+
+### 6.1 RED — Write failing E2E tests
+
+- [ ] Create `e2e/knowledge-sandbox.spec.cjs`
+  - Member adds YouTube channel source in Nest → source appears in list
+  - Agent creates draft → draft card shows "Sourced from" section
+  - Member hovers confidence → tooltip appears with breakdown
+  - Roost Agent shows Knowledge section with topic bars
+  - Source removal → cascade warning displayed
+  - Popup shows source health indicator
+
+### 6.2 GREEN — Fix any integration issues discovered by E2E
+
+### 6.3 Visual Snapshots
+
+- [ ] Add to `e2e/visual-sidepanel.spec.cjs`:
+  - DraftCard with provenance snapshot
+  - DraftCard without provenance snapshot
+  - Source card states: active, stale, disabled
+  - Topic bars at various fill levels
+  - Empty states: no sources, no knowledge, no decisions
+
+**Gate**: All E2E pass, visual snapshots captured as baselines
