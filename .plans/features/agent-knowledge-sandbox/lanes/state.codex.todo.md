@@ -3,7 +3,7 @@ feature: agent-knowledge-sandbox
 title: Agent knowledge sandbox state lane
 lane: state
 agent: codex
-status: todo
+status: ready
 source_branch: feature/agent-knowledge-sandbox
 work_branch: codex/state/agent-knowledge-sandbox
 depends_on:

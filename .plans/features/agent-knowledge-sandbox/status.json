@@ -2,7 +2,7 @@
   "$schema": "status-schema",
   "feature": "agent-knowledge-sandbox",
   "title": "Agent Knowledge Sandbox: Curated Sources + Graph Memory",
-  "stage": "draft",
+  "stage": "active",
   "lanes": {
     "ui": {
       "owner": "claude",
