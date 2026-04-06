@@ -79,7 +79,7 @@ without a failing test. No phase ships without its gate passing.
 ### 1.2 GREEN — Minimal implementation
 
 - [ ] Create `packages/shared/src/contracts/schema-knowledge.ts`
-  - `knowledgeSourceTypeSchema` — z.enum(['youtube', 'github', 'rss', 'reddit', 'npm'])
+  - `knowledgeSourceTypeSchema` — z.enum(['youtube', 'github', 'rss', 'reddit', 'npm', 'wikipedia'])
   - `knowledgeSourceSchema` — id, type, identifier, label, coopId, addedBy, addedAt, lastFetchedAt, entityCount, active
   - `KnowledgeSource` type export
 
@@ -130,6 +130,8 @@ without a failing test. No phase ships without its gate passing.
   - `rss-feed-rss2.xml` — sample RSS 2.0 feed
   - `reddit-subreddit-hot.json` — recorded JSON API response
   - `npm-package-meta.json` — recorded registry API response
+  - `wikipedia-article.json` — recorded MediaWiki API response (extract + categories)
+  - `wikipedia-not-found.json` — article not found response
 
 - [ ] Create `packages/extension/src/runtime/agent/adapters/__tests__/adapter-youtube.test.ts`
   - `fetchYouTubeTranscript()` returns StructuredContent for fixture response
@@ -157,6 +159,13 @@ without a failing test. No phase ships without its gate passing.
   - `fetchNPMPackageInfo()` returns metadata from fixture
   - `fetchNPMPackageInfo()` throws for non-allowlisted package
   - `fetchNPMPackageInfo()` handles scoped packages (@org/pkg)
+
+- [ ] Create `packages/extension/src/runtime/agent/adapters/__tests__/adapter-wikipedia.test.ts`
+  - `fetchWikipediaArticle()` returns StructuredContent with extract + categories
+  - `fetchWikipediaArticle()` throws for non-allowlisted article title
+  - `fetchWikipediaArticle()` handles not-found gracefully
+  - `fetchWikipediaArticle()` extracts infobox data as structured metadata
+  - `enrichEntityFromWikipedia()` adds description + categories to existing entity
 
 - [ ] Create `packages/extension/src/runtime/agent/adapters/__tests__/sanitizer.test.ts`
   - `sanitizeIngested()` strips `<system>` injection tags
@@ -189,6 +198,10 @@ without a failing test. No phase ships without its gate passing.
 
 - [ ] Create `packages/extension/src/runtime/agent/adapters/npm.ts`
   - `fetchNPMPackageInfo(packageName, registry)` → StructuredContent
+
+- [ ] Create `packages/extension/src/runtime/agent/adapters/wikipedia.ts`
+  - `fetchWikipediaArticle(title, registry)` → StructuredContent (via MediaWiki API)
+  - `enrichEntityFromWikipedia(entity, registry)` → enriched entity with description + categories
 
 - [ ] Create `packages/extension/src/runtime/agent/adapters/sanitizer.ts`
   - `sanitizeIngested(rawContent)` → sanitized string
@@ -425,19 +438,47 @@ without a failing test. No phase ships without its gate passing.
   - Negative precedent decreases confidence by >= 0.05
   - Trace quota: max 500, oldest-first pruning works
 
+- [ ] Create `packages/shared/src/modules/graph/__tests__/compound-loop.test.ts`
+  - `strengthenSourceEdges(traceId, 'approved')` increases edge confidence for source entities
+  - `weakenSourceEdges(traceId, 'rejected')` decreases edge confidence
+  - `createValidatedInsight(approvedDraft, sourceEntityIds)` creates insight node from approved draft
+  - Edge confidence stays clamped to [0.1, 1.0]
+  - Validated insight nodes link to source entities and the reasoning trace
+
+- [ ] Create `packages/shared/src/modules/graph/__tests__/activity-log.test.ts`
+  - `appendLogEntry({type: 'ingest', ...})` writes to Yjs Y.Array
+  - `appendLogEntry({type: 'query', ...})` writes with sourceId ref
+  - `appendLogEntry({type: 'lint', ...})` writes with health summary
+  - `appendLogEntry({type: 'approval', ...})` writes with traceId ref
+  - `getRecentLog(limit)` returns entries in reverse chronological order
+  - Log entries sync between two Y.Docs
+
 > All tests FAIL — no reasoning trace implementation.
 
 ### 6.2 GREEN — Minimal implementation
 
 - [ ] Add to `packages/shared/src/contracts/schema-knowledge.ts`
   - `reasoningTraceSchema` — traceId, skillRunId, observationId, contextEntityIds, confidence, outputSummary, outcome
+  - `knowledgeLogEntrySchema` — type, timestamp, summary, sourceId?, entityCount?, traceId?
+  - `validatedInsightSchema` — insightId, draftSummary, sourceEntityIds, traceId, createdAt
 
 - [ ] Create `packages/shared/src/modules/graph/reasoning.ts`
   - `recordReasoningTrace(graph, trace)` — creates node + edges to entities
   - `queryPrecedents(graph, observation, {limit})` — similarity search on observation text
   - `computePrecedentAdjustment(precedents)` — returns confidence delta
 
-> Run tests: all reasoning trace + precedent tests PASS.
+- [ ] Create `packages/shared/src/modules/graph/compound.ts`
+  - `strengthenSourceEdges(graph, traceId, outcome)` — adjust edge confidence based on decision
+  - `createValidatedInsight(graph, draft, sourceEntityIds, traceId)` — approved draft → insight node
+  - `enrichEntityFromWikipedia(graph, entity, wikiContent)` — add Wikipedia data to entity node
+
+- [ ] Create `packages/shared/src/modules/knowledge-source/activity-log.ts`
+  - `appendLogEntry(doc, entry)` — Y.Array append
+  - `getRecentLog(doc, limit)` — read entries
+
+- [ ] Add Y.Array `knowledge-log-v1` to sync-core doc structure
+
+> Run tests: all reasoning trace + compound loop + activity log tests PASS.
 
 ### 6.3 REFACTOR
 
@@ -450,12 +491,15 @@ without a failing test. No phase ships without its gate passing.
 
 ## Phase 7: Integration
 
-### 7.1 RED — Write regression + integration tests
+### 7.1 RED — Write regression + integration + lint tests
 
 - [ ] Create `packages/extension/src/runtime/__tests__/knowledge-sandbox-integration.test.ts`
   - Full cycle: source → adapter → entities extracted → graph populated → skill retrieves context → output includes graph entities
+  - Compound loop: draft approved → source edges strengthened → validated insight created → log appended
+  - Compound loop: draft rejected → source edges weakened → negative precedent recorded → log appended
   - Source removal: remove source → entities marked stale → skill no longer retrieves them
   - Allowlist enforcement: non-registered URL blocked at adapter level
+  - Wikipedia enrichment: entity extracted → Wikipedia lookup → entity node enriched with description + categories
   - Backwards compat: flat agentMemories still queryable alongside graph
 
 - [ ] Create `packages/extension/src/runtime/__tests__/knowledge-sandbox-regression.test.ts`
@@ -464,9 +508,17 @@ without a failing test. No phase ships without its gate passing.
   - Existing observation triggers still fire correctly
   - Existing memory queries still return results
 
+- [ ] Create `packages/extension/src/runtime/__tests__/knowledge-lint.test.ts`
+  - `runKnowledgeLint(graph, sources)` detects orphan entities (zero edges)
+  - `runKnowledgeLint()` detects stale sources (not refreshed in 14+ days)
+  - `runKnowledgeLint()` detects contradictions (conflicting temporal edges)
+  - `runKnowledgeLint()` detects coverage gaps (source types with zero entities)
+  - `runKnowledgeLint()` reports graph health (size vs budget, entity:edge ratio)
+  - Lint output includes actionable suggestions per finding
+
 > Integration tests FAIL (not wired yet). Regression tests should PASS (nothing changed yet).
 
-### 7.2 GREEN — Wire the pipeline
+### 7.2 GREEN — Wire the pipeline + lint + schema
 
 - [ ] Modify `packages/extension/src/runtime/agent/runner-skills-context.ts`
   - In `buildSkillContext()` (~line 262): add graph retrieval alongside existing Dexie memory query
@@ -475,19 +527,44 @@ without a failing test. No phase ships without its gate passing.
 - [ ] Modify `packages/extension/src/runtime/agent/runner-skills.ts`
   - After `completeSkillRun()` (~line 366) and before `writeSkillMemories()` (~line 376):
     Insert `recordReasoningTrace()` call
+  - After reasoning trace: call `appendLogEntry()` with ingest/query type
 
 - [ ] Modify `packages/extension/src/runtime/agent/quality.ts`
   - In confidence computation: add precedent adjustment from `computePrecedentAdjustment()`
 
+- [ ] Wire compound loop into approval/rejection handlers:
+  - On draft approval: `strengthenSourceEdges()` + `createValidatedInsight()` + `appendLogEntry('approval')`
+  - On draft rejection: `weakenSourceEdges()` + `appendLogEntry('rejection')`
+
 - [ ] Create observation emitter for source content:
   - Modify `packages/extension/src/background/handlers/agent-observation-emitters.ts`
   - Add `emitSourceContentObservation()` function
+  - Add `emitKnowledgeLintObservation()` function (weekly trigger)
+
+- [ ] Create `packages/extension/src/skills/knowledge-lint/skill.json`
+  - id: "knowledge-lint", triggers: ["knowledge-lint-due"], model: "heuristic"
+  - outputSchemaRef: "knowledge-lint-output"
+
+- [ ] Create `packages/extension/src/skills/knowledge-lint/SKILL.md`
+
+- [ ] Create `packages/shared/src/modules/graph/lint.ts`
+  - `runKnowledgeLint(graph, sources)` → KnowledgeLintOutput
+
+- [ ] Add `knowledge-lint-due` to observation trigger schema
+- [ ] Add `knowledge-lint-output` to skill output schemas
+
+- [ ] Create per-coop knowledge schema support:
+  - Add `knowledge-schema-v1` Y.Map to sync-core doc structure
+  - `readKnowledgeSchema(doc)` — returns POLE+O priorities, topic focus, confidence threshold
+  - `writeKnowledgeSchema(doc, schema)` — persists config
+  - Entity extraction skill reads schema to prioritize extraction types
 
 - [ ] Wire source adapters to observation system:
   - After successful adapter fetch → emit `source-content-ready` observation
   - Entity extraction skill triggers on this observation
+  - Wikipedia enrichment runs as post-extraction background job
 
-> Run tests: integration tests PASS. Regression tests PASS. Zero regressions.
+> Run tests: integration tests PASS. Regression tests PASS. Lint tests PASS. Zero regressions.
 
 ### 7.3 REFACTOR + EVALUATE
 

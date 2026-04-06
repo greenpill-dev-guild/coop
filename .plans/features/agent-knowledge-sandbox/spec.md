@@ -36,6 +36,7 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - RSS/Atom adapter (`rss-parser` for articles, metadata)
 - Reddit adapter (JSON API for posts, top comments)
 - NPM adapter (registry API for metadata, README)
+- Wikipedia adapter (MediaWiki API for article content, infoboxes, categories — entity enrichment)
 - Shared content sanitizer (prompt injection protection)
 
 **Phase 3 — Entity Extraction Skill** (intelligence)
@@ -56,13 +57,20 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - Context assembly for skill prompts (token-budgeted)
 - No LLM calls during retrieval (hard requirement)
 
-**Phase 6 — Reasoning Traces** (learning)
+**Phase 6 — Reasoning Traces + Compound Loop** (learning)
 - Record decision traces as precedent nodes linked to skill runs
 - Precedent query by observation similarity
 - Confidence adjustment based on past decision outcomes
 - Positive/negative precedent tracking
+- Approval strengthens graph: approved drafts increase source entity edge confidence
+- Rejection weakens: decrease edge confidence, temporal invalidation (not deletion)
+- Validated insight entities: approved draft summaries become first-class graph nodes
+- Append-only activity log: chronological record of ingests, queries, lint passes
 
-**Phase 7 — Integration** (wiring)
+**Phase 7 — Lint + Integration** (wiring + health)
+- Knowledge lint skill: orphan entities, stale sources, contradictions, coverage gaps, graph health
+- `knowledge-lint-due` observation trigger on weekly cadence
+- Per-coop knowledge schema: configurable POLE+O type priorities, topic focus, confidence thresholds
 - Wire adapters into observation triggers
 - Wire graph retrieval into skill context assembly
 - Wire reasoning traces into skill completion flow

@@ -40,6 +40,7 @@ child learns through curated educational content before accessing the broader in
 | **RSS/Atom** | `rss-parser` npm or `feed-mcp` MCP server | Feed URL | Articles, author, metadata | Poll interval |
 | **Reddit** | JSON API (`/r/{sub}/hot.json`) | Subreddit | Posts, top comments, engagement | Hourly poll |
 | **NPM** | Registry API (`registry.npmjs.org/{pkg}`) | Package name/scope | Metadata, README, versions, deps | On version publish |
+| **Wikipedia** | MediaWiki API (`en.wikipedia.org/w/api.php`) | Article title or Wikidata QID | Article content, infobox, categories, linked entities | On-demand (enrichment) |
 | **Git** (local) | Existing `pageExtracts` pipeline | Repository path | Code structure, diffs, history | On capture |
 
 ### 2.2 Communication Sources
@@ -1729,7 +1730,208 @@ and onchain execution built in.
 
 ---
 
-## 15. Connection to Existing Plans
+## 15. Graph ↔ Yjs ↔ CRDT: How They Connect
+
+### 15.1 The Architecture Question
+
+Coop has two data layers that need to work together:
+
+- **Yjs (CRDT)** — Shared state that syncs between members in real-time.
+  Artifacts, members, source registries, agent messages. Conflict-free.
+- **Kuzu-WASM (Graph)** — Local intelligence that the agent builds from
+  sources. Entities, relationships, embeddings, reasoning traces.
+
+The question: what syncs and what stays local?
+
+### 15.2 The Hybrid Model
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SHARED (Yjs CRDT)                            │
+│                                                                 │
+│  Syncs between all coop members in real-time                    │
+│  ─────────────────────────────────────────────                  │
+│                                                                 │
+│  knowledge-sources-v1    Y.Map    Source registry (what to read) │
+│  coop-artifacts-v2       Y.Map    Published artifacts            │
+│  coop-members-v2         Y.Map    Member roster                  │
+│  knowledge-decisions-v1  Y.Map    Reasoning traces (decisions)   │
+│  knowledge-log-v1        Y.Array  Activity log (append-only)     │
+│  knowledge-schema-v1     Y.Map    Per-coop POLE+O config         │
+│                                                                 │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                    shared identifiers
+                    (sourceId, artifactId,
+                     traceId, entityName)
+                            │
+┌───────────────────────────┴─────────────────────────────────────┐
+│                    LOCAL (Kuzu-WASM Graph)                       │
+│                                                                 │
+│  Built independently on each device from shared sources          │
+│  ─────────────────────────────────────────────                  │
+│                                                                 │
+│  Entity nodes          POLE+O typed         Person, Org, etc.   │
+│  Relationship edges    Temporal (t_valid)    founded, mentioned  │
+│  Embeddings            Vector indexes        Per-entity vectors  │
+│  Retrieval indexes     BM25 + vector         Hybrid search       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 15.3 What Syncs vs What Stays Local
+
+| Data | Layer | Why |
+|------|-------|-----|
+| **Source registry** | Yjs (shared) | All members must see the same allowlisted sources. Adding a YouTube channel is a group decision. |
+| **Activity log** | Yjs (shared) | All members should see "agent ingested Bankless #412 → 12 entities." Lightweight, append-only — perfect for Y.Array. |
+| **Reasoning traces** | Yjs (shared) | Decision history is institutional memory. When member A approves a draft, member B should see that precedent. Traces are small (IDs + summary + outcome). |
+| **Knowledge schema** | Yjs (shared) | Per-coop POLE+O config, topic focus, confidence thresholds. Group-level configuration. |
+| **Published artifacts** | Yjs (shared) | Already syncs (existing architecture). |
+| **Entity nodes** | Kuzu-WASM (local) | Full entity content + embeddings are large (could be MBs). Each member's agent extracts from the same sources but may produce slightly different extraction results. Local is fine — the inputs (sources) and outputs (decisions) sync; the middle layer (graph) is local intelligence. |
+| **Relationship edges** | Kuzu-WASM (local) | Same reasoning — edges are derived from local extraction. |
+| **Embeddings** | Kuzu-WASM (local) | Vectors are device-specific (different Transformers.js versions may produce slightly different embeddings). Local generation + local search. |
+| **Retrieval indexes** | Kuzu-WASM (local) | Indexes are query infrastructure, not shared state. |
+
+### 15.4 Why This Split Works
+
+The insight: **sync the decisions, not the derivations.**
+
+Every member's agent reads from the same sources (Yjs-synced registry) and
+produces the same published artifacts (Yjs-synced). The middle layer — entity
+extraction, graph construction, retrieval — is local computation that each
+agent performs independently. This is fine because:
+
+1. **Same inputs → similar outputs.** If both agents read the same Bankless
+   transcript, they'll extract similar entities. Minor differences in
+   extraction don't matter because the decisions (approve/reject) sync.
+
+2. **Decisions are the contract.** When member A's agent recommends a draft
+   and member A approves it, the reasoning trace syncs via Yjs. Member B's
+   agent sees that precedent and adjusts its own confidence — even if its
+   local graph has slightly different entity content.
+
+3. **Graph sync would be prohibitively complex.** Graph databases don't have
+   native CRDT semantics. Syncing entity nodes + edges + temporal validity
+   across multiple Kuzu-WASM instances would require a custom CRDT layer.
+   The engineering cost far exceeds the benefit.
+
+4. **Local graphs can diverge safely.** If member A's agent extracts 47
+   entities from a source and member B's extracts 45, both agents still
+   function correctly. The divergence is in intermediate computation, not
+   in shared outcomes.
+
+### 15.5 The Connection Points
+
+Where local graph meets shared Yjs:
+
+```
+SOURCE REGISTRY (Yjs)
+  │
+  │ Agent reads allowlisted sources
+  ▼
+ENTITY EXTRACTION (Local)
+  │
+  │ Agent builds graph from source content
+  ▼
+GRAPH (Kuzu-WASM, Local)
+  │
+  │ Agent queries graph for relevant context
+  ▼
+SKILL OUTPUT (Local)
+  │
+  │ Agent produces draft recommendation
+  ▼
+REASONING TRACE (Yjs)  ◄── syncs decision + source refs
+  │
+  │ Member reviews in Chickens
+  ▼
+ARTIFACT (Yjs)  ◄── syncs published content
+  │
+  │ Approval/rejection flows back
+  ▼
+GRAPH ENRICHMENT (Local)  ◄── edge confidence adjusted
+  │                             from synced trace outcome
+  ▼
+ACTIVITY LOG (Yjs)  ◄── syncs "approved draft, 3 source entities strengthened"
+```
+
+The key identifiers that bridge local and shared:
+- `sourceId` — links graph entities to Yjs-synced source registry entries
+- `artifactId` — links graph insights to Yjs-synced published artifacts
+- `traceId` — links graph reasoning to Yjs-synced decision history
+- `entityName` + `entityType` — referenced in traces, human-readable in UI
+
+### 15.6 Yjs Data Structures for Knowledge Sandbox
+
+New Y.Map/Y.Array entries in the Yjs doc (extending `sharedKeys` in sync-core/doc.ts):
+
+```typescript
+// Source registry — who added which sources, active state
+'knowledge-sources-v1': Y.Map<string, KnowledgeSourceEntry>
+// Each entry: { type, identifier, label, addedBy, addedAt, active }
+// Key: sourceId
+
+// Reasoning traces — shared decision history
+'knowledge-decisions-v1': Y.Map<string, ReasoningTraceEntry>
+// Each entry: { traceId, skillRunId, observationTrigger, confidence,
+//   outputSummary, outcome, sourceEntityNames[], precedentTraceIds[] }
+// Key: traceId
+
+// Activity log — append-only chronological record
+'knowledge-log-v1': Y.Array<KnowledgeLogEntry>
+// Each entry: { type: 'ingest'|'query'|'lint'|'approval'|'rejection',
+//   timestamp, summary, sourceId?, entityCount?, traceId? }
+
+// Per-coop knowledge schema — configurable extraction
+'knowledge-schema-v1': Y.Map<string, unknown>
+// { poleTypePriorities: [...], topicFocus: [...], confidenceThreshold: 0.4 }
+```
+
+These follow the existing V2 pattern (field-level CRDT merge via nested Y.Maps)
+established by `coop-artifacts-v2` and `coop-members-v2`.
+
+### 15.7 CRDT Properties We Get For Free
+
+| Property | How Yjs Handles It | Knowledge Sandbox Benefit |
+|----------|-------------------|-------------------------|
+| **Conflict-free merging** | Last-writer-wins per Y.Map field | Two members add sources simultaneously → both appear |
+| **Offline support** | Yjs buffers updates in y-indexeddb | Member adds source offline → syncs when reconnected |
+| **Peer-to-peer sync** | y-webrtc (direct) + y-websocket (relay) | Source changes propagate without server roundtrip |
+| **Append-only safety** | Y.Array preserves insertion order | Activity log entries never lost, even with concurrent appends |
+| **Partial sync** | Yjs sends incremental updates, not full state | Adding one source doesn't resend all 50 sources |
+| **History** | Yjs tracks full operation history | Can replay how the source registry evolved |
+
+### 15.8 What This Means for Wikipedia as a Source
+
+Wikipedia is special — it's an **enrichment source**, not a primary capture source:
+
+```
+Primary source (YouTube transcript)
+  → Entity extraction: "Filecoin" entity identified
+  → Wikipedia enrichment: fetch en.wikipedia.org/wiki/Filecoin
+  → Graph enrichment: add description, founding date, category edges
+  → Result: richer entity node with cross-source context
+```
+
+Wikipedia adapter uses the [MediaWiki API](https://www.mediawiki.org/wiki/API:Main_page):
+- `action=query&prop=extracts` for article text
+- `action=query&prop=categories` for category taxonomy
+- `action=parse&prop=wikitext` for structured infobox data
+- Rate limit: respectful polling, cache aggressively (Wikipedia content changes slowly)
+
+Allowlist unit: article title or Wikidata QID. Members can allowlist specific
+articles ("Filecoin", "Regenerative agriculture") or use Wikidata QIDs for
+language-independent references.
+
+Wikipedia enrichment happens at **ingestion time** (eager), not retrieval time:
+when the entity extractor identifies a named entity, a background job checks
+if a corresponding Wikipedia article exists in the allowlist and enriches the
+graph node with Wikipedia content. This keeps retrieval fast (no network calls).
+
+---
+
+## 16. Connection to Existing Plans
 
 | Existing Plan | Relationship |
 |---------------|-------------|
