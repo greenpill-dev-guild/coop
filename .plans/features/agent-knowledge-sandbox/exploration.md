@@ -1572,7 +1572,164 @@ The ultimate proof that graph memory improves agent quality:
 
 ---
 
-## 14. Connection to Existing Plans
+## 14. Karpathy's LLM Wiki — Pattern Alignment
+
+**Source**: [Andrej Karpathy's LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) (2026-04-04)
+
+Karpathy's pattern describes building persistent, compounding knowledge bases where the
+LLM acts as a **compiler** — not a retriever. Instead of re-deriving knowledge from raw
+documents on every query (traditional RAG), the LLM incrementally builds and maintains a
+structured, interlinked wiki that gets richer with each source and question.
+
+This is **exactly** what the Coop knowledge sandbox builds — but with a graph database
+instead of markdown files, in a browser instead of a filesystem, and for groups instead
+of individuals.
+
+### 14.1 Architecture Mapping
+
+| Karpathy Layer | Coop Equivalent | How It Maps |
+|---------------|----------------|-------------|
+| **Raw sources** (immutable articles, papers, data) | **Source registry** (allowlisted YouTube, GitHub, RSS, Reddit, NPM) | Curated, immutable inputs. Karpathy drops files in `raw/`. Coop's adapters fetch from allowlisted URLs. |
+| **The wiki** (LLM-generated markdown with summaries, entity pages, cross-references) | **Knowledge graph** (Kuzu-WASM with POLE+O entities, temporal edges, cross-references) | The persistent, compounding artifact. Karpathy uses interlinked markdown. Coop uses a graph database with typed entities and relationships. |
+| **The schema** (CLAUDE.md defining structure, conventions, workflows) | **Skill manifests + POLE+O model + source registry config** | The meta-layer that tells the LLM how to structure knowledge. Karpathy uses a config doc. Coop uses typed schemas and skill prompts. |
+
+### 14.2 Operation Mapping
+
+| Karpathy Operation | Coop Equivalent | Key Insight |
+|-------------------|----------------|-------------|
+| **Ingest** — Drop source, LLM reads, writes summary, updates index, revises entity pages, appends log | **Source adapter → entity extraction skill → graph upsert** | Same flow. Karpathy's "updates index, revises entity pages" = our entity extraction updating the graph. The graph IS the index — entities are pages, edges are cross-references. |
+| **Query** — Search relevant pages, synthesize answer with citations, file good answers back into wiki | **Graph retrieval → skill context assembly → skill output → reasoning trace** | The critical "file back" step is our reasoning trace system. Good skill outputs become precedent nodes that enrich future queries. The wiki compounds. |
+| **Lint** — Health-check: contradictions, stale claims, orphan pages, missing cross-references, data gaps | **NOT EXPLICITLY IN OUR PLAN** — this is a gap we should adopt | We have temporal validity (edges expire) and stale source detection, but no active lint operation. See adoption below. |
+
+### 14.3 The Key Insight: Compilation, Not Retrieval
+
+Karpathy's central thesis: "Rather than re-derive knowledge on every query, build a
+persistent, compounding artifact."
+
+This validates our entire approach. Traditional RAG (vector search → chunk retrieval →
+LLM synthesis) is what most agent frameworks do. It's stateless — the system learns
+nothing between queries. Karpathy rejects this for a **compilation** model where each
+interaction enriches the knowledge base.
+
+Coop's knowledge graph IS the compiled artifact:
+- **RAG approach** (what we're NOT doing): Agent receives observation → vector-search
+  flat memories → synthesize answer from fragments → answer evaporates
+- **Compilation approach** (what we ARE doing): Agent receives observation → extract
+  entities from sources → upsert into graph with relationships → retrieve via graph
+  traversal → synthesize with rich context → record reasoning trace as precedent →
+  graph gets richer
+
+The graph never re-derives. It compounds. Each entity extraction adds nodes and edges.
+Each reasoning trace adds decision precedent. Each source refresh updates temporal
+validity. The more the agent runs, the better its context becomes.
+
+### 14.4 Patterns to Adopt
+
+**1. Lint Operation (NEW — add to plan)**
+
+Karpathy runs periodic health-checks on the wiki. We should add a `knowledge-lint`
+skill that runs as a low-priority observation trigger:
+
+```
+Lint checks for knowledge graph:
+  - Orphan entities: nodes with zero edges (extracted but never connected)
+  - Stale sources: sources not refreshed in > 14 days
+  - Contradictions: entities with conflicting temporal edges
+  - Missing cross-references: entities from same source that should be connected
+  - Coverage gaps: source types with zero entities (e.g., all YouTube, no RSS)
+  - Graph health: size vs budget, entity count vs relationship ratio
+```
+
+This maps to a new observation trigger `knowledge-lint-due` on a weekly cadence.
+The lint output surfaces in Roost > Agent > Knowledge section.
+
+**2. Log as Append-Only Audit Trail**
+
+Karpathy's `log.md` is an append-only chronological record of every ingest, query,
+and lint pass. We have reasoning traces but no simple chronological log view.
+
+Add: a `graphLog` Dexie table or graph node type that records every operation:
+```
+[2026-04-06] ingest | Bankless #412 → 12 entities, 8 relationships
+[2026-04-06] ingest | filecoin-project/specs → 89 entities, 34 relationships
+[2026-04-06] query  | "grant opportunities" → 3 results, used in draft
+[2026-04-06] lint   | 2 orphan entities, 1 stale source, 0 contradictions
+```
+
+This gives members a simple "what did the agent learn today?" view — not the
+full reasoning trace, just the activity log. Surfaces in Roost > Agent as a
+lightweight timeline.
+
+**3. "Good Answers Filed Back Into the Wiki"**
+
+Karpathy: "Outputs from queries get filed back into the wiki, so every
+exploration adds up."
+
+This is our precedent system — but we can make it more explicit. When a member
+approves a draft that the agent created using graph context, that approval
+should:
+1. Record a positive reasoning trace (already planned)
+2. **Strengthen the edges** between the source entities that informed it
+   (edge confidence increases)
+3. **Create a "validated insight" entity** — the approved draft summary
+   becomes a first-class node in the graph, linked to its source entities
+
+Conversely, rejection should:
+1. Record a negative reasoning trace (already planned)
+2. Decrease edge confidence for the source entities involved
+3. NOT delete anything — temporal invalidation, not destruction
+
+This creates Karpathy's compound loop: sources → graph → recommendation →
+human judgment → graph enrichment → better future recommendations.
+
+**4. Schema as First-Class Configuration**
+
+Karpathy treats the schema (CLAUDE.md) as a first-class document that
+defines how the wiki is structured. We should formalize our equivalent:
+
+The **knowledge schema** for a coop would be:
+- POLE+O entity type configuration (which types to extract, weighted by domain)
+- Source type priorities (which source types to favor for entity extraction)
+- Topic focus areas (what domains the coop cares about)
+- Confidence thresholds (minimum confidence for graph inclusion)
+
+This could be a per-coop configurable schema stored in Yjs alongside the
+source registry. A regenerative agriculture coop configures ecological entity
+types. A DeFi coop configures protocol and token entity types.
+
+### 14.5 What Coop Adds Beyond Karpathy's Pattern
+
+| Dimension | Karpathy (Individual) | Coop (Group) |
+|-----------|----------------------|-------------|
+| Users | Single person | Multiple members + agent |
+| Storage | Local markdown files (git) | Browser IndexedDB (Dexie + Kuzu-WASM) |
+| Sync | Git push/pull | Yjs CRDT (real-time, offline-capable) |
+| Structure | Flat markdown pages | Typed graph with POLE+O entities + temporal edges |
+| Cross-references | Markdown [[links]] | Graph edges with typed relationships |
+| Search | BM25 + optional vector (qmd) | Hybrid: BM25 + vector + graph traversal |
+| Curation | Manual file drops | Allowlisted source registry with adapters |
+| Verification | Manual reading | Human review (Chickens) + Safe multisig |
+| Provenance | File names + frontmatter | Graph edges with source refs + temporal validity |
+| Execution | Read-only knowledge | Onchain actions via Safe (spending, publishing) |
+| Agent | Stateless compiler (runs on demand) | Persistent observer (runs on triggers, builds memory) |
+
+The fundamental upgrade: Karpathy's wiki is for **one person's knowledge**. Coop's
+knowledge graph is for **a group's shared understanding** — with review, governance,
+and onchain execution built in.
+
+### 14.6 Community Patterns Worth Noting
+
+| Pattern | Source | Coop Relevance |
+|---------|--------|---------------|
+| **Provenance tracking with content hashes** (Palinode) | Content hashes on every entity, tracking how knowledge was compiled | We have `contentHash` on memories already. Extend to graph entities. |
+| **Five-pass compilation pipeline** (sage-wiki) | Typed entity system with self-learning corrections | Our entity extraction could benefit from multi-pass refinement. |
+| **Decision records as first-class pages** (Context-as-Code) | Explaining WHY the wiki is structured this way | Our reasoning traces serve this purpose — decisions are first-class. |
+| **Ontology-based graph** (blex2011) | Graph database built on formal ontology | Validates our POLE+O graph model. Domain-specific ontologies per coop. |
+| **Drift detection** (Zorro) | Auditing structural alignment across systems | Maps to our lint operation — detecting graph health drift. |
+
+---
+
+## 15. Connection to Existing Plans
 
 | Existing Plan | Relationship |
 |---------------|-------------|
@@ -1584,9 +1741,10 @@ The ultimate proof that graph memory improves agent quality:
 
 ---
 
-## 15. Sources
+## 16. Sources
 
 ### Research
+- [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — Persistent compounding knowledge base pattern (compilation > retrieval)
 - [Zep: A Temporal Knowledge Graph Architecture for Agent Memory](https://arxiv.org/abs/2501.13956)
 - [Graphiti: Knowledge Graph Memory for an Agentic World](https://neo4j.com/blog/developer/graphiti-knowledge-graph-memory/)
 - [KuzuDB for Production AI Agents (Vela Partners)](https://www.vela.partners/blog/kuzudb-ai-agent-memory-graph-database)
