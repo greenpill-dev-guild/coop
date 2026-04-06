@@ -1,0 +1,60 @@
+{
+  "$schema": "status-schema",
+  "feature": "agent-knowledge-sandbox",
+  "title": "Agent Knowledge Sandbox: Curated Sources + Graph Memory",
+  "stage": "draft",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "todo",
+      "depends_on": ["state"],
+      "branch": "claude/ui/agent-knowledge-sandbox",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "todo",
+      "depends_on": [],
+      "branch": "codex/state/agent-knowledge-sandbox",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/agent-knowledge-sandbox"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/agent-knowledge-sandbox"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui", "state"],
+      "branch": "handoff/qa-codex/agent-knowledge-sandbox",
+      "branch_trigger": "handoff/qa-codex/agent-knowledge-sandbox",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/agent-knowledge-sandbox",
+      "branch_trigger": "handoff/qa-claude/agent-knowledge-sandbox",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    "Kuzu-WASM over LevelGraph for graph storage",
+    "POLE+O entity model (matches Neo4j agent-memory)",
+    "Temporal edges with Graphiti validity windows",
+    "No LLM during retrieval (hard perf requirement)",
+    "Vellum material language for all UI surfaces",
+    "7-phase dependency-ordered build with gates",
+    "Entity extraction as new skill using existing cascade"
+  ],
+  "updated_at": "2026-04-05"
+}
