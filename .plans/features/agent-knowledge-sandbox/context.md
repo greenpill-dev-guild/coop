@@ -97,7 +97,7 @@
 - DraftCard: add `.draft-card__provenance` section between meta strip and "Why now"
 - Popup: add source health line in PopupProfilePanel area
 
-## Relevant Codepaths
+## Relevant Codepaths (verified 2026-04-05)
 
 | Component | Path | Key Lines |
 |-----------|------|-----------|
@@ -105,17 +105,27 @@
 | Knowledge skill import | `extension/src/runtime/agent/knowledge.ts` | 123-151 |
 | Knowledge skill selection | `extension/src/runtime/agent/knowledge.ts` | 216-255 |
 | Agent memory schema | `shared/src/contracts/schema-agent.ts` | AgentMemory type |
-| Memory CRUD | `shared/src/modules/agent/memory.ts` | 14-90 |
-| Memory write after skill | `extension/src/runtime/skills/memories.ts` | — |
-| DB schema | `shared/src/modules/storage/db-schema.ts` | 102-103, 283, 340, 344 |
-| Skill registry | `extension/src/runtime/agent/registry.ts` | 14-88 |
-| Skill harness | `extension/src/runtime/agent/harness.ts` | 162-209 |
-| Skill context builder | `extension/src/runtime/agent/runner-skills.ts` | buildSkillContext |
-| Skill completion | `extension/src/runtime/agent/runner-skills-completion.ts` | completeSkill |
+| Memory CRUD | `shared/src/modules/agent/memory.ts` | 14-236 (full file) |
+| Memory write after skill | `extension/src/runtime/agent/runner-skills.ts` | ~376-382 (writeSkillMemories call) |
+| DB schema (v18, 31 tables) | `shared/src/modules/storage/db-schema.ts` | knowledgeSkills v9 (283), agentMemories v11 (344) |
+| Skill registry (glob) | `extension/src/runtime/agent/registry.ts` | 14-91 (import.meta.glob eager) |
+| Skill manifest schema | `shared/src/contracts/schema-agent.ts` | 311-332 (skillManifestSchema) |
+| Skill output schemas map | `shared/src/contracts/schema-agent.ts` | skillOutputSchemas (48-68) |
+| Skill harness | `extension/src/runtime/agent/harness.ts` | 162-209 (selectSkillIdsForObservation) |
+| Skill context builder | `extension/src/runtime/agent/runner-skills-context.ts` | 262 (buildSkillContext → SkillExecutionContext) |
+| Skill execution context type | `extension/src/runtime/agent/runner-state.ts` | 42-57 (SkillExecutionContext) |
+| Skill completion + run save | `extension/src/runtime/agent/runner-skills.ts` | 366-382 (completeSkillRun → save → writeMemories) |
 | Inference cascade | `extension/src/runtime/agent/models.ts` | 542-646 |
 | Eval pipeline | `extension/src/runtime/agent/eval.ts` | 165-292 |
 | Quality scoring | `extension/src/runtime/agent/quality.ts` | 23-52 |
-| Yjs doc structure | `shared/src/modules/sync-core/doc.ts` | 68-104 |
+| Observation triggers (18) | `shared/src/contracts/schema-agent.ts` | 5-22 (agentObservationTriggerSchema) |
+| Observation emitters | `extension/src/background/handlers/agent-observation-emitters.ts` | 13-106 |
+| Yjs doc structure | `shared/src/modules/sync-core/doc.ts` | 68-72, 87-104 (sharedKeys) |
+| RuntimeRequest (50 types) | `extension/src/runtime/messages.ts` | 269-684 |
+| Handler registry | `extension/src/background/handler-registry.ts` | 196-532 (type-safe dispatch) |
+| Handler receiver | `extension/src/background/handlers/receiver.ts` | 1-654 |
+| Offscreen document | `extension/src/runtime/receiver-sync-offscreen.ts` | 1-383 (WebRTC + agent runner) |
+| Offscreen management | `extension/src/background/context-receiver.ts` | 64-95 |
 | DraftCard component | `extension/src/views/Sidepanel/cards/DraftCard.tsx` | 46-327 |
 | Provenance formatting | `extension/src/views/Sidepanel/cards/card-shared.ts` | 39-48 |
 | Roost Agent section | `extension/src/views/Sidepanel/tabs/RoostAgentSection.tsx` | — |
@@ -125,6 +135,28 @@
 | Popup profile | `extension/src/views/Popup/PopupProfilePanel.tsx` | — |
 | Global CSS | `extension/src/global.css` | Component classes |
 | Design tokens | `shared/src/styles/tokens.css` | Palette, spacing, radii |
+| Barrel exports | `shared/src/modules/index.ts` | Wildcard re-exports from module dirs |
+
+## Missing Infrastructure (must be created)
+
+| What | Where | Notes |
+|------|-------|-------|
+| Dexie v19 schema bump | `db-schema.ts` | Add `knowledgeSources` table (current version: 18) |
+| `KnowledgeSource` Zod schema | `shared/src/contracts/schema-knowledge.ts` | New file, re-export from contracts/index.ts |
+| `knowledge-source` module | `shared/src/modules/knowledge-source/` | New module, re-export from modules/index.ts |
+| `graph` module | `shared/src/modules/graph/` | New module for Kuzu-WASM integration |
+| `entity-extractor` skill | `extension/src/skills/entity-extractor/` | skill.json + SKILL.md + eval/ |
+| `entity-extraction-output` schema | `shared/src/contracts/schema-agent.ts` | Add to skillOutputSchemaRefSchema + skillOutputSchemas map |
+| `source-content-ready` trigger | `shared/src/contracts/schema-agent.ts` | Add to agentObservationTriggerSchema |
+| Source CRUD RuntimeRequest types | `extension/src/runtime/messages.ts` | ~4 new request types |
+| Source CRUD handlers | `extension/src/background/handlers/` | New handler file or extend existing |
+| Source adapter functions | `extension/src/runtime/agent/adapters/` | New directory with 5 adapter files |
+| Graph retrieval integration | `extension/src/runtime/agent/runner-skills-context.ts` | Modify buildSkillContext |
+| Reasoning trace recording | `extension/src/runtime/agent/runner-skills.ts` | Hook at line ~370 between completeSkillRun and writeSkillMemories |
+| New validation suites | `scripts/validate.ts` | unit:knowledge-sandbox, unit:graph-memory, e2e:knowledge-sandbox |
+| NPM dependencies | `packages/extension/package.json` | @kuzu/kuzu-wasm, youtube-caption-extractor, rss-parser |
+| Nest Sources UI | `extension/src/views/Sidepanel/tabs/NestSourcesSection.tsx` | New file |
+| Shared UI components | `extension/src/views/shared/` | SourceBadge, PrecedentIndicator, TopicBar, ConfidenceTooltip |
 
 ## Constraints
 

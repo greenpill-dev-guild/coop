@@ -1,3 +1,31 @@
+---
+feature: agent-knowledge-sandbox
+title: Agent knowledge sandbox state lane
+lane: state
+agent: codex
+status: todo
+source_branch: feature/agent-knowledge-sandbox
+work_branch: codex/state/agent-knowledge-sandbox
+depends_on:
+  - ../spec.md
+owned_paths:
+  - packages/shared/src/contracts/schema-knowledge.ts
+  - packages/shared/src/modules/knowledge-source
+  - packages/shared/src/modules/graph
+  - packages/extension/src/runtime/agent/adapters
+  - packages/extension/src/skills/entity-extractor
+done_when:
+  - assertAllowedSource(
+  - upsertEntity(
+  - hybridSearch(
+  - recordReasoningTrace(
+skills:
+  - state-logic
+  - shared
+  - testing
+updated: 2026-04-05
+---
+
 # State Lane — Codex
 
 Owner: Codex

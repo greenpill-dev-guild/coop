@@ -1,3 +1,34 @@
+---
+feature: agent-knowledge-sandbox
+title: Agent knowledge sandbox UI lane
+lane: ui
+agent: claude
+status: todo
+source_branch: feature/agent-knowledge-sandbox
+work_branch: claude/ui/agent-knowledge-sandbox
+depends_on:
+  - ../spec.md
+  - state.codex.todo.md
+owned_paths:
+  - packages/extension/src/views/Sidepanel/tabs/NestSourcesSection.tsx
+  - packages/extension/src/views/Sidepanel/cards/DraftCard.tsx
+  - packages/extension/src/views/Sidepanel/tabs/RoostAgentSection.tsx
+  - packages/extension/src/views/shared/SourceBadge.tsx
+  - packages/extension/src/views/shared/PrecedentIndicator.tsx
+  - packages/extension/src/views/shared/TopicBar.tsx
+  - packages/extension/src/views/shared/ConfidenceTooltip.tsx
+done_when:
+  - NestSourcesSection
+  - SourceBadge
+  - draft-card__provenance
+skills:
+  - design
+  - react
+  - ui-compliance
+  - testing
+updated: 2026-04-05
+---
+
 # UI Lane — Claude
 
 Owner: Claude

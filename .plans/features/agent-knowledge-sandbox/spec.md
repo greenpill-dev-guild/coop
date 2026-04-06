@@ -199,6 +199,54 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - **A/B**: Baseline (flat memory) vs graph-enhanced (graph retrieval) quality comparison on eval corpus
 - **Regression**: All existing skill eval cases + unit tests must pass at pre-implementation thresholds
 
+## Parallelization Map
+
+```
+Week   Codex (State)                        Claude (UI)
+─────  ───────────────────────────────────   ─────────────────────────────────
+  1    P1: KnowledgeSource schema + Dexie    P1: Nest Sources section (mock data)
+       P1: assertAllowedSource()             P2: SourceBadge, TopicBar components
+       P1: Yjs sync module
+
+  2    P2: YouTube + GitHub adapters          P1: Wire Sources UI to handlers
+       P2: RSS + Reddit + NPM adapters       P2: ConfidenceTooltip, PrecedentIndicator
+       P2: Content sanitizer
+
+  3    P3: Entity extraction schema           P3: DraftCard provenance section
+       P3: Entity extractor skill manifest    P3: ChickensCompactCard source icon
+       P3: Eval cases + quality scoring
+
+  4    P4: Kuzu-WASM integration              P4: Roost Knowledge subsection
+       P4: POLE+O DDL + CRUD                  P4: Roost Decision History subsection
+       P4: Temporal edges + queries
+
+  5    P5: Hybrid retrieval                   P5: Popup source health indicator
+       P5: Embedding generation               P5: E2E test scaffolding
+       P5: Relevance benchmark
+
+  6    P6: Reasoning traces                   P6: E2E tests for all flows
+       P6: Precedent queries                  P6: Visual snapshot tests
+
+  7    P7: Wire into pipeline                 P7: Wire UI to live graph data
+       P7: Regression testing                 P7: Design compliance review
+       P7: A/B evaluation
+       ─── QA Pass 1 (Codex) ───              ─── QA Pass 2 (Claude) ───
+```
+
+**Key parallelization**: Claude can start UI work in Week 1 using mock data from fixtures, independent of Codex's schema work. Shared components (Week 2) don't depend on state. Phases 4-5 (graph memory) are Codex-heavy while Claude builds Roost sections. Phase 7 is the only sequential bottleneck.
+
+## Integration Risks
+
+| Risk | Phase | Severity | Mitigation |
+|------|-------|----------|------------|
+| **Kuzu-WASM in offscreen document** | 4 | High | Offscreen already loads Transformers.js (~4MB) + WebLLM. Kuzu adds ~4MB more. Test memory pressure early. If too heavy, fall back to LevelGraph (~50KB). |
+| **IDBFS vs Dexie IndexedDB collision** | 4 | Medium | Kuzu-WASM uses IDBFS which creates its own IDB object stores. Dexie uses separate database name. Coexistence should work but needs early validation. |
+| **buildSkillContext() modification blast radius** | 7 | High | This function assembles all context for skill prompts. Zero existing tests directly cover it (tests mock at higher level). Add targeted tests before modifying. |
+| **completeSkillRun() reasoning trace hook** | 7 | Medium | Insert point is between `completeSkillRun()` (line ~366) and `writeSkillMemories()` (line ~376). Additive — no existing behavior changes. |
+| **Entity extraction ↔ graph schema mismatch** | 3→4 | Medium | Define GraphEntity schema in Phase 3 so both skill output and graph store use the same types. Single source of truth in schema-knowledge.ts. |
+| **Agent cycle time regression** | 7 | Medium | Graph retrieval adds latency. Budget: <200ms for retrieval, <50ms for graph queries. Total cycle stays within 120% baseline. Monitor with timing assertions. |
+| **Source adapter API stability** | 2 | Low | YouTube frequently changes scraping interfaces. Use recorded fixtures for tests, not live APIs. Pin youtube-caption-extractor version exactly. |
+
 ## References
 
 - **Exploration doc**: `.plans/features/agent-knowledge-sandbox/exploration.md` (1600+ lines, full research)
