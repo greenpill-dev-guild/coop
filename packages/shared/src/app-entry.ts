@@ -56,6 +56,7 @@ export {
   emptySetupInsightsInput,
   toSetupInsights,
 } from './modules/coop/setup-insights';
+export type { SetupInsightsInput } from './modules/coop/setup-insights';
 
 // Ritual-lens presets — predefined capture configurations
 export { getRitualLenses } from './modules/coop/presets';

@@ -1,10 +1,10 @@
 import type { SetupInsightsInput } from '@coop/shared/app';
 import {
   clipboardPasteFallbackMessage,
-  getRitualLenses,
+  type getRitualLenses,
   pasteClipboardText,
 } from '@coop/shared/app';
-import { type CSSProperties, type MutableRefObject, type RefObject } from 'react';
+import type { CSSProperties, MutableRefObject, RefObject } from 'react';
 import { useI18n } from '../../../hooks/useI18n';
 import {
   audienceOptions,

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import type { getRitualLenses } from '@coop/shared/app';
+import { useEffect, useRef, useState } from 'react';
 import {
   cleanText,
   defaultTranscriptStatus,

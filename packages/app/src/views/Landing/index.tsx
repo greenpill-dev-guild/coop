@@ -146,6 +146,7 @@ function LandingPageContent({
   }
 
   const speech = useSpeechCapture(transcripts, updateTranscript, ritualLenses);
+  const stopRecognitionNow = speech.stopRecognitionNow;
 
   // ── Auto-synthesize purpose from transcripts ────────────────────────
   useEffect(() => {
@@ -596,7 +597,7 @@ function LandingPageContent({
 
       event.preventDefault();
       focusReturnCardRef.current = openCardId;
-      speech.stopRecognitionNow();
+      stopRecognitionNow();
       setOpenCardId(null);
     };
 
@@ -604,7 +605,7 @@ function LandingPageContent({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [openCardId]); // speech.stopRecognitionNow is ref-stable in behavior
+  }, [openCardId, stopRecognitionNow]);
 
   // ── Focus management for flashcard open/close ───────────────────────
   useEffect(() => {
