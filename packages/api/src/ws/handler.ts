@@ -41,6 +41,7 @@ export function createWSHandlers(registry: TopicRegistry) {
 
   /** Connections that have begun closing — reject late messages. */
   const closedConnections = new WeakSet<object>();
+  const authorizedTopics = new WeakMap<object, string>();
 
   function getSubscribedTopics(ws: WSContext): Set<string> {
     const key = rawKey(ws);
@@ -64,6 +65,10 @@ export function createWSHandlers(registry: TopicRegistry) {
   }
 
   return {
+    authorizeConnection(ws: WSContext, topicName: string): void {
+      authorizedTopics.set(rawKey(ws), topicName);
+    },
+
     onOpen(_evt: Event, ws: WSContext): void {
       getSubscribedTopics(ws);
     },
@@ -89,6 +94,7 @@ export function createWSHandlers(registry: TopicRegistry) {
       }
 
       const subscribedTopics = getSubscribedTopics(ws);
+      const authorizedTopic = authorizedTopics.get(rawKey(ws));
       const type = message.type as MessageType;
 
       switch (type) {
@@ -96,6 +102,9 @@ export function createWSHandlers(registry: TopicRegistry) {
           const topics = (message.topics as unknown[]) ?? [];
           for (const topicName of topics) {
             if (typeof topicName !== 'string') {
+              continue;
+            }
+            if (authorizedTopic && topicName !== authorizedTopic) {
               continue;
             }
             registry.subscribe(ws, topicName);
@@ -110,6 +119,9 @@ export function createWSHandlers(registry: TopicRegistry) {
             if (typeof topicName !== 'string') {
               continue;
             }
+            if (authorizedTopic && topicName !== authorizedTopic) {
+              continue;
+            }
             registry.unsubscribe(ws, topicName);
             subscribedTopics.delete(topicName);
           }
@@ -121,6 +133,10 @@ export function createWSHandlers(registry: TopicRegistry) {
             break;
           }
           const topicName = message.topic;
+
+          if (authorizedTopic && topicName !== authorizedTopic) {
+            break;
+          }
 
           // Topic authorization: must be subscribed to the topic to publish
           if (!subscribedTopics.has(topicName)) {

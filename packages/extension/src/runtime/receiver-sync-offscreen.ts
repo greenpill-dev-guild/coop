@@ -114,6 +114,13 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
     pairing.signalingUrls,
     undefined,
     iceServers,
+    undefined,
+    {
+      coopId: pairing.coopId,
+      memberId: pairing.memberId,
+      pairSecret: pairing.pairSecret,
+      roomId: pairing.roomId,
+    },
   );
   const relayTransport = resolveBindingTransport({
     webrtcEnabled: Boolean(providers.webrtc),
@@ -230,6 +237,12 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
   binding.relay = connectReceiverSyncRelay({
     roomId: pairing.roomId,
     signalingUrls: pairing.signalingUrls,
+    pairing: {
+      coopId: pairing.coopId,
+      memberId: pairing.memberId,
+      pairSecret: pairing.pairSecret,
+      roomId: pairing.roomId,
+    },
     onCapture: async (frame) => {
       if (frame.pairingId !== pairing.pairingId || frame.roomId !== pairing.roomId) {
         return;
@@ -343,22 +356,6 @@ async function refreshBindings() {
   return refreshPromise;
 }
 
-void reportReceiverSyncRuntime({
-  loadedAt: runtimeNow(),
-  activePairingIds: [],
-  activeBindingKeys: [],
-  transport: 'none',
-  hasWebSocket: typeof WebSocket !== 'undefined',
-  hasRtcPeerConnection: hasRtcPeerConnection(),
-});
-void refreshBindings();
-
-// Heartbeat fallback: refresh bindings periodically in case message-driven
-// wake misses an event. 10s is a ~7x improvement over the previous 1.5s poll.
-window.setInterval(() => {
-  void refreshBindings();
-}, heartbeatIntervalMs);
-
 chrome.runtime.onMessage.addListener(
   (message: { type?: string; payload?: { force?: boolean; reason?: string } }) => {
     if (message.type === 'run-agent-cycle-if-pending') {
@@ -373,6 +370,25 @@ chrome.runtime.onMessage.addListener(
     }
   },
 );
+
+void reportReceiverSyncRuntime({
+  loadedAt: runtimeNow(),
+  activePairingIds: [],
+  activeBindingKeys: [],
+  transport: 'none',
+  hasWebSocket: typeof WebSocket !== 'undefined',
+  hasRtcPeerConnection: hasRtcPeerConnection(),
+});
+void refreshBindings();
+// Recover any pending agent-cycle request that was queued before the offscreen
+// document finished booting and registered its runtime message listener.
+void runAgentCycle({ reason: 'offscreen-ready' });
+
+// Heartbeat fallback: refresh bindings periodically in case message-driven
+// wake misses an event. 10s is a ~7x improvement over the previous 1.5s poll.
+window.setInterval(() => {
+  void refreshBindings();
+}, heartbeatIntervalMs);
 
 window.addEventListener('unload', () => {
   for (const binding of bindings.values()) {

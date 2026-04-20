@@ -18,6 +18,14 @@ function createMockWS(rawKey?: object) {
   } as unknown as WSContext & { sent: string[]; readyState: number };
 }
 
+function readFirstSentJson(ws: { sent: string[] }) {
+  const message = ws.sent[0];
+  if (!message) {
+    throw new Error('Expected at least one sent message.');
+  }
+  return JSON.parse(message) as Record<string, unknown>;
+}
+
 describe('createWSHandlers', () => {
   let registry: TopicRegistry;
   let handlers: ReturnType<typeof createWSHandlers>;
@@ -97,7 +105,7 @@ describe('createWSHandlers', () => {
     expect(ws2.sent).toHaveLength(1);
     expect(ws3.sent).toHaveLength(1);
 
-    const parsed = JSON.parse(ws2.sent[0]!);
+    const parsed = readFirstSentJson(ws2);
     expect(parsed.payload).toBe('hi');
     expect(parsed.clients).toBe(3);
   });
@@ -122,7 +130,7 @@ describe('createWSHandlers', () => {
 
     // The current handler broadcasts to ALL subscribers, including the sender
     expect(ws1.sent).toHaveLength(1);
-    const parsed = JSON.parse(ws1.sent[0]!);
+    const parsed = readFirstSentJson(ws1);
     expect(parsed.payload).toBe('echo');
   });
 
@@ -152,6 +160,36 @@ describe('createWSHandlers', () => {
 
     // ws2 should NOT receive the message
     expect(ws2.sent).toHaveLength(0);
+  });
+
+  it('restricts subscribe and publish to the connection-authorized room', () => {
+    const ws = createMockWS();
+    const peer = createMockWS();
+    handlers.onOpen(new Event('open'), ws);
+    handlers.onOpen(new Event('open'), peer);
+    handlers.authorizeConnection(ws, 'room-1');
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'subscribe', topics: ['room-2'] }),
+      }),
+      ws,
+    );
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'subscribe', topics: ['room-1'] }),
+      }),
+      peer,
+    );
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'publish', topic: 'room-2', payload: 'blocked' }),
+      }),
+      ws,
+    );
+
+    expect(registry.getSubscriberCount('room-2')).toBe(0);
+    expect(peer.sent).toHaveLength(0);
   });
 
   // --- Rate limiting ---
@@ -240,7 +278,7 @@ describe('createWSHandlers', () => {
         ws1,
       );
       expect(ws2.sent).toHaveLength(1);
-      const parsed = JSON.parse(ws2.sent[0]!);
+      const parsed = readFirstSentJson(ws2);
       expect(parsed.n).toBe('after-window');
     });
   });
@@ -254,7 +292,7 @@ describe('createWSHandlers', () => {
     handlers.onMessage(new MessageEvent('message', { data: JSON.stringify({ type: 'ping' }) }), ws);
 
     expect(ws.sent).toHaveLength(1);
-    expect(JSON.parse(ws.sent[0]!)).toEqual({ type: 'pong' });
+    expect(readFirstSentJson(ws)).toEqual({ type: 'pong' });
   });
 
   // --- Cleanup ---

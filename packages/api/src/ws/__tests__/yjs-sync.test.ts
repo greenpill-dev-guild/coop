@@ -66,6 +66,14 @@ function readMessageType(data: Uint8Array): number {
   return decoding.readVarUint(decoder);
 }
 
+function getSentMessage(ws: { sent: Uint8Array[] }, index = 0): Uint8Array {
+  const message = ws.sent[index];
+  if (!message) {
+    throw new Error(`Expected a sent message at index ${index}.`);
+  }
+  return message;
+}
+
 describe('createYjsSyncHandlers', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -82,7 +90,7 @@ describe('createYjsSyncHandlers', () => {
     handlers.onOpen('test-room', ws);
 
     expect(ws.sent).toHaveLength(1);
-    const msgType = readMessageType(ws.sent[0]!);
+    const msgType = readMessageType(getSentMessage(ws));
     expect(msgType).toBe(messageSync);
   });
 
@@ -115,7 +123,7 @@ describe('createYjsSyncHandlers', () => {
 
     // Server should respond with sync step 2
     expect(ws.sent.length).toBeGreaterThanOrEqual(1);
-    const msgType = readMessageType(ws.sent[0]!);
+    const msgType = readMessageType(getSentMessage(ws));
     expect(msgType).toBe(messageSync);
   });
 
@@ -366,7 +374,7 @@ describe('createYjsSyncHandlers', () => {
       expect(ws3.sent).toHaveLength(1);
 
       // Verify the payload has originConnectionId stamped
-      const payload = extractBlobRelayPayload(ws2.sent[0]!);
+      const payload = extractBlobRelayPayload(getSentMessage(ws2));
       expect(payload?.type).toBe('blob-relay-request');
       expect(payload?.originConnectionId).toBeDefined();
       expect(typeof payload?.originConnectionId).toBe('string');
@@ -401,7 +409,7 @@ describe('createYjsSyncHandlers', () => {
       expect(ws1.sent).toHaveLength(1);
       expect(ws2.sent).toHaveLength(0);
 
-      const payload = extractBlobRelayPayload(ws1.sent[0]!);
+      const payload = extractBlobRelayPayload(getSentMessage(ws1));
       expect(payload?.type).toBe('blob-relay-chunk');
     });
 
@@ -428,7 +436,7 @@ describe('createYjsSyncHandlers', () => {
       expect(ws1.sent).toHaveLength(1);
       expect(ws2.sent).toHaveLength(0);
 
-      const payload = extractBlobRelayPayload(ws1.sent[0]!);
+      const payload = extractBlobRelayPayload(getSentMessage(ws1));
       expect(payload?.type).toBe('blob-relay-not-found');
     });
 
@@ -451,7 +459,7 @@ describe('createYjsSyncHandlers', () => {
       expect(ws1.sent).toHaveLength(0);
       expect(ws2.sent).toHaveLength(1);
 
-      const payload = extractBlobRelayPayload(ws2.sent[0]!);
+      const payload = extractBlobRelayPayload(getSentMessage(ws2));
       expect(payload?.type).toBe('blob-relay-manifest');
       expect(payload?.originConnectionId).toBeDefined();
     });
@@ -594,7 +602,7 @@ describe('createYjsSyncHandlers', () => {
       if (originalBun) {
         (globalThis as Record<string, unknown>).Bun = originalBun;
       } else {
-        delete (globalThis as Record<string, unknown>).Bun;
+        (globalThis as Record<string, unknown>).Bun = undefined;
       }
     });
 
@@ -611,7 +619,7 @@ describe('createYjsSyncHandlers', () => {
       loadResolve();
       await vi.waitFor(() => expect(ws.sent).toHaveLength(1));
 
-      const msgType = readMessageType(ws.sent[0]!);
+      const msgType = readMessageType(getSentMessage(ws));
       expect(msgType).toBe(messageSync);
     });
 
@@ -672,8 +680,8 @@ describe('createYjsSyncHandlers', () => {
       await vi.waitFor(() => expect(ws1.sent).toHaveLength(1));
 
       expect(ws2.sent).toHaveLength(1);
-      expect(readMessageType(ws1.sent[0]!)).toBe(messageSync);
-      expect(readMessageType(ws2.sent[0]!)).toBe(messageSync);
+      expect(readMessageType(getSentMessage(ws1))).toBe(messageSync);
+      expect(readMessageType(getSentMessage(ws2))).toBe(messageSync);
     });
 
     it('client joining already-loaded room gets immediate sync', async () => {
@@ -691,7 +699,7 @@ describe('createYjsSyncHandlers', () => {
 
       // Should get sync step 1 immediately (no loading promise pending)
       expect(ws2.sent).toHaveLength(1);
-      expect(readMessageType(ws2.sent[0]!)).toBe(messageSync);
+      expect(readMessageType(getSentMessage(ws2))).toBe(messageSync);
     });
   });
 });

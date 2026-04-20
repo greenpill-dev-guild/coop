@@ -8,6 +8,7 @@ import {
   defaultWebsocketSyncUrl,
   filterUsableSignalingUrls,
 } from '../../sync-config';
+import { appendReceiverSyncAuthToUrl, buildReceiverSyncAuthParams } from './pairing';
 
 const ROOT_KEY = 'receiver-sync';
 const CAPTURES_KEY = 'captures';
@@ -109,6 +110,12 @@ export function connectReceiverSyncProviders(
   password?: string,
   iceServers?: RTCIceServer[],
   websocketSyncUrl?: string,
+  auth?: {
+    coopId: string;
+    memberId: string;
+    pairSecret: string;
+    roomId: string;
+  },
 ) {
   if (typeof window === 'undefined') {
     return {
@@ -123,15 +130,18 @@ export function connectReceiverSyncProviders(
   const indexeddb = new IndexeddbPersistence(roomId, doc);
   let webrtc: WebrtcProvider | undefined;
   const usableSignalingUrls = filterUsableSignalingUrls(signalingUrls);
+  const authenticatedSignalingUrls = auth
+    ? usableSignalingUrls.map((url) => appendReceiverSyncAuthToUrl(url, auth))
+    : usableSignalingUrls;
   const hasWebRtcRuntime =
     typeof globalThis.RTCPeerConnection !== 'undefined' ||
     typeof (globalThis as typeof globalThis & { webkitRTCPeerConnection?: unknown })
       .webkitRTCPeerConnection !== 'undefined';
 
-  if (usableSignalingUrls.length > 0 && hasWebRtcRuntime) {
+  if (authenticatedSignalingUrls.length > 0 && hasWebRtcRuntime) {
     try {
       webrtc = new WebrtcProvider(roomId, doc, {
-        signaling: usableSignalingUrls,
+        signaling: authenticatedSignalingUrls,
         password: password ?? roomId,
         maxConns: 6,
         peerOpts: { config: { iceServers: iceServers ?? defaultIceServers } },
@@ -148,6 +158,7 @@ export function connectReceiverSyncProviders(
     try {
       websocket = new WebsocketProvider(resolvedWsUrl, roomId, doc, {
         connect: true,
+        params: auth ? buildReceiverSyncAuthParams(auth) : undefined,
       });
     } catch (error) {
       void error;

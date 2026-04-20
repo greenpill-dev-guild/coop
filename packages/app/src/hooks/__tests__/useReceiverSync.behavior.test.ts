@@ -1,3 +1,4 @@
+import type { ReceiverPairingRecord } from '@coop/shared/app';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,8 +75,9 @@ vi.mock('@coop/shared/app', async (importOriginal) => {
 
 const { useReceiverSync } = await import('../useReceiverSync');
 
-function makePairing() {
+function makePairing(): ReceiverPairingRecord {
   return {
+    version: 1,
     pairingId: 'pairing-1',
     coopId: 'coop-1',
     coopDisplayName: 'River Coop',
@@ -87,7 +89,7 @@ function makePairing() {
     issuedAt: '2026-03-28T00:00:00.000Z',
     expiresAt: '2026-04-28T00:00:00.000Z',
     active: true,
-  } as never;
+  };
 }
 
 function makeCapture(overrides: Record<string, unknown> = {}) {
@@ -469,6 +471,40 @@ describe('useReceiverSync behavior', () => {
     );
     expect(markReceiverCaptureSyncFailedMock).toHaveBeenCalledWith(capture, 'relay publish failed');
     expect(patchReceiverSyncEnvelopeMock).toHaveBeenCalled();
+  });
+
+  it('skips the direct bridge handoff entirely when bridge optimization is disabled', async () => {
+    const doc = {
+      on: vi.fn(),
+      off: vi.fn(),
+    };
+    const relay = {
+      publishCapture: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const providers = {
+      disconnect: vi.fn(),
+    };
+    const pairing = makePairing();
+    const capture = makeCapture();
+
+    createReceiverSyncDocMock.mockReturnValue(doc);
+    connectReceiverSyncProvidersMock.mockReturnValue(providers);
+    connectReceiverSyncRelayMock.mockReturnValue(relay);
+    listReceiverCapturesMock.mockResolvedValue([capture]);
+    listReceiverSyncEnvelopesMock.mockReturnValue([{ capture }]);
+    const postMessageSpy = vi.spyOn(window, 'postMessage');
+
+    const deps = makeDeps({
+      pairing,
+      bridgeOptimizationDisabled: true,
+    });
+
+    renderHook(() => useReceiverSync({} as never, deps as never));
+
+    await waitFor(() => expect(relay.publishCapture).toHaveBeenCalledTimes(1));
+    expect(postMessageSpy).not.toHaveBeenCalled();
+    expect(deps.setMessage).not.toHaveBeenCalled();
   });
 
   it('marks retries as failed when the active pairing is not ready', async () => {

@@ -6,7 +6,6 @@ import {
   artifactSchema,
   coopSharedStateSchema,
 } from '../../contracts/schema';
-import { createId, hashText } from '../../utils';
 import {
   buildIceServers,
   defaultIceServers,
@@ -14,6 +13,7 @@ import {
   defaultWebsocketSyncUrl,
   parseSignalingUrls,
 } from '../../sync-config';
+import { appendQueryParams, createId, hashText } from '../../utils';
 
 // --- Minimal varuint framing (avoids lib0 dependency in shared package) ---
 
@@ -69,6 +69,10 @@ const ROOT_KEY = 'coop';
 const ARTIFACTS_MAP_KEY = 'coop-artifacts';
 const ARTIFACTS_V2_MAP_KEY = 'coop-artifacts-v2';
 const MEMBERS_V2_MAP_KEY = 'coop-members-v2';
+const INVITES_V2_MAP_KEY = 'coop-invites-v2';
+const REVIEW_BOARD_V2_MAP_KEY = 'coop-review-board-v2';
+const ARCHIVE_RECEIPTS_V2_MAP_KEY = 'coop-archive-receipts-v2';
+const MEMBER_ACCOUNTS_V2_MAP_KEY = 'coop-member-accounts-v2';
 
 /**
  * Transaction origin tag for local writes. Handlers observing doc updates
@@ -96,11 +100,13 @@ const sharedKeys = [
   'archiveReceipts',
   'memoryProfile',
   'syncRoom',
+  'agentIdentity',
   'onchainState',
   'memberAccounts',
   'greenGoods',
   'archiveConfig',
   'memberCommitments',
+  'fvmState',
 ] as const;
 
 /**
@@ -111,6 +117,38 @@ const sharedKeys = [
  */
 export function deriveSyncRoomId(coopId: string, roomSecret: string) {
   return `coop-room-${hashText(`${coopId}:${roomSecret}`).slice(2, 18)}`;
+}
+
+export function buildCoopSyncAuthParams(
+  room: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'roomSecret'>,
+) {
+  return {
+    syncScope: 'coop',
+    coopId: room.coopId,
+    roomId: room.roomId,
+    roomSecret: room.roomSecret,
+  } as const;
+}
+
+export function appendSyncAuthToUrl(
+  rawUrl: string,
+  params: Record<string, string | null | undefined>,
+) {
+  return appendQueryParams(rawUrl, params);
+}
+
+export function buildAuthenticatedSignalingUrls(
+  room: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'roomSecret'>,
+  signalingUrls: string[],
+) {
+  const params = buildCoopSyncAuthParams(room);
+  return signalingUrls.map((url) => appendSyncAuthToUrl(url, params));
+}
+
+export function isAuthorizedCoopSyncRoom(
+  room: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'roomSecret'>,
+) {
+  return deriveSyncRoomId(room.coopId, room.roomSecret) === room.roomId;
 }
 
 /**
@@ -206,9 +244,62 @@ function syncV2Map<T extends { id: string }>(
       if (!definedKeys.has(key)) fieldMap.delete(key);
     }
     for (const [key, value] of definedEntries) {
-      fieldMap.set(key, JSON.stringify(value));
+      const serialized = JSON.stringify(value);
+      if (fieldMap.get(key) !== serialized) {
+        fieldMap.set(key, serialized);
+      }
     }
   }
+}
+
+function syncJsonMap<T extends { id: string }>(
+  jsonMap: Y.Map<string>,
+  items: T[],
+  getId: (item: T) => string,
+): void {
+  const currentIds = new Set(items.map(getId));
+  for (const id of jsonMap.keys()) {
+    if (!currentIds.has(id)) {
+      jsonMap.delete(id);
+    }
+  }
+  for (const item of items) {
+    const id = getId(item);
+    const serialized = JSON.stringify(item);
+    if (jsonMap.get(id) !== serialized) {
+      jsonMap.set(id, serialized);
+    }
+  }
+}
+
+function writeJsonValueIfChanged(root: Y.Map<string>, key: string, value: unknown): void {
+  const serialized = value === undefined ? undefined : JSON.stringify(value);
+  const current = root.get(key);
+  if (serialized === undefined) {
+    if (current !== undefined) {
+      root.delete(key);
+    }
+    return;
+  }
+  if (current !== serialized) {
+    root.set(key, serialized);
+  }
+}
+
+function readV2MapItems(v2Map: Y.Map<Y.Map<string>>): unknown[] {
+  const items: unknown[] = [];
+  for (const fieldMap of v2Map.values()) {
+    try {
+      const obj: Record<string, unknown> = {};
+      for (const [key, value] of fieldMap.entries()) {
+        obj[key] = JSON.parse(value);
+      }
+      items.push(obj);
+    } catch {
+      // skip corrupted entries
+    }
+  }
+  return items;
 }
 
 /**
@@ -221,23 +312,19 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
   const artifactsV2 = doc.getMap<Y.Map<string>>(ARTIFACTS_V2_MAP_KEY);
   const membersV2 = doc.getMap<Y.Map<string>>(MEMBERS_V2_MAP_KEY);
+  const invitesV2 = doc.getMap<Y.Map<string>>(INVITES_V2_MAP_KEY);
+  const reviewBoardV2 = doc.getMap<Y.Map<string>>(REVIEW_BOARD_V2_MAP_KEY);
+  const archiveReceiptsV2 = doc.getMap<Y.Map<string>>(ARCHIVE_RECEIPTS_V2_MAP_KEY);
+  const memberAccountsV2 = doc.getMap<Y.Map<string>>(MEMBER_ACCOUNTS_V2_MAP_KEY);
 
   doc.transact(() => {
     for (const key of sharedKeys) {
       // Legacy format kept for backward compat with pre-migration peers
-      root.set(key, JSON.stringify(state[key]));
+      writeJsonValueIfChanged(root, key, state[key]);
     }
 
     // v1 format: per-artifact JSON string entries
-    const currentIds = new Set(state.artifacts.map((a) => a.id));
-    for (const id of artifactsMap.keys()) {
-      if (!currentIds.has(id)) {
-        artifactsMap.delete(id);
-      }
-    }
-    for (const artifact of state.artifacts) {
-      artifactsMap.set(artifact.id, JSON.stringify(artifact));
-    }
+    syncJsonMap(artifactsMap, state.artifacts, (artifact) => artifact.id);
 
     // v2 format: per-artifact nested Y.Map with per-field entries.
     // Two peers editing different fields of the same artifact merge cleanly.
@@ -247,6 +334,10 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
     // Concurrent member joins on separate peers merge cleanly instead of
     // last-writer-wins on the JSON-serialized members array.
     syncV2Map(membersV2, state.members, (m) => m.id);
+    syncV2Map(invitesV2, state.invites, (invite) => invite.id);
+    syncV2Map(reviewBoardV2, state.reviewBoard, (group) => group.id);
+    syncV2Map(archiveReceiptsV2, state.archiveReceipts, (receipt) => receipt.id);
+    syncV2Map(memberAccountsV2, state.memberAccounts, (account) => account.id);
   }, ORIGIN_LOCAL);
 }
 
@@ -261,22 +352,15 @@ export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
   const artifactsMap = doc.getMap<string>(ARTIFACTS_MAP_KEY);
   const artifactsV2 = doc.getMap<Y.Map<string>>(ARTIFACTS_V2_MAP_KEY);
   const membersV2 = doc.getMap<Y.Map<string>>(MEMBERS_V2_MAP_KEY);
+  const invitesV2 = doc.getMap<Y.Map<string>>(INVITES_V2_MAP_KEY);
+  const reviewBoardV2 = doc.getMap<Y.Map<string>>(REVIEW_BOARD_V2_MAP_KEY);
+  const archiveReceiptsV2 = doc.getMap<Y.Map<string>>(ARCHIVE_RECEIPTS_V2_MAP_KEY);
+  const memberAccountsV2 = doc.getMap<Y.Map<string>>(MEMBER_ACCOUNTS_V2_MAP_KEY);
 
   // Read artifacts: prefer v2 (per-field) > v1 (per-artifact JSON) > legacy
   let artifacts: unknown[];
   if (artifactsV2.size > 0) {
-    artifacts = [];
-    for (const fieldMap of artifactsV2.values()) {
-      try {
-        const obj: Record<string, unknown> = {};
-        for (const [key, value] of fieldMap.entries()) {
-          obj[key] = JSON.parse(value);
-        }
-        artifacts.push(obj);
-      } catch {
-        // skip corrupted entries
-      }
-    }
+    artifacts = readV2MapItems(artifactsV2);
   } else if (artifactsMap.size > 0) {
     artifacts = [];
     for (const value of artifactsMap.values()) {
@@ -294,27 +378,35 @@ export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
   // Read members: prefer v2 (per-member Y.Map) > legacy JSON string
   let members: unknown[];
   if (membersV2.size > 0) {
-    members = [];
-    for (const fieldMap of membersV2.values()) {
-      try {
-        const obj: Record<string, unknown> = {};
-        for (const [key, value] of fieldMap.entries()) {
-          obj[key] = JSON.parse(value);
-        }
-        members.push(obj);
-      } catch {
-        // skip corrupted entries
-      }
-    }
+    members = readV2MapItems(membersV2);
   } else {
     const raw = root.get('members');
     members = raw ? JSON.parse(raw) : [];
   }
 
+  const invites =
+    invitesV2.size > 0 ? readV2MapItems(invitesV2) : JSON.parse(root.get('invites') ?? '[]');
+  const reviewBoard =
+    reviewBoardV2.size > 0
+      ? readV2MapItems(reviewBoardV2)
+      : JSON.parse(root.get('reviewBoard') ?? '[]');
+  const archiveReceipts =
+    archiveReceiptsV2.size > 0
+      ? readV2MapItems(archiveReceiptsV2)
+      : JSON.parse(root.get('archiveReceipts') ?? '[]');
+  const memberAccounts =
+    memberAccountsV2.size > 0
+      ? readV2MapItems(memberAccountsV2)
+      : JSON.parse(root.get('memberAccounts') ?? '[]');
+
   return Object.fromEntries(
     sharedKeys.map((key) => {
       if (key === 'artifacts') return ['artifacts', artifacts];
       if (key === 'members') return ['members', members];
+      if (key === 'invites') return ['invites', invites];
+      if (key === 'reviewBoard') return ['reviewBoard', reviewBoard];
+      if (key === 'archiveReceipts') return ['archiveReceipts', archiveReceipts];
+      if (key === 'memberAccounts') return ['memberAccounts', memberAccounts];
       const value = root.get(key);
       return [key, value ? JSON.parse(value) : undefined];
     }),
@@ -364,7 +456,7 @@ export function createCoopDoc(state: CoopSharedState) {
  * @returns Binary state update suitable for storage in Dexie
  */
 export function encodeCoopDoc(doc: Y.Doc) {
-  return Y.encodeStateAsUpdate(doc);
+  return Y.encodeStateAsUpdateV2(doc);
 }
 
 /**
@@ -396,11 +488,20 @@ export function mergeCoopDocUpdates(updates: Uint8Array[]) {
  * @returns A Y.Doc, either empty or hydrated from the update
  */
 export function hydrateCoopDoc(update?: Uint8Array) {
-  const doc = new Y.Doc();
-  if (update) {
-    Y.applyUpdate(doc, update);
+  if (!update) {
+    return new Y.Doc();
   }
-  return doc;
+
+  const v2Doc = new Y.Doc();
+  try {
+    Y.applyUpdateV2(v2Doc, update);
+    return v2Doc;
+  } catch {
+    v2Doc.destroy();
+    const legacyDoc = new Y.Doc();
+    Y.applyUpdate(legacyDoc, update);
+    return legacyDoc;
+  }
 }
 
 // --- Per-artifact observation ---
@@ -520,8 +621,8 @@ export function compactCoopArtifacts(input: {
       artifactsV2.delete(id);
     }
     const remaining = sorted.filter((a) => !archivedSet.has(a.id));
-    root.set('artifacts', JSON.stringify(remaining));
-  });
+    writeJsonValueIfChanged(root, 'artifacts', remaining);
+  }, ORIGIN_LOCAL);
 
   return { archivedIds, remainingCount: sorted.length - archivedIds.length };
 }

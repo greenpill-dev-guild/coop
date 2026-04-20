@@ -5,7 +5,14 @@ import {
   receiverPairingRecordSchema,
 } from '../../contracts/schema';
 import { filterUsableSignalingUrls } from '../../sync-config';
-import { createId, decodeBase64Url, encodeBase64Url, hashText, nowIso } from '../../utils';
+import {
+  appendQueryParams,
+  createId,
+  decodeBase64Url,
+  encodeBase64Url,
+  hashText,
+  nowIso,
+} from '../../utils';
 
 const RECEIVER_PAIRING_PREFIX = 'coop-receiver:';
 const RECEIVER_PROTOCOL_PREFIX = 'web+coop-receiver:';
@@ -13,6 +20,33 @@ const REDACTED_RECEIVER_PAIR_SECRET_PREFIX = 'encrypted://local/receiver-pairing
 
 export function deriveReceiverRoomId(coopId: string, memberId: string, pairSecret: string) {
   return `receiver-room-${hashText(`${coopId}:${memberId}:${pairSecret}`).slice(2, 18)}`;
+}
+
+export function buildReceiverSyncAuthParams(
+  pairing: Pick<ReceiverPairingRecord, 'coopId' | 'memberId' | 'pairSecret' | 'roomId'>,
+) {
+  return {
+    syncScope: 'receiver',
+    coopId: pairing.coopId,
+    memberId: pairing.memberId,
+    roomId: pairing.roomId,
+    pairSecret: pairing.pairSecret,
+  } as const;
+}
+
+export function appendReceiverSyncAuthToUrl(
+  rawUrl: string,
+  pairing: Pick<ReceiverPairingRecord, 'coopId' | 'memberId' | 'pairSecret' | 'roomId'>,
+) {
+  return appendQueryParams(rawUrl, buildReceiverSyncAuthParams(pairing));
+}
+
+export function isAuthorizedReceiverSyncRoom(
+  pairing: Pick<ReceiverPairingRecord, 'coopId' | 'memberId' | 'pairSecret' | 'roomId'>,
+) {
+  return (
+    deriveReceiverRoomId(pairing.coopId, pairing.memberId, pairing.pairSecret) === pairing.roomId
+  );
 }
 
 export function createReceiverPairingPayload(input: {

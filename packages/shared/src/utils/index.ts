@@ -76,6 +76,23 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
+export function appendQueryParams(
+  rawUrl: string,
+  params: Record<string, string | null | undefined>,
+) {
+  try {
+    const url = new URL(rawUrl);
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === 'string' && value.length > 0) {
+        url.searchParams.set(key, value);
+      }
+    }
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 const TRACKING_QUERY_PARAM_NAMES = new Set([
   'dclid',
   'fbclid',

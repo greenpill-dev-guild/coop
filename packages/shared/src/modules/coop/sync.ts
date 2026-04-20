@@ -11,6 +11,8 @@ import {
   encodeBlobRelayMessage,
 } from '../blob';
 import {
+  buildAuthenticatedSignalingUrls,
+  buildCoopSyncAuthParams,
   decodeRelayFrame,
   defaultIceServers,
   defaultWebsocketSyncUrl,
@@ -20,7 +22,10 @@ import {
 // Re-export everything from sync-core for backward compatibility
 export {
   ORIGIN_LOCAL,
+  appendSyncAuthToUrl,
   buildIceServers,
+  buildAuthenticatedSignalingUrls,
+  buildCoopSyncAuthParams,
   compactCoopArtifacts,
   createBootstrapSyncRoomConfig,
   createCoopDoc,
@@ -34,6 +39,7 @@ export {
   encodeRelayFrame,
   hydrateCoopDoc,
   isBootstrapSyncRoomConfig,
+  isAuthorizedCoopSyncRoom,
   mergeCoopDocUpdates,
   observeArtifacts,
   parseSignalingUrls,
@@ -52,7 +58,7 @@ export type { CompactionResult } from '../sync-core';
  * Returns a no-op bundle in non-browser environments (SSR-safe).
  * @param doc - The Yjs document to connect providers to
  * @param room - Sync room configuration with room ID, secrets, and signaling URLs
- * @param iceServers - Optional ICE servers for WebRTC (defaults to production TURN servers)
+ * @param iceServers - Optional ICE servers for WebRTC (defaults to STUN-only unless TURN is configured)
  * @param websocketSyncUrl - Optional WebSocket sync URL (defaults to production)
  * @returns Object with roomId, provider references, and a disconnect() cleanup function
  */
@@ -74,10 +80,11 @@ export function connectSyncProviders(
 
   const indexeddb = new IndexeddbPersistence(room.roomId, doc);
   let webrtc: WebrtcProvider | undefined;
+  const authenticatedSignalingUrls = buildAuthenticatedSignalingUrls(room, room.signalingUrls);
 
   try {
     webrtc = new WebrtcProvider(room.roomId, doc, {
-      signaling: room.signalingUrls,
+      signaling: authenticatedSignalingUrls,
       password: room.roomSecret,
       maxConns: 8,
       peerOpts: { config: { iceServers: iceServers ?? defaultIceServers } },
@@ -93,6 +100,7 @@ export function connectSyncProviders(
     try {
       websocket = new WebsocketProvider(resolvedWsUrl, room.roomId, doc, {
         connect: true,
+        params: buildCoopSyncAuthParams(room),
       });
     } catch (error) {
       void error;

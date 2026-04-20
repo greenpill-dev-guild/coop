@@ -1,8 +1,9 @@
-// @vitest-environment node
 import { type ChildProcess, spawn } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
 import path from 'node:path';
+// @vitest-environment node
+import { appendSyncAuthToUrl, buildCoopSyncAuthParams, createSyncRoomConfig } from '@coop/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 
@@ -38,10 +39,9 @@ async function getAvailablePort() {
   });
 }
 
-/** Create a WebSocket client connected to the test server. */
-function createClient(): Promise<WebSocket> {
+function createClient(room = createSyncRoomConfig('server-test')): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(appendSyncAuthToUrl(wsUrl, buildCoopSyncAuthParams(room)));
     ws.on('open', () => resolve(ws));
     ws.on('error', reject);
   });
@@ -195,9 +195,10 @@ describe('signaling server', () => {
 
   describe('subscribe and publish', () => {
     it('subscriber receives published messages with client count', async () => {
-      const topic = 'test-sub-pub-single';
-      const subscriber = await createClient();
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-sub-pub-single');
+      const topic = room.roomId;
+      const subscriber = await createClient(room);
+      const publisher = await createClient(room);
 
       try {
         // Subscribe both — topic authorization requires publisher to be subscribed
@@ -226,10 +227,11 @@ describe('signaling server', () => {
     });
 
     it('two subscribers on same topic both receive published messages', async () => {
-      const topic = 'test-two-subs';
-      const sub1 = await createClient();
-      const sub2 = await createClient();
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-two-subs');
+      const topic = room.roomId;
+      const sub1 = await createClient(room);
+      const sub2 = await createClient(room);
+      const publisher = await createClient(room);
 
       try {
         sendMessage(sub1, { type: 'subscribe', topics: [topic] });
@@ -263,8 +265,9 @@ describe('signaling server', () => {
     });
 
     it('publisher who is also subscribed receives their own message', async () => {
-      const topic = 'test-self-publish';
-      const client = await createClient();
+      const room = createSyncRoomConfig('test-self-publish');
+      const topic = room.roomId;
+      const client = await createClient(room);
 
       try {
         sendMessage(client, { type: 'subscribe', topics: [topic] });
@@ -289,9 +292,10 @@ describe('signaling server', () => {
 
   describe('unsubscribe', () => {
     it('unsubscribed client no longer receives messages', async () => {
-      const topic = 'test-unsub';
-      const sub = await createClient();
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-unsub');
+      const topic = room.roomId;
+      const sub = await createClient(room);
+      const publisher = await createClient(room);
 
       try {
         // Subscribe then unsubscribe
@@ -326,10 +330,11 @@ describe('signaling server', () => {
 
   describe('connection close cleanup', () => {
     it('closing a connection removes it from subscribed topics', async () => {
-      const topic = 'test-close-cleanup';
-      const sub1 = await createClient();
-      const sub2 = await createClient();
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-close-cleanup');
+      const topic = room.roomId;
+      const sub1 = await createClient(room);
+      const sub2 = await createClient(room);
+      const publisher = await createClient(room);
 
       try {
         sendMessage(sub1, { type: 'subscribe', topics: [topic] });
@@ -361,14 +366,16 @@ describe('signaling server', () => {
 
   describe('edge cases', () => {
     it('publishing to a topic with no other subscribers does not error', async () => {
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-lonely-publish');
+      const topic = room.roomId;
+      const publisher = await createClient(room);
       try {
         // Subscribe then publish -- topic authorization requires subscription
-        sendMessage(publisher, { type: 'subscribe', topics: ['nonexistent-topic'] });
+        sendMessage(publisher, { type: 'subscribe', topics: [topic] });
         await new Promise((r) => setTimeout(r, 50));
         sendMessage(publisher, {
           type: 'publish',
-          topic: 'nonexistent-topic',
+          topic,
           data: { lonely: true },
         });
 
@@ -420,9 +427,10 @@ describe('signaling server', () => {
     });
 
     it('subscribe with non-string topic names skips invalid entries', async () => {
-      const validTopic = 'test-mixed-topics';
-      const ws = await createClient();
-      const publisher = await createClient();
+      const room = createSyncRoomConfig('test-mixed-topics');
+      const validTopic = room.roomId;
+      const ws = await createClient(room);
+      const publisher = await createClient(room);
 
       try {
         // Subscribe with mixed valid/invalid topic names
@@ -462,33 +470,38 @@ describe('signaling server', () => {
       }
     });
 
-    it('subscribing to multiple topics works correctly', async () => {
-      const topicA = 'test-multi-a';
-      const topicB = 'test-multi-b';
-      const sub = await createClient();
-      const publisher = await createClient();
+    it('ignores subscriptions outside the connection-authorized room', async () => {
+      const roomA = createSyncRoomConfig('test-multi-a');
+      const roomB = createSyncRoomConfig('test-multi-b');
+      const topicA = roomA.roomId;
+      const topicB = roomB.roomId;
+      const sub = await createClient(roomA);
+      const publisherA = await createClient(roomA);
+      const publisherB = await createClient(roomB);
 
       try {
         sendMessage(sub, { type: 'subscribe', topics: [topicA, topicB] });
-        sendMessage(publisher, { type: 'subscribe', topics: [topicA, topicB] });
+        sendMessage(publisherA, { type: 'subscribe', topics: [topicA] });
+        sendMessage(publisherB, { type: 'subscribe', topics: [topicB] });
         await new Promise((r) => setTimeout(r, 50));
 
-        // Publish to topic A
         const msgAPromise = waitForMessage(sub);
-        sendMessage(publisher, { type: 'publish', topic: topicA, data: { from: 'A' } });
+        sendMessage(publisherA, { type: 'publish', topic: topicA, data: { from: 'A' } });
         const msgA = await msgAPromise;
         expect(msgA.topic).toBe(topicA);
         expect(msgA.data).toEqual({ from: 'A' });
 
-        // Publish to topic B
-        const msgBPromise = waitForMessage(sub);
-        sendMessage(publisher, { type: 'publish', topic: topicB, data: { from: 'B' } });
-        const msgB = await msgBPromise;
-        expect(msgB.topic).toBe(topicB);
-        expect(msgB.data).toEqual({ from: 'B' });
+        let receivedUnexpected = false;
+        sub.once('message', () => {
+          receivedUnexpected = true;
+        });
+        sendMessage(publisherB, { type: 'publish', topic: topicB, data: { from: 'B' } });
+        await new Promise((r) => setTimeout(r, 200));
+        expect(receivedUnexpected).toBe(false);
       } finally {
         await closeClient(sub);
-        await closeClient(publisher);
+        await closeClient(publisherA);
+        await closeClient(publisherB);
       }
     });
   });

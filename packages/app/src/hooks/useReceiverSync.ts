@@ -472,6 +472,11 @@ export function useReceiverSync(
       syncBindingRef.current = null;
     }
 
+    const activePairing = pairingRef.current;
+    if (!activePairing) {
+      return;
+    }
+
     const doc = createReceiverSyncDoc();
     const iceServers = buildIceServers({
       urls: import.meta.env.VITE_COOP_TURN_URLS,
@@ -484,18 +489,31 @@ export function useReceiverSync(
       signalingUrls,
       undefined,
       iceServers,
+      undefined,
+      {
+        coopId: activePairing.coopId,
+        memberId: activePairing.memberId,
+        pairSecret: activePairing.pairSecret,
+        roomId: pairingRoomId,
+      },
     );
     const relay = connectReceiverSyncRelay({
       roomId: pairingRoomId,
       signalingUrls: signalingUrls,
+      pairing: {
+        coopId: activePairing.coopId,
+        memberId: activePairing.memberId,
+        pairSecret: activePairing.pairSecret,
+        roomId: pairingRoomId,
+      },
       onAck: async (frame) => {
-        const activePairing = pairingRef.current;
-        if (!activePairing || activePairing.pairingId !== frame.pairingId) {
+        const currentPairing = pairingRef.current;
+        if (!currentPairing || currentPairing.pairingId !== frame.pairingId) {
           return;
         }
 
         try {
-          const ack = await assertReceiverSyncRelayAck(frame, activePairing);
+          const ack = await assertReceiverSyncRelayAck(frame, currentPairing);
           await applyRemoteCaptureSync(ack.capture);
         } catch {
           // Ignore malformed or stale relay acknowledgements.

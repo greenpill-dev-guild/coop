@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { createCoop } from '../flows';
 import {
+  buildAuthenticatedSignalingUrls,
+  buildCoopSyncAuthParams,
   connectSyncProviders,
   createCoopDoc,
   createSyncRoomConfig,
   encodeCoopDoc,
   hydrateCoopDoc,
+  isAuthorizedCoopSyncRoom,
   readCoopState,
   summarizeSyncTransportHealth,
   toSyncRoomBootstrap,
@@ -114,6 +117,54 @@ describe('shared contracts and sync hydration', () => {
     expect(state.memberAccounts).toHaveLength(created.state.memberAccounts.length);
     expect(state.memberAccounts[0]?.memberId).toBe(created.state.memberAccounts[0]?.memberId);
     expect(state.memberAccounts[0]?.status).toBe(created.state.memberAccounts[0]?.status);
+  });
+
+  it('hydrates legacy v1 Yjs snapshots for backward compatibility', () => {
+    const created = createCoop({
+      coopName: 'Legacy Sync Coop',
+      purpose: 'Verify legacy Yjs snapshots still hydrate after V2 encoding changes.',
+      creatorDisplayName: 'Rae',
+      captureMode: 'manual',
+      seedContribution: 'Testing backward-compatible sync persistence.',
+      setupInsights: {
+        summary: 'A concise but valid setup payload for sync testing.',
+        crossCuttingPainPoints: ['Context drifts'],
+        crossCuttingOpportunities: ['Shared state stays typed'],
+        lenses: [
+          {
+            lens: 'capital-formation',
+            currentState: 'Links are scattered.',
+            painPoints: 'Funding context disappears.',
+            improvements: 'Route leads into shared state.',
+          },
+          {
+            lens: 'impact-reporting',
+            currentState: 'Reporting is rushed.',
+            painPoints: 'Evidence gets dropped.',
+            improvements: 'Collect evidence incrementally.',
+          },
+          {
+            lens: 'governance-coordination',
+            currentState: 'Calls happen weekly.',
+            painPoints: 'Actions slip.',
+            improvements: 'Review actions through the board.',
+          },
+          {
+            lens: 'knowledge-garden-resources',
+            currentState: 'Resources live in tabs.',
+            painPoints: 'Research repeats.',
+            improvements: 'Persist high-signal references.',
+          },
+        ],
+      },
+    });
+
+    const legacyUpdate = Y.encodeStateAsUpdate(created.doc);
+    const hydrated = hydrateCoopDoc(legacyUpdate);
+    const state = readCoopState(hydrated);
+
+    expect(state.profile.id).toBe(created.state.profile.id);
+    expect(state.syncRoom.roomId).toBe(created.state.syncRoom.roomId);
   });
 
   it('surfaces degraded sync health when signaling is unavailable', () => {
@@ -225,6 +276,46 @@ describe('connectSyncProviders', () => {
     result.disconnect();
     doc.destroy();
     await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+});
+
+describe('coop sync auth helpers', () => {
+  it('builds deterministic query params and authenticated signaling URLs', () => {
+    const room = createSyncRoomConfig('coop-auth-test', ['wss://api.coop.town']);
+
+    expect(buildCoopSyncAuthParams(room)).toEqual({
+      syncScope: 'coop',
+      coopId: room.coopId,
+      roomId: room.roomId,
+      roomSecret: room.roomSecret,
+    });
+
+    expect(buildAuthenticatedSignalingUrls(room, room.signalingUrls)).toEqual([
+      expect.stringContaining(`roomId=${encodeURIComponent(room.roomId)}`),
+    ]);
+  });
+
+  it('preserves existing query params when appending coop auth credentials', () => {
+    const room = createSyncRoomConfig('coop-auth-test', ['wss://api.coop.town?existing=1']);
+
+    expect(buildAuthenticatedSignalingUrls(room, room.signalingUrls)).toEqual([
+      expect.stringContaining('existing=1'),
+    ]);
+    expect(buildAuthenticatedSignalingUrls(room, room.signalingUrls)).toEqual([
+      expect.stringContaining('syncScope=coop'),
+    ]);
+  });
+
+  it('validates room credentials against the derived room id', () => {
+    const room = createSyncRoomConfig('coop-auth-test', ['wss://api.coop.town']);
+
+    expect(isAuthorizedCoopSyncRoom(room)).toBe(true);
+    expect(
+      isAuthorizedCoopSyncRoom({
+        ...room,
+        roomSecret: 'wrong-secret',
+      }),
+    ).toBe(false);
   });
 });
 

@@ -7,7 +7,11 @@ import {
   receiverSyncEnvelopeSchema,
 } from '../../contracts/schema';
 import { bytesToBase64Url, createId, nowIso } from '../../utils';
-import { assertReceiverPairingRecord, filterUsableReceiverSignalingUrls } from './pairing';
+import {
+  appendReceiverSyncAuthToUrl,
+  assertReceiverPairingRecord,
+  filterUsableReceiverSignalingUrls,
+} from './pairing';
 
 const receiverRelayProtocolSchema = z.object({
   type: z.literal('publish'),
@@ -254,13 +258,21 @@ export async function assertReceiverSyncRelayAck(
 export function connectReceiverSyncRelay(input: {
   roomId: string;
   signalingUrls?: string[];
+  pairing?: {
+    coopId: string;
+    memberId: string;
+    pairSecret: string;
+    roomId: string;
+  };
   onCapture?: (frame: ReceiverSyncRelayCaptureFrame) => void | Promise<void>;
   onAck?: (frame: ReceiverSyncRelayAckFrame) => void | Promise<void>;
   onStatusChange?: (state: ReceiverSyncRelayConnectionState) => void;
   onError?: (error: Error) => void;
   reconnectDelayMs?: number;
 }) {
-  const urls = resolveReceiverRelayWebSocketUrls(input.signalingUrls);
+  const urls = resolveReceiverRelayWebSocketUrls(input.signalingUrls).map((url) =>
+    input.pairing ? appendReceiverSyncAuthToUrl(url, input.pairing) : url,
+  );
   const topics = buildReceiverSyncRelayTopics(input.roomId);
   const subscribedTopics = [
     input.onCapture ? topics.captureTopic : null,

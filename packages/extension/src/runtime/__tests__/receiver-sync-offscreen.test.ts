@@ -252,7 +252,9 @@ describe('receiver sync offscreen runtime', () => {
         scheduledTimeouts.delete(timerId);
       }
     }) as typeof window.clearTimeout);
-    vi.spyOn(window, 'setInterval').mockImplementation((() => 1) as typeof window.setInterval);
+    vi.spyOn(window, 'setInterval').mockImplementation(
+      (() => 1) as unknown as typeof window.setInterval,
+    );
     vi.spyOn(window, 'clearInterval').mockImplementation(
       (() => undefined) as typeof window.clearInterval,
     );
@@ -270,7 +272,7 @@ describe('receiver sync offscreen runtime', () => {
       off: docOffMock,
     };
     sharedMocks.createReceiverSyncDoc.mockReturnValue(doc);
-    sharedMocks.listReceiverSyncEnvelopes.mockReturnValue([buildEnvelope()]);
+    sharedMocks.listReceiverSyncEnvelopes.mockReturnValue([buildEnvelope()] as never);
 
     await import('../receiver-sync-offscreen');
     await flushMicrotasks();
@@ -285,6 +287,13 @@ describe('receiver sync offscreen runtime', () => {
       ['wss://signal.coop.test'],
       undefined,
       ['ice-server'],
+      undefined,
+      {
+        coopId: 'coop-1',
+        memberId: 'member-1',
+        pairSecret: 'pair-secret',
+        roomId: 'room-1',
+      },
     );
     expect(sharedMocks.patchReceiverSyncEnvelope).toHaveBeenCalledWith(
       doc,
@@ -298,6 +307,9 @@ describe('receiver sync offscreen runtime', () => {
         activeBindingKeys: ['room-1:wss://signal.coop.test'],
         transport: 'websocket',
       }),
+    });
+    expect(runtimeMocks.runAgentCycle).toHaveBeenCalledWith({
+      reason: 'offscreen-ready',
     });
     expect(onUnload).not.toBeNull();
     expect(onRuntimeMessage).not.toBeNull();
@@ -321,7 +333,7 @@ describe('receiver sync offscreen runtime', () => {
       },
     });
 
-    expect(runtimeMocks.runAgentCycle).toHaveBeenCalledWith({
+    expect(runtimeMocks.runAgentCycle).toHaveBeenNthCalledWith(2, {
       force: true,
       reason: 'receiver-sync-refresh',
     });
