@@ -1,16 +1,40 @@
 {
   "id": "entity-extractor-github-readme",
   "description": "Extract entities from a GitHub README about Claude Code",
-  "input": {
-    "observationContext": "Claude Code is a CLI tool by Anthropic for working with Claude. Features include interactive coding sessions, file editing, and code review. Install via npm install -g @anthropic-ai/claude-code."
+  "output": {
+    "entities": [
+      {
+        "id": "entity-claude-code",
+        "name": "Claude Code",
+        "type": "object",
+        "description": "CLI tool for working with Claude in interactive coding and review sessions.",
+        "sourceRef": "github:anthropic-ai/claude-code"
+      },
+      {
+        "id": "entity-anthropic",
+        "name": "Anthropic",
+        "type": "organization",
+        "description": "AI company that publishes Claude Code.",
+        "sourceRef": "github:anthropic-ai/claude-code"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "entity-claude-code",
+        "to": "entity-anthropic",
+        "type": "published-by",
+        "confidence": 0.94,
+        "t_valid": "2026-04-01T00:00:00.000Z",
+        "t_invalid": null,
+        "provenance": "github:anthropic-ai/claude-code"
+      }
+    ]
   },
   "assertions": [
-    { "type": "array-min-length", "path": "entities", "value": 1 },
-    {
-      "type": "field-match",
-      "path": "entities[*].type",
-      "oneOf": ["person", "organization", "object"]
-    }
+    { "type": "array-min-length", "path": "entities", "threshold": 2 },
+    { "type": "field-equals", "path": "entities.0.type", "expected": "object" },
+    { "type": "field-present", "path": "relationships.0.type" },
+    { "type": "string-min-length", "path": "entities.0.description", "threshold": 20 }
   ],
   "threshold": 0.6
 }

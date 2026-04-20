@@ -2,6 +2,7 @@ import type {
   AgentProvider,
   CapitalFormationBriefOutput,
   EcosystemEntityExtractorOutput,
+  EntityExtractionOutput,
   Erc8004FeedbackOutput,
   Erc8004RegistrationOutput,
   GrantFitScorerOutput,
@@ -17,15 +18,17 @@ import type {
   ThemeClustererOutput,
 } from '@coop/shared';
 import { validateSkillOutput } from '@coop/shared';
-import { AGENT_SKILL_TIMEOUT_MS } from './config';
-import { AgentWebLlmBridge } from './webllm-bridge';
 import { resolveOnnxRuntimeWasmPaths } from '../onnx-assets';
+import { AGENT_SKILL_TIMEOUT_MS } from './config';
+import { inferPoleEntitiesFromText } from './runner-inference';
+import { AgentWebLlmBridge } from './webllm-bridge';
 
 const TRANSFORMERS_MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
 const TRANSFORMERS_COLD_START_FALLBACK_SCHEMAS = new Set<SkillOutputSchemaRef>([
   'tab-router-output',
   'opportunity-extractor-output',
   'grant-fit-scorer-output',
+  'entity-extraction-output',
   'ecosystem-entity-extractor-output',
   'theme-clusterer-output',
 ]);
@@ -111,6 +114,31 @@ function warmTransformersPipeline() {
     transformersPipelinePromise = null;
     transformersPipelineReady = false;
   });
+}
+
+export function isTransformersPipelineReady() {
+  return transformersPipelineReady;
+}
+
+export function getTransformersModelId() {
+  return TRANSFORMERS_MODEL_ID;
+}
+
+export async function initializeTransformersPipeline() {
+  const start = Date.now();
+  await ensureTransformersPipeline();
+  return {
+    model: TRANSFORMERS_MODEL_ID,
+    durationMs: Date.now() - start,
+  };
+}
+
+export function getAgentWebLlmStatus() {
+  return webLlmBridge.status;
+}
+
+export async function initializeWebLlmEngine() {
+  return webLlmBridge.initialize();
 }
 
 export function extractJsonBlock(raw: string) {
@@ -232,8 +260,17 @@ export function repairJson(raw: string): string {
   return result;
 }
 
+export function parseValidatedOutputAttempt<T>(schemaRef: SkillOutputSchemaRef, raw: string) {
+  const extracted = extractJsonBlock(raw);
+  const repaired = repairJson(extracted);
+  return {
+    output: validateSkillOutput<T>(schemaRef, JSON.parse(repaired)),
+    jsonRepaired: repaired !== extracted,
+  };
+}
+
 function parseValidatedOutput<T>(schemaRef: SkillOutputSchemaRef, raw: string) {
-  return validateSkillOutput<T>(schemaRef, JSON.parse(repairJson(extractJsonBlock(raw))));
+  return parseValidatedOutputAttempt<T>(schemaRef, raw).output;
 }
 
 function parseValidatedJson<T>(validate: (value: unknown) => T, raw: string) {
@@ -274,6 +311,13 @@ async function ensureTransformersPipeline() {
     });
 
   return transformersPipelinePromise;
+}
+
+export function buildHeuristicSkillOutput<T>(
+  schemaRef: SkillOutputSchemaRef,
+  rawContext: string,
+): T {
+  return validateSkillOutput<T>(schemaRef, heuristicOutput(schemaRef, rawContext));
 }
 
 function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
@@ -345,6 +389,8 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
       return {
         entities: [],
       } satisfies EcosystemEntityExtractorOutput;
+    case 'entity-extraction-output':
+      return inferPoleEntitiesFromText(rawContext) satisfies EntityExtractionOutput;
     case 'theme-clusterer-output':
       return {
         themes: [],
@@ -428,9 +474,8 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
   }
 }
 
-async function runTransformers<T>(input: {
+export async function runTransformersTextCompletion(input: {
   prompt: string;
-  schemaRef: SkillOutputSchemaRef;
   maxTokens?: number;
   retryContext?: string;
   signal?: AbortSignal;
@@ -468,8 +513,24 @@ async function runTransformers<T>(input: {
   return {
     provider: 'transformers' as const,
     model: TRANSFORMERS_MODEL_ID,
-    output: parseValidatedOutput<T>(input.schemaRef, output),
+    output,
     durationMs: Date.now() - start,
+  };
+}
+
+async function runTransformers<T>(input: {
+  prompt: string;
+  schemaRef: SkillOutputSchemaRef;
+  maxTokens?: number;
+  retryContext?: string;
+  signal?: AbortSignal;
+}) {
+  const result = await runTransformersTextCompletion(input);
+  return {
+    provider: result.provider,
+    model: result.model,
+    output: parseValidatedOutput<T>(input.schemaRef, result.output),
+    durationMs: result.durationMs,
   };
 }
 
@@ -518,10 +579,9 @@ async function runTransformersStructured<T>(input: {
   };
 }
 
-async function runWebLlm<T>(input: {
+export async function runWebLlmTextCompletion(input: {
   system: string;
   prompt: string;
-  schemaRef: SkillOutputSchemaRef;
   maxTokens?: number;
   retryContext?: string;
   signal?: AbortSignal;
@@ -529,7 +589,7 @@ async function runWebLlm<T>(input: {
   const promptWithRetry = input.retryContext
     ? `${input.prompt}\n\n${input.retryContext}`
     : input.prompt;
-  const result = await withTimeoutAndSignal(
+  return withTimeoutAndSignal(
     webLlmBridge.complete({
       system: input.system,
       prompt: promptWithRetry,
@@ -540,6 +600,17 @@ async function runWebLlm<T>(input: {
     'WebLLM completion',
     input.signal,
   );
+}
+
+async function runWebLlm<T>(input: {
+  system: string;
+  prompt: string;
+  schemaRef: SkillOutputSchemaRef;
+  maxTokens?: number;
+  retryContext?: string;
+  signal?: AbortSignal;
+}) {
+  const result = await runWebLlmTextCompletion(input);
   return {
     provider: result.provider,
     model: result.model,

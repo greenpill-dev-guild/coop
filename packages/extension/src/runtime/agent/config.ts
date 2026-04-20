@@ -2,6 +2,7 @@ export const AGENT_SETTING_KEYS = {
   autoRunSkillIds: 'agent-auto-run-skill-ids',
   cycleRequest: 'agent-cycle-request',
   cycleState: 'agent-cycle-state',
+  webLlmPromotionState: 'agent-webllm-promotion-state',
 } as const;
 
 // Passive pipeline relevance scores for strong funding/opportunity pages currently

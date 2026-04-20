@@ -1,4 +1,9 @@
 import {
+  type AgentMemory,
+  type AutoresearchConfig,
+  type CoopDexie,
+  type ExperimentRecord,
+  type SkillVariant,
   createAgentMemory,
   createAgentObservation,
   experimentRecordSchema,
@@ -8,15 +13,11 @@ import {
   listAgentMemories,
   saveExperimentRecord,
   skillVariantSchema,
-  type AgentMemory,
-  type AutoresearchConfig,
-  type CoopDexie,
-  type ExperimentRecord,
-  type SkillVariant,
 } from '@coop/shared';
-import { loadSkillEvalCases, runSkillEvalCase, type SkillEvalCase } from './eval';
+import { type SkillEvalCase, loadSkillEvalCases, runSkillEvalCase } from './eval';
+import { agentLog } from './logger';
 import { computeOutputConfidence } from './quality';
-import { getRegisteredSkill, type RegisteredSkill } from './registry';
+import { type RegisteredSkill, getRegisteredSkill } from './registry';
 import { completeSkill } from './runner-skills-completion';
 import {
   activateVariant,
@@ -26,6 +27,22 @@ import {
   revertToBaseline,
   seedBaseline,
 } from './variant-engine';
+import { generateVariantPrompt } from './variant-generation';
+
+// --- Pause/resume state (ephemeral, per-skill) ---
+const pausedSkills = new Set<string>();
+
+export function pauseCycle(skillId: string) {
+  pausedSkills.add(skillId);
+}
+
+export function resumeCycle(skillId: string) {
+  pausedSkills.delete(skillId);
+}
+
+export function isCyclePaused(skillId: string) {
+  return pausedSkills.has(skillId);
+}
 
 function average(values: number[]) {
   if (values.length === 0) {
@@ -369,6 +386,20 @@ export async function runExperiment(
   });
 
   await saveExperimentRecord(db, record);
+  agentLog({
+    spanType: 'experiment',
+    level: outcome === 'kept' ? 'info' : 'warn',
+    message: `Experiment ${outcome}: ${skillId} (${(compositeScore * 100).toFixed(1)}%, delta ${(record.delta * 100).toFixed(1)}%, ${finishedAt - startedAt}ms)`,
+    skillId,
+    data: {
+      experimentId: record.id,
+      outcome,
+      compositeScore,
+      delta: record.delta,
+      duration: record.duration,
+      errorMessage,
+    },
+  }).catch(() => {});
   return record;
 }
 
@@ -389,6 +420,13 @@ export async function runCycle(db: CoopDexie, skillId: string, config: Autoresea
     };
   }
 
+  agentLog({
+    spanType: 'experiment',
+    level: 'info',
+    message: `Autoresearch cycle starting for ${skillId} (max ${resolvedConfig.maxExperimentsPerCycle} experiments, floor ${(resolvedConfig.qualityFloor * 100).toFixed(0)}%)`,
+    skillId,
+  }).catch(() => {});
+
   const fixtures = loadSkillEvalCases().filter((fixture) => fixture.skillId === skillId);
   const baseline =
     (await getBaselineVariant(db, skillId)) ??
@@ -402,7 +440,16 @@ export async function runCycle(db: CoopDexie, skillId: string, config: Autoresea
   let bestScore = 0;
 
   for (let index = 0; index < resolvedConfig.maxExperimentsPerCycle; index += 1) {
-    const variantPrompt = `${currentBaseline.promptText}\n\nautoresearch variant ${index + 1}`;
+    if (pausedSkills.has(skillId)) {
+      agentLog({
+        spanType: 'experiment',
+        level: 'info',
+        message: `Autoresearch cycle paused for ${skillId} after ${experimentsRun} experiments`,
+        skillId,
+      }).catch(() => {});
+      break;
+    }
+    const variantPrompt = generateVariantPrompt(currentBaseline.promptText, index);
     const variant = await createVariant(db, skillId, variantPrompt, currentBaseline.id);
     const record = await runExperiment(db, skillId, variant, fixtures, resolvedConfig);
 
@@ -425,10 +472,13 @@ export async function runCycle(db: CoopDexie, skillId: string, config: Autoresea
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
-  return {
-    experimentsRun,
-    kept,
-    reverted,
-    bestScore,
-  };
+  const summary = { experimentsRun, kept, reverted, bestScore };
+  agentLog({
+    spanType: 'experiment',
+    level: kept > 0 ? 'info' : 'warn',
+    message: `Autoresearch cycle complete for ${skillId}: ${experimentsRun} run, ${kept} kept, ${reverted} reverted, best ${(bestScore * 100).toFixed(1)}%`,
+    skillId,
+    data: summary,
+  }).catch(() => {});
+  return summary;
 }

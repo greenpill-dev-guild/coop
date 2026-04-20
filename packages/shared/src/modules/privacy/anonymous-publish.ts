@@ -2,8 +2,8 @@ import { Identity } from '@semaphore-protocol/core';
 import type { MembershipProof } from '../../contracts/schema';
 // Use ../storage/db (the real barrel) to avoid vitest circular-dep resolution issues
 import {
-  LOCAL_DATA_PLACEHOLDER_PREFIX,
   type CoopDexie,
+  LOCAL_DATA_PLACEHOLDER_PREFIX,
   getPrivacyIdentitiesForCoop,
   getPrivacyIdentity,
 } from '../storage/db';

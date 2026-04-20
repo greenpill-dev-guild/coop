@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeReviewDraft } from '@coop/shared/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeCoopState } from '../../../__tests__/fixtures';
 
 const sharedMocks = vi.hoisted(() => ({

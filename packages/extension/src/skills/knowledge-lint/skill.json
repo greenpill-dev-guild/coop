@@ -12,7 +12,6 @@
   "requiredCapabilities": [],
   "approvalMode": "advisory",
   "timeoutMs": 10000,
-  "maxTokens": 0,
   "depends": [],
   "provides": ["knowledge-health"]
 }

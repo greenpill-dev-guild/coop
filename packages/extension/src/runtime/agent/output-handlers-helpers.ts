@@ -3,8 +3,9 @@ import type {
   AgentPlan,
   AgentProvider,
   CoopSharedState,
-  OpportunityCandidate,
+  EntityExtractionOutput,
   GrantFitScore,
+  OpportunityCandidate,
   PublishReadinessCheckOutput,
   ReadablePageExtract,
   ReviewDraft,
@@ -14,6 +15,7 @@ import type {
   TabRouting,
 } from '@coop/shared';
 import { updateAgentPlan } from '@coop/shared';
+import type { PersistedEntityExtractionResult } from './graph-persistence';
 
 export type SkillOutputHandlerExecutionContext = {
   coop?: CoopSharedState;
@@ -51,6 +53,12 @@ export type SkillOutputHandlerInput = {
     output: TabRouterOutput;
     provider: AgentProvider;
   }): Promise<PersistedTabRouterResult>;
+  persistEntityExtractionOutput(input: {
+    observation: AgentObservation;
+    coopId: string;
+    output: EntityExtractionOutput;
+    provider: AgentProvider;
+  }): Promise<PersistedEntityExtractionResult>;
   maybePatchDraft(
     draft: ReviewDraft | null | undefined,
     output: PublishReadinessCheckOutput,
@@ -69,6 +77,7 @@ export type SkillOutputHandlerResult = {
   createdDraftIds: string[];
   autoExecutedActionCount: number;
   errors: string[];
+  contextEntityIds?: string[];
 };
 
 export type SkillOutputHandler = (

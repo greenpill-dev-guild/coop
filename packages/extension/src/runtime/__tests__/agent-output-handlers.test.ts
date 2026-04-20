@@ -7,13 +7,13 @@ import type {
   SkillOutputSchemaRef,
   SkillRun,
 } from '@coop/shared';
-import { describe, expect, it, vi } from 'vitest';
 import {
   makeAgentObservation,
   makeAgentPlan,
   makeReviewDraft,
   makeSkillRun,
 } from '@coop/shared/testing';
+import { describe, expect, it, vi } from 'vitest';
 import {
   type SkillOutputHandlerInput,
   type SkillOutputHandlerResult,
@@ -144,10 +144,18 @@ function buildInput(overrides: Partial<SkillOutputHandlerInput> = {}): SkillOutp
     saveReviewDraft: vi.fn(async () => undefined),
     savePlan: vi.fn(async () => undefined),
     persistTabRouterOutput: vi.fn(async () => ({ createdDraftIds: ['draft-routed'] })),
+    persistEntityExtractionOutput: vi.fn(async () => ({
+      entityIds: ['ent-1'],
+      relationshipCount: 1,
+    })),
     maybePatchDraft: vi.fn(async (nextDraft) => nextDraft),
     dispatchActionProposal: vi.fn(async () => ({ ok: true, executed: true })),
     ...overrides,
   };
+}
+
+function getFirstSavedDraft(saveReviewDraft: ReturnType<typeof vi.fn>): ReviewDraft | undefined {
+  return (saveReviewDraft.mock.calls as unknown[][])[0]?.[0] as ReviewDraft | undefined;
 }
 
 describe('green goods address helpers', () => {
@@ -229,6 +237,79 @@ describe('applySkillOutput', () => {
     expect(routed.context.createdDraftIds).toContain('draft-routed');
   });
 
+  it('persists entity extraction output into the graph when coop context exists', async () => {
+    const input = buildInput({
+      manifest: makeManifest('entity-extraction-output'),
+      output: {
+        entities: [
+          {
+            id: 'ent-anthropic',
+            name: 'Anthropic',
+            type: 'organization',
+            description: 'AI company',
+            sourceRef: 'heuristic:entity-extraction',
+          },
+          {
+            id: 'ent-claude-code',
+            name: 'Claude Code',
+            type: 'object',
+            description: 'Coding assistant',
+            sourceRef: 'heuristic:entity-extraction',
+          },
+        ],
+        relationships: [
+          {
+            from: 'ent-anthropic',
+            to: 'ent-claude-code',
+            type: 'published',
+            confidence: 0.82,
+            t_valid: '2026-04-12T00:00:00.000Z',
+            t_invalid: null,
+            provenance: 'heuristic:entity-extraction',
+          },
+        ],
+      },
+    });
+
+    const result = await applySkillOutput(input);
+
+    expect(input.persistEntityExtractionOutput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        coopId: 'coop-1',
+        observation: input.observation,
+        output: input.output,
+        provider: 'heuristic',
+      }),
+    );
+    expect(result.contextEntityIds).toEqual(['ent-1']);
+    expect(result.createdDraftIds).toEqual([]);
+  });
+
+  it('skips graph persistence for entity extraction output without coop scope', async () => {
+    const input = buildInput({
+      manifest: makeManifest('entity-extraction-output'),
+      output: { entities: [], relationships: [] },
+      observation: makeAgentObservation({
+        id: 'obs-no-coop',
+        coopId: undefined,
+      }) as AgentObservation,
+      context: {
+        coop: undefined,
+        draft: null,
+        candidates: [],
+        scores: [],
+        createdDraftIds: [],
+        relatedDrafts: [],
+        relatedRoutings: [],
+      },
+    });
+
+    const result = await applySkillOutput(input);
+
+    expect(input.persistEntityExtractionOutput).not.toHaveBeenCalled();
+    expect(result.contextEntityIds).toEqual([]);
+  });
+
   it('creates a capital-formation draft when coop context exists and skips otherwise', async () => {
     const saveReviewDraft = vi.fn(async () => undefined);
     const withCoop = buildInput({
@@ -304,7 +385,7 @@ describe('applySkillOutput', () => {
     const result = await applySkillOutput(input);
 
     expect(saveReviewDraft).toHaveBeenCalledTimes(2);
-    expect(saveReviewDraft.mock.calls[0]?.[0]).toMatchObject({
+    expect(getFirstSavedDraft(saveReviewDraft)).toMatchObject({
       id: 'draft-existing',
       title: expect.stringContaining('Fresh insight'),
       tags: expect.arrayContaining(['old', 'memory']),
@@ -343,7 +424,9 @@ describe('applySkillOutput', () => {
         },
       }),
     );
-    expect(saveReviewDraft.mock.calls[0]?.[0]).toMatchObject({ id: 'draft-existing' });
+    expect(getFirstSavedDraft(saveReviewDraft)).toMatchObject({
+      id: 'draft-existing',
+    });
     expect(patched.createdDraftIds).toEqual([]);
 
     saveReviewDraft.mockClear();
@@ -361,7 +444,7 @@ describe('applySkillOutput', () => {
       }),
     );
     expect(created.createdDraftIds).toHaveLength(1);
-    expect(saveReviewDraft.mock.calls[0]?.[0]).toMatchObject({
+    expect(getFirstSavedDraft(saveReviewDraft)).toMatchObject({
       title: expect.stringContaining('Weekly digest'),
     });
   });
@@ -399,6 +482,11 @@ describe('applySkillOutput', () => {
     expect(result.autoExecutedActionCount).toBe(1);
     expect(result.plan.requiresApproval).toBe(true);
     expect(result.plan.actionProposals).toHaveLength(1);
+    expect(result.plan.actionProposals[0]).toMatchObject({
+      actionClass: 'publish-ready-draft',
+      riskTags: ['publish'],
+      requiresExplicitAcknowledgement: false,
+    });
   });
 
   it('surfaces disallowed publish actions as errors without mutating the plan', async () => {
@@ -553,6 +641,10 @@ describe('applySkillOutput', () => {
       },
     });
     expect(gapSync.plan.actionProposals[0]?.actionClass).toBe('green-goods-sync-gap-admins');
+    expect(gapSync.plan.actionProposals[0]?.riskTags).toContain('sync');
+    expect(gapSync.plan.actionProposals[0]?.requiresExplicitAcknowledgement).toBe(
+      gapSync.plan.actionProposals[0]?.riskTags.includes('live') ?? false,
+    );
 
     const noopGapSync = await applySkillOutput({
       ...baseInput,

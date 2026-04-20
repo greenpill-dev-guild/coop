@@ -13,7 +13,6 @@ import {
   setupInsightsSchema,
 } from '../../contracts/schema';
 import { createId, nowIso, slugify, truncateWords } from '../../utils';
-import { createDeviceBoundWarning, createMember } from './member-factory';
 // Direct imports to avoid vitest circular dep: coop barrel → these modules → auth → coop
 import {
   createInitialGreenGoodsState,
@@ -21,13 +20,15 @@ import {
 } from '../greengoods/greengoods';
 import { provisionMemberAccounts } from '../member-account/member-account';
 import { createUnavailableOnchainState } from '../onchain/onchain';
+import { seedDefaultInviteCodes, validateInvite, verifyInviteCodeProof } from './flows-invites';
+import { createDeviceBoundWarning, createMember } from './member-factory';
 import { buildMemoryProfileSeed } from './memory-profile';
 import { formatCoopSpaceTypeLabel } from './presets';
 import { buildReviewBoard, updateMemoryProfileFromArtifacts } from './publish';
 import {
-  isBootstrapSyncRoomConfig,
   createCoopDoc,
   createSyncRoomConfig,
+  isBootstrapSyncRoomConfig,
   readCoopState,
   updateCoopState,
 } from './sync';
@@ -36,7 +37,6 @@ import {
   summarizeSoulArtifact,
   synthesizeCoopFromPurpose,
 } from './synthesis';
-import { seedDefaultInviteCodes, validateInvite, verifyInviteCodeProof } from './flows-invites';
 
 export { createDeviceBoundWarning, createMember } from './member-factory';
 

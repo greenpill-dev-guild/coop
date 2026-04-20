@@ -107,6 +107,26 @@ describe('action-bundle', () => {
       expect(bundle.approvedAt).toBeUndefined();
     });
 
+    it('attaches deterministic risk metadata to bundles', () => {
+      const policy = createPolicy({
+        actionClass: 'safe-remove-owner',
+        approvalRequired: true,
+        createdAt: FIXED_NOW,
+      });
+      const bundle = createActionBundle({
+        actionClass: 'safe-remove-owner',
+        coopId: 'coop-1',
+        memberId: 'member-1',
+        payload: { coopId: 'coop-1', ownerAddress: '0x1111111111111111111111111111111111111111' },
+        policy,
+        createdAt: FIXED_NOW,
+        onchainMode: 'live',
+      });
+
+      expect(bundle.riskTags).toEqual(['live', 'permission', 'destructive']);
+      expect(bundle.requiresExplicitAcknowledgement).toBe(true);
+    });
+
     it('produces valid bundle with approved status when approval not required', () => {
       const { bundle } = makeBundle({ approvalRequired: false });
 

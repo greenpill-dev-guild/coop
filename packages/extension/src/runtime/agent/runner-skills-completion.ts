@@ -1,10 +1,13 @@
 import type {
   ActionBundle,
+  AgentMemory,
   AgentObservation,
+  AgentPlan,
   AgentProvider,
   ArchiveReceipt,
   CoopSharedState,
   EcosystemEntityExtractorOutput,
+  EntityExtractionOutput,
   GrantFitScore,
   GrantFitScorerOutput,
   OpportunityCandidate,
@@ -15,8 +18,6 @@ import type {
   TabRouterOutput,
   TabRouting,
   ThemeClustererOutput,
-  AgentMemory,
-  AgentPlan,
 } from '@coop/shared';
 import {
   buildAgentManifest,
@@ -31,22 +32,28 @@ import {
   greenGoodsWorkApprovalRequestSchema,
   saveReviewDraft,
 } from '@coop/shared';
+import type { RuntimeActionResponse } from '../messages';
 import { completeSkillOutput } from './models';
 import {
   resolveGreenGoodsGapAdminAddresses,
   resolveGreenGoodsOperatorAddresses,
 } from './output-handlers';
+import { resolvePreferredProvider } from './provider-promotion';
 import { computeOutputConfidence } from './quality';
 import { type RegisteredSkill, listRegisteredSkills } from './registry';
 import {
   computeGrantFitScores,
   inferEntitiesFromText,
+  inferPoleEntitiesFromText,
   inferTabRoutingsHeuristically,
   inferThemes,
 } from './runner-inference';
-import { buildSkillPrompt, createHeuristicCapitalFormationBrief } from './runner-skills-prompt';
-import { db, findAuthenticatedCoopMember, getCoops, inferPreferredProvider } from './runner-state';
-import type { RuntimeActionResponse } from './messages';
+import {
+  type PreparedSkillPrompt,
+  buildSkillPrompt,
+  createHeuristicCapitalFormationBrief,
+} from './runner-skills-prompt';
+import { db, findAuthenticatedCoopMember, getCoops } from './runner-state';
 
 export async function completeSkill<T>(input: {
   skill: RegisteredSkill;
@@ -64,11 +71,13 @@ export async function completeSkill<T>(input: {
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
   graphContext?: string;
+  preparedPrompt?: PreparedSkillPrompt;
+  preferredProvider?: AgentProvider;
   signal?: AbortSignal;
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const { manifest } = input.skill;
-  const prepared = await buildSkillPrompt(input);
-  const preferredProvider = inferPreferredProvider(manifest);
+  const prepared = input.preparedPrompt ?? (await buildSkillPrompt(input));
+  const preferredProvider = input.preferredProvider ?? (await resolvePreferredProvider(manifest));
   const result = await completeSkillOutput<T>({
     preferredProvider,
     schemaRef: manifest.outputSchemaRef,
@@ -118,6 +127,18 @@ export async function completeSkill<T>(input: {
       model: result.model,
       durationMs: result.durationMs,
       output: inferEntitiesFromText(prepared.heuristicContext) as T,
+    };
+  }
+
+  if (
+    manifest.outputSchemaRef === 'entity-extraction-output' &&
+    ((result.output as EntityExtractionOutput).entities?.length ?? 0) === 0
+  ) {
+    return {
+      provider: 'heuristic',
+      model: result.model,
+      durationMs: result.durationMs,
+      output: inferPoleEntitiesFromText(prepared.heuristicContext) as T,
     };
   }
 

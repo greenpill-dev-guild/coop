@@ -21,6 +21,7 @@ Object.defineProperty(globalThis, 'chrome', {
 
 // Mock the runtime modules so the hook can be imported without full extension context.
 vi.mock('../../../../runtime/config', () => ({
+  configuredOnchainMode: 'mock',
   resolveConfiguredChain: () => 'sepolia',
   resolveConfiguredArchiveMode: () => 'mock',
   resolveConfiguredOnchainMode: () => 'mock',

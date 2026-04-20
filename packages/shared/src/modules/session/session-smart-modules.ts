@@ -1,3 +1,4 @@
+import type { Account as SessionModuleAccount } from '@rhinestone/module-sdk/account';
 import {
   type Session,
   SmartSessionMode,
@@ -14,12 +15,11 @@ import {
   getUsageLimitPolicy,
   isSessionEnabled,
 } from '@rhinestone/module-sdk/module';
-import type { Account as SessionModuleAccount } from '@rhinestone/module-sdk/account';
 import { type Address, type Hex, hexToBigInt, pad, zeroHash } from 'viem';
 import {
-  getUserOperationHash,
   type EntryPointVersion,
   type UserOperation,
+  getUserOperationHash,
 } from 'viem/account-abstraction';
 import type {
   ActionBundle,
@@ -28,8 +28,8 @@ import type {
   TypedActionBundle,
 } from '../../contracts/schema';
 import { getCoopChainConfig } from '../onchain/onchain';
-import { GREEN_GOODS_ACTION_SELECTORS, isAddress } from './session-constants';
 import { refreshSessionCapabilityStatus, toUnixSeconds } from './session-capability';
+import { GREEN_GOODS_ACTION_SELECTORS, isAddress } from './session-constants';
 
 export function buildSmartSession(input: { capability: SessionCapability }): {
   session: Session;

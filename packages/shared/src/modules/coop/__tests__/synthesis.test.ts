@@ -282,8 +282,12 @@ describe('summarizeRitualArtifact', () => {
       purpose: 'Track evidence and funding leads.',
       captureMode: 'manual',
     }).rituals;
+    const firstRitual = rituals[0];
+    if (!firstRitual) {
+      throw new Error('Expected at least one synthesized ritual.');
+    }
 
-    const summary = summarizeRitualArtifact(rituals[0]!);
+    const summary = summarizeRitualArtifact(firstRitual);
     expect(summary.length).toBeGreaterThan(0);
     expect(summary).toContain('centers');
     expect(summary.split(/\s+/).length).toBeLessThanOrEqual(30);

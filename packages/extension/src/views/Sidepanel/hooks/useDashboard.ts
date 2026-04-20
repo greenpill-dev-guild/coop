@@ -24,10 +24,10 @@ import {
 } from '@coop/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  configuredOnchainMode,
   parseConfiguredSignalingUrls,
   resolveConfiguredArchiveMode,
   resolveConfiguredChain,
-  resolveConfiguredOnchainMode,
   resolveConfiguredPrivacyMode,
   resolveConfiguredProviderMode,
   resolveConfiguredSessionMode,
@@ -51,10 +51,6 @@ import {
 
 const configuredChain = resolveConfiguredChain(import.meta.env.VITE_COOP_CHAIN);
 const configuredArchiveMode = resolveConfiguredArchiveMode(import.meta.env.VITE_COOP_ARCHIVE_MODE);
-const configuredOnchainMode = resolveConfiguredOnchainMode(
-  import.meta.env.VITE_COOP_ONCHAIN_MODE,
-  import.meta.env.VITE_PIMLICO_API_KEY,
-);
 const configuredSessionMode = resolveConfiguredSessionMode(import.meta.env.VITE_COOP_SESSION_MODE);
 const configuredProviderMode = resolveConfiguredProviderMode(
   import.meta.env.VITE_COOP_PROVIDER_MODE,

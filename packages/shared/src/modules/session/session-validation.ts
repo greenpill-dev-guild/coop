@@ -7,12 +7,12 @@ import type {
 import { sessionCapabilitySchema } from '../../contracts/schema';
 import { nowIso } from '../../utils';
 import { getGreenGoodsDeployment } from '../greengoods/greengoods';
-import { isAddress, isSessionCapableActionClass } from './session-constants';
 import {
   buildActiveSessionCapabilityStatusDetail,
   computeSessionCapabilityStatus,
   refreshSessionCapabilityStatus,
 } from './session-capability';
+import { isAddress, isSessionCapableActionClass } from './session-constants';
 
 export type SessionCapabilityValidationResult =
   | {

@@ -129,6 +129,7 @@ export interface SidepanelOrchestration {
   handleRejectAgentPlan: (planId: string) => Promise<void>;
   handleRetrySkillRun: (skillRunId: string) => Promise<void>;
   handleToggleSkillAutoRun: (skillId: string, enabled: boolean) => Promise<void>;
+  handleActivateWebLlmProviderPromotion: () => Promise<void>;
   handleQueueGreenGoodsWorkApproval: (
     coopId: string,
     request: GreenGoodsWorkApprovalRequest,

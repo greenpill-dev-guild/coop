@@ -89,6 +89,7 @@ const baseProps = {
   onRejectPlan: vi.fn(),
   onRetrySkillRun: vi.fn(),
   onToggleSkillAutoRun: vi.fn(),
+  onActivateWebLlmProviderPromotion: vi.fn(),
 } as unknown as ComponentProps<typeof OperatorConsole>;
 
 describe('operator console', () => {
@@ -150,6 +151,79 @@ describe('operator console', () => {
     expect(screen.getByRole('heading', { name: 'Garden Requests' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /sync garden admins/i }));
     expect(onQueueGreenGoodsGapAdminSync).toHaveBeenCalledWith('coop-1');
+  });
+
+  it('shows WebLLM promotion status and lets trusted operators re-run the gate', async () => {
+    const user = userEvent.setup();
+    const onActivateWebLlmProviderPromotion = vi.fn();
+
+    render(
+      <OperatorConsole
+        {...baseProps}
+        onActivateWebLlmProviderPromotion={onActivateWebLlmProviderPromotion}
+        providerPromotion={{
+          enabled: true,
+          canActivate: true,
+          webllm: {
+            providerId: 'webllm',
+            baselineProviderId: 'transformers',
+            evaluatedSkillIds: ['tab-router', 'opportunity-extractor'],
+            promotedSkillIds: ['tab-router', 'opportunity-extractor'],
+            benchmarkRecordIds: ['benchmark-1'],
+            traceRecordIds: ['trace-1'],
+            benchmarked: true,
+            traced: true,
+            schemaStable: true,
+            maliciousPackClean: true,
+            fallbackSafe: true,
+            promotable: true,
+            securityPassRate: 1,
+            failedChecks: [],
+            evaluatedAt: '2026-04-18T00:00:00.000Z',
+            activatedAt: '2026-04-18T00:00:00.000Z',
+          },
+          webllmEvidence: {
+            benchmarkRecords: [
+              {
+                recordId: 'benchmark-1',
+                skillId: 'tab-router',
+                outcome: 'completed',
+                schemaPassRate: 1,
+                jsonRepairRate: 0,
+                medianLatencyMs: 420,
+                coldStartTimeMs: 900,
+                confidenceScore: 0.88,
+                createdAt: '2026-04-18T00:00:00.000Z',
+              },
+            ],
+            traceRecords: [
+              {
+                recordId: 'trace-1',
+                skillId: 'tab-router',
+                outcome: 'completed',
+                durationMs: 420,
+                confidenceScore: 0.88,
+                evalScore: 1,
+                createdAt: '2026-04-18T00:00:00.000Z',
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('WebLLM promotion')).toBeVisible();
+    expect(screen.getByText(/Promoted skills: tab-router, opportunity-extractor/i)).toBeVisible();
+    expect(screen.getByText(/Security pass rate: 100%/i)).toBeVisible();
+    expect(
+      screen.getByText(/tab-router: schema 100%, latency 420 ms, confidence 88%/i),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Trace tab-router: completed, 420 ms, eval 100%, confidence 88%/i),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /re-run webllm gate/i }));
+    expect(onActivateWebLlmProviderPromotion).toHaveBeenCalledTimes(1);
   });
 
   it('shows member bindings and queues gardener sync actions', async () => {
@@ -383,6 +457,8 @@ describe('operator console', () => {
           policyId: 'policy-1',
           status: 'proposed',
           digest: `0x${'ab'.repeat(32)}`,
+          riskTags: [],
+          requiresExplicitAcknowledgement: false,
         },
       ];
 
@@ -409,6 +485,8 @@ describe('operator console', () => {
           policyId: 'policy-1',
           status: 'approved',
           digest: `0x${'cd'.repeat(32)}`,
+          riskTags: [],
+          requiresExplicitAcknowledgement: false,
           approvedAt: '2026-03-12T00:01:00.000Z',
         },
       ];
@@ -435,6 +513,8 @@ describe('operator console', () => {
           policyId: 'policy-1',
           status: 'proposed',
           digest: `0x${'ab'.repeat(32)}`,
+          riskTags: [],
+          requiresExplicitAcknowledgement: false,
         },
       ];
 
@@ -466,6 +546,8 @@ describe('operator console', () => {
           policyId: 'policy-1',
           status: 'proposed',
           digest: `0x${'ab'.repeat(32)}`,
+          riskTags: [],
+          requiresExplicitAcknowledgement: false,
         },
       ];
 
@@ -497,6 +579,8 @@ describe('operator console', () => {
           policyId: 'policy-1',
           status: 'approved',
           digest: `0x${'cd'.repeat(32)}`,
+          riskTags: [],
+          requiresExplicitAcknowledgement: false,
           approvedAt: '2026-03-12T00:01:00.000Z',
         },
       ];
@@ -511,6 +595,53 @@ describe('operator console', () => {
 
       await user.click(screen.getByRole('button', { name: /run now/i }));
       expect(onExecuteAction).toHaveBeenCalledWith('bundle-2');
+    });
+
+    it('renders risk badges and requires acknowledgement before approving a high-risk chore', async () => {
+      const user = userEvent.setup();
+      const onApproveAction = vi.fn();
+      const actionQueue: ActionBundle[] = [
+        {
+          id: 'bundle-risk',
+          replayId: 'replay-risk',
+          actionClass: 'safe-remove-owner',
+          coopId: 'coop-1',
+          memberId: 'member-1',
+          payload: {},
+          createdAt: '2026-03-12T00:00:00.000Z',
+          expiresAt: '2026-03-13T00:00:00.000Z',
+          policyId: 'policy-1',
+          status: 'proposed',
+          digest: `0x${'ef'.repeat(32)}`,
+          riskTags: ['live', 'permission', 'destructive'],
+          requiresExplicitAcknowledgement: true,
+        },
+      ];
+
+      render(
+        <OperatorConsole
+          {...baseProps}
+          actionQueue={actionQueue}
+          onApproveAction={onApproveAction}
+        />,
+      );
+
+      await expandSection(user, 'Waiting Chores');
+      expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
+      expect(screen.getByText('Permission')).toBeVisible();
+      expect(screen.getByText('+1')).toBeVisible();
+      expect(
+        screen.getByText(/Needs judgment: this will affect live external state/i),
+      ).toBeVisible();
+
+      const approveButton = screen.getByRole('button', { name: /^approve$/i });
+      expect(approveButton).toBeDisabled();
+
+      await user.click(screen.getByLabelText('I reviewed the live effect'));
+      expect(approveButton).toBeEnabled();
+
+      await user.click(approveButton);
+      expect(onApproveAction).toHaveBeenCalledWith('bundle-risk');
     });
   });
 

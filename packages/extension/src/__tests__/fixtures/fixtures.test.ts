@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import { makeReviewDraft } from '@coop/shared/testing';
+import { describe, expect, it, vi } from 'vitest';
 import { installChromeMock, makeDashboardResponse } from './index';
 
 describe('extension test fixture factories', () => {

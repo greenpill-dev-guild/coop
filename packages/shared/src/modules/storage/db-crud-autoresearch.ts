@@ -1,9 +1,5 @@
 import Dexie from 'dexie';
-import type {
-  AutoresearchConfig,
-  ExperimentRecord,
-  SkillVariant,
-} from '../../contracts/schema';
+import type { AutoresearchConfig, ExperimentRecord, SkillVariant } from '../../contracts/schema';
 import {
   autoresearchConfigSchema,
   experimentRecordSchema,

@@ -1,12 +1,40 @@
 {
   "id": "entity-extractor-rss-article",
   "description": "Extract entities from an RSS article about knowledge graphs",
-  "input": {
-    "observationContext": "Knowledge graphs store entities and relationships. Ethereum is a decentralized blockchain platform that establishes a peer-to-peer network. Vitalik Buterin co-founded Ethereum in 2015. The platform supports smart contracts and decentralized applications."
+  "output": {
+    "entities": [
+      {
+        "id": "entity-ethereum",
+        "name": "Ethereum",
+        "type": "organization",
+        "description": "Decentralized blockchain platform that supports smart contracts and peer-to-peer applications.",
+        "sourceRef": "rss:knowledge-graphs"
+      },
+      {
+        "id": "entity-vitalik",
+        "name": "Vitalik Buterin",
+        "type": "person",
+        "description": "Co-founder of Ethereum referenced in the article.",
+        "sourceRef": "rss:knowledge-graphs"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "entity-vitalik",
+        "to": "entity-ethereum",
+        "type": "co-founded",
+        "confidence": 0.88,
+        "t_valid": "2015-01-01T00:00:00.000Z",
+        "t_invalid": null,
+        "provenance": "rss:knowledge-graphs"
+      }
+    ]
   },
   "assertions": [
-    { "type": "array-min-length", "path": "entities", "value": 1 },
-    { "type": "field-present", "path": "entities[0].description" }
+    { "type": "array-min-length", "path": "entities", "threshold": 2 },
+    { "type": "field-equals", "path": "entities.1.type", "expected": "person" },
+    { "type": "field-present", "path": "entities.0.description" },
+    { "type": "number-range", "path": "relationships.0.confidence", "min": 0.8, "max": 1 }
   ],
   "threshold": 0.6
 }

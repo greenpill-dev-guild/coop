@@ -30,6 +30,7 @@ import {
 import type { Address } from 'viem';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { db } from '../context';
+import { configuredOnchainMode } from '../context-config';
 import { getTrustedNodeContext } from '../operator';
 import { buildActionExecutors } from './action-executors';
 
@@ -98,6 +99,7 @@ async function persistProposedBundle(input: {
     memberId: input.memberId,
     payload: input.payload,
     policy: input.policy,
+    onchainMode: configuredOnchainMode,
     chainId: input.chainId,
     chainKey: input.chainKey,
     safeAddress: input.safeAddress,

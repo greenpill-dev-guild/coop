@@ -36,7 +36,7 @@ export function isCaptureRuntimeMessage(message: RuntimeRequest): message is Cap
 export async function dispatchCaptureRuntimeMessage(
   message: CaptureRuntimeMessage,
   handlers: {
-    runCaptureCycle: () => Promise<number>;
+    runCaptureCycle: (options?: { awaitFollowUp?: boolean }) => Promise<number>;
     captureActiveTab: (
       options?: Extract<RuntimeRequest, { type: 'capture-active-tab' }>['payload'],
     ) => Promise<ActiveTabCaptureResult>;
@@ -59,7 +59,7 @@ export async function dispatchCaptureRuntimeMessage(
 export async function dispatchCaptureRuntimeMessage(
   message: RuntimeRequest,
   handlers: {
-    runCaptureCycle: () => Promise<number>;
+    runCaptureCycle: (options?: { awaitFollowUp?: boolean }) => Promise<number>;
     captureActiveTab: (
       options?: Extract<RuntimeRequest, { type: 'capture-active-tab' }>['payload'],
     ) => Promise<ActiveTabCaptureResult>;
@@ -85,7 +85,7 @@ export async function dispatchCaptureRuntimeMessage(
 
   switch (message.type) {
     case 'manual-capture':
-      return respond(handlers.runCaptureCycle, 'Roundup failed.');
+      return respond(() => handlers.runCaptureCycle({ awaitFollowUp: true }), 'Roundup failed.');
     case 'capture-active-tab':
       return respond(
         () => handlers.captureActiveTab(message.payload),

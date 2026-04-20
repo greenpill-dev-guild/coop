@@ -1,0 +1,26 @@
+{
+  "id": "multi-highlight-digest",
+  "description": "Digests with multiple highlights should cover different topics and provide actionable summaries.",
+  "output": {
+    "title": "Bi-weekly review: stewardship progress and new partnership lead",
+    "summary": "The coop advanced two field stewardship tasks and received an inbound partnership inquiry from a regional land trust with aligned conservation goals.",
+    "whyItMatters": "The partnership lead could accelerate the coop's land access goal, and stewardship momentum should be maintained while interest is high.",
+    "suggestedNextStep": "Schedule a 15-minute call with the land trust contact and review stewardship photos for archive readiness.",
+    "highlights": [
+      "Completed the spring soil sampling protocol across all three restoration sites.",
+      "Received partnership inquiry from Cascadia Land Trust — they are looking for community monitoring partners.",
+      "Two archive-ready field reports are waiting for member review before publishing."
+    ],
+    "tags": ["stewardship", "partnership", "archive", "field-work"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "array-min-length", "path": "highlights", "threshold": 2 },
+    { "type": "array-min-length", "path": "tags", "threshold": 3 },
+    { "type": "semantic-word-count", "path": "summary", "threshold": 12 },
+    { "type": "semantic-word-count", "path": "whyItMatters", "threshold": 8 },
+    { "type": "string-min-length", "path": "highlights.0", "threshold": 20 },
+    { "type": "string-min-length", "path": "highlights.1", "threshold": 20 },
+    { "type": "semantic-word-count", "path": "suggestedNextStep", "threshold": 6 }
+  ]
+}

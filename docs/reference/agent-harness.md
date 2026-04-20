@@ -83,6 +83,129 @@ Small models (0.5B parameters) produce unreliable JSON. The harness compensates 
 - **Zod schema validation**: Every skill output is validated against its declared schema before acceptance
 - **Graceful fallback**: If a model fails, the next tier is tried automatically; heuristic rules always produce valid output
 
+### Runtime Provider Contract
+
+The runtime now treats provider choice as an explicit contract instead of a hardcoded detail. The
+shared contract shape lives in `packages/shared/src/contracts/schema-agent.ts`, and the extension
+registry lives in `packages/extension/src/runtime/agent/provider-contracts.ts`.
+
+Each provider record declares:
+
+- structured JSON mode
+- worker safety
+- offscreen safety
+- WebGPU requirement
+- streaming support
+- multimodal support
+- fallback order
+
+Current contracts cover:
+
+- heuristic fallback
+- transformers.js / WASM
+- WebLLM / WebGPU
+- Chrome Prompt API as an experimental, flag-gated scaffold
+
+The default user-facing path is unchanged. The legacy execution loop still prefers the same local
+providers and falls back to heuristics when needed.
+
+### Provider Benchmarks
+
+The benchmark entrypoint is `packages/extension/src/runtime/agent/benchmarks.ts` via
+`runAgentProviderBenchmarks()`.
+
+It runs the high-value benchmark fixtures for:
+
+- `tab-router`
+- `opportunity-extractor`
+- `capital-formation-brief`
+
+For each skill/provider pair it records:
+
+- schema pass rate
+- JSON repair rate
+- median latency
+- cold start time
+- confidence score
+- fallback or unavailable reason
+
+Results are persisted locally in the `agentBenchmarkRecords` Dexie table so later provider
+promotion logic can reuse them without re-shaping raw benchmark output.
+
+### Core Eval Packs
+
+The runtime also keeps a narrow fixture-pack layer for the three priority skills:
+
+- `tab-router`
+- `opportunity-extractor`
+- `capital-formation-brief`
+
+These fixtures live beside each skill in `packages/extension/src/skills/*/eval/*.json` and are
+loaded through `packages/extension/src/runtime/agent/eval.ts`.
+
+Each core pack now labels fixtures as:
+
+- `golden`
+- `noisy`
+- `low-signal`
+- `malicious`
+
+and can declare:
+
+- assertion score threshold
+- confidence floor
+- pack tags for later release-gate wiring
+
+This keeps skill tuning and future provider promotion grounded in fixed local examples without
+changing the default runtime path.
+
+The security-pack benchmark inputs live in
+`packages/extension/src/runtime/agent/benchmark-fixtures.ts` and feed the release-gate entrypoint
+`runAgentProviderReleaseGate()` from
+`packages/extension/src/runtime/agent/release-gates.ts`.
+
+That gate currently checks whether a provider is:
+
+- benchmarked across the three priority skills
+- traced locally during the gate run
+- clean on the malicious fixture pack
+- fallback-safe when unavailable
+
+### Feature-Flagged Promotion
+
+The first promotion slice stays narrow. Coop can now persist a local WebLLM promotion decision via
+`activateWebLlmProviderPromotion()` in
+`packages/extension/src/runtime/agent/provider-promotion.ts`.
+
+That helper runs the WebLLM release gate, stores the resulting signoff in the existing settings
+store, and only marks the path active when WebLLM is:
+
+- benchmarked
+- traced
+- schema-stable
+- malicious-pack clean
+- fallback-safe
+
+Runtime use of that promotion is still off by default. The promoted path is only honored when
+`VITE_COOP_ENABLE_WEBLLM_PROMOTION=true`, and even then only for the benchmarked extraction skills
+that still default to `transformers` today. If the gate state is missing or fails, the legacy
+provider preference remains in place.
+
+The runtime now also exposes that state through the existing agent dashboard/message layer:
+
+- `get-agent-dashboard` includes the current `providerPromotion.webllm` state for operator-facing
+  consumers
+- `get-webllm-provider-promotion-state` returns the stored local activation record
+- `activate-webllm-provider-promotion` runs the gated activation path from the background runtime
+
+When `VITE_COOP_ENABLE_WEBLLM_PROMOTION=true`, the Nest agent console also shows the stored WebLLM
+promotion state and lets trusted operators re-run the local gate without changing the default
+provider path.
+
+That operator view now includes the exact benchmark records and security traces captured by the
+stored promotion run, keyed from the local promotion state rather than guessed from whatever
+records happen to be newest.
+
 ## Skill System
 
 ### Executable Skills (16 registered)
@@ -196,6 +319,25 @@ Trace: agent-trace-abc123
 ```
 
 Logs are stored in the `agentLogs` Dexie table with span type, level, skill ID, observation ID, and arbitrary data payload (provider, model, duration, tokens).
+
+### Skill Trace Records
+
+In addition to span logs, each executed skill attempt now writes a local-only
+`agentTraceRecords` row. These records are meant for debugging, provider comparison, and later
+promotion logic without storing raw prompt or model output by default.
+
+Each trace record captures:
+
+- the cycle `traceId`, `observationId`, `skillId`, `providerId`, and resolved `modelId`
+- a hashed `promptHash`
+- a short `contextInventory` and estimated `contextBudgetTokens`
+- `sourceRisk` classified as `trusted`, `mixed`, or `untrusted`
+- `durationMs`, `repairSteps`, `validationErrors`, `confidenceScore`, and trace `outcome`
+- a hashed `rawOutputHash` instead of persisted raw output content
+
+The runtime persists trace rows from
+`packages/extension/src/runtime/agent/runner-skills.ts` through
+`packages/extension/src/runtime/agent/trace-records.ts`.
 
 ### Stall Detection
 

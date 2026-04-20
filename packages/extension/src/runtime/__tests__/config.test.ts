@@ -7,6 +7,7 @@ import {
   resolveConfiguredChain,
   resolveConfiguredOnchainMode,
   resolveConfiguredSessionMode,
+  resolveConfiguredWebLlmPromotionEnabled,
   resolveReceiverAppUrl,
   resolveTrustedNodeArchiveBootstrapConfig,
 } from '../config';
@@ -26,6 +27,9 @@ describe('runtime config helpers', () => {
     expect(resolveConfiguredSessionMode(undefined)).toBe('off');
     expect(resolveConfiguredSessionMode('mock')).toBe('mock');
     expect(resolveConfiguredSessionMode('live')).toBe('live');
+    expect(resolveConfiguredWebLlmPromotionEnabled(undefined)).toBe(false);
+    expect(resolveConfiguredWebLlmPromotionEnabled('true')).toBe(true);
+    expect(resolveConfiguredWebLlmPromotionEnabled('false')).toBe(false);
   });
 
   it('parses optional signaling and archive settings', () => {

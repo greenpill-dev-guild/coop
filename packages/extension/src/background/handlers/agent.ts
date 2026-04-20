@@ -1,6 +1,7 @@
 import {
   type AgentObservation,
   type AgentPlan,
+  type AgentProviderPromotionState,
   type GreenGoodsAssessmentRequest,
   type GreenGoodsWorkApprovalRequest,
   completeAgentPlan,
@@ -10,6 +11,7 @@ import {
   getSkillRun,
   greenGoodsAssessmentRequestSchema,
   greenGoodsWorkApprovalRequestSchema,
+  listSkillRunsByPlanId,
   approveAgentPlan as markAgentPlanApproved,
   rejectAgentPlan as markAgentPlanRejected,
   saveAgentObservation,
@@ -18,6 +20,10 @@ import {
   updateAgentPlan,
 } from '@coop/shared';
 import { AGENT_SETTING_KEYS } from '../../runtime/agent/config';
+import {
+  activateWebLlmProviderPromotion,
+  getWebLlmProviderPromotionState,
+} from '../../runtime/agent/provider-promotion';
 import { listRegisteredSkills } from '../../runtime/agent/registry';
 import type {
   AgentDashboardResponse,
@@ -93,6 +99,31 @@ export async function handleRunAgentCycle(): Promise<
   };
 }
 
+export async function handleGetWebLlmProviderPromotionState(): Promise<
+  RuntimeActionResponse<AgentProviderPromotionState | null>
+> {
+  return {
+    ok: true,
+    data: await getWebLlmProviderPromotionState(db),
+  };
+}
+
+export async function handleActivateWebLlmProviderPromotion(): Promise<
+  RuntimeActionResponse<AgentProviderPromotionState>
+> {
+  const trustedNodeContext = await getTrustedNodeContext();
+  if (!trustedNodeContext.ok) {
+    return { ok: false, error: trustedNodeContext.error };
+  }
+
+  return {
+    ok: true,
+    data: await activateWebLlmProviderPromotion({
+      db,
+    }),
+  };
+}
+
 export async function handleApproveAgentPlan(
   message: Extract<RuntimeRequest, { type: 'approve-agent-plan' }>,
 ): Promise<RuntimeActionResponse<AgentPlan>> {
@@ -135,6 +166,16 @@ export async function handleApproveAgentPlan(
     sourceObservationId: plan.observationId,
   }).catch(() => {});
 
+  // Wire autoresearch feedback for each skill run in this plan
+  listSkillRunsByPlanId(db, plan.id)
+    .then(async (runs) => {
+      const { collectFeedback } = await import('../../runtime/agent/experiment-loop');
+      for (const run of runs) {
+        await collectFeedback(db, run.id, true).catch(() => {});
+      }
+    })
+    .catch(() => {});
+
   return { ok: true, data: approvedPlan };
 }
 
@@ -174,6 +215,16 @@ export async function handleRejectAgentPlan(
     confidence: 1,
     sourceObservationId: plan.observationId,
   }).catch(() => {});
+
+  // Wire autoresearch feedback (rejection) for each skill run in this plan
+  listSkillRunsByPlanId(db, plan.id)
+    .then(async (runs) => {
+      const { collectFeedback } = await import('../../runtime/agent/experiment-loop');
+      for (const run of runs) {
+        await collectFeedback(db, run.id, false).catch(() => {});
+      }
+    })
+    .catch(() => {});
 
   // Knowledge sandbox compound loop: weaken edges on rejection
   try {

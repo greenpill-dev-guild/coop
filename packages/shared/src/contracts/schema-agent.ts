@@ -1,6 +1,6 @@
 import z from 'zod';
 import { artifactCategorySchema, ritualLensSchema } from './schema-enums';
-import { policyActionClassSchema } from './schema-policy';
+import { actionRiskTagSchema, policyActionClassSchema } from './schema-policy';
 
 export const agentObservationTriggerSchema = z.enum([
   'roundup-batch-ready',
@@ -44,6 +44,19 @@ export const agentPlanStatusSchema = z.enum([
 export const agentPlanStepStatusSchema = z.enum(['pending', 'completed', 'failed', 'skipped']);
 
 export const agentProviderSchema = z.enum(['heuristic', 'transformers', 'webllm']);
+export const agentRuntimeProviderIdSchema = z.enum([
+  'heuristic',
+  'transformers',
+  'webllm',
+  'chrome-prompt-api',
+]);
+export const agentRuntimeProviderTierSchema = z.enum(['p0', 'p1', 'p2', 'p3']);
+export const agentRuntimeStructuredJsonModeSchema = z.enum([
+  'deterministic',
+  'repairable',
+  'grammar-constrained',
+  'schema-constrained',
+]);
 
 export const skillRuntimeSchema = z.enum(['extension-offscreen', 'extension-sidepanel']);
 
@@ -96,6 +109,8 @@ export const actionProposalSchema = z.object({
   approvalMode: skillApprovalModeSchema,
   requiresPermit: z.boolean().default(false),
   permitId: z.string().min(1).optional(),
+  riskTags: z.array(actionRiskTagSchema).default([]),
+  requiresExplicitAcknowledgement: z.boolean().default(false),
   generatedBySkillId: z.string().min(1).optional(),
   createdAt: z.string().datetime(),
 });
@@ -380,6 +395,7 @@ export const agentLogSpanTypeSchema = z.enum([
   'skill',
   'inference',
   'action',
+  'experiment',
 ]);
 
 export const agentLogLevelSchema = z.enum(['info', 'warn', 'error']);
@@ -453,6 +469,9 @@ export type AgentObservation = z.infer<typeof agentObservationSchema>;
 export type AgentPlanStatus = z.infer<typeof agentPlanStatusSchema>;
 export type AgentPlanStepStatus = z.infer<typeof agentPlanStepStatusSchema>;
 export type AgentProvider = z.infer<typeof agentProviderSchema>;
+export type AgentRuntimeProviderId = z.infer<typeof agentRuntimeProviderIdSchema>;
+export type AgentRuntimeProviderTier = z.infer<typeof agentRuntimeProviderTierSchema>;
+export type AgentRuntimeStructuredJsonMode = z.infer<typeof agentRuntimeStructuredJsonModeSchema>;
 export type SkillRuntime = z.infer<typeof skillRuntimeSchema>;
 export type SkillModel = z.infer<typeof skillModelSchema>;
 export type SkillApprovalMode = z.infer<typeof skillApprovalModeSchema>;
@@ -493,6 +512,120 @@ export type AgentMemoryScope = z.infer<typeof agentMemoryScopeSchema>;
 export type AgentMemory = z.infer<typeof agentMemorySchema>;
 export type PrivilegedActionStatus = z.infer<typeof privilegedActionStatusSchema>;
 export type ArchiveWorthiness = z.infer<typeof archiveWorthinessSchema>;
+
+export const agentRuntimeProviderCapabilitiesSchema = z.object({
+  structuredJson: agentRuntimeStructuredJsonModeSchema,
+  workerSafe: z.boolean(),
+  offscreenSafe: z.boolean(),
+  requiresWebGpu: z.boolean(),
+  supportsStreaming: z.boolean(),
+  supportsMultimodal: z.boolean(),
+});
+
+export const agentRuntimeProviderContractSchema = z.object({
+  id: agentRuntimeProviderIdSchema,
+  tier: agentRuntimeProviderTierSchema,
+  label: z.string().min(1),
+  defaultModelId: z.string().min(1).optional(),
+  experimental: z.boolean().default(false),
+  capabilities: agentRuntimeProviderCapabilitiesSchema,
+  fallbackOrder: z.array(agentRuntimeProviderIdSchema).default([]),
+});
+
+export type AgentRuntimeProviderCapabilities = z.infer<
+  typeof agentRuntimeProviderCapabilitiesSchema
+>;
+export type AgentRuntimeProviderContract = z.infer<typeof agentRuntimeProviderContractSchema>;
+
+export const agentBenchmarkFixtureResultSchema = z.object({
+  fixtureId: z.string().min(1),
+  outcome: z.enum(['completed', 'failed', 'unavailable']),
+  schemaPassed: z.boolean(),
+  jsonRepaired: z.boolean(),
+  latencyMs: z.number().nonnegative(),
+  coldStartMs: z.number().nonnegative().nullable().default(null),
+  confidenceScore: z.number().min(0).max(1).nullable().default(null),
+  failureReason: z.string().min(1).optional(),
+  unavailableReason: z.string().min(1).optional(),
+  fallbackProviderId: agentRuntimeProviderIdSchema.optional(),
+});
+
+export const agentBenchmarkRecordSchema = z.object({
+  id: z.string().min(1),
+  skillId: z.string().min(1),
+  providerId: agentRuntimeProviderIdSchema,
+  providerTier: agentRuntimeProviderTierSchema,
+  modelId: z.string().min(1).optional(),
+  capabilities: agentRuntimeProviderCapabilitiesSchema,
+  fallbackOrder: z.array(agentRuntimeProviderIdSchema).default([]),
+  outcome: z.enum(['completed', 'completed-with-failures', 'unavailable']),
+  fixtureResults: z.array(agentBenchmarkFixtureResultSchema).default([]),
+  schemaPassRate: z.number().min(0).max(1),
+  jsonRepairRate: z.number().min(0).max(1),
+  medianLatencyMs: z.number().nonnegative().nullable(),
+  coldStartTimeMs: z.number().nonnegative().nullable(),
+  confidenceScore: z.number().min(0).max(1).nullable(),
+  unavailableReason: z.string().min(1).optional(),
+  fallbackProviderId: agentRuntimeProviderIdSchema.optional(),
+  fallbackReason: z.string().min(1).optional(),
+  createdAt: z.string().datetime(),
+});
+
+export type AgentBenchmarkFixtureResult = z.infer<typeof agentBenchmarkFixtureResultSchema>;
+export type AgentBenchmarkRecord = z.infer<typeof agentBenchmarkRecordSchema>;
+
+export const agentProviderPromotionStateSchema = z.object({
+  providerId: agentRuntimeProviderIdSchema,
+  baselineProviderId: agentRuntimeProviderIdSchema,
+  evaluatedSkillIds: z.array(z.string().min(1)).default([]),
+  promotedSkillIds: z.array(z.string().min(1)).default([]),
+  benchmarkRecordIds: z.array(z.string().min(1)).default([]),
+  traceRecordIds: z.array(z.string().min(1)).default([]),
+  benchmarked: z.boolean(),
+  traced: z.boolean(),
+  schemaStable: z.boolean(),
+  maliciousPackClean: z.boolean(),
+  fallbackSafe: z.boolean(),
+  promotable: z.boolean(),
+  securityPassRate: z.number().min(0).max(1),
+  failedChecks: z.array(z.string().min(1)).default([]),
+  evaluatedAt: z.string().datetime(),
+  activatedAt: z.string().datetime().optional(),
+});
+
+export type AgentProviderPromotionState = z.infer<typeof agentProviderPromotionStateSchema>;
+
+export const agentTraceSourceRiskSchema = z.enum(['trusted', 'mixed', 'untrusted']);
+export const agentTraceOutcomeSchema = z.enum(['completed', 'fallback', 'rejected', 'failed']);
+export const agentTraceUserOutcomeSchema = z.enum(['approved', 'rejected', 'dismissed']);
+
+export const agentTraceRecordSchema = z.object({
+  id: z.string().min(1),
+  traceId: z.string().min(1),
+  observationId: z.string().min(1),
+  skillId: z.string().min(1),
+  providerId: agentRuntimeProviderIdSchema,
+  modelId: z.string().min(1),
+  promptHash: z.string().min(1),
+  contextInventory: z.array(z.string().min(1)).default([]),
+  contextBudgetTokens: z.number().int().positive().optional(),
+  sourceRisk: agentTraceSourceRiskSchema,
+  startedAt: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative(),
+  rawOutputHash: z.string().min(1).optional(),
+  repairSteps: z.array(z.string().min(1)).default([]),
+  validationErrors: z.array(z.string().min(1)).default([]),
+  confidenceScore: z.number().min(0).max(1).optional(),
+  evalScore: z.number().min(0).max(1).optional(),
+  outcome: agentTraceOutcomeSchema,
+  userOutcome: agentTraceUserOutcomeSchema.optional(),
+  createdAt: z.string().datetime(),
+});
+
+export type AgentTraceSourceRisk = z.infer<typeof agentTraceSourceRiskSchema>;
+export type AgentTraceOutcome = z.infer<typeof agentTraceOutcomeSchema>;
+export type AgentTraceUserOutcome = z.infer<typeof agentTraceUserOutcomeSchema>;
+export type AgentTraceRecord = z.infer<typeof agentTraceRecordSchema>;
 
 export const experimentRecordSchema = z.object({
   id: z.string().min(1),

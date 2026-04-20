@@ -370,13 +370,13 @@ export async function buildProactiveSignals(input: {
   );
 
   return [...groups.entries()]
-    .map(([groupId, routings]) => {
+    .flatMap(([groupId, routings]) => {
       const ranked = [...routings].sort(
         (left, right) => right.relevanceScore - left.relevanceScore,
       );
       const top = ranked[0];
       if (!top) {
-        return null;
+        return [];
       }
 
       const candidate = candidatesById.get(top.sourceCandidateId);
@@ -445,24 +445,25 @@ export async function buildProactiveSignals(input: {
         )
         .slice(0, 2);
 
-      return {
-        id: `signal:${groupId}`,
-        sourceCandidateId: top.sourceCandidateId,
-        extractId: top.extractId,
-        title: candidate?.title ?? linkedDraft?.title ?? 'Routed signal',
-        url: candidate?.url ?? linkedDraft?.sources[0]?.url ?? '',
-        domain: candidate?.domain ?? linkedDraft?.sources[0]?.domain ?? 'local',
-        category: top.category,
-        tags: [...new Set(ranked.flatMap((routing) => routing.tags))],
-        archiveWorthinessHint: ranked.some((routing) => routing.archiveWorthinessHint),
-        draftId,
-        topRelevanceScore: top.relevanceScore,
-        targetCoops,
-        support,
-        updatedAt: ranked[0]?.updatedAt ?? top.updatedAt,
-      } satisfies ProactiveSignal;
+      return [
+        {
+          id: `signal:${groupId}`,
+          sourceCandidateId: top.sourceCandidateId,
+          extractId: top.extractId,
+          title: candidate?.title ?? linkedDraft?.title ?? 'Routed signal',
+          url: candidate?.url ?? linkedDraft?.sources[0]?.url ?? '',
+          domain: candidate?.domain ?? linkedDraft?.sources[0]?.domain ?? 'local',
+          category: top.category,
+          tags: [...new Set(ranked.flatMap((routing) => routing.tags))],
+          archiveWorthinessHint: ranked.some((routing) => routing.archiveWorthinessHint),
+          draftId,
+          topRelevanceScore: top.relevanceScore,
+          targetCoops,
+          support,
+          updatedAt: top.updatedAt,
+        } satisfies ProactiveSignal,
+      ];
     })
-    .filter((signal): signal is ProactiveSignal => Boolean(signal))
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 

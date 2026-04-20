@@ -40,6 +40,15 @@ export const policyActionClassSchema = z.enum([
   'erc8004-give-feedback',
 ]);
 
+export const actionRiskTagSchema = z.enum([
+  'publish',
+  'archive',
+  'sync',
+  'permission',
+  'live',
+  'destructive',
+]);
+
 export const actionPolicySchema = z.object({
   id: z.string().min(1),
   actionClass: policyActionClassSchema,
@@ -104,6 +113,8 @@ export const actionBundleSchema = z.object({
   policyId: z.string().min(1),
   status: actionBundleStatusSchema,
   digest: z.string().min(1),
+  riskTags: z.array(actionRiskTagSchema).default([]),
+  requiresExplicitAcknowledgement: z.boolean().default(false),
   typedAuthorization: typedActionBundleSchema.optional(),
   approvedAt: z.string().datetime().optional(),
   rejectedAt: z.string().datetime().optional(),
@@ -193,6 +204,7 @@ export const permitLogEntrySchema = z.object({
 
 export type PrivilegedActionType = z.infer<typeof privilegedActionTypeSchema>;
 export type PolicyActionClass = z.infer<typeof policyActionClassSchema>;
+export type ActionRiskTag = z.infer<typeof actionRiskTagSchema>;
 export type ActionPolicy = z.infer<typeof actionPolicySchema>;
 export type ActionBundleStatus = z.infer<typeof actionBundleStatusSchema>;
 export type TypedActionBundle = z.infer<typeof typedActionBundleSchema>;

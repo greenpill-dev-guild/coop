@@ -440,7 +440,7 @@ describe('canManageInvites', () => {
     });
     const regular = joined.state.members[1];
     expect(regular).toBeDefined();
-    expect(canManageInvites(joined.state, regular!.id)).toBe(false);
+    expect(canManageInvites(joined.state, regular?.id ?? '')).toBe(false);
   });
 
   it('returns true for trusted member role', () => {
@@ -458,7 +458,7 @@ describe('canManageInvites', () => {
     });
     const trusted = joined.state.members[1];
     expect(trusted).toBeDefined();
-    expect(canManageInvites(joined.state, trusted!.id)).toBe(true);
+    expect(canManageInvites(joined.state, trusted?.id ?? '')).toBe(true);
   });
 });
 
@@ -482,11 +482,14 @@ describe('leaveCoop', () => {
     });
     const leaver = joined.state.members[1];
     expect(leaver).toBeDefined();
+    if (!leaver) {
+      throw new Error('Expected leaver to exist.');
+    }
 
-    const result = leaveCoop({ state: joined.state, memberId: leaver!.id });
+    const result = leaveCoop({ state: joined.state, memberId: leaver.id });
 
     expect(result.state.members).toHaveLength(1);
-    expect(result.state.memberAccounts.every((a) => a.memberId !== leaver!.id)).toBe(true);
+    expect(result.state.memberAccounts.every((a) => a.memberId !== leaver.id)).toBe(true);
     expect(result.removedMember.displayName).toBe('Leaver');
   });
 

@@ -6,6 +6,7 @@ import type {
   CapitalFormationBriefOutput,
   CoopSharedState,
   EcosystemEntityExtractorOutput,
+  EntityExtractionOutput,
   GrantFitScore,
   GrantFitScorerOutput,
   OpportunityCandidate,
@@ -32,15 +33,17 @@ import {
   resolveGreenGoodsGapAdminAddresses,
   resolveGreenGoodsOperatorAddresses,
 } from '../agent/output-handlers';
+import { resolvePreferredProvider } from '../agent/provider-promotion';
 import { computeOutputConfidence } from '../agent/quality';
 import { type RegisteredSkill, listRegisteredSkills } from '../agent/registry';
 import {
   computeGrantFitScores,
   inferEntitiesFromText,
+  inferPoleEntitiesFromText,
   inferTabRoutingsHeuristically,
   inferThemes,
 } from '../agent/runner-inference';
-import { getCoops, inferPreferredProvider } from '../agent/runner-state';
+import { getCoops } from '../agent/runner-state';
 import { buildSkillPrompt } from './prompt';
 
 function createHeuristicCapitalFormationBrief(input: {
@@ -116,10 +119,11 @@ export async function completeSkill<T>(input: {
   relatedArtifacts: CoopSharedState['artifacts'];
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
+  preferredProvider?: AgentProvider;
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const { manifest } = input.skill;
   const prepared = await buildSkillPrompt(input);
-  const preferredProvider = inferPreferredProvider(manifest);
+  const preferredProvider = input.preferredProvider ?? (await resolvePreferredProvider(manifest));
   const result = await completeSkillOutput<T>({
     preferredProvider,
     schemaRef: manifest.outputSchemaRef,
@@ -168,6 +172,18 @@ export async function completeSkill<T>(input: {
       model: result.model,
       durationMs: result.durationMs,
       output: inferEntitiesFromText(prepared.heuristicContext) as T,
+    };
+  }
+
+  if (
+    manifest.outputSchemaRef === 'entity-extraction-output' &&
+    ((result.output as EntityExtractionOutput).entities?.length ?? 0) === 0
+  ) {
+    return {
+      provider: 'heuristic',
+      model: result.model,
+      durationMs: result.durationMs,
+      output: inferPoleEntitiesFromText(prepared.heuristicContext) as T,
     };
   }
 

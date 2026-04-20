@@ -1,3 +1,4 @@
+import type { AgentProviderPromotionState } from '@coop/shared';
 import { type AgentDashboardResponse, sendRuntimeMessage } from '../../../runtime/messages';
 import type { useDashboard } from './useDashboard';
 
@@ -93,11 +94,37 @@ export function useSidepanelAgent(deps: SidepanelAgentDeps) {
     await loadAgentDashboard();
   }
 
+  async function handleActivateWebLlmProviderPromotion() {
+    const response = await sendRuntimeMessage<AgentProviderPromotionState>({
+      type: 'activate-webllm-provider-promotion',
+    });
+    if (!response.ok || !response.data) {
+      setMessage(friendlyAgentError(response.error));
+      return;
+    }
+
+    await loadAgentDashboard();
+
+    if (response.data.promotable) {
+      setMessage(
+        `WebLLM promotion activated for ${response.data.promotedSkillIds.length} skill${response.data.promotedSkillIds.length === 1 ? '' : 's'}.`,
+      );
+      return;
+    }
+
+    const failedChecks =
+      response.data.failedChecks.length > 0
+        ? ` Failed checks: ${response.data.failedChecks.join(', ')}.`
+        : '';
+    setMessage(`WebLLM promotion did not pass the release gate.${failedChecks}`);
+  }
+
   return {
     handleRunAgentCycle,
     handleApproveAgentPlan,
     handleRejectAgentPlan,
     handleRetrySkillRun,
     handleToggleSkillAutoRun,
+    handleActivateWebLlmProviderPromotion,
   };
 }

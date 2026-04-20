@@ -17,8 +17,8 @@ import { describe, expect, it } from 'vitest';
 import { makeSetupInsights } from '../../../__tests__/fixtures';
 import { canonicalizeUrl, hashText } from '../../../utils';
 import { createCoop } from '../flows';
-import type { PageSignalInput } from '../pipeline';
 import { buildMemoryProfileSeed } from '../memory-profile';
+import type { PageSignalInput } from '../pipeline';
 import {
   arePageExtractsNearDuplicates,
   buildReadablePageExtract,
@@ -629,7 +629,10 @@ describe('createLocalEnhancementAdapter', () => {
     });
 
     const baseInterp = interpretExtractForCoop(extract, state);
-    const enhanced = adapter.enhance!({ extract, coop: state, interpretation: baseInterp });
+    if (!adapter.enhance) {
+      throw new Error('Expected enhance adapter to exist.');
+    }
+    const enhanced = adapter.enhance({ extract, coop: state, interpretation: baseInterp });
 
     expect(enhanced.relevanceScore).toBeGreaterThanOrEqual(baseInterp.relevanceScore);
     expect(enhanced.rationale).toContain('Local classifier');
@@ -744,7 +747,7 @@ describe('runPassivePipeline', () => {
       d.suggestedTargetCoopIds.includes(coopB.state.profile.id),
     );
     if (cookingDrafts.length > 0) {
-      expect(fundingDrafts[0]!.confidence).toBeGreaterThan(cookingDrafts[0]!.confidence);
+      expect(fundingDrafts[0]?.confidence).toBeGreaterThan(cookingDrafts[0]?.confidence);
     }
   });
 

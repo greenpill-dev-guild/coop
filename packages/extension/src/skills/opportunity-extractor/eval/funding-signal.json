@@ -1,6 +1,9 @@
 {
   "id": "funding-signal",
   "description": "Opportunity extraction should emit at least one well-formed funding candidate.",
+  "fixtureType": "golden",
+  "confidenceFloor": 0.68,
+  "tags": ["core-pack", "grant", "watershed"],
   "output": {
     "candidates": [
       {
@@ -23,5 +26,6 @@
     { "type": "semantic-word-count", "path": "candidates.0.rationale", "threshold": 8 },
     { "type": "number-range", "path": "candidates.0.priority", "min": 0, "max": 1 },
     { "type": "string-min-length", "path": "candidates.0.summary", "threshold": 20 }
-  ]
+  ],
+  "threshold": 0.84
 }

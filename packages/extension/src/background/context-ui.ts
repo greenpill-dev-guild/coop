@@ -5,8 +5,8 @@ import {
   setUiPreferences,
   uiPreferencesSchema,
 } from '@coop/shared';
-import { db, getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 import type { SidepanelIntent } from '../runtime/messages';
+import { db, getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 
 // ---- UI Preferences ----
 

@@ -206,7 +206,7 @@ describe('filterPrivateReceiverIntake', () => {
   it('treats undefined intakeStatus as private-intake', () => {
     const capture = buildCapture({ id: 'c-undef' });
     // @ts-expect-error — testing runtime behavior with missing field
-    delete capture.intakeStatus;
+    capture.intakeStatus = undefined;
 
     const result = filterPrivateReceiverIntake([capture], 'coop-1', 'member-1');
     expect(result).toHaveLength(1);

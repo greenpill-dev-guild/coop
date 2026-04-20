@@ -82,4 +82,51 @@ describe('AgentObservationsSection', () => {
     expect(onRejectPlan).toHaveBeenCalledWith('plan-1');
     expect(onRetrySkillRun).toHaveBeenCalledWith('run-1');
   });
+
+  it('adds passive judgment cues and gates high-risk plan approval behind acknowledgement', async () => {
+    const user = userEvent.setup();
+    const onApprovePlan = vi.fn();
+
+    render(
+      <AgentObservationsSection
+        agentObservations={[]}
+        agentPlans={[
+          {
+            id: 'plan-risk',
+            status: 'pending',
+            provider: 'heuristic',
+            actionProposals: [
+              {
+                id: 'proposal-risk',
+                riskTags: ['live', 'permission', 'destructive'],
+                requiresExplicitAcknowledgement: true,
+              },
+            ],
+            goal: 'Rotate the Safe owners',
+            rationale: 'The coop requested an owner rotation.',
+          } as never,
+        ]}
+        skillRuns={[]}
+        onApprovePlan={onApprovePlan}
+        onRejectPlan={vi.fn()}
+        onRetrySkillRun={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getByText('Permission')).toBeInTheDocument();
+    expect(screen.getByText('+1')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Needs judgment: this will affect live external state/i),
+    ).toBeInTheDocument();
+
+    const approveButton = screen.getByRole('button', { name: 'Approve plan' });
+    expect(approveButton).toBeDisabled();
+
+    await user.click(screen.getByLabelText('I reviewed the live effect'));
+    expect(approveButton).toBeEnabled();
+
+    await user.click(approveButton);
+    expect(onApprovePlan).toHaveBeenCalledWith('plan-risk');
+  });
 });

@@ -16,6 +16,7 @@ import {
   buildGreenGoodsSyncGardenProfilePayload,
   createActionProposal,
 } from '@coop/shared';
+import { configuredOnchainMode } from '../config';
 import type { SkillOutputHandler } from './output-handlers-helpers';
 import {
   queueActionProposals,
@@ -60,6 +61,7 @@ export const handleGreenGoodsGardenBootstrapOutput: SkillOutputHandler = async (
         }),
         reason: bootstrap.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],
@@ -111,6 +113,7 @@ export const handleGreenGoodsGardenSyncOutput: SkillOutputHandler = async (input
         }),
         reason: sync.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
       createActionProposal({
@@ -123,6 +126,7 @@ export const handleGreenGoodsGardenSyncOutput: SkillOutputHandler = async (input
         }),
         reason: 'Keep Green Goods garden domains aligned with the coop scope.',
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
       ...(sync.ensurePools
@@ -136,6 +140,7 @@ export const handleGreenGoodsGardenSyncOutput: SkillOutputHandler = async (input
               }),
               reason: 'Ensure Green Goods signal pools exist for this garden.',
               approvalMode: input.manifest.approvalMode,
+              onchainMode: configuredOnchainMode,
               generatedBySkillId: input.skillId,
             }),
           ]
@@ -189,6 +194,7 @@ export const handleGreenGoodsWorkApprovalOutput: SkillOutputHandler = async (inp
         }),
         reason: approval.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],
@@ -240,6 +246,7 @@ export const handleGreenGoodsAssessmentOutput: SkillOutputHandler = async (input
         }),
         reason: assessment.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],
@@ -297,6 +304,7 @@ export const handleGreenGoodsGapAdminSyncOutput: SkillOutputHandler = async (inp
         }),
         reason: gapSync.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],

@@ -64,13 +64,17 @@ export function compact(value: Array<string | undefined | null | false>) {
   return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
 }
 
-export async function getSetting<T>(key: string, fallback: T): Promise<T> {
-  const record = await db.settings.get(key);
+export async function getSetting<T>(
+  key: string,
+  fallback: T,
+  targetDb: CoopDexie = db,
+): Promise<T> {
+  const record = await targetDb.settings.get(key);
   return (record?.value as T | undefined) ?? fallback;
 }
 
-export async function setSetting(key: string, value: unknown) {
-  await db.settings.put({ key, value });
+export async function setSetting(key: string, value: unknown, targetDb: CoopDexie = db) {
+  await targetDb.settings.put({ key, value });
 }
 
 export async function getCycleState() {

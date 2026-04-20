@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SetupInsights } from '../../../contracts/schema';
 import { canonicalizeUrl, hashText } from '../../../utils';
 import { createCoop } from '../flows';
-import { buildReadablePageExtract, tokenize, scoreAgainstCoop } from '../pipeline';
+import { buildReadablePageExtract, scoreAgainstCoop, tokenize } from '../pipeline';
 import { classifyCategory, classifyLenses, deriveTags } from '../pipeline-categorize';
 
 // ---------------------------------------------------------------------------
@@ -204,7 +204,7 @@ describe('classifyLenses', () => {
     });
 
     const lenses = classifyLenses(extract, insights);
-    expect(lenses).toEqual([insights.lenses[0]!.lens]);
+    expect(lenses).toEqual([insights.lenses[0]?.lens]);
   });
 
   it('returns multiple lenses when content spans categories', () => {

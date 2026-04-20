@@ -1,5 +1,6 @@
 import type {
   CapitalFormationBriefOutput,
+  EntityExtractionOutput,
   GrantFitScorerOutput,
   OpportunityExtractorOutput,
   SkillOutputSchemaRef,
@@ -59,6 +60,38 @@ export const handleTabRouterOutput: SkillOutputHandler = async (input) => {
   };
 };
 
+export const handleEntityExtractionOutput: SkillOutputHandler = async (input) => {
+  const coopId = input.context.coop?.profile.id ?? input.observation.coopId;
+  if (!coopId) {
+    return {
+      plan: input.plan,
+      context: input.context,
+      output: input.output,
+      createdDraftIds: [],
+      autoExecutedActionCount: 0,
+      errors: [],
+      contextEntityIds: [],
+    };
+  }
+
+  const persisted = await input.persistEntityExtractionOutput({
+    observation: input.observation,
+    coopId,
+    output: input.output as EntityExtractionOutput,
+    provider: input.provider,
+  });
+
+  return {
+    plan: input.plan,
+    context: input.context,
+    output: input.output,
+    createdDraftIds: [],
+    autoExecutedActionCount: 0,
+    errors: [],
+    contextEntityIds: persisted.entityIds,
+  };
+};
+
 export const handleCapitalFormationBriefOutput: SkillOutputHandler = async (input) => {
   if (!input.context.coop) {
     return {
@@ -102,5 +135,6 @@ export const coreHandlers: Partial<Record<SkillOutputSchemaRef, SkillOutputHandl
   'opportunity-extractor-output': handleOpportunityExtractorOutput,
   'grant-fit-scorer-output': handleGrantFitScorerOutput,
   'tab-router-output': handleTabRouterOutput,
+  'entity-extraction-output': handleEntityExtractionOutput,
   'capital-formation-brief-output': handleCapitalFormationBriefOutput,
 };

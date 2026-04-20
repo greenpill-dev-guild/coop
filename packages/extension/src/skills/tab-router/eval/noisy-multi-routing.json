@@ -1,0 +1,47 @@
+{
+  "id": "noisy-multi-routing",
+  "description": "Routing should preserve both strong and weak coop matches when the source includes useful signal wrapped in surrounding noise.",
+  "fixtureType": "noisy",
+  "confidenceFloor": 0.68,
+  "tags": ["core-pack", "mixed-signal", "routing"],
+  "output": {
+    "routings": [
+      {
+        "sourceCandidateId": "candidate-estuary-1",
+        "extractId": "extract-estuary-call",
+        "coopId": "coop-estuary",
+        "relevanceScore": 0.79,
+        "matchedRitualLenses": ["capital-formation", "impact-reporting"],
+        "category": "funding-lead",
+        "tags": ["estuary", "monitoring", "community-science"],
+        "rationale": "Even with boilerplate program text around it, the extract clearly names community-led estuary monitoring and measurable restoration outcomes that fit the coop's current funding focus.",
+        "suggestedNextStep": "Keep it in the review queue and compare it with the other coastal monitoring leads before drafting.",
+        "archiveWorthinessHint": true
+      },
+      {
+        "sourceCandidateId": "candidate-estuary-1",
+        "extractId": "extract-estuary-call",
+        "coopId": "coop-coastal-learning",
+        "relevanceScore": 0.44,
+        "matchedRitualLenses": ["knowledge-garden-resources"],
+        "category": "resource",
+        "tags": ["coastal", "training"],
+        "rationale": "The same extract also carries a weaker but still useful training signal, so the learning-oriented match should stay visible instead of being discarded.",
+        "suggestedNextStep": "Save the weaker match as a research thread and revisit it if the main estuary lead advances.",
+        "archiveWorthinessHint": false
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "routings", "threshold": 2 },
+    { "type": "field-present", "path": "routings.0.coopId" },
+    { "type": "field-present", "path": "routings.1.coopId" },
+    { "type": "field-equals", "path": "routings.1.archiveWorthinessHint", "expected": false },
+    { "type": "number-range", "path": "routings.0.relevanceScore", "min": 0.6, "max": 1 },
+    { "type": "number-range", "path": "routings.1.relevanceScore", "min": 0.2, "max": 0.6 },
+    { "type": "semantic-word-count", "path": "routings.0.rationale", "threshold": 10 },
+    { "type": "semantic-word-count", "path": "routings.1.rationale", "threshold": 10 },
+    { "type": "string-min-length", "path": "routings.1.suggestedNextStep", "threshold": 25 }
+  ],
+  "threshold": 0.82
+}

@@ -1,0 +1,34 @@
+{
+  "id": "knowledge-lint-basic-health",
+  "description": "Knowledge lint output should surface findings with actionable suggestions and graph health stats.",
+  "output": {
+    "findings": [
+      {
+        "type": "coverage-gap",
+        "severity": "warning",
+        "message": "No GitHub-backed entities have been ingested yet.",
+        "suggestion": "Add at least one GitHub source and re-run extraction."
+      },
+      {
+        "type": "health",
+        "severity": "info",
+        "message": "Graph remains readable and ready for the next ingest pass."
+      }
+    ],
+    "stats": {
+      "entityCount": 12,
+      "relationshipCount": 7,
+      "sourceCount": 3,
+      "orphanEntityCount": 1,
+      "staleSourceCount": 0
+    }
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "findings", "threshold": 1 },
+    { "type": "field-equals", "path": "findings.0.type", "expected": "coverage-gap" },
+    { "type": "field-present", "path": "findings.0.suggestion" },
+    { "type": "number-range", "path": "stats.entityCount", "min": 1, "max": 1000 },
+    { "type": "number-range", "path": "stats.relationshipCount", "min": 0, "max": 1000 }
+  ],
+  "threshold": 0.6
+}

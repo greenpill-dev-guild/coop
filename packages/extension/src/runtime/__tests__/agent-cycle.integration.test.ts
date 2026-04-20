@@ -20,9 +20,13 @@ const { mockCompleteSkillOutput } = vi.hoisted(() => ({
   mockCompleteSkillOutput: vi.fn(),
 }));
 
-vi.mock('../agent/models', () => ({
-  completeSkillOutput: mockCompleteSkillOutput,
-}));
+vi.mock('../agent/models', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../agent/models')>();
+  return {
+    ...actual,
+    completeSkillOutput: mockCompleteSkillOutput,
+  };
+});
 
 vi.mock('../../background/dashboard', () => ({
   refreshBadge: vi.fn(),
@@ -75,6 +79,31 @@ function makeAuthSession(address: string, displayName: string) {
     primaryAddress: address,
     createdAt: nowIso(),
     identityWarning: 'Stored locally.',
+  };
+}
+
+function makeTab(overrides: {
+  id: number;
+  windowId: number;
+  url: string;
+  title: string;
+}): chrome.tabs.Tab {
+  return {
+    active: true,
+    autoDiscardable: true,
+    discarded: false,
+    frozen: false,
+    groupId: -1,
+    highlighted: true,
+    id: overrides.id,
+    incognito: false,
+    index: 0,
+    pinned: false,
+    selected: true,
+    status: 'complete',
+    title: overrides.title,
+    url: overrides.url,
+    windowId: overrides.windowId,
   };
 }
 
@@ -219,7 +248,7 @@ describe('agent cycle integration', () => {
             previewImageUrl: undefined,
           },
         },
-      ]);
+      ] as never);
 
       mockCompleteSkillOutput.mockImplementation(async ({ schemaRef }) => {
         if (schemaRef !== 'tab-router-output') {
@@ -279,12 +308,12 @@ describe('agent cycle integration', () => {
 
       const captureResult = await runCaptureForTabs(
         [
-          {
+          makeTab({
             id: 7,
             windowId: 3,
             url: 'https://funding.example.com/watershed?utm_source=newsletter',
             title: 'Funding round-up',
-          },
+          }),
         ],
         { drainAgent: false },
       );
@@ -360,7 +389,7 @@ describe('agent cycle integration', () => {
               previewImageUrl: undefined,
             },
           },
-        ])
+        ] as never)
         .mockResolvedValueOnce([
           {
             result: {
@@ -376,7 +405,7 @@ describe('agent cycle integration', () => {
               previewImageUrl: undefined,
             },
           },
-        ]);
+        ] as never);
 
       mockCompleteSkillOutput.mockImplementation(async ({ schemaRef }) => {
         if (schemaRef !== 'tab-router-output') {
@@ -412,18 +441,18 @@ describe('agent cycle integration', () => {
 
       const captureResult = await runCaptureForTabs(
         [
-          {
+          makeTab({
             id: 8,
             windowId: 3,
             url: 'https://funding.example.org/grants/watershed-roundup?utm_source=newsletter',
             title: 'Funding round-up',
-          },
-          {
+          }),
+          makeTab({
             id: 9,
             windowId: 3,
             url: 'https://funding.example.org/news/watershed-roundup-print',
             title: 'Print view',
-          },
+          }),
         ],
         { drainAgent: false },
       );

@@ -1,0 +1,32 @@
+{
+  "id": "watchlist-hint",
+  "description": "Low-signal funding hints should still produce a structured watchlist candidate with a cautious follow-up path.",
+  "fixtureType": "low-signal",
+  "confidenceFloor": 0.55,
+  "tags": ["core-pack", "watchlist", "low-signal"],
+  "output": {
+    "candidates": [
+      {
+        "id": "candidate-food-hub-workshop",
+        "title": "Regional food hub planning workshop with emerging grant hints",
+        "summary": "A planning workshop mentions future support for cooperative food hubs, but the funding path is not fully specified yet.",
+        "rationale": "The source is light on hard funding detail, yet it points to a relevant convening where a future cooperative grant or partnership signal may emerge.",
+        "regionTags": [],
+        "ecologyTags": [],
+        "fundingSignals": ["planning"],
+        "priority": 0.34,
+        "recommendedNextStep": "Keep it in the watchlist and revisit after the workshop agenda or sponsor details are posted."
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "candidates", "threshold": 1 },
+    { "type": "field-present", "path": "candidates.0.title" },
+    { "type": "field-present", "path": "candidates.0.fundingSignals.0" },
+    { "type": "number-range", "path": "candidates.0.priority", "min": 0.2, "max": 0.5 },
+    { "type": "semantic-word-count", "path": "candidates.0.rationale", "threshold": 10 },
+    { "type": "string-min-length", "path": "candidates.0.summary", "threshold": 30 },
+    { "type": "string-min-length", "path": "candidates.0.recommendedNextStep", "threshold": 30 }
+  ],
+  "threshold": 0.76
+}

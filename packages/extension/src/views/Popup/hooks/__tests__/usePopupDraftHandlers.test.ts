@@ -1,7 +1,7 @@
 import type { ReviewDraft } from '@coop/shared';
+import { makeReviewDraft } from '@coop/shared/testing';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { makeReviewDraft } from '@coop/shared/testing';
 
 const { usePopupDraftHandlers } = await import('../usePopupDraftHandlers');
 

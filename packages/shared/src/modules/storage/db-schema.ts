@@ -2,17 +2,19 @@ import Dexie, { type EntityTable } from 'dexie';
 import type {
   ActionBundle,
   ActionLogEntry,
+  AgentBenchmarkRecord,
   AgentLog,
   AgentMemory,
   AgentObservation,
   AgentPlan,
+  AgentTraceRecord,
   AutoresearchConfig,
   CoopBlobRecord,
   CoopKnowledgeSkillOverride,
   EncryptedLocalPayload,
   EncryptedSessionMaterial,
-  ExperimentRecord,
   ExecutionPermit,
+  ExperimentRecord,
   GraphSnapshot,
   KnowledgeSkill,
   KnowledgeSource,
@@ -26,8 +28,8 @@ import type {
   ReviewDraft,
   SessionCapability,
   SessionCapabilityLogEntry,
-  SkillVariant,
   SkillRun,
+  SkillVariant,
   StealthKeyPairRecord,
   TabCandidate,
   TabRouting,
@@ -107,6 +109,7 @@ export class CoopDexie extends Dexie {
   knowledgeSkills!: EntityTable<KnowledgeSkill, 'id'>;
   coopKnowledgeSkillOverrides!: EntityTable<CoopKnowledgeSkillOverride, 'id'>;
   agentLogs!: EntityTable<AgentLog, 'id'>;
+  agentTraceRecords!: EntityTable<AgentTraceRecord, 'id'>;
   privacyIdentities!: EntityTable<PrivacyIdentityRecord, 'id'>;
   stealthKeyPairs!: EntityTable<StealthKeyPairRecord, 'id'>;
   agentMemories!: EntityTable<AgentMemory, 'id'>;
@@ -118,6 +121,7 @@ export class CoopDexie extends Dexie {
   skillVariants!: EntityTable<SkillVariant, 'id'>;
   experimentRecords!: EntityTable<ExperimentRecord, 'id'>;
   autoresearchConfigs!: EntityTable<AutoresearchConfig, 'skillId'>;
+  agentBenchmarkRecords!: EntityTable<AgentBenchmarkRecord, 'id'>;
 
   constructor(name = 'coop-v1') {
     super(name);
@@ -514,6 +518,13 @@ export class CoopDexie extends Dexie {
       skillVariants: 'id, skillId, [skillId+isActive], promptHash',
       experimentRecords: 'id, [skillId+createdAt], outcome',
       autoresearchConfigs: '&skillId',
+    });
+    this.version(22).stores({
+      agentBenchmarkRecords: 'id, [skillId+createdAt], providerId, createdAt',
+    });
+    this.version(23).stores({
+      agentTraceRecords:
+        'id, traceId, [observationId+startedAt], [skillId+startedAt], providerId, outcome, startedAt, createdAt',
     });
   }
 }

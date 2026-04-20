@@ -1,0 +1,26 @@
+{
+  "id": "low-confidence-insight",
+  "description": "Even low-confidence insights should have complete fields and honest confidence scoring.",
+  "output": {
+    "insights": [
+      {
+        "title": "Possible overlap between two capture sources",
+        "summary": "Two recently routed signals reference the same regional water board meeting, but from different member captures with slightly different interpretations.",
+        "whyItMatters": "If the overlap is real, the coop should consolidate these into one draft rather than creating duplicate work.",
+        "suggestedNextStep": "Compare the two captures side by side and merge if they cover the same event.",
+        "tags": ["dedup", "water-board"],
+        "category": "insight",
+        "confidence": 0.42
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "insights", "threshold": 1 },
+    { "type": "field-present", "path": "insights.0.title" },
+    { "type": "field-present", "path": "insights.0.suggestedNextStep" },
+    { "type": "number-range", "path": "insights.0.confidence", "min": 0, "max": 0.6 },
+    { "type": "semantic-word-count", "path": "insights.0.summary", "threshold": 8 },
+    { "type": "semantic-word-count", "path": "insights.0.whyItMatters", "threshold": 6 },
+    { "type": "array-min-length", "path": "insights.0.tags", "threshold": 1 }
+  ]
+}

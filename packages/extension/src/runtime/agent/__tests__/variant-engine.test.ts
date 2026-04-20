@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
+import { type CoopDexie, createCoopDb } from '@coop/shared';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createCoopDb, type CoopDexie } from '@coop/shared';
 import {
   activateVariant,
   createVariant,

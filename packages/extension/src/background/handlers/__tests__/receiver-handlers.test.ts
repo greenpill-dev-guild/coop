@@ -1,6 +1,6 @@
 import type { ReceiverCapture, ReviewDraft } from '@coop/shared';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeReviewDraft } from '@coop/shared/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   makeCoopState,
   makeReceiverCapture,

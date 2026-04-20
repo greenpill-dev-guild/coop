@@ -1,13 +1,18 @@
 import type {
   ActionProposal,
+  AgentBenchmarkRecord,
   AgentObservation,
   AgentObservationTrigger,
   AgentPlan,
   AgentPlanStep,
   AgentPlanStepEvaluationContract,
   AgentProvider,
+  AgentProviderPromotionState,
+  AgentRuntimeProviderContract,
+  AgentTraceRecord,
   ArtifactCategory,
   CapitalFormationBriefOutput,
+  IntegrationMode,
   MemoryInsightOutput,
   OpportunityCandidate,
   PublishReadinessCheckOutput,
@@ -20,9 +25,13 @@ import type {
 } from '../../contracts/schema';
 import {
   actionProposalSchema,
+  agentBenchmarkRecordSchema,
   agentObservationSchema,
   agentPlanSchema,
   agentPlanStepSchema,
+  agentProviderPromotionStateSchema,
+  agentRuntimeProviderContractSchema,
+  agentTraceRecordSchema,
   capitalFormationBriefOutputSchema,
   ecosystemEntityExtractorOutputSchema,
   erc8004FeedbackOutputSchema,
@@ -48,6 +57,7 @@ import {
   knowledgeLintOutputSchema,
 } from '../../contracts/schema-knowledge';
 import { createId, hashJson, nowIso, slugify, truncateWords } from '../../utils';
+import { classifyActionRisks } from '../policy/risk';
 
 export const skillOutputSchemas: Record<
   SkillOutputSchemaRef,
@@ -186,11 +196,17 @@ export function createActionProposal(input: {
   payload: Record<string, unknown>;
   reason: string;
   approvalMode: ActionProposal['approvalMode'];
+  onchainMode?: IntegrationMode;
   requiresPermit?: boolean;
   permitId?: string;
   generatedBySkillId?: string;
   createdAt?: string;
 }): ActionProposal {
+  const riskState = classifyActionRisks({
+    actionClass: input.actionClass,
+    onchainMode: input.onchainMode,
+  });
+
   return actionProposalSchema.parse({
     id: createId('agent-proposal'),
     actionClass: input.actionClass,
@@ -201,6 +217,8 @@ export function createActionProposal(input: {
     approvalMode: input.approvalMode,
     requiresPermit: input.requiresPermit ?? false,
     permitId: input.permitId,
+    riskTags: riskState.riskTags,
+    requiresExplicitAcknowledgement: riskState.requiresExplicitAcknowledgement,
     generatedBySkillId: input.generatedBySkillId,
     createdAt: input.createdAt ?? nowIso(),
   });
@@ -336,6 +354,59 @@ export function validateSkillManifest(input: unknown): SkillManifest {
 
 export function validateSkillOutput<T>(schemaRef: SkillOutputSchemaRef, value: unknown) {
   return skillOutputSchemas[schemaRef].parse(value) as T;
+}
+
+export function validateAgentRuntimeProviderContract(input: unknown): AgentRuntimeProviderContract {
+  return agentRuntimeProviderContractSchema.parse(input);
+}
+
+export function createAgentBenchmarkRecord(
+  input: Omit<AgentBenchmarkRecord, 'id' | 'createdAt'> & {
+    id?: string;
+    createdAt?: string;
+  },
+) {
+  return agentBenchmarkRecordSchema.parse({
+    id: input.id ?? createId('agent-benchmark'),
+    ...input,
+    createdAt: input.createdAt ?? nowIso(),
+  });
+}
+
+export function validateAgentBenchmarkRecord(input: unknown) {
+  return agentBenchmarkRecordSchema.parse(input);
+}
+
+export function createAgentProviderPromotionState(
+  input: Omit<AgentProviderPromotionState, 'evaluatedAt'> & {
+    evaluatedAt?: string;
+  },
+) {
+  return agentProviderPromotionStateSchema.parse({
+    ...input,
+    evaluatedAt: input.evaluatedAt ?? nowIso(),
+  });
+}
+
+export function validateAgentProviderPromotionState(input: unknown) {
+  return agentProviderPromotionStateSchema.parse(input);
+}
+
+export function createAgentTraceRecord(
+  input: Omit<AgentTraceRecord, 'id' | 'createdAt'> & {
+    id?: string;
+    createdAt?: string;
+  },
+) {
+  return agentTraceRecordSchema.parse({
+    id: input.id ?? createId('agent-trace-record'),
+    ...input,
+    createdAt: input.createdAt ?? nowIso(),
+  });
+}
+
+export function validateAgentTraceRecord(input: unknown) {
+  return agentTraceRecordSchema.parse(input);
 }
 
 function buildAgentDraftTitle(prefix: string, title: string) {

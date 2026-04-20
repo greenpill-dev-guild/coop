@@ -1,0 +1,20 @@
+{
+  "id": "single-signal-digest",
+  "description": "Digests based on a single strong signal should still produce useful synthesis.",
+  "output": {
+    "title": "Review: emergency grant deadline approaching",
+    "summary": "A climate disaster relief grant with a 48-hour window was flagged from the capture pipeline.",
+    "whyItMatters": "The coop's recent flood documentation qualifies as supporting evidence — missing this deadline means waiting for the next cycle.",
+    "suggestedNextStep": "Assign one member to draft the application using existing flood documentation by end of day.",
+    "highlights": ["FEMA Community Resilience Fund: application closes Friday at 5pm ET."],
+    "tags": ["emergency", "grant", "deadline"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "array-min-length", "path": "highlights", "threshold": 1 },
+    { "type": "array-min-length", "path": "tags", "threshold": 2 },
+    { "type": "semantic-word-count", "path": "summary", "threshold": 6 },
+    { "type": "semantic-word-count", "path": "whyItMatters", "threshold": 8 },
+    { "type": "semantic-word-count", "path": "suggestedNextStep", "threshold": 6 }
+  ]
+}

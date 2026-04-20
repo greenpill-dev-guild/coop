@@ -1,6 +1,9 @@
 {
   "id": "review-brief",
-  "description": "Capital formation briefs should have the core review fields filled in.",
+  "description": "Capital formation briefs should stay reviewable even when the supporting signal is compressed into a single strong lead.",
+  "fixtureType": "noisy",
+  "confidenceFloor": 0.74,
+  "tags": ["core-pack", "reviewable", "single-lead"],
   "output": {
     "title": "Capital formation opening for river restoration stewardship",
     "summary": "This opportunity could fund the coop's watershed restoration work through a resilience-focused grant round.",
@@ -17,5 +20,6 @@
     { "type": "semantic-word-count", "path": "whyItMatters", "threshold": 6 },
     { "type": "string-min-length", "path": "summary", "threshold": 20 },
     { "type": "semantic-word-count", "path": "suggestedNextStep", "threshold": 5 }
-  ]
+  ],
+  "threshold": 0.8
 }

@@ -1,5 +1,12 @@
 import type { AgentMemory, AgentObservation, AgentPlan } from '@coop/shared';
+import { useState } from 'react';
 import type { RuntimeSummary } from '../../../runtime/messages';
+import {
+  getPlanJudgmentCue,
+  planNeedsJudgment,
+  renderAcknowledgementControl,
+  renderRiskBadges,
+} from '../review-risk';
 import type { DecisionEntry } from './RoostDecisionHistory';
 import { RoostDecisionHistory } from './RoostDecisionHistory';
 import type { KnowledgeTopic } from './RoostKnowledgeSection';
@@ -40,6 +47,8 @@ export function AgentSection({
   onRejectAgentPlan,
 }: AgentSectionProps) {
   const cadence = (summary as { agentCadenceMinutes?: number } | null)?.agentCadenceMinutes ?? 8;
+  const [acknowledgedPlanIds, setAcknowledgedPlanIds] = useState<Record<string, boolean>>({});
+  const hasJudgmentPlan = pendingPlans.some(planNeedsJudgment);
 
   return (
     <>
@@ -72,32 +81,53 @@ export function AgentSection({
       {/* --- Pending approvals --- */}
       {pendingPlans.length > 0 ? (
         <article className="panel-card">
-          <h2>Needs Approval</h2>
+          <h2>{hasJudgmentPlan ? 'Needs Judgment' : 'Needs Approval'}</h2>
           <div className="roost-activity-list">
-            {pendingPlans.map((plan) => (
-              <div className="roost-activity-item" key={plan.id}>
-                <span className="roost-activity-item__title">{plan.goal}</span>
-                <span className="roost-activity-item__meta">
-                  Confidence: {Math.round(plan.confidence * 100)}%
-                </span>
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    onClick={() => void onApproveAgentPlan(plan.id)}
-                    type="button"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => void onRejectAgentPlan(plan.id)}
-                    type="button"
-                  >
-                    Reject
-                  </button>
+            {pendingPlans.map((plan) => {
+              const cue = getPlanJudgmentCue(plan);
+              const isAcknowledged = acknowledgedPlanIds[plan.id] ?? false;
+
+              return (
+                <div className="roost-activity-item" key={plan.id}>
+                  <span className="roost-activity-item__title">{plan.goal}</span>
+                  <span className="roost-activity-item__meta">
+                    Confidence: {Math.round(plan.confidence * 100)}%
+                  </span>
+                  {cue.riskTags.length > 0 ? (
+                    <div className="badge-row">{renderRiskBadges(plan.id, cue)}</div>
+                  ) : null}
+                  {cue.helperLine ? (
+                    <span className="roost-activity-item__meta">{cue.helperLine}</span>
+                  ) : null}
+                  <div className="action-row">
+                    {renderAcknowledgementControl({
+                      checked: isAcknowledged,
+                      cue,
+                      onToggle: () =>
+                        setAcknowledgedPlanIds((current) => ({
+                          ...current,
+                          [plan.id]: !isAcknowledged,
+                        })),
+                    })}
+                    <button
+                      className="primary-button"
+                      disabled={cue.requiresAcknowledgement && !isAcknowledged}
+                      onClick={() => void onApproveAgentPlan(plan.id)}
+                      type="button"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => void onRejectAgentPlan(plan.id)}
+                      type="button"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </article>
       ) : null}

@@ -1,6 +1,6 @@
+import { getOwnableValidator } from '@rhinestone/module-sdk/module';
 import type { Address, Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { getOwnableValidator } from '@rhinestone/module-sdk/module';
 import type {
   SessionCapability,
   SessionCapabilityFailureReason,

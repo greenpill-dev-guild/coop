@@ -55,4 +55,12 @@ describe('dispatchCaptureRuntimeMessage', () => {
 
     expect(handlers.captureActiveTab).toHaveBeenCalledWith({ allowRecentDuplicate: true });
   });
+
+  it('waits for manual capture follow-up work before responding', async () => {
+    const handlers = makeHandlers();
+
+    await dispatchCaptureRuntimeMessage({ type: 'manual-capture' }, handlers);
+
+    expect(handlers.runCaptureCycle).toHaveBeenCalledWith({ awaitFollowUp: true });
+  });
 });

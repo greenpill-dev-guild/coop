@@ -4,11 +4,12 @@ import {
   artifactCategorySchema,
   isArchiveWorthy,
 } from '@coop/shared';
-import type { Precedent } from '../../shared/PrecedentIndicator';
 import type { InferenceBridgeState } from '../../../runtime/inference-bridge';
 import type { DashboardResponse } from '../../../runtime/messages';
 import { ShareMenu } from '../../Popup/ShareMenu';
+import type { Precedent } from '../../shared/PrecedentIndicator';
 import { formatArtifactCategoryLabel } from '../helpers';
+import { DraftCardProvenance } from './DraftCardProvenance';
 import {
   type DraftEditorReturn,
   formatConfidence,
@@ -17,7 +18,6 @@ import {
   formatRelativeTime,
   summarizeSourceLine,
 } from './card-shared';
-import { DraftCardProvenance } from './DraftCardProvenance';
 
 export interface DraftCardProps {
   draft: ReviewDraft;

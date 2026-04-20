@@ -44,6 +44,9 @@ import {
   uiPreferences,
 } from './context';
 
+import { listReceiverPairings, selectActiveReceiverPairingsForSync } from '@coop/shared';
+import { filterVisibleReceiverPairings } from '../runtime/receiver';
+import { consumePendingSidepanelIntent, setPendingSidepanelIntent } from './context';
 import { getDashboard, refreshBadge } from './dashboard';
 import {
   handleApproveAction,
@@ -63,8 +66,10 @@ import {
 } from './handlers/actions';
 import {
   ensureOnboardingBurst,
+  handleActivateWebLlmProviderPromotion,
   handleApproveAgentPlan,
   handleGetAgentDashboard,
+  handleGetWebLlmProviderPromotionState,
   handleListSkillManifests,
   handleQueueGreenGoodsAssessment,
   handleQueueGreenGoodsGapAdminSync,
@@ -98,6 +103,14 @@ import {
   handleUpdateCoopDetails,
 } from './handlers/coop';
 import {
+  handleAddKnowledgeSource,
+  handleGetKnowledgeStats,
+  handleListKnowledgeSources,
+  handleRemoveKnowledgeSource,
+  handleToggleKnowledgeSource,
+} from './handlers/knowledge-source';
+import { handleRefreshKnowledgeSource } from './handlers/knowledge-source-fetch';
+import {
   handleProvisionMemberOnchainAccount,
   handleSubmitGreenGoodsWorkSubmission,
 } from './handlers/member-account';
@@ -115,14 +128,6 @@ import {
   handleSetReceiverIntakeArchiveWorthiness,
 } from './handlers/receiver';
 import {
-  handleAddKnowledgeSource,
-  handleGetKnowledgeStats,
-  handleListKnowledgeSources,
-  handleRemoveKnowledgeSource,
-  handleToggleKnowledgeSource,
-} from './handlers/knowledge-source';
-import { handleRefreshKnowledgeSource } from './handlers/knowledge-source-fetch';
-import {
   handlePromoteSignalToDraft,
   handlePublishDraft,
   handleUpdateMeetingSettings,
@@ -136,10 +141,7 @@ import {
   handleRotateSessionCapability,
 } from './handlers/session';
 import { getActiveReviewContextForSession } from './operator';
-import { filterVisibleReceiverPairings } from '../runtime/receiver';
-import { listReceiverPairings, selectActiveReceiverPairingsForSync } from '@coop/shared';
 import { getPopupSidepanelState, togglePopupSidepanel } from './sidepanel';
-import { consumePendingSidepanelIntent, setPendingSidepanelIntent } from './context';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -195,6 +197,23 @@ async function getReceiverSyncConfig() {
       activeContext.activeMemberId,
     ),
   };
+}
+
+async function handleRunAutoresearchCycle(
+  message: Extract<RegistryRequest, { type: 'run-autoresearch-cycle' }>,
+) {
+  const { runCycle } = await import('../runtime/agent/experiment-loop');
+  const { skillId } = message.payload;
+  const config = (await db.autoresearchConfigs.get(skillId)) ?? {
+    skillId,
+    enabled: true,
+    maxExperimentsPerCycle: 5,
+    timeBudgetMs: 60000,
+    qualityFloor: 0.3,
+    updatedAt: Date.now(),
+  };
+  const summary = await runCycle(db, skillId, config);
+  return { ok: true, data: summary };
 }
 
 // ---------------------------------------------------------------------------
@@ -341,6 +360,36 @@ export const handlerRegistry: HandlerRecord = {
   'refresh-knowledge-source': async (message) => handleRefreshKnowledgeSource(message),
   'get-knowledge-stats': async (message) => handleGetKnowledgeStats(message),
 
+  // ---- Autoresearch ----
+  'list-autoresearch-configs': async () => {
+    const configs: Record<string, import('@coop/shared').AutoresearchConfig> = {};
+    const all = await db.autoresearchConfigs.toArray();
+    for (const c of all) configs[c.skillId] = c;
+    return { ok: true, data: configs };
+  },
+
+  'set-autoresearch-config': async (message) => {
+    const { skillId, enabled } = message.payload;
+    const existing = await db.autoresearchConfigs.get(skillId);
+    const config = {
+      skillId,
+      enabled,
+      maxExperimentsPerCycle: existing?.maxExperimentsPerCycle ?? 5,
+      timeBudgetMs: existing?.timeBudgetMs ?? 60000,
+      qualityFloor: existing?.qualityFloor ?? 0.3,
+      updatedAt: Date.now(),
+    };
+    await db.autoresearchConfigs.put(config);
+    return { ok: true };
+  },
+
+  'run-autoresearch-cycle': handleRunAutoresearchCycle,
+
+  'list-experiment-records': async () => {
+    const records = await db.experimentRecords.orderBy('createdAt').reverse().limit(100).toArray();
+    return { ok: true, data: records };
+  },
+
   // ---- Export ----
   'export-snapshot': async (message) => handleExportSnapshot(message),
   'export-artifact': async (message) => handleExportArtifact(message),
@@ -434,6 +483,8 @@ export const handlerRegistry: HandlerRecord = {
   // ---- Agent ----
   'get-agent-dashboard': async () => handleGetAgentDashboard(),
   'run-agent-cycle': async () => handleRunAgentCycle(),
+  'get-webllm-provider-promotion-state': async () => handleGetWebLlmProviderPromotionState(),
+  'activate-webllm-provider-promotion': async () => handleActivateWebLlmProviderPromotion(),
   'approve-agent-plan': async (message) => handleApproveAgentPlan(message),
   'reject-agent-plan': async (message) => handleRejectAgentPlan(message),
   'retry-skill-run': async (message) => handleRetrySkillRun(message),

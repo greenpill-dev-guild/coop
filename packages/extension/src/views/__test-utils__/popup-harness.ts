@@ -5,11 +5,11 @@
  * Pattern: message-passing mocks + dashboard factory + snapshot hydration.
  */
 import type { Artifact, ReviewDraft } from '@coop/shared';
-import type { vi } from 'vitest';
 import {
   makeArtifact as makeSharedArtifact,
   makeReviewDraft as makeSharedReviewDraft,
 } from '@coop/shared/testing';
+import type { vi } from 'vitest';
 import { makeCoopState, makeDashboardResponse } from '../../__tests__/fixtures';
 import type { DashboardResponse } from '../../runtime/messages';
 

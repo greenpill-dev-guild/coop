@@ -15,18 +15,18 @@ import { CompactCard } from './ChickensCompactCard';
 import { CompactSharedCard } from './ChickensCompactSharedCard';
 import { FilterPopover } from './FilterPopover';
 import {
-  ORIENTATION_CATEGORIES,
-  buildReviewItems,
-  formatCategoryLabel,
-  isStalePendingObservation,
-} from './chickens-helpers';
-import {
   type ChickensFilterState,
   type TimeGroup,
   buildCategoryOptions,
   groupByTime,
   isFilterActive,
 } from './chickens-filters';
+import {
+  ORIENTATION_CATEGORIES,
+  buildReviewItems,
+  formatCategoryLabel,
+  isStalePendingObservation,
+} from './chickens-helpers';
 
 // ---------------------------------------------------------------------------
 // Icons

@@ -4,6 +4,12 @@ import {
   formatActionLogEventLabel,
   isDeprecatedPolicyActionClass,
 } from '@coop/shared';
+import { useState } from 'react';
+import {
+  getBundleJudgmentCue,
+  renderAcknowledgementControl,
+  renderRiskBadges,
+} from '../review-risk';
 
 export type PolicyAndQueueSectionProps = {
   policies: ActionPolicy[];
@@ -20,6 +26,7 @@ export type PolicyAndQueueSectionProps = {
 };
 
 export function PolicyAndQueueSection(props: PolicyAndQueueSectionProps) {
+  const [acknowledgedBundleIds, setAcknowledgedBundleIds] = useState<Record<string, boolean>>({});
   const visiblePolicies = props.policies.filter(
     (policy) => !isDeprecatedPolicyActionClass(policy.actionClass),
   );
@@ -61,48 +68,75 @@ export function PolicyAndQueueSection(props: PolicyAndQueueSectionProps) {
           <h3>Waiting Chores</h3>
         </summary>
         <div className="collapsible-card__content">
-          {props.actionQueue.map((bundle) => (
-            <article className="operator-log-entry" key={bundle.id}>
-              <div className="badge-row">
-                <span className="badge">{formatActionClassLabel(bundle.actionClass)}</span>
-                <span className="badge">{bundle.status}</span>
-                <span className="badge">{bundle.coopId}</span>
-              </div>
-              <div className="helper-text">
-                Created: {new Date(bundle.createdAt).toLocaleString()} · Expires:{' '}
-                {new Date(bundle.expiresAt).toLocaleString()}
-              </div>
-              {bundle.status === 'proposed' ? (
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    onClick={() => void props.onApproveAction(bundle.id)}
-                    type="button"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => void props.onRejectAction(bundle.id)}
-                    type="button"
-                  >
-                    Reject
-                  </button>
+          {props.actionQueue.map((bundle) => {
+            const cue = getBundleJudgmentCue(bundle);
+            const isAcknowledged = acknowledgedBundleIds[bundle.id] ?? false;
+
+            return (
+              <article className="operator-log-entry" key={bundle.id}>
+                <div className="badge-row">
+                  <span className="badge">{formatActionClassLabel(bundle.actionClass)}</span>
+                  <span className="badge">{bundle.status}</span>
+                  <span className="badge">{bundle.coopId}</span>
+                  {renderRiskBadges(bundle.id, cue)}
                 </div>
-              ) : null}
-              {bundle.status === 'approved' ? (
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    onClick={() => void props.onExecuteAction(bundle.id)}
-                    type="button"
-                  >
-                    Run now
-                  </button>
+                <div className="helper-text">
+                  {cue.helperLine ? `${cue.helperLine} · ` : ''}
+                  Created: {new Date(bundle.createdAt).toLocaleString()} · Expires:{' '}
+                  {new Date(bundle.expiresAt).toLocaleString()}
                 </div>
-              ) : null}
-            </article>
-          ))}
+                {bundle.status === 'proposed' ? (
+                  <div className="action-row">
+                    {renderAcknowledgementControl({
+                      checked: isAcknowledged,
+                      cue,
+                      onToggle: () =>
+                        setAcknowledgedBundleIds((current) => ({
+                          ...current,
+                          [bundle.id]: !isAcknowledged,
+                        })),
+                    })}
+                    <button
+                      className="primary-button"
+                      disabled={cue.requiresAcknowledgement && !isAcknowledged}
+                      onClick={() => void props.onApproveAction(bundle.id)}
+                      type="button"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => void props.onRejectAction(bundle.id)}
+                      type="button"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                ) : null}
+                {bundle.status === 'approved' ? (
+                  <div className="action-row">
+                    {renderAcknowledgementControl({
+                      checked: isAcknowledged,
+                      cue,
+                      onToggle: () =>
+                        setAcknowledgedBundleIds((current) => ({
+                          ...current,
+                          [bundle.id]: !isAcknowledged,
+                        })),
+                    })}
+                    <button
+                      className="primary-button"
+                      disabled={cue.requiresAcknowledgement && !isAcknowledged}
+                      onClick={() => void props.onExecuteAction(bundle.id)}
+                      type="button"
+                    >
+                      Run now
+                    </button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
           {props.actionQueue.length === 0 ? (
             <div className="empty-state">No waiting chores.</div>
           ) : null}

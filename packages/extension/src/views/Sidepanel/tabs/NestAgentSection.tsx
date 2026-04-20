@@ -1,4 +1,5 @@
 import type { ActionPolicy, CoopSharedState } from '@coop/shared';
+import { resolveConfiguredWebLlmPromotionEnabled } from '../../../runtime/config';
 import type { AgentDashboardResponse, DashboardResponse } from '../../../runtime/messages';
 import { OperatorConsole } from '../OperatorConsole';
 
@@ -21,6 +22,7 @@ export interface NestAgentSectionProps {
   handleRejectAgentPlan: (planId: string) => Promise<void>;
   handleRetrySkillRun: (skillRunId: string) => Promise<void>;
   handleToggleSkillAutoRun: (skillId: string, enabled: boolean) => Promise<void>;
+  handleActivateWebLlmProviderPromotion: () => Promise<void>;
   handleSetPolicy: (
     actionClass: import('@coop/shared').PolicyActionClass,
     approvalRequired: boolean,
@@ -66,6 +68,7 @@ export interface NestAgentSectionProps {
     request: import('@coop/shared').GreenGoodsHypercertMintRequest,
   ) => Promise<void>;
   handleQueueGreenGoodsMemberSync: (coopId: string) => Promise<void>;
+  hasTrustedNodeAccess: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +90,7 @@ export function NestAgentSection({
   handleRejectAgentPlan,
   handleRetrySkillRun,
   handleToggleSkillAutoRun,
+  handleActivateWebLlmProviderPromotion,
   handleSetPolicy,
   handleProposeAction,
   handleApproveAction,
@@ -103,7 +107,18 @@ export function NestAgentSection({
   handleQueueGreenGoodsGapAdminSync,
   handleQueueGreenGoodsHypercertMint,
   handleQueueGreenGoodsMemberSync,
+  hasTrustedNodeAccess,
 }: NestAgentSectionProps) {
+  const webLlmPromotionEnabled = resolveConfiguredWebLlmPromotionEnabled(
+    import.meta.env.VITE_COOP_ENABLE_WEBLLM_PROMOTION,
+  );
+  const webLlmPromotionState = agentDashboard?.providerPromotion?.webllm ?? null;
+  const webLlmPromotionEvidence = agentDashboard?.providerPromotion?.webllmEvidence ?? {
+    benchmarkRecords: [],
+    traceRecords: [],
+  };
+  const showProviderPromotion = webLlmPromotionEnabled || Boolean(webLlmPromotionState);
+
   return (
     <OperatorConsole
       actionLog={dashboard?.operator.actionLog ?? []}
@@ -135,6 +150,7 @@ export function NestAgentSection({
       onRunAgentCycle={handleRunAgentCycle}
       onToggleAnchor={toggleAnchorMode}
       onToggleSkillAutoRun={handleToggleSkillAutoRun}
+      onActivateWebLlmProviderPromotion={handleActivateWebLlmProviderPromotion}
       onchainMode={dashboard?.operator.onchainMode ?? runtimeConfig.onchainMode}
       refreshableReceiptCount={refreshableArchiveReceipts.length}
       policies={actionPolicies}
@@ -182,6 +198,16 @@ export function NestAgentSection({
       skillManifests={agentDashboard?.manifests ?? []}
       skillRuns={agentDashboard?.skillRuns ?? []}
       memories={agentDashboard?.memories ?? []}
+      providerPromotion={
+        showProviderPromotion
+          ? {
+              enabled: webLlmPromotionEnabled,
+              canActivate: webLlmPromotionEnabled && hasTrustedNodeAccess,
+              webllm: webLlmPromotionState,
+              webllmEvidence: webLlmPromotionEvidence,
+            }
+          : undefined
+      }
     />
   );
 }

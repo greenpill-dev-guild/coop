@@ -4,8 +4,8 @@ import {
   resolveScopedActionPayload,
 } from '../action-payload-parsers';
 
-const VALID_ADDRESS = '0x' + 'aB'.repeat(20);
-const VALID_BYTES32 = '0x' + 'cd'.repeat(32);
+const VALID_ADDRESS = `0x${'aB'.repeat(20)}`;
+const VALID_BYTES32 = `0x${'cd'.repeat(32)}`;
 
 function expectOk(result: ScopedActionPayloadResolution) {
   expect(result.ok).toBe(true);
@@ -295,7 +295,7 @@ describe('resolveScopedActionPayload', () => {
   });
 
   describe('safe-swap-owner', () => {
-    const secondAddress = '0x' + 'CD'.repeat(20);
+    const secondAddress = `0x${'CD'.repeat(20)}`;
 
     it('returns both old and new owner addresses', () => {
       const result = expectOk(

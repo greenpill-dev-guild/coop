@@ -6,13 +6,13 @@ import type {
   RuntimeSummary,
   SidepanelIntentSegment,
 } from '../../../runtime/messages';
-import type { KnowledgeTopic } from './RoostKnowledgeSection';
-import type { DecisionEntry } from './RoostDecisionHistory';
 import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
 import { SidepanelSubheader } from '../SidepanelSubheader';
 import { AgentSection } from './RoostAgentSection';
+import type { DecisionEntry } from './RoostDecisionHistory';
 import { FocusSection } from './RoostFocusSection';
 import { GardenSection } from './RoostGardenSection';
+import type { KnowledgeTopic } from './RoostKnowledgeSection';
 import { isGardenerActionBundle, readBundleTargetMemberId } from './roost-helpers';
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ export function RoostTab({
 
   const lastCompletedRun = useMemo(() => {
     const runs = agentDashboard?.skillRuns ?? [];
-    return runs.find((r) => r.completedAt) ?? null;
+    return runs.find((r) => r.finishedAt) ?? null;
   }, [agentDashboard]);
 
   // ---------------------------------------------------------------------------
@@ -146,20 +146,21 @@ export function RoostTab({
     sources: 0,
   });
   const [decisions, setDecisions] = useState<DecisionEntry[]>([]);
+  const activeCoopId = activeCoop?.profile.id;
 
   const fetchKnowledgeStats = useCallback(async () => {
-    if (!activeCoop) return;
+    if (!activeCoopId || !globalThis.chrome?.runtime?.sendMessage) return;
     const result = await sendRuntimeMessage<{
       topics: KnowledgeTopic[];
       stats: { entities: number; relationships: number; sources: number };
       decisions: DecisionEntry[];
-    }>({ type: 'get-knowledge-stats', payload: { coopId: activeCoop.profile.id } });
+    }>({ type: 'get-knowledge-stats', payload: { coopId: activeCoopId } });
     if (result.ok && result.data) {
       setKnowledgeTopics(result.data.topics);
       setKnowledgeStats(result.data.stats);
       setDecisions(result.data.decisions);
     }
-  }, [activeCoop?.profile.id]);
+  }, [activeCoopId]);
 
   useEffect(() => {
     if (roostSubTab === 'agent') void fetchKnowledgeStats();

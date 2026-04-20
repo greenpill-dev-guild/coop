@@ -1,0 +1,45 @@
+{
+  "id": "noisy-multi-signal",
+  "description": "Opportunity extraction should keep multiple viable candidates distinct when a source mixes strong funding language with adjacent operational noise.",
+  "fixtureType": "noisy",
+  "confidenceFloor": 0.72,
+  "tags": ["core-pack", "mixed-signal", "multi-candidate"],
+  "output": {
+    "candidates": [
+      {
+        "id": "candidate-community-solar-stack",
+        "title": "Community solar and workforce microgrant for cooperative food sites",
+        "summary": "A climate equity program offers equipment funding and workforce training for food-growing sites that use cooperative ownership models.",
+        "rationale": "The source combines explicit funding language, ecological infrastructure, and member ownership in a way that maps cleanly to the coop's capital formation work.",
+        "regionTags": ["oakland"],
+        "ecologyTags": ["energy", "urban-agriculture"],
+        "fundingSignals": ["microgrant", "workforce-training"],
+        "priority": 0.81,
+        "recommendedNextStep": "Compare the grant size and timeline against current rooftop solar plans before drafting a brief."
+      },
+      {
+        "id": "candidate-site-readiness-support",
+        "title": "Site readiness assistance for cooperative garden infrastructure",
+        "summary": "The same program also includes technical assistance and planning support that could help the coop qualify for a later capital round.",
+        "rationale": "This is a weaker opportunity than the main grant path, but it still creates a plausible next step by reducing project risk and improving readiness.",
+        "regionTags": ["oakland"],
+        "ecologyTags": [],
+        "fundingSignals": ["technical-assistance"],
+        "priority": 0.42,
+        "recommendedNextStep": "Keep it in the watchlist and revisit if the main solar grant needs site-readiness support."
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "candidates", "threshold": 2 },
+    { "type": "field-present", "path": "candidates.0.title" },
+    { "type": "field-present", "path": "candidates.1.title" },
+    { "type": "array-min-length", "path": "candidates.0.fundingSignals", "threshold": 2 },
+    { "type": "field-present", "path": "candidates.1.fundingSignals.0" },
+    { "type": "number-range", "path": "candidates.0.priority", "min": 0.6, "max": 1 },
+    { "type": "number-range", "path": "candidates.1.priority", "min": 0.25, "max": 0.65 },
+    { "type": "semantic-word-count", "path": "candidates.0.rationale", "threshold": 10 },
+    { "type": "string-min-length", "path": "candidates.1.recommendedNextStep", "threshold": 30 }
+  ],
+  "threshold": 0.82
+}

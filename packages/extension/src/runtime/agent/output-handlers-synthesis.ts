@@ -10,6 +10,7 @@ import {
   createMemoryInsightDraft,
   createReviewDigestDraft,
 } from '@coop/shared';
+import { configuredOnchainMode } from '../config';
 import type { SkillOutputHandler } from './output-handlers-helpers';
 import {
   patchSynthesisDraft,
@@ -176,6 +177,7 @@ export const handlePublishReadinessCheckOutput: SkillOutputHandler = async (inpu
         },
         reason: 'Publish readiness check marked the draft as ready.',
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],

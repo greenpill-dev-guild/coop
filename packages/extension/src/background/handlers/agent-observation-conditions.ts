@@ -34,7 +34,7 @@ export function isRitualReviewDue(input: { coop: CoopSharedState; drafts: Review
   const reviewableDrafts = input.drafts.filter(
     (draft) =>
       draft.suggestedTargetCoopIds.includes(input.coop.profile.id) &&
-      (draft.status === 'accepted' || draft.status === 'published'),
+      draft.workflowStage === 'ready',
   );
   if (reviewableDrafts.length === 0) {
     return false;

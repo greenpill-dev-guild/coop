@@ -1,0 +1,25 @@
+{
+  "id": "minimal-viable-brief",
+  "description": "Even minimal briefs must have title, summary, rationale, and at least one tag.",
+  "fixtureType": "low-signal",
+  "confidenceFloor": 0.6,
+  "tags": ["core-pack", "minimal", "low-signal"],
+  "output": {
+    "title": "Seed funding for mangrove monitoring network",
+    "summary": "A coastal resilience fund is accepting proposals for community-led monitoring systems.",
+    "whyItMatters": "The coop already has field data from last season's mangrove survey — this builds on existing work.",
+    "suggestedNextStep": "Check eligibility criteria and confirm the application deadline.",
+    "tags": ["coastal", "monitoring"],
+    "targetCoopIds": [],
+    "supportingCandidateIds": ["candidate-mangrove-fund"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "string-min-length", "path": "title", "threshold": 10 },
+    { "type": "string-min-length", "path": "summary", "threshold": 20 },
+    { "type": "array-min-length", "path": "tags", "threshold": 1 },
+    { "type": "semantic-word-count", "path": "whyItMatters", "threshold": 5 },
+    { "type": "semantic-word-count", "path": "suggestedNextStep", "threshold": 4 }
+  ],
+  "threshold": 0.72
+}

@@ -83,6 +83,53 @@ describe('useSidepanelAgent', () => {
     expect(deps.loadDashboard).toHaveBeenCalledTimes(1);
   });
 
+  it('activates WebLLM promotion and refreshes the agent dashboard', async () => {
+    const deps = makeDeps();
+    sendRuntimeMessageMock.mockResolvedValue({
+      ok: true,
+      data: {
+        promotable: true,
+        promotedSkillIds: ['tab-router', 'opportunity-extractor'],
+        failedChecks: [],
+      },
+    });
+
+    const { result } = renderHook(() => useSidepanelAgent(deps));
+
+    await act(async () => {
+      await result.current.handleActivateWebLlmProviderPromotion();
+    });
+
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+      type: 'activate-webllm-provider-promotion',
+    });
+    expect(deps.loadAgentDashboard).toHaveBeenCalledTimes(1);
+    expect(deps.setMessage).toHaveBeenCalledWith('WebLLM promotion activated for 2 skills.');
+  });
+
+  it('reports failed release-gate checks when WebLLM promotion is blocked', async () => {
+    const deps = makeDeps();
+    sendRuntimeMessageMock.mockResolvedValue({
+      ok: true,
+      data: {
+        promotable: false,
+        promotedSkillIds: [],
+        failedChecks: ['traced', 'malicious-pack-clean'],
+      },
+    });
+
+    const { result } = renderHook(() => useSidepanelAgent(deps));
+
+    await act(async () => {
+      await result.current.handleActivateWebLlmProviderPromotion();
+    });
+
+    expect(deps.loadAgentDashboard).toHaveBeenCalledTimes(1);
+    expect(deps.setMessage).toHaveBeenCalledWith(
+      'WebLLM promotion did not pass the release gate. Failed checks: traced, malicious-pack-clean.',
+    );
+  });
+
   it('surfaces runtime failures', async () => {
     const deps = makeDeps();
     sendRuntimeMessageMock.mockResolvedValue({ ok: false, error: 'agent failed' });
@@ -129,5 +176,24 @@ describe('useSidepanelAgent', () => {
         expect(deps.setMessage).toHaveBeenCalledWith(friendly);
       });
     }
+  });
+
+  it('surfaces approval and rejection failures without refreshing dashboards', async () => {
+    const deps = makeDeps();
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ ok: false, error: 'approval blocked' })
+      .mockResolvedValueOnce({ ok: false, error: 'rejection blocked' });
+
+    const { result } = renderHook(() => useSidepanelAgent(deps));
+
+    await act(async () => {
+      await result.current.handleApproveAgentPlan('plan-1');
+      await result.current.handleRejectAgentPlan('plan-2');
+    });
+
+    expect(deps.setMessage).toHaveBeenNthCalledWith(1, 'approval blocked');
+    expect(deps.setMessage).toHaveBeenNthCalledWith(2, 'rejection blocked');
+    expect(deps.loadAgentDashboard).not.toHaveBeenCalled();
+    expect(deps.loadDashboard).not.toHaveBeenCalled();
   });
 });

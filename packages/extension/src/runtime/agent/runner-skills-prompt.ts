@@ -12,8 +12,11 @@ import type {
   TabRouting,
 } from '@coop/shared';
 import { sanitizeTextForInference, sanitizeValueForInference, truncateWords } from '@coop/shared';
+import { sanitizeIngested } from './adapters';
 import type { RegisteredSkill } from './registry';
 import { compact } from './runner-state';
+
+export type PreparedSkillPrompt = Awaited<ReturnType<typeof buildSkillPrompt>>;
 
 export async function buildSkillPrompt(input: {
   skill: RegisteredSkill;
@@ -34,6 +37,10 @@ export async function buildSkillPrompt(input: {
   const sanitize = (value?: string, maxWords = 80) =>
     typeof value === 'string' && value.trim().length > 0
       ? truncateWords(sanitizeTextForInference(value), maxWords)
+      : undefined;
+  const sanitizeUntrusted = (value?: string, maxWords = 80) =>
+    typeof value === 'string' && value.trim().length > 0
+      ? truncateWords(sanitizeTextForInference(sanitizeIngested(value)), maxWords)
       : undefined;
   const sanitizedObservationPayload =
     input.observation.payload && Object.keys(input.observation.payload).length > 0
@@ -72,16 +79,20 @@ export async function buildSkillPrompt(input: {
 
   const sourceContext = compact([
     input.observation.title
-      ? `Observation title: ${sanitize(input.observation.title, 24)}`
+      ? `Observation title: ${sanitizeUntrusted(input.observation.title, 24)}`
       : undefined,
     input.observation.summary
-      ? `Observation summary: ${sanitize(input.observation.summary, 40)}`
+      ? `Observation summary: ${sanitizeUntrusted(input.observation.summary, 40)}`
       : undefined,
     sanitizedObservationPayload ? `Observation payload: ${sanitizedObservationPayload}` : undefined,
-    input.draft?.title ? `Draft title: ${sanitize(input.draft.title, 24)}` : undefined,
-    input.draft?.summary ? `Draft summary: ${sanitize(input.draft.summary, 40)}` : undefined,
-    input.capture?.title ? `Capture title: ${sanitize(input.capture.title, 24)}` : undefined,
-    input.capture?.note ? `Capture note: ${sanitize(input.capture.note, 40)}` : undefined,
+    input.draft?.title ? `Draft title: ${sanitizeUntrusted(input.draft.title, 24)}` : undefined,
+    input.draft?.summary
+      ? `Draft summary: ${sanitizeUntrusted(input.draft.summary, 40)}`
+      : undefined,
+    input.capture?.title
+      ? `Capture title: ${sanitizeUntrusted(input.capture.title, 24)}`
+      : undefined,
+    input.capture?.note ? `Capture note: ${sanitizeUntrusted(input.capture.note, 40)}` : undefined,
     input.receipt?.rootCid ? `Archive root CID: ${input.receipt.rootCid}` : undefined,
   ]).join('\n');
 
@@ -90,11 +101,13 @@ export async function buildSkillPrompt(input: {
       ? `Captured extracts:\n${input.extracts
           .map(
             (extract) =>
-              `- ${extract.id}: ${sanitize(extract.cleanedTitle, 24)} (${extract.domain})\n  ${truncateWords(
+              `- ${extract.id}: ${sanitizeUntrusted(extract.cleanedTitle, 24)} (${extract.domain})\n  ${truncateWords(
                 sanitizeTextForInference(
-                  [extract.metaDescription, ...extract.topHeadings, ...extract.leadParagraphs]
-                    .filter(Boolean)
-                    .join(' '),
+                  sanitizeIngested(
+                    [extract.metaDescription, ...extract.topHeadings, ...extract.leadParagraphs]
+                      .filter(Boolean)
+                      .join(' '),
+                  ),
                 ),
                 48,
               )}`,
@@ -107,7 +120,7 @@ export async function buildSkillPrompt(input: {
       ? `Opportunity candidates:\n${input.candidates
           .map(
             (candidate) =>
-              `- ${candidate.id}: ${sanitize(candidate.title, 20)} (priority ${candidate.priority.toFixed(2)})\n  ${sanitize(candidate.summary, 32)}`,
+              `- ${candidate.id}: ${sanitizeUntrusted(candidate.title, 20)} (priority ${candidate.priority.toFixed(2)})\n  ${sanitizeUntrusted(candidate.summary, 32)}`,
           )
           .join('\n')}`
       : 'Opportunity candidates: none yet.';
@@ -117,8 +130,8 @@ export async function buildSkillPrompt(input: {
       ? `Grant fit scores:\n${input.scores
           .map(
             (score) =>
-              `- ${score.candidateId}: ${score.score.toFixed(2)} for ${sanitize(score.candidateTitle, 18)}; reasons: ${
-                score.reasons.map((reason) => sanitize(reason, 16)).join(', ') || 'none'
+              `- ${score.candidateId}: ${score.score.toFixed(2)} for ${sanitizeUntrusted(score.candidateTitle, 18)}; reasons: ${
+                score.reasons.map((reason) => sanitizeUntrusted(reason, 16)).join(', ') || 'none'
               }`,
           )
           .join('\n')}`
@@ -136,13 +149,13 @@ export async function buildSkillPrompt(input: {
     `Recent related drafts: ${
       input.relatedDrafts
         .slice(0, 4)
-        .map((draft) => sanitize(draft.title, 18))
+        .map((draft) => sanitizeUntrusted(draft.title, 18))
         .join(', ') || 'none'
     }`,
     `Recent related artifacts: ${
       input.relatedArtifacts
         .slice(-4)
-        .map((artifact) => sanitize(artifact.title, 18))
+        .map((artifact) => sanitizeUntrusted(artifact.title, 18))
         .join(', ') || 'none'
     }`,
   ].join('\n');
@@ -168,7 +181,7 @@ export async function buildSkillPrompt(input: {
           .map(
             (memory) =>
               `- [${memory.scope}:${memory.type}] ${truncateWords(
-                sanitizeTextForInference(memory.content),
+                sanitizeTextForInference(sanitizeIngested(memory.content)),
                 40,
               )} (confidence: ${memory.confidence.toFixed(2)})`,
           )

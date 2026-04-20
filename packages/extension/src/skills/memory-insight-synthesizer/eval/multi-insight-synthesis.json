@@ -1,0 +1,37 @@
+{
+  "id": "multi-insight-synthesis",
+  "description": "When multiple patterns emerge, synthesis should produce distinct insights with different categories.",
+  "output": {
+    "insights": [
+      {
+        "title": "Seasonal volunteer recruitment window",
+        "summary": "Three separate captures over the past month mention spring volunteer drives at partner organizations, suggesting a predictable recruitment window the coop could leverage.",
+        "whyItMatters": "Coordinating recruitment with partner timelines increases the pool of skilled volunteers available for field work.",
+        "suggestedNextStep": "Post a volunteer call aligned with partner org timelines and cross-promote through shared channels.",
+        "tags": ["volunteers", "seasonal", "recruitment"],
+        "category": "insight",
+        "confidence": 0.72
+      },
+      {
+        "title": "Documentation format gap",
+        "summary": "Recent field reports consistently lack GPS coordinates, making them harder to archive with spatial context.",
+        "whyItMatters": "Adding location data now prevents costly re-visits later and makes archives more useful for future grant applications.",
+        "suggestedNextStep": "Add a GPS coordinate field to the field report template before the next site visit.",
+        "tags": ["documentation", "quality", "spatial"],
+        "category": "insight",
+        "confidence": 0.65
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "insights", "threshold": 2 },
+    { "type": "field-present", "path": "insights.0.title" },
+    { "type": "field-present", "path": "insights.0.whyItMatters" },
+    { "type": "field-present", "path": "insights.1.title" },
+    { "type": "field-present", "path": "insights.1.whyItMatters" },
+    { "type": "number-range", "path": "insights.0.confidence", "min": 0, "max": 1 },
+    { "type": "number-range", "path": "insights.1.confidence", "min": 0, "max": 1 },
+    { "type": "semantic-word-count", "path": "insights.0.summary", "threshold": 10 },
+    { "type": "semantic-word-count", "path": "insights.1.summary", "threshold": 8 }
+  ]
+}

@@ -10,14 +10,14 @@ import {
   setSoundPreferences,
   setTrustedNodeArchiveConfig,
 } from '@coop/shared';
-import { alarmNames, db, getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 import {
   prefersLocalEnhancement,
   trustedNodeArchiveBootstrap,
   trustedNodeArchiveConfigMissingError,
 } from './context-config';
-import { hydrateUiPreferences } from './context-ui';
+import { alarmNames, db, getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 import { getRequiredReceiverPermissionOrigins } from './context-receiver';
+import { hydrateUiPreferences } from './context-ui';
 
 // Re-export so barrel consumers can still reach these from context-runtime
 export { stateKeys, alarmNames } from './context-db';

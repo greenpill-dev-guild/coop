@@ -3,6 +3,7 @@ import type {
   ActionBundle,
   ActionBundleStatus,
   ActionPolicy,
+  IntegrationMode,
   PolicyActionClass,
   TypedActionBundle,
 } from '../../contracts/schema';
@@ -10,6 +11,7 @@ import { actionBundleSchema, supportedOnchainChainIds } from '../../contracts/sc
 import { createId, hashJson, nowIso } from '../../utils';
 import { resolveScopedActionPayload } from './action-payload-parsers';
 import { isPolicyExpired } from './policy';
+import { classifyActionRisks } from './risk';
 
 const DEFAULT_BUNDLE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -97,6 +99,7 @@ export function createActionBundle(input: {
   policy: ActionPolicy;
   expiresAt?: string;
   createdAt?: string;
+  onchainMode?: IntegrationMode;
   chainId?: number;
   chainKey?: 'arbitrum' | 'sepolia';
   safeAddress?: `0x${string}`;
@@ -122,6 +125,11 @@ export function createActionBundle(input: {
     safeAddress: input.safeAddress,
   });
 
+  const riskState = classifyActionRisks({
+    actionClass: input.actionClass,
+    onchainMode: input.onchainMode,
+  });
+
   return actionBundleSchema.parse({
     id: createId('bundle'),
     replayId,
@@ -134,6 +142,8 @@ export function createActionBundle(input: {
     policyId: input.policy.id,
     status: initialStatus,
     digest: typedAuthorization.digest,
+    riskTags: riskState.riskTags,
+    requiresExplicitAcknowledgement: riskState.requiresExplicitAcknowledgement,
     typedAuthorization,
     approvedAt: initialStatus === 'approved' ? createdAt : undefined,
   });

@@ -21,7 +21,8 @@ function makeDraft(overrides: Record<string, unknown> = {}) {
   return {
     id: 'draft-1',
     title: 'Review me',
-    status: 'accepted',
+    status: 'draft',
+    workflowStage: 'ready',
     suggestedTargetCoopIds: ['coop-1'],
     provenance: {
       type: 'tab',
@@ -32,17 +33,17 @@ function makeDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe('isRitualReviewDue', () => {
-  it('does not mark a new coop as due when there are no accepted or published drafts', () => {
+  it('does not mark a new coop as due when there are no review-ready drafts', () => {
     expect(isRitualReviewDue({ coop: makeCoop() as never, drafts: [] as never[] })).toBe(false);
     expect(
       isRitualReviewDue({
         coop: makeCoop() as never,
-        drafts: [makeDraft({ status: 'draft' })] as never[],
+        drafts: [makeDraft({ workflowStage: 'candidate' })] as never[],
       }),
     ).toBe(false);
   });
 
-  it('marks the ritual as due when accepted drafts exist but no digest has been created', () => {
+  it('marks the ritual as due when review-ready drafts exist but no digest has been created', () => {
     expect(
       isRitualReviewDue({
         coop: makeCoop() as never,
@@ -63,7 +64,6 @@ describe('isRitualReviewDue', () => {
               type: 'agent',
               skillId: 'review-digest',
             },
-            status: 'published',
             // Must be within the 7-day freshness window relative to now
             createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           }),

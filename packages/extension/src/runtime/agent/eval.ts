@@ -32,7 +32,15 @@ const STOPWORDS = new Set([
   'me',
 ]);
 
-const STRUCTURAL_ASSERTION_TYPES = new Set(['field-present', 'field-equals', 'array-min-length']);
+const STRUCTURAL_ASSERTION_TYPES = new Set([
+  'field-present',
+  'field-equals',
+  'array-min-length',
+  'array-max-length',
+]);
+const EVAL_FIXTURE_TYPES = ['golden', 'noisy', 'low-signal', 'malicious'] as const;
+
+export type SkillEvalFixtureType = (typeof EVAL_FIXTURE_TYPES)[number];
 
 type EvalAssertion =
   | {
@@ -46,6 +54,11 @@ type EvalAssertion =
     }
   | {
       type: 'array-min-length';
+      path: string;
+      threshold: number;
+    }
+  | {
+      type: 'array-max-length';
       path: string;
       threshold: number;
     }
@@ -66,6 +79,11 @@ type EvalAssertion =
       pattern: string;
     }
   | {
+      type: 'regex-not-match';
+      path: string;
+      pattern: string;
+    }
+  | {
       type: 'semantic-word-count';
       path: string;
       threshold: number;
@@ -77,6 +95,9 @@ type SkillEvalFixture = {
   output: unknown;
   assertions: EvalAssertion[];
   threshold?: number;
+  fixtureType?: SkillEvalFixtureType;
+  confidenceFloor?: number;
+  tags?: string[];
 };
 
 export type SkillEvalCase = SkillEvalFixture & {
@@ -94,6 +115,9 @@ export type SkillEvalResult = {
   skillId: string;
   caseId: string;
   description: string;
+  fixtureType: SkillEvalFixtureType;
+  confidenceFloor: number | null;
+  tags: string[];
   passed: boolean;
   score: number;
   threshold: number;
@@ -137,29 +161,75 @@ function parseSkillIdFromPath(path: string) {
   return match?.[1];
 }
 
+function normalizeEvalFixture(
+  path: string,
+  fixture: SkillEvalFixture,
+): SkillEvalFixture & {
+  fixtureType: SkillEvalFixtureType;
+  confidenceFloor?: number;
+  tags: string[];
+} {
+  const fixtureType = fixture.fixtureType ?? 'golden';
+  if (!EVAL_FIXTURE_TYPES.includes(fixtureType)) {
+    throw new Error(`Eval case "${path}" uses unsupported fixtureType "${fixtureType}".`);
+  }
+
+  if (
+    fixture.threshold !== undefined &&
+    (typeof fixture.threshold !== 'number' || fixture.threshold < 0 || fixture.threshold > 1)
+  ) {
+    throw new Error(`Eval case "${path}" has threshold outside [0, 1].`);
+  }
+
+  if (
+    fixture.confidenceFloor !== undefined &&
+    (typeof fixture.confidenceFloor !== 'number' ||
+      fixture.confidenceFloor < 0 ||
+      fixture.confidenceFloor > 1)
+  ) {
+    throw new Error(`Eval case "${path}" has confidenceFloor outside [0, 1].`);
+  }
+
+  if (
+    fixture.tags !== undefined &&
+    (!Array.isArray(fixture.tags) || fixture.tags.some((tag) => typeof tag !== 'string'))
+  ) {
+    throw new Error(`Eval case "${path}" must define tags as a string array.`);
+  }
+
+  return {
+    ...fixture,
+    fixtureType,
+    tags: fixture.tags ?? [],
+  };
+}
+
 export function loadSkillEvalCases(): SkillEvalCase[] {
-  return Object.entries(evalModules)
-    .map(([path, fixture]) => {
-      const skillId = parseSkillIdFromPath(path);
-      if (!skillId) {
-        return null;
-      }
+  const cases: SkillEvalCase[] = [];
 
-      const registered = getRegisteredSkill(skillId);
-      if (!registered) {
-        throw new Error(`Eval case "${path}" references unknown skill "${skillId}".`);
-      }
+  for (const [path, fixture] of Object.entries(evalModules)) {
+    const skillId = parseSkillIdFromPath(path);
+    if (!skillId) {
+      continue;
+    }
 
-      return {
-        ...fixture,
-        skillId,
-        outputSchemaRef: registered.manifest.outputSchemaRef,
-      } satisfies SkillEvalCase;
-    })
-    .filter((entry): entry is SkillEvalCase => Boolean(entry))
-    .sort((left, right) =>
-      `${left.skillId}:${left.id}`.localeCompare(`${right.skillId}:${right.id}`),
-    );
+    const registered = getRegisteredSkill(skillId);
+    if (!registered) {
+      throw new Error(`Eval case "${path}" references unknown skill "${skillId}".`);
+    }
+
+    const normalizedFixture = normalizeEvalFixture(path, fixture);
+
+    cases.push({
+      ...normalizedFixture,
+      skillId,
+      outputSchemaRef: registered.manifest.outputSchemaRef,
+    });
+  }
+
+  return cases.sort((left, right) =>
+    `${left.skillId}:${left.id}`.localeCompare(`${right.skillId}:${right.id}`),
+  );
 }
 
 export function runSkillEvalCase(testCase: SkillEvalCase): SkillEvalResult {
@@ -215,6 +285,15 @@ export function runSkillEvalCase(testCase: SkillEvalCase): SkillEvalResult {
           }
           structuralPassed += 1;
           continue;
+        case 'array-max-length':
+          if (!Array.isArray(value) || value.length > assertion.threshold) {
+            failures.push(
+              `Expected "${assertion.path}" to contain at most ${assertion.threshold} items.`,
+            );
+            continue;
+          }
+          structuralPassed += 1;
+          continue;
         case 'string-min-length':
           if (typeof value !== 'string' || value.length < assertion.threshold) {
             failures.push(
@@ -238,6 +317,22 @@ export function runSkillEvalCase(testCase: SkillEvalCase): SkillEvalResult {
             if (typeof value !== 'string' || !new RegExp(assertion.pattern).test(value)) {
               failures.push(
                 `Expected "${assertion.path}" to match pattern /${assertion.pattern}/.`,
+              );
+              continue;
+            }
+          } catch {
+            failures.push(
+              `Invalid regex pattern "/${assertion.pattern}/" for "${assertion.path}".`,
+            );
+            continue;
+          }
+          semanticPassed += 1;
+          continue;
+        case 'regex-not-match':
+          try {
+            if (typeof value !== 'string' || new RegExp(assertion.pattern).test(value)) {
+              failures.push(
+                `Expected "${assertion.path}" to avoid pattern /${assertion.pattern}/.`,
               );
               continue;
             }
@@ -277,6 +372,9 @@ export function runSkillEvalCase(testCase: SkillEvalCase): SkillEvalResult {
     skillId: testCase.skillId,
     caseId: testCase.id,
     description: testCase.description,
+    fixtureType: testCase.fixtureType ?? 'golden',
+    confidenceFloor: testCase.confidenceFloor ?? null,
+    tags: testCase.tags ?? [],
     passed: schemaValid && score >= threshold,
     score,
     threshold,

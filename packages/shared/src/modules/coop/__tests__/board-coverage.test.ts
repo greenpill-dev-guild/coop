@@ -265,10 +265,13 @@ describe('buildCoopBoardGraph', () => {
     const memberNode = graph.nodes.find((n) => n.kind === 'member');
     const artifactNode = graph.nodes.find((n) => n.kind === 'artifact');
     const coopNode = graph.nodes.find((n) => n.kind === 'coop');
+    if (!memberNode || !artifactNode || !coopNode) {
+      throw new Error('Expected member, artifact, and coop nodes to exist.');
+    }
 
     // Member lane should be leftmost, artifact further right, coop in between
-    expect(memberNode!.position.x).toBeLessThan(coopNode!.position.x);
-    expect(coopNode!.position.x).toBeLessThan(artifactNode!.position.x);
+    expect(memberNode.position.x).toBeLessThan(coopNode.position.x);
+    expect(coopNode.position.x).toBeLessThan(artifactNode.position.x);
   });
 });
 

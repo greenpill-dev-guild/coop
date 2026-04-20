@@ -1,0 +1,33 @@
+{
+  "id": "weak-match-watchlist",
+  "description": "Weak but real matches should stay routable with a cautious next step instead of disappearing from local review.",
+  "fixtureType": "low-signal",
+  "confidenceFloor": 0.56,
+  "tags": ["core-pack", "weak-match", "watchlist"],
+  "output": {
+    "routings": [
+      {
+        "sourceCandidateId": "candidate-cohort-1",
+        "extractId": "extract-stewardship-cohort",
+        "coopId": "coop-watershed-learning",
+        "relevanceScore": 0.33,
+        "matchedRitualLenses": ["knowledge-garden-resources"],
+        "category": "resource",
+        "tags": ["stewardship", "cohort"],
+        "rationale": "The capture only hints at a future stewardship cohort, but it still overlaps with the coop's watershed learning work enough to stay on the radar.",
+        "suggestedNextStep": "Monitor the lead for a clearer funding or application signal before promoting it into a draft.",
+        "archiveWorthinessHint": false
+      }
+    ]
+  },
+  "assertions": [
+    { "type": "array-min-length", "path": "routings", "threshold": 1 },
+    { "type": "field-present", "path": "routings.0.coopId" },
+    { "type": "field-equals", "path": "routings.0.category", "expected": "resource" },
+    { "type": "field-equals", "path": "routings.0.archiveWorthinessHint", "expected": false },
+    { "type": "number-range", "path": "routings.0.relevanceScore", "min": 0.2, "max": 0.45 },
+    { "type": "semantic-word-count", "path": "routings.0.rationale", "threshold": 10 },
+    { "type": "string-min-length", "path": "routings.0.suggestedNextStep", "threshold": 25 }
+  ],
+  "threshold": 0.76
+}

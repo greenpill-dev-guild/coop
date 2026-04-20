@@ -1,5 +1,6 @@
 import type { AgentPlan, CoopSharedState } from '@coop/shared';
 import type { RuntimeSummary } from '../../../runtime/messages';
+import { planNeedsJudgment } from '../review-risk';
 
 // ---------------------------------------------------------------------------
 // FocusSection
@@ -26,6 +27,7 @@ export function FocusSection({
   const stale = summary?.staleObservationCount ?? 0;
   const insights = (summary as { insightDrafts?: number } | null)?.insightDrafts ?? 0;
   const hasItems = drafts > 0 || stale > 0 || pendingPlans.length > 0 || insights > 0;
+  const pendingPlansNeedJudgment = pendingPlans.some(planNeedsJudgment);
 
   return (
     <>
@@ -66,8 +68,8 @@ export function FocusSection({
             {pendingPlans.length > 0 ? (
               <div className="roost-activity-item">
                 <span className="roost-activity-item__title">
-                  {pendingPlans.length} agent plan{pendingPlans.length !== 1 ? 's' : ''} need
-                  approval
+                  {pendingPlans.length} agent plan{pendingPlans.length !== 1 ? 's' : ''}{' '}
+                  {pendingPlansNeedJudgment ? 'need judgment' : 'need approval'}
                 </span>
                 <span className="roost-activity-item__meta">Review in Agent tab</span>
               </div>

@@ -2223,3 +2223,84 @@ button.sidepanel-header__brand {
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
 }
+
+/* ---- Autoresearch ---- */
+
+.autoresearch-skill-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(47, 90, 37, 0.1);
+  border-radius: var(--coop-radius-input);
+}
+
+.autoresearch-skill-row__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.autoresearch-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.autoresearch-skill-row__controls {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.4rem;
+}
+
+.autoresearch-experiment-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.65rem;
+  cursor: pointer;
+  text-align: left;
+  border: none;
+  width: 100%;
+  background: transparent;
+}
+
+.autoresearch-experiment-card:hover {
+  background: rgba(47, 90, 37, 0.04);
+}
+
+.autoresearch-experiment-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.autoresearch-experiment-card__scores {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.autoresearch-delta--positive {
+  color: var(--coop-green);
+  font-weight: 600;
+}
+
+.autoresearch-experiment-card__detail {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(47, 90, 37, 0.08);
+}
+
+.autoresearch-diff {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  padding: 0.5rem;
+  border-radius: var(--coop-radius-input);
+  background: rgba(79, 46, 31, 0.04);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 12rem;
+}

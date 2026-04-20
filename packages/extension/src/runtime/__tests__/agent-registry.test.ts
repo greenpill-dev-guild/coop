@@ -5,7 +5,6 @@ describe('agent skill registry', () => {
   it('loads bundled skills with manifests and instructions', () => {
     const skills = listRegisteredSkills();
 
-    expect(skills).toHaveLength(16);
     expect(skills.map((entry) => entry.manifest.id)).toEqual(
       expect.arrayContaining([
         'opportunity-extractor',
@@ -13,11 +12,13 @@ describe('agent skill registry', () => {
         'capital-formation-brief',
         'review-digest',
         'ecosystem-entity-extractor',
+        'entity-extractor',
         'theme-clusterer',
         'publish-readiness-check',
         'green-goods-work-approval',
         'green-goods-assessment',
         'green-goods-gap-admin-sync',
+        'knowledge-lint',
       ]),
     );
     for (const entry of skills) {

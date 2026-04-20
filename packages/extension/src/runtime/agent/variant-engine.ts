@@ -1,4 +1,4 @@
-import { skillVariantSchema, type CoopDexie, type SkillVariant } from '@coop/shared';
+import { type CoopDexie, type SkillVariant, skillVariantSchema } from '@coop/shared';
 
 function buildVariantId() {
   return `skill-variant-${crypto.randomUUID()}`;

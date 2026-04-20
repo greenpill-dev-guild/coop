@@ -1,6 +1,9 @@
 {
   "id": "basic-routing",
   "description": "Tab routing should emit at least one well-formed routing with relevance score and rationale.",
+  "fixtureType": "golden",
+  "confidenceFloor": 0.72,
+  "tags": ["core-pack", "watershed", "routing"],
   "output": {
     "routings": [
       {
@@ -25,5 +28,6 @@
     { "type": "number-range", "path": "routings.0.relevanceScore", "min": 0, "max": 1 },
     { "type": "semantic-word-count", "path": "routings.0.rationale", "threshold": 8 },
     { "type": "string-min-length", "path": "routings.0.suggestedNextStep", "threshold": 15 }
-  ]
+  ],
+  "threshold": 0.86
 }

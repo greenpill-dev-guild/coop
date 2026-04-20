@@ -72,6 +72,20 @@ const {
   requireCreatorGrantManager,
 } = await import('../operator');
 
+function makeAuthSession(primaryAddress: string | undefined) {
+  if (!primaryAddress) {
+    return null;
+  }
+
+  return {
+    authMode: 'passkey' as const,
+    displayName: 'Test Operator',
+    primaryAddress,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    identityWarning: 'Stored locally.',
+  };
+}
+
 function makeCoop(overrides: Partial<CoopSharedState> = {}): CoopSharedState {
   return {
     profile: {
@@ -175,7 +189,7 @@ beforeEach(() => {
 describe('background operator helpers', () => {
   it('passes the requested active coop id into review-context resolution', async () => {
     const coop = makeCoop();
-    const authSession = { primaryAddress: coop.members[0]?.address };
+    const authSession = makeAuthSession(coop.members[0]?.address);
     mocks.resolveActiveReviewContext.mockResolvedValue({
       activeCoopId: 'coop-1',
       activeCoop: coop,
@@ -194,7 +208,7 @@ describe('background operator helpers', () => {
 
   it('builds operator state and blocks live archive when trusted-node config is missing', async () => {
     const coop = makeCoop();
-    const authSession = { primaryAddress: coop.members[0]?.address };
+    const authSession = makeAuthSession(coop.members[0]?.address);
     mocks.getCoops.mockResolvedValue([coop]);
     mocks.getAuthSession.mockResolvedValue(authSession);
     mocks.getAnchorCapability.mockResolvedValue({ enabled: true });
@@ -235,7 +249,10 @@ describe('background operator helpers', () => {
 
   it('creates privileged log entries with the correct mode and actor context', async () => {
     const coop = makeCoop();
-    const authSession = { primaryAddress: coop.members[0]?.address };
+    const authSession = makeAuthSession(coop.members[0]?.address);
+    if (!authSession) {
+      throw new Error('Expected auth session for coop member.');
+    }
 
     const entry = await logPrivilegedAction({
       actionType: 'safe-deployment',
@@ -266,15 +283,16 @@ describe('background operator helpers', () => {
 
   it('finds authenticated members and enforces creator-only grant management', async () => {
     const coop = makeCoop();
-    const creatorSession = { primaryAddress: '0x1111111111111111111111111111111111111111' };
-    const memberSession = { primaryAddress: '0x2222222222222222222222222222222222222222' };
+    const creatorSession = makeAuthSession('0x1111111111111111111111111111111111111111');
+    const memberSession = makeAuthSession('0x2222222222222222222222222222222222222222');
     mocks.getCoops.mockResolvedValue([coop]);
 
     expect(findAuthenticatedCoopMember(coop, creatorSession)?.id).toBe('member-1');
     expect(
-      findAuthenticatedCoopMember(coop, {
-        primaryAddress: '0x3333333333333333333333333333333333333333',
-      }),
+      findAuthenticatedCoopMember(
+        coop,
+        makeAuthSession('0x3333333333333333333333333333333333333333'),
+      ),
     ).toBeUndefined();
 
     const creatorResult = await requireCreatorGrantManager(

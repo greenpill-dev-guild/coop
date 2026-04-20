@@ -1,6 +1,6 @@
-import { getLocalSetting, setLocalSetting, stateKeys } from './context-db';
-import { configuredReceiverAppUrl } from './context-config';
 import type { ReceiverSyncRuntimeStatus } from '../runtime/messages';
+import { configuredReceiverAppUrl } from './context-config';
+import { getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 
 // ---- Receiver Permission Origins ----
 

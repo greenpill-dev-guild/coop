@@ -467,6 +467,54 @@ describe('agent model provider fallback', () => {
     ]);
   });
 
+  it('uses heuristic entity extraction on transformers cold start while warming the pipeline', async () => {
+    transformersPipeline.mockResolvedValue([
+      {
+        generated_text: JSON.stringify({
+          entities: [
+            {
+              id: 'entity-1',
+              type: 'organization',
+              name: 'Coop Town',
+              confidence: 0.95,
+              aliases: [],
+              provenance: [],
+            },
+          ],
+          relationships: [],
+        }),
+      },
+    ]);
+
+    const result = await completeSkillOutput({
+      preferredProvider: 'transformers',
+      schemaRef: 'entity-extraction-output',
+      system: 'Return JSON only.',
+      prompt: 'Extract entities and relationships.',
+      heuristicContext:
+        'Observation title: River funding roundup\nObservation summary: Alice Johnson from Greenpill Network met at River Summit in Portland using Coop Protocol.',
+    });
+
+    expect(result.provider).toBe('heuristic');
+    expect(result.output).toEqual(
+      expect.objectContaining({
+        entities: expect.arrayContaining([
+          expect.objectContaining({ name: 'Alice Johnson', type: 'person' }),
+          expect.objectContaining({ name: 'Greenpill Network', type: 'organization' }),
+          expect.objectContaining({ name: 'River Summit', type: 'event' }),
+          expect.objectContaining({ name: 'Portland', type: 'location' }),
+          expect.objectContaining({ name: 'Coop Protocol', type: 'object' }),
+        ]),
+        relationships: expect.arrayContaining([
+          expect.objectContaining({ type: 'affiliated-with' }),
+          expect.objectContaining({ type: 'participated-in' }),
+          expect.objectContaining({ type: 'hosted-in' }),
+          expect.objectContaining({ type: 'uses' }),
+        ]),
+      }),
+    );
+  });
+
   it('keeps using heuristic opportunity extraction while transformers are still warming', async () => {
     transformersPipeline.mockImplementation(() => new Promise(() => {}));
 

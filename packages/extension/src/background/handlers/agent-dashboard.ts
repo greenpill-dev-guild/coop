@@ -11,8 +11,18 @@ import {
   queryRecentMemories,
 } from '@coop/shared';
 import { filterAgentDashboardState } from '../../runtime/agent/harness';
+import {
+  getWebLlmProviderPromotionEvidence,
+  getWebLlmProviderPromotionState,
+} from '../../runtime/agent/provider-promotion';
 import { listRegisteredSkills } from '../../runtime/agent/registry';
-import { type AgentDashboardResponse, notifyAgentEvent } from '../../runtime/messages';
+import {
+  type AgentDashboardResponse,
+  type AgentProviderPromotionBenchmarkEvidence,
+  type AgentProviderPromotionEvidence,
+  type AgentProviderPromotionTraceEvidence,
+  notifyAgentEvent,
+} from '../../runtime/messages';
 import {
   agentOnboardingKey,
   alarmNames,
@@ -24,17 +34,71 @@ import {
 import { getTrustedNodeContext } from '../operator';
 import { getAgentAutoRunSkillIds } from './agent-cycle-helpers';
 
+function summarizePromotionBenchmarkEvidence(
+  record: Awaited<
+    ReturnType<typeof getWebLlmProviderPromotionEvidence>
+  >['benchmarkRecords'][number],
+): AgentProviderPromotionBenchmarkEvidence {
+  return {
+    recordId: record.id,
+    skillId: record.skillId,
+    outcome: record.outcome,
+    schemaPassRate: record.schemaPassRate,
+    jsonRepairRate: record.jsonRepairRate,
+    medianLatencyMs: record.medianLatencyMs,
+    coldStartTimeMs: record.coldStartTimeMs,
+    confidenceScore: record.confidenceScore,
+    fallbackReason: record.fallbackReason,
+    unavailableReason: record.unavailableReason,
+    createdAt: record.createdAt,
+  };
+}
+
+function summarizePromotionTraceEvidence(
+  record: Awaited<ReturnType<typeof getWebLlmProviderPromotionEvidence>>['traceRecords'][number],
+): AgentProviderPromotionTraceEvidence {
+  return {
+    recordId: record.id,
+    skillId: record.skillId,
+    outcome: record.outcome,
+    durationMs: record.durationMs,
+    confidenceScore: record.confidenceScore,
+    evalScore: record.evalScore,
+    createdAt: record.createdAt,
+  };
+}
+
+function summarizeProviderPromotionEvidence(
+  evidence: Awaited<ReturnType<typeof getWebLlmProviderPromotionEvidence>>,
+): AgentProviderPromotionEvidence {
+  return {
+    benchmarkRecords: evidence.benchmarkRecords.map(summarizePromotionBenchmarkEvidence),
+    traceRecords: evidence.traceRecords.map(summarizePromotionTraceEvidence),
+  };
+}
+
 async function getAgentDashboard(): Promise<AgentDashboardResponse> {
-  const [observations, plans, skillRuns, autoRunSkillIds, drafts, captures, trustedNodeContext] =
-    await Promise.all([
-      listAgentObservations(db, 80),
-      listAgentPlans(db, 80),
-      listSkillRuns(db, 120),
-      getAgentAutoRunSkillIds(),
-      listReviewDrafts(db),
-      listReceiverCaptures(db),
-      getTrustedNodeContext(),
-    ]);
+  const [
+    observations,
+    plans,
+    skillRuns,
+    autoRunSkillIds,
+    drafts,
+    captures,
+    trustedNodeContext,
+    webLlmPromotionState,
+    webLlmPromotionEvidence,
+  ] = await Promise.all([
+    listAgentObservations(db, 80),
+    listAgentPlans(db, 80),
+    listSkillRuns(db, 120),
+    getAgentAutoRunSkillIds(),
+    listReviewDrafts(db),
+    listReceiverCaptures(db),
+    getTrustedNodeContext(),
+    getWebLlmProviderPromotionState(db),
+    getWebLlmProviderPromotionEvidence(db),
+  ]);
 
   const activeCoopId = trustedNodeContext.ok ? trustedNodeContext.coop.profile.id : undefined;
   const memories = activeCoopId ? await queryRecentMemories(db, activeCoopId, { limit: 20 }) : [];
@@ -56,6 +120,10 @@ async function getAgentDashboard(): Promise<AgentDashboardResponse> {
     manifests: listRegisteredSkills().map((entry) => entry.manifest),
     autoRunSkillIds,
     memories,
+    providerPromotion: {
+      webllm: webLlmPromotionState,
+      webllmEvidence: summarizeProviderPromotionEvidence(webLlmPromotionEvidence),
+    },
   };
 }
 

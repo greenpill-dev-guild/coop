@@ -123,6 +123,7 @@ const mockListAgentPlansByObservationId = vi.fn().mockResolvedValue([]);
 const mockSaveAgentObservation = vi.fn().mockResolvedValue(undefined);
 const mockSaveAgentPlan = vi.fn().mockResolvedValue(undefined);
 const mockSaveSkillRun = vi.fn().mockResolvedValue(undefined);
+const mockSaveAgentTraceRecord = vi.fn().mockResolvedValue(undefined);
 const mockSaveReviewDraft = vi.fn().mockResolvedValue(undefined);
 const mockSaveTabRouting = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthSession = vi.fn().mockResolvedValue(null);
@@ -137,6 +138,11 @@ const mockQueryMemoriesForSkill = vi.fn().mockResolvedValue([]);
 const mockPruneExpiredMemories = vi.fn().mockResolvedValue(undefined);
 const mockFindAgentObservationByFingerprint = vi.fn().mockResolvedValue(undefined);
 const mockCreateAgentMemory = vi.fn().mockResolvedValue(undefined);
+const mockCreateAgentTraceRecord = vi.fn((input: Record<string, unknown>) => ({
+  id: `agent-trace-record-${Math.random().toString(36).slice(2, 8)}`,
+  createdAt: '2026-03-22T00:00:00.000Z',
+  ...input,
+}));
 
 const mockUpdateAgentObservation = vi.fn(
   (observation: Record<string, unknown>, patch: Record<string, unknown>) => ({
@@ -236,6 +242,7 @@ vi.mock('@coop/shared', () => ({
   saveAgentObservation: mockSaveAgentObservation,
   saveAgentPlan: mockSaveAgentPlan,
   saveSkillRun: mockSaveSkillRun,
+  saveAgentTraceRecord: mockSaveAgentTraceRecord,
   saveReviewDraft: mockSaveReviewDraft,
   saveTabRouting: mockSaveTabRouting,
   getAuthSession: mockGetAuthSession,
@@ -250,6 +257,7 @@ vi.mock('@coop/shared', () => ({
   pruneExpiredMemories: mockPruneExpiredMemories,
   findAgentObservationByFingerprint: mockFindAgentObservationByFingerprint,
   createAgentMemory: mockCreateAgentMemory,
+  createAgentTraceRecord: mockCreateAgentTraceRecord,
   updateAgentObservation: mockUpdateAgentObservation,
   createAgentObservation: vi.fn((input: Record<string, unknown>) => ({
     id: `obs-${Math.random().toString(36).slice(2, 8)}`,
@@ -337,8 +345,10 @@ const mockLogObservationDismissed = vi.fn();
 const mockLogSkillStart = vi.fn();
 const mockLogSkillComplete = vi.fn();
 const mockLogSkillFailed = vi.fn();
+const mockGetActiveTraceId = vi.fn().mockReturnValue('trace-001');
 
 vi.mock('../agent/logger', () => ({
+  getActiveTraceId: mockGetActiveTraceId,
   logCycleStart: mockLogCycleStart,
   logCycleEnd: mockLogCycleEnd,
   logObservationStart: mockLogObservationStart,
@@ -357,9 +367,13 @@ const mockCompleteSkillOutput = vi.fn().mockResolvedValue({
   durationMs: 100,
 });
 
-vi.mock('../agent/models', () => ({
-  completeSkillOutput: mockCompleteSkillOutput,
-}));
+vi.mock('../agent/models', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../agent/models')>();
+  return {
+    ...actual,
+    completeSkillOutput: mockCompleteSkillOutput,
+  };
+});
 
 // --- Mock for agent-output-handlers ---
 
@@ -998,6 +1012,7 @@ describe('agent-runner', () => {
 
       const registered = makeRegisteredSkill({
         id: 'tab-router',
+        model: 'transformers',
         outputSchemaRef: 'tab-router-output',
         triggers: ['roundup-batch-ready'],
       });
@@ -1025,6 +1040,76 @@ describe('agent-runner', () => {
 
       expect(result.processedObservationIds).toContain('obs-fallback');
       expect(result.completedSkillRunIds.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('trace persistence', () => {
+    it('persists a local-only trace record for completed skill runs', async () => {
+      mockSettings.set('agent-cycle-state', { running: false });
+      setupAuthorizedCoop();
+      setupExtractsForObservation(['extract-1']);
+
+      const obs = makeObservation({
+        id: 'obs-trace',
+        trigger: 'roundup-batch-ready',
+        payload: { extractIds: ['extract-1'] },
+      });
+      mockListAgentObservationsByStatus.mockResolvedValue([obs]);
+      mockListAgentPlansByObservationId.mockResolvedValue([]);
+
+      const registered = makeRegisteredSkill({
+        id: 'tab-router',
+        outputSchemaRef: 'tab-router-output',
+        triggers: ['roundup-batch-ready'],
+      });
+      mockSelectSkillIdsForObservation.mockReturnValue(['tab-router']);
+      mockGetRegisteredSkill.mockReturnValue(registered);
+      mockListRegisteredSkills.mockReturnValue([registered]);
+
+      mockCompleteSkillOutput.mockResolvedValueOnce({
+        provider: 'transformers',
+        model: 'onnx-community/Qwen2.5-0.5B-Instruct',
+        output: {
+          routings: [
+            {
+              sourceCandidateId: 'candidate-1',
+              extractId: 'extract-1',
+              coopId: 'coop-1',
+              relevanceScore: 0.84,
+              matchedRitualLenses: [],
+              category: 'funding-lead',
+              tags: ['grant'],
+              rationale: 'Relevant funding signal.',
+              suggestedNextStep: 'Review in the next coop funding ritual.',
+              archiveWorthinessHint: true,
+            },
+          ],
+        },
+        durationMs: 220,
+      });
+      mockApplySkillOutput.mockImplementation(async (input) => ({
+        output: input.output,
+        plan: input.plan,
+        createdDraftIds: [],
+        autoExecutedActionCount: 0,
+        errors: [],
+      }));
+
+      await runAgentCycle({ force: true });
+
+      expect(mockGetActiveTraceId).toHaveBeenCalled();
+      expect(mockSaveAgentTraceRecord).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          observationId: 'obs-trace',
+          skillId: 'tab-router',
+          providerId: 'transformers',
+          sourceRisk: 'mixed',
+          outcome: 'fallback',
+          promptHash: expect.stringMatching(/^[a-f0-9]{8,64}$/),
+          rawOutputHash: expect.stringMatching(/^[a-f0-9]{8,64}$/),
+        }),
+      );
     });
   });
 

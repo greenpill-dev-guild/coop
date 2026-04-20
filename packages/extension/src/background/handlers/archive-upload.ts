@@ -1,5 +1,6 @@
 import {
   type CoopSharedState,
+  type createArchiveBundle,
   createArchiveReceiptFromUpload,
   createMockArchiveReceipt,
   createStorachaArchiveClient,
@@ -7,7 +8,6 @@ import {
   getAuthSession,
   issueArchiveDelegation,
   uploadArchiveBundleToStoracha,
-  type createArchiveBundle,
 } from '@coop/shared';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { describeArchiveLiveFailure, requireAnchorModeForFeature } from '../../runtime/operator';

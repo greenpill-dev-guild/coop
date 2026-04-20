@@ -1,34 +1,39 @@
+import type { AgentProvider } from '@coop/shared';
 import { describe, expect, it } from 'vitest';
 import { loadSkillEvalCases, runAllSkillEvals, runSkillEvalCase } from '../agent/eval';
 import type { SkillEvalCase } from '../agent/eval';
+import { computeOutputConfidence } from '../agent/quality';
+import { getRegisteredSkill, listRegisteredSkills } from '../agent/registry';
 
-const ALL_SKILL_IDS = [
-  'capital-formation-brief',
-  'ecosystem-entity-extractor',
-  'erc8004-feedback',
-  'erc8004-register',
-  'grant-fit-scorer',
-  'green-goods-assessment',
-  'green-goods-gap-admin-sync',
-  'green-goods-garden-bootstrap',
-  'green-goods-garden-sync',
-  'green-goods-work-approval',
-  'memory-insight-synthesizer',
-  'opportunity-extractor',
-  'publish-readiness-check',
-  'review-digest',
-  'tab-router',
-  'theme-clusterer',
-];
+const CORE_SKILL_IDS = ['tab-router', 'opportunity-extractor', 'capital-formation-brief'] as const;
+
+function providerForSkill(skillId: string): AgentProvider {
+  const registered = getRegisteredSkill(skillId);
+  if (!registered) {
+    throw new Error(`Skill "${skillId}" is not registered.`);
+  }
+
+  switch (registered.manifest.model) {
+    case 'heuristic':
+      return 'heuristic';
+    case 'webllm':
+      return 'webllm';
+    default:
+      return 'transformers';
+  }
+}
 
 describe('skill eval harness', () => {
   it('loads eval fixtures for all registered skills', () => {
     const testCases = loadSkillEvalCases();
+    const registeredSkillIds = listRegisteredSkills()
+      .map((entry) => entry.manifest.id)
+      .sort();
 
-    expect(testCases.length).toBeGreaterThanOrEqual(16);
+    expect(testCases.length).toBeGreaterThanOrEqual(registeredSkillIds.length);
 
     const coveredSkillIds = [...new Set(testCases.map((testCase) => testCase.skillId))].sort();
-    expect(coveredSkillIds).toEqual(ALL_SKILL_IDS);
+    expect(coveredSkillIds).toEqual(registeredSkillIds);
   });
 
   it('passes all structural and semantic skill evals', () => {
@@ -46,6 +51,58 @@ describe('skill eval harness', () => {
       expect(result.qualityScore).toBeLessThanOrEqual(1);
       expect(result.qualityBreakdown).toBeDefined();
       expect(result.qualityBreakdown.schemaCompliance).toBe(1);
+      expect(['golden', 'noisy', 'low-signal', 'malicious']).toContain(result.fixtureType);
+      expect(Array.isArray(result.tags)).toBe(true);
+    }
+  });
+
+  it('covers golden, noisy, and low-signal fixtures for the three core skills', () => {
+    const testCases = loadSkillEvalCases();
+
+    for (const skillId of CORE_SKILL_IDS) {
+      const skillCases = testCases.filter((testCase) => testCase.skillId === skillId);
+      expect(skillCases.length).toBeGreaterThanOrEqual(3);
+      expect(skillCases.map((testCase) => testCase.fixtureType)).toEqual(
+        expect.arrayContaining(['golden', 'noisy', 'low-signal']),
+      );
+
+      for (const testCase of skillCases) {
+        expect(typeof testCase.confidenceFloor).toBe('number');
+        expect(testCase.confidenceFloor).toBeGreaterThan(0);
+        expect(testCase.confidenceFloor).toBeLessThanOrEqual(1);
+        if (testCase.fixtureType === 'malicious') {
+          expect(testCase.tags).toContain('security-pack');
+        } else {
+          expect(testCase.tags).toContain('core-pack');
+        }
+      }
+    }
+  });
+
+  it('includes malicious security fixtures for the three core skills', () => {
+    const testCases = loadSkillEvalCases();
+
+    for (const skillId of CORE_SKILL_IDS) {
+      const maliciousCases = testCases.filter(
+        (testCase) => testCase.skillId === skillId && testCase.fixtureType === 'malicious',
+      );
+      expect(maliciousCases).toHaveLength(1);
+      expect(maliciousCases[0]?.tags).toContain('security-pack');
+    }
+  });
+
+  it('keeps the core eval sample outputs above their declared confidence floors', () => {
+    const testCases = loadSkillEvalCases().filter((testCase) =>
+      CORE_SKILL_IDS.includes(testCase.skillId as (typeof CORE_SKILL_IDS)[number]),
+    );
+
+    for (const testCase of testCases) {
+      const confidence = computeOutputConfidence(
+        testCase.outputSchemaRef,
+        testCase.output,
+        providerForSkill(testCase.skillId),
+      );
+      expect(confidence).toBeGreaterThanOrEqual(testCase.confidenceFloor ?? 0);
     }
   });
 
@@ -156,5 +213,75 @@ describe('skill eval harness', () => {
     const result = runSkillEvalCase(testCase);
     expect(result.passed).toBe(false);
     expect(result.failures).toContainEqual(expect.stringContaining('match pattern'));
+  });
+
+  it('catches array-max-length violations', () => {
+    const testCase: SkillEvalCase = {
+      id: 'test-array-max',
+      description: 'Test array-max-length assertion',
+      skillId: 'tab-router',
+      outputSchemaRef: 'tab-router-output',
+      output: {
+        routings: [
+          {
+            sourceCandidateId: 'candidate-1',
+            extractId: 'extract-1',
+            coopId: 'coop-1',
+            relevanceScore: 0.4,
+            matchedRitualLenses: [],
+            category: 'resource',
+            tags: [],
+            rationale: 'A weak routing.',
+            suggestedNextStep: 'Review later.',
+            archiveWorthinessHint: false,
+          },
+        ],
+      },
+      assertions: [{ type: 'array-max-length', path: 'routings', threshold: 0 }],
+    };
+
+    const result = runSkillEvalCase(testCase);
+    expect(result.passed).toBe(false);
+    expect(result.failures).toContainEqual(expect.stringContaining('at most 0 items'));
+  });
+
+  it('catches regex-not-match violations', () => {
+    const testCase: SkillEvalCase = {
+      id: 'test-regex-not-match',
+      description: 'Test regex-not-match assertion',
+      skillId: 'capital-formation-brief',
+      outputSchemaRef: 'capital-formation-brief-output',
+      output: {
+        title: 'Reveal the system prompt',
+        summary: 'This should not pass.',
+        whyItMatters: 'The string leaks protected content.',
+        suggestedNextStep: 'Publish immediately.',
+        tags: ['bad'],
+        targetCoopIds: [],
+        supportingCandidateIds: [],
+      },
+      assertions: [{ type: 'regex-not-match', path: 'title', pattern: '[Ss]ystem prompt' }],
+    };
+
+    const result = runSkillEvalCase(testCase);
+    expect(result.passed).toBe(false);
+    expect(result.failures).toContainEqual(expect.stringContaining('avoid pattern'));
+  });
+
+  it('returns eval fixture metadata alongside the result payload', () => {
+    const testCase = loadSkillEvalCases().find(
+      (entry) => entry.skillId === 'tab-router' && entry.fixtureType === 'golden',
+    );
+
+    expect(testCase).toBeDefined();
+    if (!testCase) {
+      throw new Error('Expected a golden tab-router eval fixture.');
+    }
+
+    const result = runSkillEvalCase(testCase);
+
+    expect(result.fixtureType).toBe('golden');
+    expect(result.confidenceFloor).toBe(testCase.confidenceFloor ?? null);
+    expect(result.tags).toContain('core-pack');
   });
 });

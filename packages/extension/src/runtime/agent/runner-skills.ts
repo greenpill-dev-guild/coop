@@ -1,4 +1,10 @@
-import type { AgentObservation, AgentPlan, AgentPlanStep, CoopSharedState } from '@coop/shared';
+import type {
+  AgentObservation,
+  AgentPlan,
+  AgentPlanStep,
+  AgentRuntimeProviderId,
+  CoopSharedState,
+} from '@coop/shared';
 import { createId, nowIso as nowIsoUtil, recordReasoningTrace } from '@coop/shared';
 import {
   completeAgentPlan,
@@ -19,12 +25,14 @@ import {
   updateAgentPlan,
   updateAgentPlanStep,
 } from '@coop/shared';
+import { configuredOnchainMode } from '../config';
 import {
   getMissingRequiredCapabilities,
   selectSkillIdsForObservation,
   shouldSkipSkill,
 } from './harness';
 import {
+  getActiveTraceId,
   logObservationDismissed,
   logObservationStart,
   logSkillComplete,
@@ -32,12 +40,18 @@ import {
   logSkillStart,
 } from './logger';
 import { applySkillOutput } from './output-handlers';
+import { resolvePreferredProvider } from './provider-promotion';
 import { computeOutputConfidence } from './quality';
 import { getRegisteredSkill, listRegisteredSkills } from './registry';
 import { getObservationDismissReason } from './runner-observations';
 import { completeSkill, dispatchActionProposal, maybePatchDraft } from './runner-skills-completion';
-import { buildSkillContext, persistTabRouterOutput } from './runner-skills-context';
+import {
+  buildSkillContext,
+  persistEntityExtractionOutput,
+  persistTabRouterOutput,
+} from './runner-skills-context';
 import { writeSkillMemories } from './runner-skills-memory';
+import { buildSkillPrompt } from './runner-skills-prompt';
 import {
   type AgentCycleResult,
   db,
@@ -45,6 +59,7 @@ import {
   getCoops,
   inferPreferredProvider,
 } from './runner-state';
+import { hashTraceValue, persistAgentSkillTrace } from './trace-records';
 
 // Re-export all split module surfaces so existing imports from this file continue to work
 export * from './runner-skills-prompt';
@@ -92,17 +107,29 @@ export async function runObservationPlan(
     observation,
     listRegisteredSkills().map((entry) => entry.manifest),
   );
+  const preferredProviders = new Map<
+    string,
+    Awaited<ReturnType<typeof resolvePreferredProvider>>
+  >();
+  for (const skillId of skillIds) {
+    const manifest = getRegisteredSkill(skillId)?.manifest;
+    if (manifest) {
+      preferredProviders.set(skillId, await resolvePreferredProvider(manifest));
+    }
+  }
+  const getPreferredProvider = (skillId: string) => {
+    const preferredProvider = preferredProviders.get(skillId);
+    if (preferredProvider) {
+      return preferredProvider;
+    }
+    const manifest = getRegisteredSkill(skillId)?.manifest;
+    return manifest ? inferPreferredProvider(manifest) : 'heuristic';
+  };
   const plan = createAgentPlan({
     observationId: observation.id,
-    provider: skillIds.some((skillId) => {
-      const manifest = getRegisteredSkill(skillId)?.manifest;
-      return manifest ? inferPreferredProvider(manifest) === 'webllm' : false;
-    })
+    provider: skillIds.some((skillId) => getPreferredProvider(skillId) === 'webllm')
       ? 'webllm'
-      : skillIds.some((skillId) => {
-            const manifest = getRegisteredSkill(skillId)?.manifest;
-            return manifest ? inferPreferredProvider(manifest) === 'transformers' : false;
-          })
+      : skillIds.some((skillId) => getPreferredProvider(skillId) === 'transformers')
         ? 'transformers'
         : 'heuristic',
     confidence: Math.max(0.55, context.draft?.confidence ?? 0.62),
@@ -141,6 +168,7 @@ export async function runObservationPlan(
       },
       reason: 'Archive receipt follow-up is due.',
       approvalMode: 'auto-run-eligible',
+      onchainMode: configuredOnchainMode,
       generatedBySkillId: 'stale-archive-receipt',
     });
     workingPlan = updateAgentPlan(workingPlan, {
@@ -190,6 +218,7 @@ export async function runObservationPlan(
       result.errors.push(`Unknown skill "${skillId}".`);
       continue;
     }
+    const preferredProvider = getPreferredProvider(skillId);
 
     const missingRequiredCapabilities = getMissingRequiredCapabilities(
       registered.manifest.requiredCapabilities,
@@ -217,7 +246,7 @@ export async function runObservationPlan(
     ) {
       const skippedStep = createAgentPlanStep({
         skillId,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         summary: registered.manifest.description,
         startedAt: nowIso(),
       });
@@ -231,13 +260,13 @@ export async function runObservationPlan(
       void logSkillComplete({
         skillId,
         observationId: observation.id,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         durationMs: 0,
         skipped: true,
       });
       result.skillRunMetrics.push({
         skillId,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         durationMs: 0,
         retryCount: 0,
         skipped: true,
@@ -247,7 +276,7 @@ export async function runObservationPlan(
 
     const step = createAgentPlanStep({
       skillId,
-      provider: inferPreferredProvider(registered.manifest),
+      provider: preferredProvider,
       summary: registered.manifest.description,
       startedAt: nowIso(),
     });
@@ -258,18 +287,49 @@ export async function runObservationPlan(
     await saveAgentPlan(db, workingPlan);
 
     let currentStep: AgentPlanStep = step;
+    const preparedPrompt = await buildSkillPrompt({
+      skill: registered,
+      observation,
+      coop: context.coop,
+      draft: context.draft,
+      capture: context.capture,
+      receipt: context.receipt,
+      candidates: context.candidates,
+      scores: context.scores,
+      extracts: context.extracts,
+      relatedDrafts: context.relatedDrafts,
+      relatedArtifacts: context.relatedArtifacts,
+      relatedRoutings: context.relatedRoutings,
+      memories: context.memories,
+    });
+    const promptHash = await hashTraceValue(`${preparedPrompt.system}\n\n${preparedPrompt.prompt}`);
+    const traceContext = {
+      observation,
+      coop: context.coop,
+      draft: context.draft,
+      capture: context.capture,
+      receipt: context.receipt,
+      candidates: context.candidates,
+      scores: context.scores,
+      extracts: context.extracts,
+      relatedDrafts: context.relatedDrafts,
+      relatedArtifacts: context.relatedArtifacts,
+      relatedRoutings: context.relatedRoutings,
+      memories: context.memories,
+    };
+    const startedAtMs = Date.now();
     let run = createSkillRun({
       observationId: observation.id,
       planId: workingPlan.id,
       skill: registered.manifest,
-      provider: inferPreferredProvider(registered.manifest),
-      promptHash: `${registered.manifest.id}:${observation.id}:${observation.updatedAt}`,
+      provider: preferredProvider,
+      promptHash,
     });
     await saveSkillRun(db, run);
     void logSkillStart({
       skillId,
       observationId: observation.id,
-      provider: inferPreferredProvider(registered.manifest),
+      provider: preferredProvider,
     });
 
     try {
@@ -288,7 +348,15 @@ export async function runObservationPlan(
         relatedArtifacts: context.relatedArtifacts,
         relatedRoutings: context.relatedRoutings,
         memories: context.memories,
+        preparedPrompt,
+        preferredProvider,
       });
+      const repairSteps =
+        completed.provider !== preferredProvider
+          ? [
+              `provider-fallback:${preferredProvider}->${completed.provider as AgentRuntimeProviderId}`,
+            ]
+          : [];
 
       const confidenceBefore = workingPlan.confidence;
       const recalculatedConfidence = computeOutputConfidence(
@@ -322,6 +390,24 @@ export async function runObservationPlan(
         });
         await saveAgentPlan(db, workingPlan);
 
+        await persistAgentSkillTrace({
+          traceId: getActiveTraceId(),
+          observationId: observation.id,
+          skillId,
+          providerId: completed.provider as AgentRuntimeProviderId,
+          modelId: completed.model,
+          promptHash,
+          preparedPrompt,
+          context: traceContext,
+          startedAt: startedAtMs,
+          durationMs: completed.durationMs,
+          output: completed.output,
+          repairSteps,
+          validationErrors: [message],
+          confidenceScore: recalculatedConfidence,
+          outcome: 'rejected',
+        });
+
         result.errors.push(message);
         result.skillRunMetrics.push({
           skillId,
@@ -349,6 +435,7 @@ export async function runObservationPlan(
         saveReviewDraft: async (draft) => saveReviewDraft(db, draft),
         savePlan: async (plan) => saveAgentPlan(db, plan),
         persistTabRouterOutput,
+        persistEntityExtractionOutput,
         maybePatchDraft,
         dispatchActionProposal,
       });
@@ -386,7 +473,7 @@ export async function runObservationPlan(
           skillRunId: run.id,
           observationId: observation.id,
           observationText: `${observation.title}: ${observation.summary}`,
-          contextEntityIds: [],
+          contextEntityIds: handled.contextEntityIds ?? [],
           precedentTraceIds: [],
           confidence: recalculatedConfidence,
           outputSummary: `${skillId} completed with confidence ${recalculatedConfidence.toFixed(2)}`,
@@ -399,6 +486,23 @@ export async function runObservationPlan(
       } catch {
         // Graph store not available — skip trace recording
       }
+
+      await persistAgentSkillTrace({
+        traceId: getActiveTraceId(),
+        observationId: observation.id,
+        skillId,
+        providerId: completed.provider as AgentRuntimeProviderId,
+        modelId: completed.model,
+        promptHash,
+        preparedPrompt,
+        context: traceContext,
+        startedAt: startedAtMs,
+        durationMs: completed.durationMs,
+        output,
+        repairSteps,
+        confidenceScore: recalculatedConfidence,
+        outcome: repairSteps.length > 0 ? 'fallback' : 'completed',
+      });
 
       result.skillRunMetrics.push({
         skillId,
@@ -434,6 +538,19 @@ export async function runObservationPlan(
       const message = error instanceof Error ? error.message : `Skill ${skillId} failed.`;
       run = failSkillRun(run, message);
       await saveSkillRun(db, run);
+      await persistAgentSkillTrace({
+        traceId: getActiveTraceId(),
+        observationId: observation.id,
+        skillId,
+        providerId: preferredProvider as AgentRuntimeProviderId,
+        promptHash,
+        preparedPrompt,
+        context: traceContext,
+        startedAt: startedAtMs,
+        durationMs: Date.now() - startedAtMs,
+        validationErrors: [message],
+        outcome: 'failed',
+      });
       void logSkillFailed({ skillId, observationId: observation.id, error: message });
 
       currentStep = updateAgentPlanStep(currentStep, {

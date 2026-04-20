@@ -3,20 +3,16 @@ import Dexie from 'dexie';
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  autoresearchConfigSchema,
-  experimentRecordSchema,
-  graphSnapshotSchema,
-  skillVariantSchema,
   type AutoresearchConfig,
   type ExperimentRecord,
   type GraphSnapshot,
   type SkillVariant,
+  autoresearchConfigSchema,
+  experimentRecordSchema,
+  graphSnapshotSchema,
+  skillVariantSchema,
 } from '../../../contracts/schema';
-import {
-  type CoopDexie,
-  createCoopDb,
-  pruneRevertedExperiments,
-} from '../db';
+import { type CoopDexie, createCoopDb, pruneRevertedExperiments } from '../db';
 
 Dexie.dependencies.indexedDB = indexedDB;
 Dexie.dependencies.IDBKeyRange = IDBKeyRange;
@@ -29,9 +25,7 @@ function freshDb(): CoopDexie {
   return db;
 }
 
-function buildExperimentRecord(
-  overrides: Partial<ExperimentRecord> = {},
-): ExperimentRecord {
+function buildExperimentRecord(overrides: Partial<ExperimentRecord> = {}): ExperimentRecord {
   return {
     id: `experiment-${crypto.randomUUID()}`,
     skillId: 'skill-opportunity-extractor',
@@ -76,9 +70,7 @@ function buildSkillVariant(overrides: Partial<SkillVariant> = {}): SkillVariant 
   };
 }
 
-function buildAutoresearchConfig(
-  overrides: Partial<AutoresearchConfig> = {},
-): AutoresearchConfig {
+function buildAutoresearchConfig(overrides: Partial<AutoresearchConfig> = {}): AutoresearchConfig {
   return {
     skillId: 'skill-opportunity-extractor',
     enabled: true,
@@ -203,11 +195,7 @@ describe('autoresearch Dexie tables', () => {
       isActive: true,
     });
 
-    await db.skillVariants.bulkPut([
-      activeVariant,
-      inactiveVariant,
-      otherSkillVariant,
-    ]);
+    await db.skillVariants.bulkPut([activeVariant, inactiveVariant, otherSkillVariant]);
 
     expect(db.skillVariants.schema.indexes.map((index) => index.name)).toContain(
       '[skillId+isActive]',
@@ -259,11 +247,7 @@ describe('autoresearch Dexie tables', () => {
       .reverse()
       .toArray();
 
-    expect(ordered.map((record) => record.id)).toEqual([
-      newest.id,
-      middle.id,
-      oldest.id,
-    ]);
+    expect(ordered.map((record) => record.id)).toEqual([newest.id, middle.id, oldest.id]);
   });
 
   it('prunes only reverted experiments older than the threshold', async () => {

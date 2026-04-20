@@ -1,16 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   GraphEntity,
   GraphRelationship,
   ReasoningTrace,
   ValidatedInsight,
 } from '@coop/shared';
-
-// ---------------------------------------------------------------------------
-// Re-import module under test fresh per describe block via resetModules
-// ---------------------------------------------------------------------------
-
-let mod: typeof import('../graph-store-singleton');
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as mod from '../graph-store-singleton';
 
 const mockDb = {
   graphSnapshots: {
@@ -18,11 +13,6 @@ const mockDb = {
     get: vi.fn(),
   },
 };
-
-beforeEach(async () => {
-  vi.resetModules();
-  mod = await import('../graph-store-singleton');
-});
 
 afterEach(() => {
   vi.clearAllMocks();

@@ -1,6 +1,6 @@
 import type { ActionBundle, CoopSharedState, ReviewDraft } from '@coop/shared';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeReviewDraft } from '@coop/shared/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeAuthSession, makeCoopState } from '../../../__tests__/fixtures';
 
 const configState = vi.hoisted(() => ({

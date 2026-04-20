@@ -1,17 +1,21 @@
 import type {
+  AgentBenchmarkRecord,
   AgentLog,
   AgentMemory,
   AgentObservation,
   AgentPlan,
+  AgentTraceRecord,
   CoopKnowledgeSkillOverride,
   KnowledgeSkill,
   SkillRun,
   TabRouting,
 } from '../../contracts/schema';
 import {
+  agentBenchmarkRecordSchema,
   agentMemorySchema,
   agentObservationSchema,
   agentPlanSchema,
+  agentTraceRecordSchema,
   skillRunSchema,
   tabRoutingSchema,
 } from '../../contracts/schema';
@@ -27,6 +31,70 @@ import type { CoopDexie } from './db-schema';
 
 export async function saveAgentObservation(db: CoopDexie, observation: AgentObservation) {
   await db.agentObservations.put(agentObservationSchema.parse(observation));
+}
+
+export async function saveAgentBenchmarkRecord(db: CoopDexie, record: AgentBenchmarkRecord) {
+  await db.agentBenchmarkRecords.put(agentBenchmarkRecordSchema.parse(record));
+}
+
+export async function getAgentBenchmarkRecord(db: CoopDexie, benchmarkId: string) {
+  return db.agentBenchmarkRecords.get(benchmarkId);
+}
+
+export async function listAgentBenchmarkRecords(
+  db: CoopDexie,
+  options: {
+    skillId?: string;
+    providerId?: AgentBenchmarkRecord['providerId'];
+    limit?: number;
+  } = {},
+) {
+  let records = await db.agentBenchmarkRecords.orderBy('createdAt').reverse().toArray();
+  if (options.skillId) {
+    records = records.filter((record) => record.skillId === options.skillId);
+  }
+  if (options.providerId) {
+    records = records.filter((record) => record.providerId === options.providerId);
+  }
+  return typeof options.limit === 'number' ? records.slice(0, options.limit) : records;
+}
+
+export async function saveAgentTraceRecord(db: CoopDexie, record: AgentTraceRecord) {
+  await db.agentTraceRecords.put(agentTraceRecordSchema.parse(record));
+}
+
+export async function getAgentTraceRecord(db: CoopDexie, traceRecordId: string) {
+  return db.agentTraceRecords.get(traceRecordId);
+}
+
+export async function listAgentTraceRecords(
+  db: CoopDexie,
+  options: {
+    traceId?: string;
+    observationId?: string;
+    skillId?: string;
+    providerId?: AgentTraceRecord['providerId'];
+    outcome?: AgentTraceRecord['outcome'];
+    limit?: number;
+  } = {},
+) {
+  let records = await db.agentTraceRecords.orderBy('startedAt').reverse().toArray();
+  if (options.traceId) {
+    records = records.filter((record) => record.traceId === options.traceId);
+  }
+  if (options.observationId) {
+    records = records.filter((record) => record.observationId === options.observationId);
+  }
+  if (options.skillId) {
+    records = records.filter((record) => record.skillId === options.skillId);
+  }
+  if (options.providerId) {
+    records = records.filter((record) => record.providerId === options.providerId);
+  }
+  if (options.outcome) {
+    records = records.filter((record) => record.outcome === options.outcome);
+  }
+  return typeof options.limit === 'number' ? records.slice(0, options.limit) : records;
 }
 
 export async function getAgentObservation(db: CoopDexie, observationId: string) {

@@ -79,6 +79,7 @@ const mockListAgentMemories = vi.fn().mockResolvedValue([]);
 const mockListAgentObservations = vi.fn().mockResolvedValue([]);
 const mockListAgentPlans = vi.fn().mockResolvedValue([]);
 const mockListSkillRuns = vi.fn().mockResolvedValue([]);
+const mockListSkillRunsByPlanId = vi.fn().mockResolvedValue([]);
 const mockListReviewDrafts = vi.fn().mockResolvedValue([]);
 const mockListReceiverCaptures = vi.fn().mockResolvedValue([]);
 const mockListAgentObservationsByStatus = vi.fn().mockResolvedValue([]);
@@ -118,6 +119,7 @@ vi.mock('@coop/shared', () => ({
   listAgentObservations: mockListAgentObservations,
   listAgentPlans: mockListAgentPlans,
   listSkillRuns: mockListSkillRuns,
+  listSkillRunsByPlanId: mockListSkillRunsByPlanId,
   listReviewDrafts: mockListReviewDrafts,
   listReceiverCaptures: mockListReceiverCaptures,
   listAgentObservationsByStatus: mockListAgentObservationsByStatus,
@@ -181,6 +183,26 @@ vi.mock('../../../runtime/agent/registry', () => ({
   listRegisteredSkills: vi.fn(() => []),
 }));
 
+const promotionMocks = vi.hoisted(() => ({
+  activateWebLlmProviderPromotion: vi.fn(),
+  getWebLlmProviderPromotionEvidence: vi.fn(),
+  getWebLlmProviderPromotionState: vi.fn(),
+}));
+
+const experimentLoopMocks = vi.hoisted(() => ({
+  collectFeedback: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../runtime/agent/provider-promotion', () => ({
+  activateWebLlmProviderPromotion: promotionMocks.activateWebLlmProviderPromotion,
+  getWebLlmProviderPromotionEvidence: promotionMocks.getWebLlmProviderPromotionEvidence,
+  getWebLlmProviderPromotionState: promotionMocks.getWebLlmProviderPromotionState,
+}));
+
+vi.mock('../../../runtime/agent/experiment-loop', () => ({
+  collectFeedback: experimentLoopMocks.collectFeedback,
+}));
+
 // --- Mock for messages (agent event emission) ---
 
 const mockNotifyAgentEvent = vi.fn();
@@ -199,6 +221,8 @@ vi.mock('../capture', () => ({
 // --- Import after mocks ---
 
 const {
+  handleActivateWebLlmProviderPromotion,
+  handleGetWebLlmProviderPromotionState,
   handleRunAgentCycle,
   handleApproveAgentPlan,
   handleRejectAgentPlan,
@@ -283,6 +307,30 @@ describe('agent handlers', () => {
       return fallbackValue;
     });
     mockGetTrustedNodeContext.mockResolvedValue(TRUSTED_NODE_OK);
+    promotionMocks.getWebLlmProviderPromotionEvidence.mockResolvedValue({
+      benchmarkRecords: [],
+      traceRecords: [],
+    });
+    promotionMocks.getWebLlmProviderPromotionState.mockResolvedValue(null);
+    promotionMocks.activateWebLlmProviderPromotion.mockResolvedValue({
+      providerId: 'webllm',
+      baselineProviderId: 'transformers',
+      evaluatedSkillIds: ['tab-router', 'opportunity-extractor'],
+      promotedSkillIds: ['tab-router', 'opportunity-extractor'],
+      benchmarkRecordIds: [],
+      traceRecordIds: [],
+      benchmarked: true,
+      traced: true,
+      schemaStable: true,
+      maliciousPackClean: true,
+      fallbackSafe: true,
+      promotable: true,
+      securityPassRate: 1,
+      failedChecks: [],
+      evaluatedAt: '2026-04-18T22:00:00.000Z',
+      activatedAt: '2026-04-18T22:00:00.000Z',
+    });
+    experimentLoopMocks.collectFeedback.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -307,6 +355,55 @@ describe('agent handlers', () => {
 
       expect(result.ok).toBe(true);
       expect(result.data).toBeDefined();
+    });
+  });
+
+  describe('provider promotion handlers', () => {
+    it('returns the stored WebLLM promotion state', async () => {
+      promotionMocks.getWebLlmProviderPromotionState.mockResolvedValue({
+        providerId: 'webllm',
+        baselineProviderId: 'transformers',
+        evaluatedSkillIds: ['tab-router'],
+        promotedSkillIds: ['tab-router'],
+        benchmarkRecordIds: [],
+        traceRecordIds: [],
+        benchmarked: true,
+        traced: true,
+        schemaStable: true,
+        maliciousPackClean: true,
+        fallbackSafe: true,
+        promotable: true,
+        securityPassRate: 1,
+        failedChecks: [],
+        evaluatedAt: '2026-04-18T22:00:00.000Z',
+        activatedAt: '2026-04-18T22:00:00.000Z',
+      });
+
+      const result = await handleGetWebLlmProviderPromotionState();
+
+      expect(result.ok).toBe(true);
+      expect(result.data?.providerId).toBe('webllm');
+      expect(promotionMocks.getWebLlmProviderPromotionState).toHaveBeenCalled();
+    });
+
+    it('activates WebLLM promotion only when trusted node context is available', async () => {
+      const result = await handleActivateWebLlmProviderPromotion();
+
+      expect(result.ok).toBe(true);
+      expect(result.data?.promotable).toBe(true);
+      expect(promotionMocks.activateWebLlmProviderPromotion).toHaveBeenCalledWith({
+        db: {},
+      });
+    });
+
+    it('blocks WebLLM promotion activation when trusted node context is unavailable', async () => {
+      mockGetTrustedNodeContext.mockResolvedValue(TRUSTED_NODE_FAIL);
+
+      const result = await handleActivateWebLlmProviderPromotion();
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain('authenticated passkey');
+      expect(promotionMocks.activateWebLlmProviderPromotion).not.toHaveBeenCalled();
     });
   });
 
@@ -347,6 +444,25 @@ describe('agent handlers', () => {
           confidence: 1,
         }),
       );
+    });
+
+    it('forwards approval feedback into the autoresearch loop for each skill run', async () => {
+      const plan = makePlan({ goal: 'Route tabs into coop context' });
+      const observation = makeObservation({ coopId: 'coop-1' });
+      mockGetAgentPlan.mockResolvedValue(plan);
+      mockGetAgentObservation.mockResolvedValue(observation);
+      mockListSkillRunsByPlanId.mockResolvedValue([{ id: 'run-1' }, { id: 'run-2' }]);
+
+      await handleApproveAgentPlan({
+        type: 'approve-agent-plan',
+        payload: { planId: 'plan-1' },
+      });
+
+      await vi.waitFor(() => {
+        expect(mockListSkillRunsByPlanId).toHaveBeenCalledWith({}, 'plan-1');
+        expect(experimentLoopMocks.collectFeedback).toHaveBeenNthCalledWith(1, {}, 'run-1', true);
+        expect(experimentLoopMocks.collectFeedback).toHaveBeenNthCalledWith(2, {}, 'run-2', true);
+      });
     });
 
     it('does not create feedback memory when plan is not found', async () => {
@@ -425,6 +541,28 @@ describe('agent handlers', () => {
           content: expect.stringContaining('Not relevant to our goals.'),
         }),
       );
+    });
+
+    it('forwards rejection feedback into the autoresearch loop and swallows feedback failures', async () => {
+      const plan = makePlan({ goal: 'Route tabs into coop context' });
+      const observation = makeObservation({ coopId: 'coop-1' });
+      mockGetAgentPlan.mockResolvedValue(plan);
+      mockGetAgentObservation.mockResolvedValue(observation);
+      mockListSkillRunsByPlanId.mockResolvedValue([{ id: 'run-1' }, { id: 'run-2' }]);
+      experimentLoopMocks.collectFeedback
+        .mockRejectedValueOnce(new Error('feedback failed'))
+        .mockResolvedValueOnce(undefined);
+
+      const result = await handleRejectAgentPlan({
+        type: 'reject-agent-plan',
+        payload: { planId: 'plan-1', reason: 'Not relevant to our goals.' },
+      });
+
+      expect(result.ok).toBe(true);
+      await vi.waitFor(() => {
+        expect(experimentLoopMocks.collectFeedback).toHaveBeenNthCalledWith(1, {}, 'run-1', false);
+        expect(experimentLoopMocks.collectFeedback).toHaveBeenNthCalledWith(2, {}, 'run-2', false);
+      });
     });
 
     it('does not create feedback memory when plan is not found', async () => {

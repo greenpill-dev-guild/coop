@@ -100,6 +100,15 @@ export class AgentWebLlmBridge {
     void this.ensureEngine().catch(() => {});
   }
 
+  async initialize() {
+    const start = Date.now();
+    await this.ensureEngine();
+    return {
+      model: WEBLLM_MODEL_ID,
+      durationMs: Date.now() - start,
+    };
+  }
+
   async complete(input: {
     system?: string;
     prompt: string;

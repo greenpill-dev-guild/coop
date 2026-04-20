@@ -1,9 +1,12 @@
 import type {
   ActionBundle,
   ActionLogEntry,
+  AgentBenchmarkRecord,
   AgentMemory,
   AgentObservation,
   AgentPlan,
+  AgentProviderPromotionState,
+  AgentTraceRecord,
   AnchorCapability,
   ArchiveReceipt,
   Artifact,
@@ -256,6 +259,39 @@ export interface AgentDashboardResponse {
   manifests: SkillManifest[];
   autoRunSkillIds: string[];
   memories: AgentMemory[];
+  providerPromotion?: {
+    webllm: AgentProviderPromotionState | null;
+    webllmEvidence: AgentProviderPromotionEvidence;
+  };
+}
+
+export interface AgentProviderPromotionEvidence {
+  benchmarkRecords: AgentProviderPromotionBenchmarkEvidence[];
+  traceRecords: AgentProviderPromotionTraceEvidence[];
+}
+
+export interface AgentProviderPromotionBenchmarkEvidence {
+  recordId: string;
+  skillId: string;
+  outcome: AgentBenchmarkRecord['outcome'];
+  schemaPassRate: number;
+  jsonRepairRate: number;
+  medianLatencyMs: number | null;
+  coldStartTimeMs: number | null;
+  confidenceScore: number | null;
+  fallbackReason?: string;
+  unavailableReason?: string;
+  createdAt: string;
+}
+
+export interface AgentProviderPromotionTraceEvidence {
+  recordId: string;
+  skillId: string;
+  outcome: AgentTraceRecord['outcome'];
+  durationMs: number;
+  confidenceScore?: number;
+  evalScore?: number;
+  createdAt: string;
 }
 
 export interface AgentDashboardKnowledgeSkill {
@@ -555,6 +591,8 @@ export type RuntimeRequest =
     }
   | { type: 'get-agent-dashboard' }
   | { type: 'run-agent-cycle' }
+  | { type: 'get-webllm-provider-promotion-state' }
+  | { type: 'activate-webllm-provider-promotion' }
   | { type: 'approve-agent-plan'; payload: { planId: string } }
   | { type: 'reject-agent-plan'; payload: { planId: string; reason?: string } }
   | { type: 'retry-skill-run'; payload: { skillRunId: string } }
@@ -705,7 +743,17 @@ export type RuntimeRequest =
   | {
       type: 'get-knowledge-stats';
       payload: { coopId: string };
-    };
+    }
+  | { type: 'list-autoresearch-configs' }
+  | {
+      type: 'set-autoresearch-config';
+      payload: { skillId: string; enabled: boolean };
+    }
+  | {
+      type: 'run-autoresearch-cycle';
+      payload: { skillId: string };
+    }
+  | { type: 'list-experiment-records' };
 
 export interface RuntimeActionResponse<T = unknown> {
   ok: boolean;

@@ -4,6 +4,7 @@ import type {
   SkillOutputSchemaRef,
 } from '@coop/shared';
 import { createActionProposal } from '@coop/shared';
+import { configuredOnchainMode } from '../config';
 import type { SkillOutputHandler } from './output-handlers-helpers';
 import { queueActionProposals } from './output-handlers-helpers';
 
@@ -35,6 +36,7 @@ export const handleErc8004RegistrationOutput: SkillOutputHandler = async (input)
         },
         reason: registration.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],
@@ -83,6 +85,7 @@ export const handleErc8004FeedbackOutput: SkillOutputHandler = async (input) => 
         },
         reason: feedback.rationale,
         approvalMode: input.manifest.approvalMode,
+        onchainMode: configuredOnchainMode,
         generatedBySkillId: input.skillId,
       }),
     ],

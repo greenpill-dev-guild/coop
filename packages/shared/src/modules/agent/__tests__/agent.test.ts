@@ -13,10 +13,13 @@ import {
   completeAgentPlan,
   completeSkillRun,
   createActionProposal,
+  createAgentBenchmarkRecord,
   createAgentGeneratedDraft,
   createAgentObservation,
   createAgentPlan,
   createAgentPlanStep,
+  createAgentProviderPromotionState,
+  createAgentTraceRecord,
   createCapitalFormationDraft,
   createReviewDigestDraft,
   createSkillRun,
@@ -29,6 +32,10 @@ import {
   updateAgentObservation,
   updateAgentPlan,
   updateAgentPlanStep,
+  validateAgentBenchmarkRecord,
+  validateAgentProviderPromotionState,
+  validateAgentRuntimeProviderContract,
+  validateAgentTraceRecord,
   validateSkillManifest,
   validateSkillOutput,
 } from '../agent';
@@ -176,6 +183,136 @@ describe('agent helpers', () => {
   });
 });
 
+describe('runtime provider contracts', () => {
+  it('validates an explicit provider capability contract', () => {
+    const contract = validateAgentRuntimeProviderContract({
+      id: 'webllm',
+      tier: 'p2',
+      label: 'WebLLM WebGPU',
+      defaultModelId: 'Qwen2-0.5B-Instruct-q4f16_1-MLC',
+      capabilities: {
+        structuredJson: 'grammar-constrained',
+        workerSafe: true,
+        offscreenSafe: true,
+        requiresWebGpu: true,
+        supportsStreaming: false,
+        supportsMultimodal: false,
+      },
+      fallbackOrder: ['transformers', 'heuristic'],
+    });
+
+    expect(contract.tier).toBe('p2');
+    expect(contract.capabilities.requiresWebGpu).toBe(true);
+    expect(contract.fallbackOrder).toEqual(['transformers', 'heuristic']);
+  });
+});
+
+describe('agent benchmark records', () => {
+  it('creates and validates persisted benchmark aggregates', () => {
+    const record = createAgentBenchmarkRecord({
+      skillId: 'tab-router',
+      providerId: 'transformers',
+      providerTier: 'p1',
+      modelId: 'onnx-community/Qwen2.5-0.5B-Instruct',
+      capabilities: {
+        structuredJson: 'repairable',
+        workerSafe: true,
+        offscreenSafe: true,
+        requiresWebGpu: false,
+        supportsStreaming: false,
+        supportsMultimodal: false,
+      },
+      fallbackOrder: ['heuristic'],
+      outcome: 'completed',
+      fixtureResults: [
+        {
+          fixtureId: 'tab-router-watershed-signal',
+          outcome: 'completed',
+          schemaPassed: true,
+          jsonRepaired: true,
+          latencyMs: 1820,
+          coldStartMs: 640,
+          confidenceScore: 0.74,
+        },
+      ],
+      schemaPassRate: 1,
+      jsonRepairRate: 1,
+      medianLatencyMs: 1820,
+      coldStartTimeMs: 640,
+      confidenceScore: 0.74,
+      fallbackProviderId: 'heuristic',
+      fallbackReason: 'Legacy path falls back to heuristic while warming.',
+    });
+
+    const validated = validateAgentBenchmarkRecord(record);
+
+    expect(validated.id).toMatch(/^agent-benchmark-/);
+    expect(validated.createdAt).toContain('T');
+    expect(validated.fixtureResults[0]?.jsonRepaired).toBe(true);
+  });
+});
+
+describe('agent provider promotion state', () => {
+  it('creates and validates a persisted provider promotion decision', () => {
+    const state = createAgentProviderPromotionState({
+      providerId: 'webllm',
+      baselineProviderId: 'transformers',
+      evaluatedSkillIds: ['tab-router', 'opportunity-extractor'],
+      promotedSkillIds: ['tab-router', 'opportunity-extractor'],
+      benchmarkRecordIds: ['agent-benchmark-1'],
+      traceRecordIds: ['agent-trace-record-1'],
+      benchmarked: true,
+      traced: true,
+      schemaStable: true,
+      maliciousPackClean: true,
+      fallbackSafe: true,
+      promotable: true,
+      securityPassRate: 1,
+      failedChecks: [],
+      activatedAt: '2026-04-18T20:00:00.000Z',
+    });
+
+    const validated = validateAgentProviderPromotionState(state);
+
+    expect(validated.providerId).toBe('webllm');
+    expect(validated.evaluatedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
+    expect(validated.promotedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
+    expect(validated.benchmarkRecordIds).toEqual(['agent-benchmark-1']);
+    expect(validated.traceRecordIds).toEqual(['agent-trace-record-1']);
+    expect(validated.promotable).toBe(true);
+  });
+});
+
+describe('agent trace records', () => {
+  it('creates and validates local-only skill traces with hashed payload metadata', () => {
+    const record = createAgentTraceRecord({
+      traceId: 'agent-trace-001',
+      observationId: 'agent-observation-1',
+      skillId: 'opportunity-extractor',
+      providerId: 'transformers',
+      modelId: 'onnx-community/Qwen2.5-0.5B-Instruct',
+      promptHash: 'c4d1c8d9a65ad2c5bb2f30f1c8f3a9d8f54d3b10d80d1f5a40b3190f4c2cb6a7',
+      contextInventory: ['coop:coop-1', 'extracts:2', 'memories:1'],
+      contextBudgetTokens: 284,
+      sourceRisk: 'mixed',
+      startedAt: 1_776_438_400_000,
+      durationMs: 1420,
+      rawOutputHash: '8b6c1cfed52882d1e8b70349f3f8b30f2848d43c3c32974f4a68698b6d65bf31',
+      repairSteps: ['provider-fallback:transformers->heuristic'],
+      validationErrors: [],
+      confidenceScore: 0.78,
+      outcome: 'fallback',
+    });
+
+    const validated = validateAgentTraceRecord(record);
+
+    expect(validated.id).toMatch(/^agent-trace-record-/);
+    expect(validated.outcome).toBe('fallback');
+    expect(validated.sourceRisk).toBe('mixed');
+    expect(validated.contextInventory).toContain('extracts:2');
+  });
+});
+
 /* ---------------------------------------------------------------------------
  * updateAgentObservation
  * --------------------------------------------------------------------------- */
@@ -296,6 +433,8 @@ describe('createActionProposal', () => {
     expect(proposal.reason).toBe('Draft is ready for publishing.');
     expect(proposal.approvalMode).toBe('proposal');
     expect(proposal.requiresPermit).toBe(false);
+    expect(proposal.riskTags).toEqual(['publish']);
+    expect(proposal.requiresExplicitAcknowledgement).toBe(false);
     expect(proposal.createdAt).toBeDefined();
   });
 
@@ -316,6 +455,20 @@ describe('createActionProposal', () => {
     expect(proposal.requiresPermit).toBe(true);
     expect(proposal.permitId).toBe('permit-1');
     expect(proposal.generatedBySkillId).toBe('capital-formation-brief');
+  });
+
+  it('adds live, permission, and destructive risk metadata deterministically', () => {
+    const proposal = createActionProposal({
+      actionClass: 'safe-remove-owner',
+      coopId: 'coop-2',
+      payload: { ownerAddress: '0x1111111111111111111111111111111111111111' },
+      reason: 'Remove the owner after access rotation.',
+      approvalMode: 'proposal',
+      onchainMode: 'live',
+    });
+
+    expect(proposal.riskTags).toEqual(['live', 'permission', 'destructive']);
+    expect(proposal.requiresExplicitAcknowledgement).toBe(true);
   });
 });
 

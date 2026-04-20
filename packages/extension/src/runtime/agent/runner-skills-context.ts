@@ -2,6 +2,7 @@ import type {
   AgentObservation,
   AgentProvider,
   CoopSharedState,
+  EntityExtractionOutput,
   ReadablePageExtract,
   ReviewDraft,
   TabRouterOutput,
@@ -26,6 +27,7 @@ import {
   shapeReviewDraft,
 } from '@coop/shared';
 import { AGENT_HIGH_CONFIDENCE_THRESHOLD } from './config';
+import { persistEntityExtractionOutputToGraph } from './graph-persistence';
 import { resolveObservationExtractIds, resolveObservationRoutingIds } from './runner-observations';
 import {
   type SkillExecutionContext,
@@ -255,6 +257,20 @@ export async function persistTabRouterOutput(input: {
   }
 
   return { createdDraftIds };
+}
+
+export async function persistEntityExtractionOutput(input: {
+  observation: AgentObservation;
+  coopId: string;
+  output: EntityExtractionOutput;
+  provider: AgentProvider;
+}) {
+  return persistEntityExtractionOutputToGraph({
+    db,
+    coopId: input.coopId,
+    observation: input.observation,
+    output: input.output,
+  });
 }
 
 export async function buildSkillContext(

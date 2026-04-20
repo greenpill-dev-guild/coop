@@ -1,14 +1,14 @@
 import {
+  type KnowledgeSourceType,
   createKnowledgeSource,
   getAuthSession,
   listKnowledgeSources,
   removeKnowledgeSource,
-  type KnowledgeSourceType,
 } from '@coop/shared';
-import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { loadGraphSnapshot } from '../../runtime/agent/graph-store-singleton';
-import { db, getCoops, getLocalSetting, stateKeys } from '../context';
+import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
+import { db, getCoops, getLocalSetting, stateKeys } from '../context';
 
 // ---------------------------------------------------------------------------
 // Helpers

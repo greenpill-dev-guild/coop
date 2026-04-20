@@ -18,8 +18,8 @@ import {
   type ReceiverPairingRecord,
   createCoop,
 } from '@coop/shared';
-import { vi } from 'vitest';
 import { makeArtifact, makeSetupInsights } from '@coop/shared/testing';
+import { vi } from 'vitest';
 import type { DashboardResponse } from '../../runtime/messages';
 export { mockCoopSeeds, mockCoopSeedsByName } from './mock-coop-seeds';
 

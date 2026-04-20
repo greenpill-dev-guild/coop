@@ -122,6 +122,7 @@ export async function runCaptureForTabs(
     drainAgent?: boolean;
     dedupCooldownMs?: number;
     bypassRecentDuplicateCheck?: boolean;
+    awaitFollowUp?: boolean;
   } = {},
 ) {
   const coops = await getCoops();
@@ -218,9 +219,21 @@ export async function runCaptureForTabs(
     syncError: Boolean(lastCaptureError),
     lastCaptureError,
   });
+  const followUps: Promise<unknown>[] = [];
+  const trackFollowUp = (label: string, operation: Promise<unknown>) => {
+    if (options.awaitFollowUp) {
+      followUps.push(
+        Promise.resolve(operation).catch((error) => {
+          console.warn(`[capture] ${label} failed:`, error);
+        }),
+      );
+      return;
+    }
+    queueFollowUp('capture', label, operation);
+  };
+
   if (coops.length > 0) {
-    queueFollowUp(
-      'capture',
+    trackFollowUp(
       'roundup-agent-work',
       (async () => {
         await emitRoundupBatchObservation({
@@ -239,7 +252,11 @@ export async function runCaptureForTabs(
       })(),
     );
   }
-  queueFollowUp('capture', 'refresh-badge', refreshBadge());
+  trackFollowUp('refresh-badge', refreshBadge());
+
+  if (followUps.length > 0) {
+    await Promise.all(followUps);
+  }
 
   if (candidates.length > 0 || skippedCount > 0) {
     const domainCount = capturedDomains.size;
@@ -290,8 +307,11 @@ export async function primeCoopRoundup(
   };
 }
 
-export async function runCaptureCycle() {
-  return runCaptureForTabs(await chrome.tabs.query({}), { drainAgent: true });
+export async function runCaptureCycle(options?: { awaitFollowUp?: boolean }) {
+  return runCaptureForTabs(await chrome.tabs.query({}), {
+    drainAgent: true,
+    awaitFollowUp: options?.awaitFollowUp,
+  });
 }
 
 async function wasTabCapturedWithinCooldown(tab: chrome.tabs.Tab, cooldownMs: number) {

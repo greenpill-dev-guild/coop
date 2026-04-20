@@ -1,24 +1,24 @@
 import 'fake-indexeddb/auto';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SkillEvalCase } from '../eval';
-import type { RegisteredSkill } from '../registry';
 import {
+  type AgentProvider,
+  type AutoresearchConfig,
+  type CoopDexie,
   createAgentObservation,
   createCoopDb,
   createSkillRun,
   saveAgentObservation,
   saveSkillRun,
-  type AgentProvider,
-  type AutoresearchConfig,
-  type CoopDexie,
 } from '@coop/shared';
-import { activateVariant, createVariant, getActiveVariant, seedBaseline } from '../variant-engine';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SkillEvalCase } from '../eval';
 import {
   collectFeedback,
   computeMemberFeedbackScore,
   runCycle,
   runExperiment,
 } from '../experiment-loop';
+import type { RegisteredSkill } from '../registry';
+import { activateVariant, createVariant, getActiveVariant, seedBaseline } from '../variant-engine';
 
 const { completionQueue, mockCompleteSkill, mockGetRegisteredSkill, mockLoadSkillEvalCases } =
   vi.hoisted(() => ({
@@ -69,6 +69,12 @@ function freshDb() {
   const db = createCoopDb(`coop-experiment-loop-${crypto.randomUUID()}`);
   databases.push(db);
   return db;
+}
+
+function getCompletionCallInput(index: number): { skill: { instructions: string } } | undefined {
+  return (mockCompleteSkill.mock.calls as unknown[][])[index]?.[0] as
+    | { skill: { instructions: string } }
+    | undefined;
 }
 
 function buildRegisteredSkill(): RegisteredSkill {
@@ -223,12 +229,13 @@ describe('experiment loop', () => {
     expect(record.fixtureResults).toHaveLength(fixtures.length);
     expect(record.promptDiff).toContain('--- baseline');
     expect(mockCompleteSkill).toHaveBeenCalledTimes(2);
-    const [baselineCall, variantCall] = mockCompleteSkill.mock.calls;
-    if (!baselineCall || !variantCall) {
+    const baselineInput = getCompletionCallInput(0);
+    const variantInput = getCompletionCallInput(1);
+    if (!baselineInput || !variantInput) {
       throw new Error('Expected baseline and variant completion calls.');
     }
-    expect(baselineCall[0].skill.instructions).toBe('Baseline prompt');
-    expect(variantCall[0].skill.instructions).toBe('Variant keep prompt');
+    expect(baselineInput.skill.instructions).toBe('Baseline prompt');
+    expect(variantInput.skill.instructions).toBe('Variant keep prompt');
     await expect(db.experimentRecords.get(record.id)).resolves.toEqual(record);
     await expect(getActiveVariant(db, SKILL_ID)).resolves.toMatchObject({
       id: variant.id,
@@ -320,12 +327,13 @@ describe('experiment loop', () => {
     const record = await runExperiment(db, SKILL_ID, challenger, fixtures, buildConfig());
 
     expect(record.baselineVariantId).toBe(baseline.id);
-    const [baselineCall, variantCall] = mockCompleteSkill.mock.calls;
-    if (!baselineCall || !variantCall) {
+    const baselineInput = getCompletionCallInput(0);
+    const variantInput = getCompletionCallInput(1);
+    if (!baselineInput || !variantInput) {
       throw new Error('Expected baseline and variant completion calls.');
     }
-    expect(baselineCall[0].skill.instructions).toBe('Baseline prompt');
-    expect(variantCall[0].skill.instructions).toBe('Challenger prompt');
+    expect(baselineInput.skill.instructions).toBe('Baseline prompt');
+    expect(variantInput.skill.instructions).toBe('Challenger prompt');
   });
 
   it('runs a cycle, promotes kept variants to baseline, and reports the best score', async () => {
@@ -348,11 +356,16 @@ describe('experiment loop', () => {
       bestScore: expect.any(Number),
     });
     expect(summary.bestScore).toBeGreaterThan(0.9);
-    await expect(getActiveVariant(db, SKILL_ID)).resolves.toMatchObject({
-      promptText: expect.stringContaining('autoresearch variant 1'),
+    const activeVariant = await getActiveVariant(db, SKILL_ID);
+    expect(activeVariant).toMatchObject({
       isActive: true,
       isBaseline: true,
     });
+    if (!activeVariant) {
+      throw new Error('Expected an active variant after the cycle.');
+    }
+    // Variant prompt should differ from the original baseline
+    expect(activeVariant.promptText).not.toBe('Baseline prompt');
     await expect(db.experimentRecords.count()).resolves.toBe(2);
   });
 
@@ -421,9 +434,14 @@ describe('experiment loop', () => {
       await saveSkillRun(db, run);
     }
 
-    await collectFeedback(db, runs[0]!.id, true);
-    await collectFeedback(db, runs[1]!.id, false);
-    await collectFeedback(db, runs[2]!.id, true);
+    const [firstRun, secondRun, thirdRun] = runs;
+    if (!firstRun || !secondRun || !thirdRun) {
+      throw new Error('Expected three skill runs for feedback scoring.');
+    }
+
+    await collectFeedback(db, firstRun.id, true);
+    await collectFeedback(db, secondRun.id, false);
+    await collectFeedback(db, thirdRun.id, true);
 
     await expect(computeMemberFeedbackScore(db, SKILL_ID)).resolves.toBeCloseTo(0.5, 5);
   });

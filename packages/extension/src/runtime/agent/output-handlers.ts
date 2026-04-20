@@ -34,6 +34,7 @@ export async function applySkillOutput(
       createdDraftIds: [],
       autoExecutedActionCount: 0,
       errors: [],
+      contextEntityIds: [],
     };
   }
 

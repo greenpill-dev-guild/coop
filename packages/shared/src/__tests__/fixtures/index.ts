@@ -236,6 +236,8 @@ export function makeActionBundle(overrides?: Partial<ActionBundle>): ActionBundl
     policyId: 'policy-1',
     status: 'proposed',
     digest: `0x${'ab'.repeat(32)}`,
+    riskTags: [],
+    requiresExplicitAcknowledgement: false,
     ...overrides,
   };
 }

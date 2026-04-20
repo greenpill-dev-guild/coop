@@ -19,6 +19,7 @@ import {
   updateAgentPlanStep,
 } from '@coop/shared';
 import { getMissingRequiredCapabilities, shouldSkipSkill } from '../agent/harness';
+import { selectSkillIdsForObservation } from '../agent/harness';
 import {
   logObservationDismissed,
   logObservationStart,
@@ -27,9 +28,9 @@ import {
   logSkillStart,
 } from '../agent/logger';
 import { applySkillOutput } from '../agent/output-handlers';
+import { resolvePreferredProvider } from '../agent/provider-promotion';
 import { computeOutputConfidence } from '../agent/quality';
 import { getRegisteredSkill, listRegisteredSkills } from '../agent/registry';
-import { selectSkillIdsForObservation } from '../agent/harness';
 import { getObservationDismissReason } from '../agent/runner-observations';
 import {
   type AgentCycleResult,
@@ -38,11 +39,16 @@ import {
   getCoops,
   inferPreferredProvider,
 } from '../agent/runner-state';
+import { configuredOnchainMode } from '../config';
 import { completeSkill } from './complete';
 import { buildSkillContext } from './context';
 import { dispatchActionProposal } from './helpers';
 import { writeSkillMemories } from './memories';
-import { maybePatchDraft, persistTabRouterOutput } from './persistence';
+import {
+  maybePatchDraft,
+  persistEntityExtractionOutput,
+  persistTabRouterOutput,
+} from './persistence';
 
 export async function runObservationPlan(
   observation: AgentObservation,
@@ -84,17 +90,29 @@ export async function runObservationPlan(
     observation,
     listRegisteredSkills().map((entry) => entry.manifest),
   );
+  const preferredProviders = new Map<
+    string,
+    Awaited<ReturnType<typeof resolvePreferredProvider>>
+  >();
+  for (const skillId of skillIds) {
+    const manifest = getRegisteredSkill(skillId)?.manifest;
+    if (manifest) {
+      preferredProviders.set(skillId, await resolvePreferredProvider(manifest));
+    }
+  }
+  const getPreferredProvider = (skillId: string) => {
+    const preferredProvider = preferredProviders.get(skillId);
+    if (preferredProvider) {
+      return preferredProvider;
+    }
+    const manifest = getRegisteredSkill(skillId)?.manifest;
+    return manifest ? inferPreferredProvider(manifest) : 'heuristic';
+  };
   const plan = createAgentPlan({
     observationId: observation.id,
-    provider: skillIds.some((skillId) => {
-      const manifest = getRegisteredSkill(skillId)?.manifest;
-      return manifest ? inferPreferredProvider(manifest) === 'webllm' : false;
-    })
+    provider: skillIds.some((skillId) => getPreferredProvider(skillId) === 'webllm')
       ? 'webllm'
-      : skillIds.some((skillId) => {
-            const manifest = getRegisteredSkill(skillId)?.manifest;
-            return manifest ? inferPreferredProvider(manifest) === 'transformers' : false;
-          })
+      : skillIds.some((skillId) => getPreferredProvider(skillId) === 'transformers')
         ? 'transformers'
         : 'heuristic',
     confidence: Math.max(0.55, context.draft?.confidence ?? 0.62),
@@ -133,6 +151,7 @@ export async function runObservationPlan(
       },
       reason: 'Archive receipt follow-up is due.',
       approvalMode: 'auto-run-eligible',
+      onchainMode: configuredOnchainMode,
       generatedBySkillId: 'stale-archive-receipt',
     });
     workingPlan = updateAgentPlan(workingPlan, {
@@ -182,6 +201,7 @@ export async function runObservationPlan(
       result.errors.push(`Unknown skill "${skillId}".`);
       continue;
     }
+    const preferredProvider = getPreferredProvider(skillId);
 
     const missingRequiredCapabilities = getMissingRequiredCapabilities(
       registered.manifest.requiredCapabilities,
@@ -209,7 +229,7 @@ export async function runObservationPlan(
     ) {
       const skippedStep = createAgentPlanStep({
         skillId,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         summary: registered.manifest.description,
         startedAt: nowIso(),
       });
@@ -223,13 +243,13 @@ export async function runObservationPlan(
       void logSkillComplete({
         skillId,
         observationId: observation.id,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         durationMs: 0,
         skipped: true,
       });
       result.skillRunMetrics.push({
         skillId,
-        provider: inferPreferredProvider(registered.manifest),
+        provider: preferredProvider,
         durationMs: 0,
         retryCount: 0,
         skipped: true,
@@ -239,7 +259,7 @@ export async function runObservationPlan(
 
     const step = createAgentPlanStep({
       skillId,
-      provider: inferPreferredProvider(registered.manifest),
+      provider: preferredProvider,
       summary: registered.manifest.description,
       startedAt: nowIso(),
     });
@@ -254,14 +274,14 @@ export async function runObservationPlan(
       observationId: observation.id,
       planId: workingPlan.id,
       skill: registered.manifest,
-      provider: inferPreferredProvider(registered.manifest),
+      provider: preferredProvider,
       promptHash: `${registered.manifest.id}:${observation.id}:${observation.updatedAt}`,
     });
     await saveSkillRun(db, run);
     void logSkillStart({
       skillId,
       observationId: observation.id,
-      provider: inferPreferredProvider(registered.manifest),
+      provider: preferredProvider,
     });
 
     try {
@@ -280,6 +300,7 @@ export async function runObservationPlan(
         relatedArtifacts: context.relatedArtifacts,
         relatedRoutings: context.relatedRoutings,
         memories: context.memories,
+        preferredProvider,
       });
 
       const confidenceBefore = workingPlan.confidence;
@@ -341,6 +362,7 @@ export async function runObservationPlan(
         saveReviewDraft: async (draft) => saveReviewDraft(db, draft),
         savePlan: async (plan) => saveAgentPlan(db, plan),
         persistTabRouterOutput,
+        persistEntityExtractionOutput,
         maybePatchDraft,
         dispatchActionProposal,
       });

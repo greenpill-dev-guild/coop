@@ -2,6 +2,7 @@ import type {
   AgentObservation,
   AgentProvider,
   CoopSharedState,
+  EntityExtractionOutput,
   PublishReadinessCheckOutput,
   ReadablePageExtract,
   ReviewDraft,
@@ -21,6 +22,7 @@ import {
   shapeReviewDraft,
 } from '@coop/shared';
 import { AGENT_HIGH_CONFIDENCE_THRESHOLD } from '../agent/config';
+import { persistEntityExtractionOutputToGraph } from '../agent/graph-persistence';
 import { compact, db } from '../agent/runner-state';
 
 export async function maybePatchDraft(
@@ -254,4 +256,18 @@ export async function persistTabRouterOutput(input: {
   }
 
   return { createdDraftIds };
+}
+
+export async function persistEntityExtractionOutput(input: {
+  observation: AgentObservation;
+  coopId: string;
+  output: EntityExtractionOutput;
+  provider: AgentProvider;
+}) {
+  return persistEntityExtractionOutputToGraph({
+    db,
+    coopId: input.coopId,
+    observation: input.observation,
+    output: input.output,
+  });
 }

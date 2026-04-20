@@ -32,6 +32,11 @@ const registryMocks = vi.hoisted(() => ({
   listRegisteredSkills: vi.fn(),
 }));
 
+const promotionMocks = vi.hoisted(() => ({
+  getWebLlmProviderPromotionEvidence: vi.fn(),
+  getWebLlmProviderPromotionState: vi.fn(),
+}));
+
 const messageMocks = vi.hoisted(() => ({
   notifyAgentEvent: vi.fn(),
 }));
@@ -84,6 +89,11 @@ vi.mock('../../../runtime/agent/registry', () => ({
   listRegisteredSkills: registryMocks.listRegisteredSkills,
 }));
 
+vi.mock('../../../runtime/agent/provider-promotion', () => ({
+  getWebLlmProviderPromotionEvidence: promotionMocks.getWebLlmProviderPromotionEvidence,
+  getWebLlmProviderPromotionState: promotionMocks.getWebLlmProviderPromotionState,
+}));
+
 vi.mock('../../../runtime/messages', () => ({
   notifyAgentEvent: messageMocks.notifyAgentEvent,
 }));
@@ -134,6 +144,11 @@ describe('agent dashboard helpers', () => {
         },
       },
     ]);
+    promotionMocks.getWebLlmProviderPromotionEvidence.mockResolvedValue({
+      benchmarkRecords: [],
+      traceRecords: [],
+    });
+    promotionMocks.getWebLlmProviderPromotionState.mockResolvedValue(null);
     harnessMocks.filterAgentDashboardState.mockImplementation((input) => ({
       observations: input.observations,
       plans: input.plans,
@@ -180,6 +195,13 @@ describe('agent dashboard helpers', () => {
       manifests: [{ id: 'skill-1', name: 'Memory Insight' }],
       autoRunSkillIds: ['skill-1'],
       memories: [{ id: 'memory-1' }],
+      providerPromotion: {
+        webllm: null,
+        webllmEvidence: {
+          benchmarkRecords: [],
+          traceRecords: [],
+        },
+      },
     });
   });
 

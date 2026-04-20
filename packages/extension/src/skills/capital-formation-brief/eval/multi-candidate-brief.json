@@ -1,0 +1,28 @@
+{
+  "id": "multi-candidate-brief",
+  "description": "Capital formation briefs synthesizing multiple candidates should reference supporting evidence.",
+  "fixtureType": "golden",
+  "confidenceFloor": 0.82,
+  "tags": ["core-pack", "synthesis", "multi-candidate"],
+  "output": {
+    "title": "Community solar investment opportunity for urban agriculture coops",
+    "summary": "Two complementary funding leads — a municipal sustainability grant and a community solar program — could jointly support the coop's rooftop garden expansion and energy independence goals.",
+    "whyItMatters": "Combining both leads creates a stronger proposal narrative than either alone, and the deadlines align within the same quarter.",
+    "suggestedNextStep": "Draft a joint proposal outline that shows how solar infrastructure and urban food production reinforce each other.",
+    "tags": ["solar", "agriculture", "municipal-grant", "infrastructure"],
+    "targetCoopIds": ["coop-urban-ag"],
+    "supportingCandidateIds": ["candidate-solar-grant", "candidate-municipal-sustainability"]
+  },
+  "assertions": [
+    { "type": "field-present", "path": "title" },
+    { "type": "field-present", "path": "summary" },
+    { "type": "field-present", "path": "whyItMatters" },
+    { "type": "field-present", "path": "suggestedNextStep" },
+    { "type": "array-min-length", "path": "tags", "threshold": 3 },
+    { "type": "array-min-length", "path": "supportingCandidateIds", "threshold": 2 },
+    { "type": "semantic-word-count", "path": "summary", "threshold": 12 },
+    { "type": "semantic-word-count", "path": "whyItMatters", "threshold": 8 },
+    { "type": "semantic-word-count", "path": "suggestedNextStep", "threshold": 8 }
+  ],
+  "threshold": 0.86
+}

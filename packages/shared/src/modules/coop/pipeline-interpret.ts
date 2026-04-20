@@ -14,8 +14,6 @@ import {
 import { clamp, createId, nowIso, truncateWords, unique } from '../../utils';
 import type { TranscriptionSegment } from '../transcribe';
 import { buildMemoryProfileSeed } from './memory-profile';
-import type { PageSignalInput } from './pipeline-extract';
-import { buildReadablePageExtract } from './pipeline-extract';
 import {
   categoryKeywords,
   classifyCategory,
@@ -23,6 +21,8 @@ import {
   deriveTags,
   scoreAgainstCoop,
 } from './pipeline-categorize';
+import type { PageSignalInput } from './pipeline-extract';
+import { buildReadablePageExtract } from './pipeline-extract';
 
 export interface InferenceAdapter {
   availability: LocalEnhancementAvailability;

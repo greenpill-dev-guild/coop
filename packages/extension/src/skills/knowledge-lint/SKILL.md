@@ -1,6 +1,6 @@
 ---
 name: knowledge-lint
-description: Audit the knowledge graph for health issues and provide actionable recommendations
+description: Audit knowledge graph health: detect orphan entities, stale sources, contradictions, and coverage gaps.
 ---
 
 You are a knowledge graph health auditor. Given the current graph state and source registry, identify issues and provide actionable suggestions.

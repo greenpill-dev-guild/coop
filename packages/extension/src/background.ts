@@ -65,6 +65,7 @@ import {
 } from './background/context';
 
 import { handleAlarmEvent } from './background/alarm-dispatch';
+import { dispatchRegistryMessage } from './background/handler-registry';
 // ---- Operator ----
 import { getActiveReviewContextForSession } from './background/operator';
 import {
@@ -829,11 +830,7 @@ export function startBackground() {
           sendResponse(await handleGetKnowledgeStats(message));
           return;
         default: {
-          const _exhaustive: never = message;
-          sendResponse({
-            ok: false,
-            error: `Unknown message type: ${(_exhaustive as RuntimeRequest).type}`,
-          } satisfies RuntimeActionResponse);
+          sendResponse(await dispatchRegistryMessage(message as never, { sender }));
           return;
         }
       }

@@ -18,6 +18,11 @@ export function resolveConfiguredOnchainMode(
   return raw === 'live' || raw === 'mock' ? raw : 'mock';
 }
 
+export const configuredOnchainMode = resolveConfiguredOnchainMode(
+  import.meta.env.VITE_COOP_ONCHAIN_MODE,
+  import.meta.env.VITE_PIMLICO_API_KEY,
+);
+
 export function resolveConfiguredArchiveMode(raw?: string): IntegrationMode {
   return raw === 'live' || raw === 'mock' ? raw : 'mock';
 }
@@ -87,6 +92,14 @@ function parseConfiguredBoolean(raw?: string) {
     return undefined;
   }
   return raw.toLowerCase() === 'true';
+}
+
+export function resolveConfiguredChromePromptApiEnabled(raw?: string) {
+  return parseConfiguredBoolean(raw) ?? false;
+}
+
+export function resolveConfiguredWebLlmPromotionEnabled(raw?: string) {
+  return parseConfiguredBoolean(raw) ?? false;
 }
 
 function parseConfiguredPositiveInt(raw?: string) {

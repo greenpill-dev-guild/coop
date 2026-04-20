@@ -265,6 +265,7 @@ describe('action policy and lifecycle handlers', () => {
       expect.objectContaining({
         coopId: 'coop-1',
         memberId: 'member-1',
+        onchainMode: expect.any(String),
         chainId: 11155111,
         chainKey: 'sepolia',
       }),

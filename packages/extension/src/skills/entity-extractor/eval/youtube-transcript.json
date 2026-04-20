@@ -1,13 +1,40 @@
 {
   "id": "entity-extractor-youtube-transcript",
   "description": "Extract entities from a YouTube transcript about knowledge graphs",
-  "input": {
-    "observationContext": "Welcome to the talk on knowledge graphs. Today we explore how agents use structured memory. The POLE model categorizes entities into Person Organization Location and Event. Temporal edges track when facts are valid. This enables reasoning over time."
+  "output": {
+    "entities": [
+      {
+        "id": "entity-pole",
+        "name": "POLE model",
+        "type": "object",
+        "description": "Entity model that categorizes people, organizations, locations, and events.",
+        "sourceRef": "youtube:knowledge-graphs-talk"
+      },
+      {
+        "id": "entity-knowledge-graphs-talk",
+        "name": "Knowledge graphs talk",
+        "type": "event",
+        "description": "Talk explaining structured memory and temporal reasoning in knowledge graphs.",
+        "sourceRef": "youtube:knowledge-graphs-talk"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "entity-pole",
+        "to": "entity-knowledge-graphs-talk",
+        "type": "explained-in",
+        "confidence": 0.81,
+        "t_valid": "2026-04-01T00:00:00.000Z",
+        "t_invalid": null,
+        "provenance": "youtube:knowledge-graphs-talk"
+      }
+    ]
   },
   "assertions": [
-    { "type": "array-min-length", "path": "entities", "value": 1 },
-    { "type": "field-present", "path": "entities[0].type" },
-    { "type": "field-present", "path": "entities[0].name" }
+    { "type": "array-min-length", "path": "entities", "threshold": 2 },
+    { "type": "field-equals", "path": "entities.1.type", "expected": "event" },
+    { "type": "field-present", "path": "entities.0.name" },
+    { "type": "field-present", "path": "relationships.0.provenance" }
   ],
   "threshold": 0.6
 }

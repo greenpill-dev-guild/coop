@@ -5,6 +5,7 @@ import type {
   AgentMemory,
   AgentObservation,
   AgentPlan,
+  AgentProviderPromotionState,
   AnchorCapability,
   DelegatedActionClass,
   ExecutionPermit,
@@ -23,6 +24,7 @@ import type {
   SkillManifest,
   SkillRun,
 } from '@coop/shared';
+import type { AgentProviderPromotionEvidence } from '../../runtime/messages';
 import {
   AgentMemorySection,
   AgentObservationsSection,
@@ -97,6 +99,7 @@ type OperatorConsoleProps = {
   onRejectPlan(planId: string): void | Promise<void>;
   onRetrySkillRun(skillRunId: string): void | Promise<void>;
   onToggleSkillAutoRun(skillId: string, enabled: boolean): void | Promise<void>;
+  onActivateWebLlmProviderPromotion(): void | Promise<void>;
   greenGoodsContext?: {
     coopId: string;
     coopName: string;
@@ -119,6 +122,12 @@ type OperatorConsoleProps = {
   ): void | Promise<void>;
   onQueueGreenGoodsMemberSync?(coopId: string): void | Promise<void>;
   memories?: AgentMemory[];
+  providerPromotion?: {
+    enabled: boolean;
+    canActivate: boolean;
+    webllm: AgentProviderPromotionState | null;
+    webllmEvidence: AgentProviderPromotionEvidence;
+  };
 };
 
 export function OperatorConsole(props: OperatorConsoleProps) {
@@ -130,6 +139,8 @@ export function OperatorConsole(props: OperatorConsoleProps) {
         agentRunning={props.agentRunning}
         onRunAgentCycle={props.onRunAgentCycle}
         onToggleSkillAutoRun={props.onToggleSkillAutoRun}
+        providerPromotion={props.providerPromotion}
+        onActivateWebLlmProviderPromotion={props.onActivateWebLlmProviderPromotion}
       />
 
       {props.greenGoodsContext?.enabled ? (

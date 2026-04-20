@@ -9,6 +9,7 @@ import {
   saveAgentObservation,
   updateAgentObservation,
 } from '@coop/shared';
+import { notifyAgentEvent, notifyDashboardUpdated } from '../messages';
 import {
   AGENT_MAX_CONSECUTIVE_FAILURES,
   AGENT_QUALITY_STALL_THRESHOLD,
@@ -35,7 +36,6 @@ import {
   setCycleState,
   setSetting,
 } from './runner-state';
-import { notifyAgentEvent, notifyDashboardUpdated } from '../messages';
 
 // Re-export all split module surfaces for downstream consumers
 export type {
@@ -73,6 +73,7 @@ export {
   maybePatchDraft,
   dispatchActionProposal,
   uniqueById,
+  persistEntityExtractionOutput,
   persistTabRouterOutput,
   buildSkillContext,
   extractMemoriesFromOutput,

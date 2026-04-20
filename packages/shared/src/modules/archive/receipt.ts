@@ -489,7 +489,7 @@ export function applyArchiveReceiptFollowUp(input: {
   refreshedAt?: string;
   filecoinInfo?: ArchiveFilecoinInfoInput | ArchiveReceiptFilecoinInfo;
   error?: string;
-}) {
+}): ArchiveReceipt {
   const refreshedAt = input.refreshedAt ?? nowIso();
   const nextFilecoinInfo = input.filecoinInfo
     ? mergeArchiveFilecoinInfo(
@@ -526,7 +526,7 @@ export function applyArchiveOnChainSealWitnesses(
     proof: string;
     proofCid: string;
   }>,
-) {
+): ArchiveReceipt {
   if (!receipt.filecoinInfo || witnesses.length === 0) {
     return receipt;
   }
@@ -566,7 +566,7 @@ export function applyArchiveOnChainSealWitnesses(
       ...receipt.filecoinInfo,
       deals,
     },
-  };
+  } satisfies ArchiveReceipt;
 }
 
 export function applyArchiveAnchor(

@@ -1,4 +1,6 @@
 import type { AgentObservation, AgentPlan, SkillRun } from '@coop/shared';
+import { useState } from 'react';
+import { getPlanJudgmentCue, renderAcknowledgementControl, renderRiskBadges } from '../review-risk';
 import { formatProviderLabel } from './helpers';
 
 export type AgentObservationsSectionProps = {
@@ -11,6 +13,8 @@ export type AgentObservationsSectionProps = {
 };
 
 export function AgentObservationsSection(props: AgentObservationsSectionProps) {
+  const [acknowledgedPlanIds, setAcknowledgedPlanIds] = useState<Record<string, boolean>>({});
+
   return (
     <>
       <details className="panel-card collapsible-card" open>
@@ -43,38 +47,55 @@ export function AgentObservationsSection(props: AgentObservationsSectionProps) {
           <h3>Helper Plans</h3>
         </summary>
         <div className="collapsible-card__content">
-          {props.agentPlans.slice(0, 12).map((plan) => (
-            <article className="operator-log-entry" key={plan.id}>
-              <div className="badge-row">
-                <span className="badge">{plan.status}</span>
-                <span className="badge">{formatProviderLabel(plan.provider)}</span>
-                <span className="badge">{plan.actionProposals.length} proposals</span>
-              </div>
-              <strong>{plan.goal}</strong>
-              <div className="helper-text">
-                {plan.rationale}
-                {plan.failureReason ? ` · ${plan.failureReason}` : ''}
-              </div>
-              {plan.status === 'pending' ? (
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    onClick={() => void props.onApprovePlan(plan.id)}
-                    type="button"
-                  >
-                    Approve plan
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => void props.onRejectPlan(plan.id)}
-                    type="button"
-                  >
-                    Not now
-                  </button>
+          {props.agentPlans.slice(0, 12).map((plan) => {
+            const cue = getPlanJudgmentCue(plan);
+            const isAcknowledged = acknowledgedPlanIds[plan.id] ?? false;
+
+            return (
+              <article className="operator-log-entry" key={plan.id}>
+                <div className="badge-row">
+                  <span className="badge">{plan.status}</span>
+                  <span className="badge">{formatProviderLabel(plan.provider)}</span>
+                  <span className="badge">{plan.actionProposals.length} proposals</span>
+                  {renderRiskBadges(plan.id, cue)}
                 </div>
-              ) : null}
-            </article>
-          ))}
+                <strong>{plan.goal}</strong>
+                <div className="helper-text">
+                  {cue.helperLine ? `${cue.helperLine} · ` : ''}
+                  {plan.rationale}
+                  {plan.failureReason ? ` · ${plan.failureReason}` : ''}
+                </div>
+                {plan.status === 'pending' ? (
+                  <div className="action-row">
+                    {renderAcknowledgementControl({
+                      checked: isAcknowledged,
+                      cue,
+                      onToggle: () =>
+                        setAcknowledgedPlanIds((current) => ({
+                          ...current,
+                          [plan.id]: !isAcknowledged,
+                        })),
+                    })}
+                    <button
+                      className="primary-button"
+                      disabled={cue.requiresAcknowledgement && !isAcknowledged}
+                      onClick={() => void props.onApprovePlan(plan.id)}
+                      type="button"
+                    >
+                      Approve plan
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => void props.onRejectPlan(plan.id)}
+                      type="button"
+                    >
+                      Not now
+                    </button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
           {props.agentPlans.length === 0 ? (
             <div className="empty-state">No helper plans yet.</div>
           ) : null}

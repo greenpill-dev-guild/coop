@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeOutputConfidence } from '../agent/quality';
+import { inferPoleEntitiesFromText } from '../agent/runner-inference';
 
 function makeEntityExtractionOutput(
   entityCount: number,
@@ -31,6 +32,63 @@ function makeEntityExtractionOutput(
 }
 
 describe('entity-extraction-output confidence scoring', () => {
+  it('heuristically maps explicit POLE+O entities and relationships', () => {
+    const output = inferPoleEntitiesFromText(
+      'Observation title: River funding roundup\nObservation summary: Alice Johnson from Greenpill Network met at River Summit in Portland using Coop Protocol.',
+    );
+
+    expect(output.entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Alice Johnson', type: 'person' }),
+        expect.objectContaining({ name: 'Greenpill Network', type: 'organization' }),
+        expect.objectContaining({ name: 'River Summit', type: 'event' }),
+        expect.objectContaining({ name: 'Portland', type: 'location' }),
+        expect.objectContaining({ name: 'Coop Protocol', type: 'object' }),
+      ]),
+    );
+    expect(output.relationships).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'affiliated-with' }),
+        expect.objectContaining({ type: 'participated-in' }),
+        expect.objectContaining({ type: 'hosted-in' }),
+        expect.objectContaining({ type: 'uses' }),
+      ]),
+    );
+  });
+
+  it('stays empty when the text has no explicit named entities', () => {
+    const output = inferPoleEntitiesFromText(
+      'observation summary: funding signals remain mixed and no named actors were provided',
+    );
+
+    expect(output).toEqual({ entities: [], relationships: [] });
+  });
+
+  it('captures single-token organizations from explicit verb cues', () => {
+    const output = inferPoleEntitiesFromText(
+      'Observation summary: Anthropic released Claude Code in San Francisco.',
+    );
+
+    expect(output.entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Anthropic', type: 'organization' }),
+        expect.objectContaining({ name: 'Claude Code', type: 'object' }),
+        expect.objectContaining({ name: 'San Francisco', type: 'location' }),
+      ]),
+    );
+    expect(output.relationships).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'published' })]),
+    );
+    expect(output.relationships).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          from: expect.stringContaining('claude-code'),
+          type: 'located-in',
+        }),
+      ]),
+    );
+  });
+
   it('returns 0.25 base for heuristic provider', () => {
     const output = makeEntityExtractionOutput(1);
     const confidence = computeOutputConfidence('entity-extraction-output', output, 'heuristic');
