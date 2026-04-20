@@ -97,3 +97,20 @@
 - Marked the contracts lane as done for this pack because the staged-vs-live release contract is
   now explicitly documented again. The state lane remains the active blocker because the automated
   staged-launch bar is still red on coverage and broader production-readiness validation.
+
+## 2026-04-19 Post-hardening reconciliation
+
+- Hardening commit 484078d expanded agent-runtime + shared-policy coverage substantially (agent
+  runner, provider contracts, release gates, trace records, risk-tag propagation, autoresearch QA
+  state, graph persistence). This addresses known coverage gaps in extension runtime and shared
+  policy, but it does not change the staged-launch posture: the release-critical gap called out in
+  `docs/reference/current-release-status.md` and `eval/qa-report.md` sits in `packages/app`
+  hooks and `packages/extension/src/views/Sidepanel/**`, not in runtime code.
+- `bun run validate quick` and `bun run validate smoke` are green on `main` after 484078d.
+  `bun run test:coverage` was not re-run during this reconciliation; the staged-launch gate stays
+  `blocked` until coverage is rerun on the broadened Sidepanel + app-hook scope.
+- Lane flips: none. `state` lane stays `blocked` because the coverage gate has not been re-measured
+  and no Sidepanel/app-hook tests were added specifically for the broadened coverage scope. Do not
+  green `current-release-status.md` until coverage is re-measured.
+- Canonical blocker set is unchanged: app hooks + Sidepanel codepaths still need coverage, live
+  rails remain a separate second gate.

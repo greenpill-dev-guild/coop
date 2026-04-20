@@ -32,3 +32,20 @@
   - `ui` remains open because the sidepanel surface is still being actively refined in the current worktree
 - Left QA blocked and unstarted. The prior `status.json` and QA lane metadata overstated completion
   relative to the actual QA report and the live in-flight changes in this repo.
+
+## 2026-04-19 Post-hardening reconciliation
+
+- Hardening commit 484078d added `NestAutoresearchSection.tsx` as the first visible autoresearch
+  surface in the Nest tab and expanded runtime agent controls that surround autoresearch
+  (provider-contracts, provider-promotion, release-gates, trace-records). It does not complete the
+  UI lane: budget slider, quality-floor editor, journal pagination, and explicit loading states
+  from `lanes/ui.claude.todo.md` are still unshipped.
+- Commit fedbbd5 added error surfacing to `NestAutoresearchSection.tsx` (aria-live helper, no more
+  silent load/toggle/run-now failures) plus targeted test coverage. Still a scaffold polish, not the
+  full UI lane exit.
+- Flipped `qa_pass_1` in `status.json` from `blocked` to `ready`: api+state+contracts deps are all
+  done. `qa_pass_2` remains blocked on `qa_pass_1` + `ui`.
+- Orchestration note: UI lane is closer to done_when than before but still incomplete. Dispatching
+  Codex QA pass 1 against the current runtime+state surface is valid under the queue contract, but
+  it is not the most conservative next worker pick for 2026-04-19 given the partial UI and the
+  freshly-committed error-handling change. See `.plans/audits/2026-04-19-reconciliation.md`.

@@ -46,7 +46,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "backlog",
+      "status": "ready",
       "depends_on": ["qa_pass_1"],
       "branch": "handoff/qa-claude/agent-judgment-cues",
       "branch_trigger": "handoff/qa-claude/agent-judgment-cues",
@@ -70,5 +70,5 @@
       "rationale": "Low-risk work should stay passive while high-stakes actions pull the human back into the loop."
     }
   ],
-  "updated_at": "2026-04-18"
+  "updated_at": "2026-04-19"
 }

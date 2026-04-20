@@ -3,7 +3,7 @@ feature: agent-knowledge-sandbox
 title: Agent knowledge sandbox QA pass 1
 lane: qa
 agent: codex
-status: blocked
+status: ready
 source_branch: feature/agent-knowledge-sandbox
 work_branch: qa/codex/agent-knowledge-sandbox
 depends_on:
@@ -17,10 +17,14 @@ skills:
 qa_order: 1
 handoff_in: handoff/qa-codex/agent-knowledge-sandbox
 handoff_out: handoff/qa-claude/agent-knowledge-sandbox
-updated: 2026-04-09
+updated: 2026-04-19
 ---
 
 # QA Pass 1 — Codex
+
+> Status flipped to `ready` on 2026-04-19 because `ui` and `state` lanes are
+> both `done`. Graph backend remains snapshot-based (Kuzu-WASM deferred); see
+> `.plans/audits/2026-04-19-reconciliation.md`.
 
 Branch: `handoff/qa-codex/agent-knowledge-sandbox`
 Triggered by: UI + State lanes complete

@@ -60,3 +60,22 @@ wc -l packages/extension/src/runtime/agent-runner-skills.ts packages/extension/s
 - Phase 2: `bun run validate release --dry-run` shows 7-8 steps. `grep -r "withTimeout" e2e/*.spec.cjs` returns 0.
 - Phase 3: `bun run test` with both modes. Tool count = 11.
 - Phase 4: `bun run plans queue --json | jq length` returns lane count.
+
+## 2026-04-19 Post-hardening reconciliation
+
+None of the four phase artifacts have shipped, despite three lanes being marked `ready`:
+
+- **Phase 1 (docs / prompt-surface)**: `.claude/context/{app,extension,shared}.md` total is still
+  1,077 lines (target ~120). `.claude/skills/index.md` still exists.
+- **Phase 2 (state / eval-pipeline)**: `scripts/validate.ts` has no `release` composite suite.
+  `e2e/helpers.cjs` does not exist; `withTimeout` is still duplicated across 7 spec files.
+- **Phase 3 (api / agent-pipeline)**: `VITE_COOP_AGENT_MODE`, `AgentToolDefinition`,
+  `runAutonomousAgentCycle`, `getAllAgentTools` — none exist outside the plan. Hardening commit
+  484078d added `provider-contracts.ts`, `provider-promotion.ts`, `release-gates.ts`, and
+  `benchmarks.ts`: these are provider-abstraction + release-gate scaffolding (adjacent to this
+  pack), not the mode-flagged autonomous runner.
+- **Phase 4 (contracts / dev-dispatch)**: `scripts/plans.ts` has no `--json` structured output,
+  `dispatchLane`, or `dynamicLaneAssignment`.
+
+`status.json` for `state`, `api`, and `docs` stays `ready`. Hardening did not regress any lane, but
+also did not advance any phase. No flips applied on this pass.

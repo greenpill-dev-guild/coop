@@ -3,7 +3,7 @@ feature: autoresearch
 title: QA Pass 1 — State & Schema Validation
 lane: qa
 agent: codex
-status: blocked
+status: ready
 qa_order: 1
 source_branch: feature/autoresearch
 work_branch: qa/codex/autoresearch
@@ -17,6 +17,10 @@ updated: 2026-04-19
 ---
 
 # QA Pass 1 — State & Schema Validation
+
+> Status flipped to `ready` on 2026-04-19 because api+state+contracts lanes are
+> all `done`. Dispatch is intentionally deferred until the `ui` lane closes — see
+> `.plans/audits/2026-04-19-reconciliation.md`.
 
 ## Objective
 

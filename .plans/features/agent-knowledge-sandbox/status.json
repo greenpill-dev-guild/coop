@@ -38,7 +38,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": ["ui", "state"],
       "branch": "handoff/qa-codex/agent-knowledge-sandbox",
       "branch_trigger": "handoff/qa-codex/agent-knowledge-sandbox",
@@ -62,5 +62,6 @@
     "7-phase dependency-ordered build with gates",
     "Entity extraction as new skill using existing cascade"
   ],
-  "updated_at": "2026-04-19"
+  "updated_at": "2026-04-19",
+  "notes": "UI + state lanes materially landed; graph backend still snapshot-persisted (Kuzu-WASM deferred). QA pass 1 is now ready to run."
 }

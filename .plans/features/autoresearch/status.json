@@ -47,7 +47,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": ["api", "state", "contracts"],
       "branch": "handoff/qa-codex/autoresearch",
       "branch_trigger": "handoff/qa-codex/autoresearch",
@@ -62,5 +62,6 @@
       "ready_when_dependencies_met": true
     }
   },
-  "updated_at": "2026-04-19"
+  "updated_at": "2026-04-19",
+  "notes": "api+state+contracts complete; qa_pass_1 deps cleared. UI lane still backlog — budget slider, quality-floor editor, pagination, and explicit loading states are not yet implemented. Run-now error-surfacing fix landed in commit fedbbd5."
 }
