@@ -46,6 +46,19 @@ GATHER → PLAN → TEST → IMPLEMENT → VERIFY
 4. **IMPLEMENT**: Write minimal code to pass (GREEN)
 5. **VERIFY**: Run full validation (`bun run test && bun build`)
 
+## Judgment & Scope Discipline
+
+- Keep changes inside the current lane's `owned_paths` or the smallest coherent surface you were
+  assigned.
+- If work must expand beyond that surface, split it or explicitly justify the spillover in your
+  summary and review request.
+- Treat these as judgment-heavy changes that must be called out before finishing: dependencies,
+  migrations or persisted state, auth/session/permit/policy, public or cross-package contracts, and
+  runtime/provider/toolchain boundaries.
+- Prefer explicit failure and visible intent over silent fallback, bare catch-alls, or hidden magic.
+- If the diff mixes unrelated concerns or crosses multiple ownership surfaces without need, stop and
+  split the work.
+
 ## Coop-Specific Rules
 
 - Shared modules in `@coop/shared` — extension/app have views and runtime only
@@ -64,4 +77,6 @@ GATHER → PLAN → TEST → IMPLEMENT → VERIFY
 - [ ] Module boundaries respected (shared modules in @coop/shared)
 - [ ] Barrel exports updated if new public API was added
 - [ ] Cathedral Check performed (most similar existing file used as reference)
+- [ ] Judgment-heavy changes explicitly called out in the completion summary or review request
+- [ ] Work stayed inside the owned surface or any spillover was explicitly justified
 - [ ] **If UI change (*.css, *.tsx in views/)**: Visually verified in Chrome via MCP screenshot or manual check. Never claim a UI fix works without seeing it.

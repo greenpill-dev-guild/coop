@@ -5,7 +5,7 @@ slug: /reference/testing-and-validation
 
 # Coop Testing And Validation
 
-Date: March 28, 2026
+Date: April 9, 2026
 
 This document maps the release-facing validation commands to the actual suite graph in
 `scripts/validate.ts`. The canonical stage-based checklist lives in
@@ -14,8 +14,11 @@ boundary lives in [Current Release Status](/reference/current-release-status). T
 deployment steps live in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook). Operator-only
 second-gate guidance lives in [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
-As of March 28, 2026, the automated mock-first release bar is green. The remaining staged-launch
-blocker is manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths.
+As of April 9, 2026, the automated mock-first release bar is blocked. The current staged-launch
+blockers are the broadened release-critical coverage gate and the broader
+`bun run validate:production-readiness` suite staying red. Manual real-Chrome confirmation of
+popup `Capture Tab` and `Screenshot` success paths remains required after that automated bar is
+green again.
 
 ## Core Commands
 
@@ -67,7 +70,8 @@ bun run validate:production-live-readiness
   `store-readiness`, `e2e:extension`, `e2e:receiver-sync`, `e2e:agent-loop`, and
   `e2e:app:mobile`.
 - `production-live-readiness`
-  Runs `production-readiness`, `arbitrum-safe-live`, `session-key-live`, and `archive-live`.
+  Runs `production-readiness`, `arbitrum-safe-live`, `session-key-live`, `greengoods-live`,
+  `archive-live`, and `fvm-registry-live`.
 
 ### Supporting Composites
 
@@ -249,11 +253,20 @@ Important:
 
 ### Full Live-Rails Gate
 
-Use this only when the release candidate enables live Safe, session-key, or archive behavior:
+Use this only when the release candidate enables live Safe, session-key, Green Goods, archive, or
+Filecoin registry behavior:
 
 ```bash
 bun run validate:production-live-readiness
 ```
+
+That gate layers these suites on top of `production-readiness`:
+
+- `bun run validate:arbitrum-safe-live`
+- `bun run validate:session-key-live`
+- `bun run validate:greengoods-live`
+- `bun run validate:archive-live`
+- `bun run validate:fvm-registry-live`
 
 ## Manual Release Checks That Still Matter
 

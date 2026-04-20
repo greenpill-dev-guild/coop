@@ -3,11 +3,19 @@ feature: production-readiness
 title: Production readiness release-contract lane
 lane: contracts
 agent: codex
-status: ready
+status: done
 source_branch: main
 work_branch: codex/contracts/production-readiness
 depends_on:
   - ../spec.md
+owned_paths:
+  - docs/reference/current-release-status.md
+  - docs/reference/testing-and-validation.md
+  - docs/reference/demo-and-deploy-runbook.md
+  - docs/reference/chrome-web-store-checklist.md
+done_when:
+  - the automated mock-first staged-launch bar is blocked
+  - live rails remain a separate second gate
 skills:
   - architecture
   - testing

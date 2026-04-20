@@ -3,17 +3,17 @@ feature: autoresearch
 title: QA Pass 1 — State & Schema Validation
 lane: qa
 agent: codex
-status: backlog
+status: blocked
 qa_order: 1
 source_branch: feature/autoresearch
-work_branch: handoff/qa-codex/autoresearch
+work_branch: qa/codex/autoresearch
 handoff_in: handoff/qa-codex/autoresearch
-handoff_out: handoff/qa-codex/autoresearch
+handoff_out: handoff/qa-claude/autoresearch
 depends_on:
   - ../lanes/eval.claude.todo.md
   - ../lanes/state.codex.todo.md
   - ../lanes/runtime.codex.todo.md
-updated: 2026-04-06
+updated: 2026-04-19
 ---
 
 # QA Pass 1 — State & Schema Validation

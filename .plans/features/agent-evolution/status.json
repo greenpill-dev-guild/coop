@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "agent-evolution",
+  "title": "Agent Evolution: Self-Extension, Inter-Agent Comms, Scoped Spending",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": [],
+      "branch": "claude/ui/agent-evolution"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "codex/state/agent-evolution"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "codex/api/agent-evolution"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "codex/contracts/agent-evolution"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/agent-evolution"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/agent-evolution",
+      "branch_trigger": "handoff/qa-codex/agent-evolution",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/agent-evolution",
+      "branch_trigger": "handoff/qa-claude/agent-evolution",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

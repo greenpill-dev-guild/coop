@@ -85,3 +85,15 @@
   - clear the remaining source-adjacent type errors before widening into lower-priority test files
   - rerun `bun run validate:typecheck`, then `bun run test`, then `bun run validate quick`
   - return to the staged-launch coverage gate only after the baseline is green again
+
+## 2026-04-09
+
+- Normalized the release-truth metadata around this pack so the plan files and docs all say the
+  same thing again.
+- Updated `docs/reference/current-release-status.md`,
+  `docs/reference/testing-and-validation.md`, `docs/reference/demo-and-deploy-runbook.md`, and
+  `docs/reference/chrome-web-store-checklist.md` to reflect the current blocked staged-launch bar
+  instead of the older green claim from March 28, 2026.
+- Marked the contracts lane as done for this pack because the staged-vs-live release contract is
+  now explicitly documented again. The state lane remains the active blocker because the automated
+  staged-launch bar is still red on coverage and broader production-readiness validation.

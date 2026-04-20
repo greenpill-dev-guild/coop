@@ -27,6 +27,8 @@ Describe the API/server/message-contract work Codex should own.
 
 `done_when` should use concrete, searchable evidence strings that will exist under `owned_paths`
 when the lane is truly complete.
+Keep changes inside `owned_paths` where possible. If work spills beyond them, explain why in
+`Handoff Notes`.
 
 ## Files
 
@@ -39,6 +41,7 @@ when the lane is truly complete.
 - [ ] Update request/response contracts
 - [ ] Implement route or handler changes
 - [ ] Add or update API tests
+- [ ] Keep work inside `owned_paths` or document justified spillover
 - [ ] Capture any migration or rollout notes
 
 ## Verification
@@ -49,3 +52,5 @@ when the lane is truly complete.
 ## Handoff Notes
 
 Anything QA should verify from client to server boundary.
+List any human judgment callouts: dependencies, migrations/persisted state, auth/policy changes,
+public contracts, runtime/toolchain boundaries, or ownership blur.

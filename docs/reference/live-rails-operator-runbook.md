@@ -19,7 +19,8 @@ The stage-based release progression lives in
 Use this doc when all of these are true:
 
 - the mock-first staged-launch bar is already green
-- you are intentionally validating live Safe, archive, or session-capability rails
+- you are intentionally validating live Safe, Green Goods, archive, session-capability, or
+  Filecoin registry rails
 - the build is operator-controlled rather than a standard public Chrome Web Store candidate
 
 For the current public-release boundary, read [Current Release Status](/reference/current-release-status).
@@ -201,7 +202,9 @@ That composite gate runs:
 - `production-readiness`
 - `arbitrum-safe-live`
 - `session-key-live`
+- `greengoods-live`
 - `archive-live`
+- `fvm-registry-live`
 
 If probe env is missing, some component probes can skip cleanly. Review the logs and do not claim
 live readiness from a skipped rehearsal.

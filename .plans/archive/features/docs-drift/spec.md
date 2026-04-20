@@ -1,10 +1,10 @@
 # Docs Drift Maintenance
 
 **Feature**: `docs-drift`
-**Status**: Active
+**Status**: Archived
 **Source Branch**: `chore/docs-drift`
 **Created**: `2026-03-26`
-**Last Updated**: `2026-03-26`
+**Last Updated**: `2026-04-12`
 
 ## Summary
 

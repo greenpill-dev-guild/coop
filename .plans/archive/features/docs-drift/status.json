@@ -1,0 +1,52 @@
+{
+  "$schema": "status-schema",
+  "feature": "docs-drift",
+  "title": "Docs Drift Maintenance",
+  "stage": "backlog",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "claude/ui/docs-drift"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/state/docs-drift"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/docs-drift"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/docs-drift"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/docs/docs-drift"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/docs-drift"
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-claude/docs-drift"
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-12"
+}

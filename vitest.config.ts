@@ -6,6 +6,7 @@ const sharedRootEntry = path.resolve(__dirname, 'packages/shared/src/index.ts');
 const sharedAppEntry = path.resolve(__dirname, 'packages/shared/src/app-entry.ts');
 const sharedSyncConfig = path.resolve(__dirname, 'packages/shared/src/sync-config.ts');
 const coverageEnabled = process.argv.includes('--coverage');
+const defaultTestTimeoutMs = 20_000;
 
 export default defineConfig({
   plugins: [react()],
@@ -25,8 +26,10 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./vitest.setup.ts'],
     fileParallelism: coverageEnabled ? false : undefined,
-    testTimeout: coverageEnabled ? 20_000 : 10_000,
-    hookTimeout: coverageEnabled ? 20_000 : 10_000,
+    // Several Dexie, privacy, and popup integration suites are legitimately
+    // slower than 10s under parallel smoke/core-loop validation.
+    testTimeout: defaultTestTimeoutMs,
+    hookTimeout: defaultTestTimeoutMs,
     include: [
       'packages/app/src/**/*.test.{ts,tsx}',
       'packages/extension/src/**/*.test.{ts,tsx}',

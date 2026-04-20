@@ -3,7 +3,7 @@ feature: autoresearch
 title: Eval Harness — Frozen Fixtures & Composite Scoring
 lane: api
 agent: claude
-status: ready
+status: done
 source_branch: feature/autoresearch
 work_branch: claude/eval/autoresearch
 depends_on:

@@ -1,0 +1,52 @@
+{
+  "$schema": "status-schema",
+  "feature": "codex-readiness-cleanup",
+  "title": "Codex Readiness Cleanup",
+  "stage": "backlog",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "claude/ui/codex-readiness-cleanup"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "codex/state/codex-readiness-cleanup"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/codex-readiness-cleanup"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/codex-readiness-cleanup"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/codex-readiness-cleanup"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/codex-readiness-cleanup"
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-claude/codex-readiness-cleanup"
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

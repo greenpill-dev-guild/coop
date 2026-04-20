@@ -1,5 +1,9 @@
 # Implementation Notes — Session Key Phase 2
 
+Note: Phase 5 cockpit visibility lives in the Green Goods repo, not this Coop repo. The Coop pack
+keeps that design dependency documented here, but the local `status.json` now marks the UI lane
+`n/a` so the active-pack metadata only tracks work owned in this repository.
+
 ## Phased Delivery Order
 
 0. **Phase 0: Regression Guards** (prerequisite — pins 228ed37/3bab69c hardening fixes)

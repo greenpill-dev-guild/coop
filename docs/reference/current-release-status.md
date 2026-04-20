@@ -5,7 +5,7 @@ slug: /reference/current-release-status
 
 # Coop Current Release Status
 
-Date: March 28, 2026
+Date: April 9, 2026
 
 This is the canonical current-state release posture for Coop. Keep `README.md`,
 [Production Release Checklist](/reference/production-release-checklist), [Testing & Validation](/reference/testing-and-validation),
@@ -14,17 +14,21 @@ this page.
 
 ## Current Status
 
-As of March 28, 2026:
+As of April 9, 2026:
 
-- the automated mock-first staged-launch bar is green
-- Coop is documentable and demoable in its current mock-first posture
-- the remaining public-release blocker is manual real-Chrome confirmation of popup `Capture Tab`
-  and `Screenshot` success paths
-- live Safe, archive, and session-capability rails remain a separate second gate
+- the automated mock-first staged-launch bar is blocked
+- Coop is still documentable and demoable in a mock-first posture, but the automated release gate
+  is not yet honest enough to call green
+- the immediate staged-launch blocker is the broadened release-critical coverage gate and the
+  broader `validate:production-readiness` suite staying red
+- manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths remains
+  required after the automated bar is green again
+- live Safe, Green Goods, archive, session-capability, and Filecoin registry rails remain a
+  separate second gate
 
 ## Automated Staged-Launch Bar
 
-These commands define the current automated green bar for a public mock-first release candidate:
+These commands still define the staged-launch bar for a public mock-first release candidate:
 
 ```bash
 bun run test
@@ -34,17 +38,22 @@ bun run validate:store-readiness
 bun run validate:production-readiness
 ```
 
-What this means:
+What the current result means:
 
-- unit, build, extension, receiver, and mobile app suites are green on the mock path
-- Chrome Web Store packaging checks are green
-- receiver-origin and packaged extension audit checks are green when `VITE_COOP_RECEIVER_APP_URL`
-  points at the exact production HTTPS receiver origin
+- the bar is currently red because the broadened release-critical coverage run remains below the
+  `85/85/85/70` threshold captured in
+  `.plans/features/production-readiness/eval/qa-report.md`
+- the biggest measured gaps remain in release-critical app hooks and sidepanel codepaths
+- `validate:store-readiness` and the manual Chrome checks still matter, but they do not override a
+  red `production-readiness` gate
 
 ## Remaining Public-Release Blocker
 
-The remaining blocker before a public Chrome Web Store release is manual QA in real Chrome for
-popup `Capture Tab` and `Screenshot` success paths.
+The staged-launch blocker before a public Chrome Web Store release is still the automated
+`production-readiness` bar.
+
+Even after that bar is green again, manual QA in real Chrome is still required for popup `Capture
+Tab` and `Screenshot` success paths.
 
 Reason:
 
@@ -83,7 +92,7 @@ Live rails are not part of the default public staged-launch bar.
 
 Use the live gate only when:
 
-- the staged-launch bar is already green
+- the staged-launch bar is already green again
 - the build is intentionally operator-controlled
 - live Safe, archive, or session-capability behavior is being exercised on purpose
 
@@ -97,7 +106,9 @@ That gate layers these probes on top of `production-readiness`:
 
 - `bun run validate:arbitrum-safe-live`
 - `bun run validate:session-key-live`
+- `bun run validate:greengoods-live`
 - `bun run validate:archive-live`
+- `bun run validate:fvm-registry-live`
 
 Read [Live Rails Operator Runbook](/reference/live-rails-operator-runbook) before enabling those
 env vars in any release candidate.

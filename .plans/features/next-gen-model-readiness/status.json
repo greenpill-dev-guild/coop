@@ -1,0 +1,52 @@
+{
+  "$schema": "status-schema",
+  "feature": "next-gen-model-readiness",
+  "title": "Next-Gen Model Readiness",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "claude/ui/next-gen-model-readiness"
+    },
+    "state": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "feature/consolidate-eval-pipeline"
+    },
+    "api": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "feature/agent-pipeline-model-upgrade"
+    },
+    "contracts": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "feature/dev-agent-dispatch"
+    },
+    "docs": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "feature/simplify-prompt-surface"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/next-gen-model-readiness"
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "handoff/qa-claude/next-gen-model-readiness"
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

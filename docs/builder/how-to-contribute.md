@@ -51,7 +51,7 @@ The repo guidance calls for this baseline:
 ```bash
 bun format && bun lint
 bun run test
-bun build
+bun run build
 ```
 
 For riskier changes, use the named validation suites in `scripts/validate.ts`.

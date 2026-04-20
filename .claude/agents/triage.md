@@ -49,6 +49,12 @@ Fast read-only classifier for deterministic routing.
 | any | investigation needed | oracle agent |
 | any | review/audit | code-reviewer agent |
 
+## Judgment Signals
+
+When the work touches dependencies, migrations/persisted state, auth/session/permit/policy,
+public contracts, or runtime/toolchain boundaries, call that out explicitly in `Context for Next
+Agent`. If ownership or package boundaries are unclear, bias toward migration or reviewer routing.
+
 ## Output Contract
 
 Required sections:

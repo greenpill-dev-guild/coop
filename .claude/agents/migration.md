@@ -39,19 +39,30 @@ Changes must flow in this order:
 2. **app** → needs shared
 3. **extension** → needs shared
 
+## Judgment & Scope Discipline
+
+- Migration work is always judgment-heavy. Dependencies, schema/persisted-state changes,
+  auth/session/permit/policy changes, public contracts, and runtime/toolchain boundaries must be
+  called out explicitly.
+- Prefer explicit behavior over hidden fallback when changing contracts, storage, or execution
+  boundaries.
+- Keep migration slices as narrow and staged as possible even when the overall task is cross-package.
+
 ## Output Contract
 
 Required section order:
 1. Summary
-2. Blast Radius
-3. Execution Order
-4. Validation Results
-5. Risks / Rollback
-6. Completion Checklist
+2. Human Judgment Callouts
+3. Blast Radius
+4. Execution Order
+5. Validation Results
+6. Risks / Rollback
+7. Completion Checklist
 
 ## Acceptance Criteria
 
 - [ ] Blast radius assessment completed before any code changes
+- [ ] Human judgment callouts explicitly documented
 - [ ] Dependency order followed: shared → app → extension
 - [ ] Each package builds and tests pass before moving to the next
 - [ ] Incremental commits per successfully migrated package

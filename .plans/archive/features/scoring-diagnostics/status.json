@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "scoring-diagnostics",
+  "title": "Scoring Diagnostics and Test Expansion",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "claude/ui/scoring-diagnostics"
+    },
+    "state": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": [],
+      "branch": "claude/state/scoring-diagnostics"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/scoring-diagnostics"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/scoring-diagnostics"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/scoring-diagnostics"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/scoring-diagnostics",
+      "branch_trigger": "handoff/qa-codex/scoring-diagnostics",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/scoring-diagnostics",
+      "branch_trigger": "handoff/qa-claude/scoring-diagnostics",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

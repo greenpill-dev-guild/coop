@@ -29,12 +29,13 @@ Additional rule:
 
 Required section order:
 1. `Summary`
-2. `Severity Mapping`
-3. `Must-Fix`
-4. `Should-Fix`
-5. `Nice-to-Have`
-6. `Verification`
-7. `Recommendation`
+2. `Human Judgment Callouts`
+3. `Severity Mapping`
+4. `Must-Fix`
+5. `Should-Fix`
+6. `Nice-to-Have`
+7. `Verification`
+8. `Recommendation`
 
 ### Triage (`triage`)
 
@@ -48,11 +49,12 @@ Required section order:
 
 Required section order:
 1. `Summary`
-2. `Blast Radius`
-3. `Execution Order`
-4. `Validation Results`
-5. `Risks / Rollback`
-6. `Completion Checklist`
+2. `Human Judgment Callouts`
+3. `Blast Radius`
+4. `Execution Order`
+5. `Validation Results`
+6. `Risks / Rollback`
+7. `Completion Checklist`
 
 ## Acceptance Criteria (Definition of Done)
 
@@ -70,6 +72,8 @@ Required section order:
 
 - [ ] All 6 review passes executed (no skipped passes)
 - [ ] Every finding has severity + file:line evidence
+- [ ] `Human Judgment Callouts` section included (`None.` if empty)
+- [ ] Judgment callouts cover dependencies, migrations/state changes, auth/permissions, destructive ops, API/export or cross-package contract changes, and build/model/provider/runtime boundary changes when present
 - [ ] Severity mapping applied (Critical|High -> must-fix, Medium -> should-fix, Low -> nice-to-have)
 - [ ] Verification commands run (`bun format && bun lint && bun run test && bun build`)
 - [ ] Final verdict is APPROVE or REQUEST_CHANGES (never ambiguous)
@@ -99,6 +103,7 @@ Required section order:
 ### Migration
 
 - [ ] Blast radius assessment completed before any code changes
+- [ ] `Human Judgment Callouts` section included (`None.` if empty)
 - [ ] Dependency order followed: shared -> app -> extension
 - [ ] Each package builds and tests pass before moving to the next
 - [ ] Incremental commits per successfully migrated package

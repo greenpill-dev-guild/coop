@@ -1,3 +1,22 @@
+---
+feature: agent-knowledge-sandbox
+title: Agent knowledge sandbox QA pass 2
+lane: qa
+agent: claude
+status: blocked
+source_branch: feature/agent-knowledge-sandbox
+work_branch: qa/claude/agent-knowledge-sandbox
+depends_on:
+  - ./qa-codex.todo.md
+skills:
+  - qa
+  - ui
+  - e2e
+qa_order: 2
+handoff_in: handoff/qa-claude/agent-knowledge-sandbox
+updated: 2026-04-09
+---
+
 # QA Pass 2 — Claude
 
 Branch: `handoff/qa-claude/agent-knowledge-sandbox`

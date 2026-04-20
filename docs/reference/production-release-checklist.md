@@ -282,7 +282,8 @@ This is a separate second gate. It is never the default public release bar.
 
 - [ ] The public staged-launch gate is already green.
 - [ ] The build is intentionally operator-controlled.
-- [ ] The team explicitly intends to exercise live Safe, archive, or session-capability behavior.
+- [ ] The team explicitly intends to exercise live Safe, Green Goods, archive, session-capability,
+      or Filecoin registry behavior.
 - [ ] The candidate is not being described as a normal public Chrome Web Store build.
 
 ### Secrets Boundary
@@ -322,7 +323,9 @@ bun run validate:production-live-readiness
 
 - [ ] `bun run validate:arbitrum-safe-live`
 - [ ] `bun run validate:session-key-live`
+- [ ] `bun run validate:greengoods-live`
 - [ ] `bun run validate:archive-live`
+- [ ] `bun run validate:fvm-registry-live`
 - [ ] No skipped probe is treated as proof of live readiness.
 - [ ] Safe probe records the successful Safe address and deployment tx hash.
 - [ ] Session-key probe records one allowed action success, one disallowed action rejection, and

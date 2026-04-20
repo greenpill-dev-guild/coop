@@ -3,14 +3,13 @@ feature: autoresearch
 title: QA Pass 2 — E2E & UX Review
 lane: qa
 agent: claude
-status: backlog
+status: blocked
 qa_order: 2
 source_branch: feature/autoresearch
-work_branch: handoff/qa-claude/autoresearch
-handoff_in: handoff/qa-codex/autoresearch
-handoff_out: handoff/qa-claude/autoresearch
+work_branch: qa/claude/autoresearch
+handoff_in: handoff/qa-claude/autoresearch
 depends_on:
-  - ../qa/qa-codex.todo.md
+  - ./qa-codex.todo.md
   - ../lanes/ui.claude.todo.md
 updated: 2026-04-06
 ---

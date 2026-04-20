@@ -27,6 +27,8 @@ Describe the onchain, permit, schema, or typed-intent work Codex should own.
 
 `done_when` should use concrete, searchable evidence strings that will exist under `owned_paths`
 when the lane is truly complete.
+Keep changes inside `owned_paths` where possible. If work spills beyond them, explain why in
+`Handoff Notes`.
 
 ## Files
 
@@ -39,6 +41,7 @@ when the lane is truly complete.
 - [ ] Update schemas and typed contracts first
 - [ ] Implement contract-facing logic
 - [ ] Add or update targeted tests
+- [ ] Keep work inside `owned_paths` or document justified spillover
 - [ ] Document any live-probe follow-up
 
 ## Verification
@@ -49,3 +52,5 @@ when the lane is truly complete.
 ## Handoff Notes
 
 State any replay, permission, or chain-mode risks for QA.
+List any human judgment callouts: dependencies, migrations/persisted state, auth/session/policy,
+public contracts, runtime/toolchain boundaries, or ownership blur.

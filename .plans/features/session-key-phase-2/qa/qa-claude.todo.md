@@ -4,11 +4,13 @@ title: Session key phase 2 QA pass 2
 lane: qa
 agent: claude
 status: blocked
+source_branch: feature/agent-autonomy-onchain
+work_branch: qa/claude/session-key-phase-2
 depends_on:
-  - qa_pass_1
-branch: handoff/qa-claude/session-key-phase-2
-branch_trigger: handoff/qa-claude/session-key-phase-2
-updated: 2026-04-06
+  - ./qa-codex.todo.md
+qa_order: 2
+handoff_in: handoff/qa-claude/session-key-phase-2
+updated: 2026-04-09
 ---
 
 # QA Pass 2 — Claude

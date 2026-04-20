@@ -28,6 +28,14 @@ Follow the 6-pass review protocol in `.claude/skills/review/SKILL.md` exactly.
 ### Summary
 [Scope + change explanation]
 
+### Human Judgment Callouts
+- [Risk area] - `file.ts:123` -- [why a human needs to decide]
+
+### Severity Mapping
+- `Critical|High -> must-fix`
+- `Medium -> should-fix`
+- `Low -> nice-to-have`
+
 ### Must-Fix (Critical/High)
 - [Issue] - `file.ts:123` -- [finding]
 
@@ -54,6 +62,9 @@ Commands to run after fixes.
 - ANY unresolved Critical/High -> REQUEST_CHANGES
 - Read surrounding code for context, not just the diff
 - Never rubber-stamp — every review gets all 6 passes
+- Always include a `Human Judgment Callouts` section. Use `None.` when no callouts apply.
+- Treat these as callouts even if the code is otherwise correct: new dependencies, schema/migrations or persisted-state changes, auth/permissions/session/policy changes, destructive operations, public API/export changes, cross-package contract changes, build/model/provider/runtime boundary changes, and oversized or ownership-blurred diffs.
+- Flag oversized diffs when they cannot be explained cleanly, mix unrelated concerns, or blur lane ownership, even if no single line looks obviously wrong.
 - For active feature work, read the matching `.plans/features/<feature-slug>/spec.md` and QA plan first when available
 
 ### Coop-Specific Checks

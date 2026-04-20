@@ -1,0 +1,74 @@
+{
+  "$schema": "status-schema",
+  "feature": "agent-judgment-cues",
+  "title": "Passive Judgment Cues",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": ["state"],
+      "branch": "claude/ui/agent-judgment-cues",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/state/agent-judgment-cues",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/agent-judgment-cues"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/agent-judgment-cues"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/agent-judgment-cues"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["ui", "state"],
+      "branch": "handoff/qa-codex/agent-judgment-cues",
+      "branch_trigger": "handoff/qa-codex/agent-judgment-cues",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/agent-judgment-cues",
+      "branch_trigger": "handoff/qa-claude/agent-judgment-cues",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Use deterministic action-class risk metadata instead of model-authored review text",
+      "rationale": "The same risk tags need to drive harness behavior, queued actions, and UI copy without prompt drift."
+    },
+    {
+      "id": "D2",
+      "choice": "Refine existing Roost and Nest cards instead of adding new review surfaces",
+      "rationale": "The product already had the right boundaries; the problem was visibility, not missing screens."
+    },
+    {
+      "id": "D3",
+      "choice": "Require explicit acknowledgement only for live, permission, and destructive risks",
+      "rationale": "Low-risk work should stay passive while high-stakes actions pull the human back into the loop."
+    }
+  ],
+  "updated_at": "2026-04-18"
+}

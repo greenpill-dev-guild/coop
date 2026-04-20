@@ -19,7 +19,7 @@ hooks:
   Stop:
     - hooks:
         - type: prompt
-          prompt: "The code reviewer is about to stop. Check if the last assistant message contains all 6 review passes (Correctness, Security, Performance, Patterns, Testing, Documentation) and a final APPROVE or REQUEST_CHANGES verdict. If any pass is missing, respond with {\"decision\": \"block\", \"reason\": \"Missing review passes. Complete all 6 passes before stopping.\"}. If all passes are present, respond with {\"decision\": \"allow\"}. Here is the context: $ARGUMENTS"
+          prompt: "The code reviewer is about to stop. Check if the last assistant message contains all 6 review passes (Correctness, Security, Performance, Patterns, Testing, Documentation), a `Human Judgment Callouts` section, and a final APPROVE or REQUEST_CHANGES verdict. If any required part is missing, respond with {\"decision\": \"block\", \"reason\": \"Missing review passes or judgment callouts. Complete the full review output before stopping.\"}. If all required parts are present, respond with {\"decision\": \"allow\"}. Here is the context: $ARGUMENTS"
           timeout: 15
 ---
 
@@ -48,12 +48,21 @@ Load the review protocol from `.claude/skills/review/SKILL.md`.
 
 Required section order:
 1. Summary
-2. Severity Mapping
-3. Must-Fix (Critical/High)
-4. Should-Fix (Medium)
-5. Nice-to-Have (Low)
-6. Verification
-7. Recommendation
+2. Human Judgment Callouts
+3. Severity Mapping
+4. Must-Fix (Critical/High)
+5. Should-Fix (Medium)
+6. Nice-to-Have (Low)
+7. Verification
+8. Recommendation
+
+## Judgment Rules
+
+- Always include `Human Judgment Callouts`, even if the section is `None.`
+- Treat dependencies, migrations/persisted state, auth/session/permit/policy, public contracts,
+  runtime/toolchain boundaries, and ownership-blurred diffs as judgment-heavy by default.
+- Flag oversized diffs when they cannot be explained cleanly, mix unrelated concerns, or blur lane
+  ownership.
 
 ## Memory
 

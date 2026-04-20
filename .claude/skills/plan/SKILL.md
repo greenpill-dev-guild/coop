@@ -134,6 +134,7 @@ Implementation steps must be granular enough for agents to execute reliably. Fol
 - Each step should be independently verifiable (can run tests after just that step)
 - Each step should produce a committable checkpoint (no half-finished states)
 - Steps should have clear input/output boundaries — what exists before, what exists after
+- Each step should stay within one ownership surface or the lane's `owned_paths` when those exist
 
 **Ordering**:
 - Follow dependency order: shared -> app -> extension
@@ -144,11 +145,17 @@ Implementation steps must be granular enough for agents to execute reliably. Fol
 - A step requires changes across 3+ packages -> split into per-package steps
 - A step has both "create new thing" and "integrate into existing thing" -> split those apart
 - A plan exceeds 15 steps -> consider splitting into multiple PRs or incremental plans
+- A step predictably crosses multiple owned surfaces without clear need -> split or route to migration
 
 **When NOT to decompose**:
 - A step is a single-file edit with clear intent -> keep it atomic
 - Splitting would create steps that can't be independently tested -> keep them together
 - The decomposition adds overhead without improving clarity
+
+**Judgment-heavy steps**:
+- Steps involving dependencies, migrations or persisted state, auth/session/permit/policy, public
+  contracts, or runtime/toolchain boundaries should explicitly call out expected human judgment in
+  handoff notes and later review.
 
 ---
 

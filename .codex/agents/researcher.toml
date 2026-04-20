@@ -44,4 +44,8 @@ Required sections:
 4. **Sources** (file:line for code, URLs for external)
 5. **Synthesis** (connect findings across sources)
 6. **Confidence Assessment**
+
+## Judgment Signals
+
+- When the investigation touches dependencies, migrations/persisted state, auth/session/permit/policy, public contracts, or runtime/toolchain boundaries, make those judgment-sensitive areas explicit in `Findings` or `Synthesis`.
 """

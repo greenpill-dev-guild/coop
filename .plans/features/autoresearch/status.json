@@ -1,7 +1,8 @@
 {
+  "$schema": "status-schema",
   "feature": "autoresearch",
   "title": "Autoresearch: Self-Optimizing Agent Skills",
-  "updated_at": "2026-04-06",
+  "stage": "active",
   "decisions": [
     "Prompt text is the editable asset",
     "Composite score as scalar metric",
@@ -11,53 +12,43 @@
     "Quality floor prevents catastrophic regression"
   ],
   "lanes": {
-    "eval": {
+    "ui": {
       "owner": "claude",
-      "status": "ready",
-      "depends_on": [],
-      "branch": "claude/eval/autoresearch",
-      "owned_paths": [
-        "packages/extension/src/runtime/agent/eval.ts",
-        "packages/extension/src/skills/*/eval/*.json"
-      ],
-      "done_when": ["runEvalSuite(", "compositeScore", "FixtureResult"]
+      "status": "backlog",
+      "depends_on": ["contracts"],
+      "branch": "claude/ui/autoresearch",
+      "ready_when_dependencies_met": true
     },
     "state": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": [],
-      "branch": "codex/state/autoresearch",
-      "owned_paths": [
-        "packages/shared/src/contracts/schema-agent.ts",
-        "packages/shared/src/modules/storage/"
-      ],
-      "done_when": ["experimentRecordSchema", "skillVariantSchema", "autoresearchConfigSchema"]
+      "branch": "codex/state/autoresearch"
     },
-    "runtime": {
-      "owner": "codex",
-      "status": "backlog",
-      "depends_on": ["eval", "state"],
-      "branch": "codex/runtime/autoresearch",
-      "ready_when_dependencies_met": true,
-      "owned_paths": [
-        "packages/extension/src/runtime/agent/experiment-loop.ts",
-        "packages/extension/src/runtime/agent/variant-engine.ts"
-      ],
-      "done_when": ["ExperimentLoop", "runExperiment(", "keepOrRevert("]
-    },
-    "ui": {
+    "api": {
       "owner": "claude",
-      "status": "todo",
-      "depends_on": ["runtime"],
-      "branch": "claude/ui/autoresearch",
-      "ready_when_dependencies_met": true,
-      "owned_paths": ["packages/extension/src/views/Sidepanel/"],
-      "done_when": ["AutoresearchSettings", "ExperimentJournal"]
+      "status": "done",
+      "depends_on": [],
+      "branch": "claude/eval/autoresearch",
+      "ready_when_dependencies_met": true
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["api", "state"],
+      "branch": "codex/runtime/autoresearch",
+      "ready_when_dependencies_met": true
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/autoresearch"
     },
     "qa_pass_1": {
       "owner": "codex",
       "status": "blocked",
-      "depends_on": ["eval", "state", "runtime"],
+      "depends_on": ["api", "state", "contracts"],
       "branch": "handoff/qa-codex/autoresearch",
       "branch_trigger": "handoff/qa-codex/autoresearch",
       "ready_when_dependencies_met": true
@@ -70,5 +61,6 @@
       "branch_trigger": "handoff/qa-claude/autoresearch",
       "ready_when_dependencies_met": true
     }
-  }
+  },
+  "updated_at": "2026-04-19"
 }

@@ -7,7 +7,7 @@ status: blocked
 source_branch: feature/agent-autonomy-onchain
 work_branch: codex/state/session-key-phase-2
 depends_on:
-  - contracts
+  - ./contracts.codex.todo.md
 owned_paths:
   - packages/extension/src/background/handlers/session.ts
   - packages/extension/src/background/handlers/executors

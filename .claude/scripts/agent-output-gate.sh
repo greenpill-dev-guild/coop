@@ -1,12 +1,13 @@
 #!/bin/bash
-# Gate for PostToolUse hooks on agent output (SendMessage).
+# Gate for Stop/SubagentStop hooks on agent output.
 # Validates that agent output follows the required section order from output-contracts.md.
-# Exit 0 = allow. Exit 2 = block with feedback.
-#
-# This is advisory validation — warns about missing sections but does not block.
+# When invoked as a Stop/SubagentStop hook, it blocks once with a concrete reason so the agent can
+# fix the output shape before finishing. On subsequent stop attempts it degrades to a warning to
+# avoid infinite loops.
 set -uo pipefail
 
-EVENT_DETAILS="${CLAUDE_HOOK_EVENT_DETAILS:-}"
+STDIN_DETAILS="$(cat 2>/dev/null || true)"
+EVENT_DETAILS="${STDIN_DETAILS:-${CLAUDE_HOOK_EVENT_DETAILS:-}}"
 if [ -z "$EVENT_DETAILS" ]; then
   exit 0
 fi
@@ -15,7 +16,9 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-CONTENT="$(jq -r '.tool_input.content // .tool_input.new_string // .tool_input.description // ""' <<<"$EVENT_DETAILS" 2>/dev/null || printf '')"
+HOOK_EVENT_NAME="$(jq -r '.hook_event_name // ""' <<<"$EVENT_DETAILS" 2>/dev/null || printf '')"
+STOP_HOOK_ACTIVE="$(jq -r '.stop_hook_active // false' <<<"$EVENT_DETAILS" 2>/dev/null || printf 'false')"
+CONTENT="$(jq -r '.last_assistant_message // .tool_input.content // .tool_input.new_string // .tool_input.description // ""' <<<"$EVENT_DETAILS" 2>/dev/null || printf '')"
 
 if [ -z "$CONTENT" ]; then
   exit 0
@@ -48,7 +51,7 @@ MISSING_SECTIONS=""
 
 case "$OUTPUT_TYPE" in
   review)
-    for section in "summary" "severity mapping" "must-fix" "verification" "recommendation"; do
+    for section in "summary" "human judgment callouts" "severity mapping" "must-fix" "should-fix" "nice-to-have" "verification" "recommendation"; do
       if ! printf '%s' "$CONTENT_LOWER" | grep -q "### $section\|## $section"; then
         MISSING_SECTIONS="$MISSING_SECTIONS $section"
       fi
@@ -62,7 +65,7 @@ case "$OUTPUT_TYPE" in
     done
     ;;
   migration)
-    for section in "summary" "blast radius" "execution order" "validation results"; do
+    for section in "summary" "human judgment callouts" "blast radius" "execution order" "validation results" "risks / rollback" "completion checklist"; do
       if ! printf '%s' "$CONTENT_LOWER" | grep -q "### $section\|## $section"; then
         MISSING_SECTIONS="$MISSING_SECTIONS $section"
       fi
@@ -78,7 +81,13 @@ case "$OUTPUT_TYPE" in
 esac
 
 if [ -n "$MISSING_SECTIONS" ]; then
-  echo "WARNING: $OUTPUT_TYPE output is missing sections:$MISSING_SECTIONS. See .claude/standards/output-contracts.md" >&2
+  REASON="$OUTPUT_TYPE output is missing sections:$MISSING_SECTIONS. See .claude/standards/output-contracts.md"
+  if { [ "$HOOK_EVENT_NAME" = "Stop" ] || [ "$HOOK_EVENT_NAME" = "SubagentStop" ]; } && [ "$STOP_HOOK_ACTIVE" != "true" ]; then
+    jq -Rn --arg reason "$REASON" '{decision:"block", reason:$reason}'
+    exit 0
+  fi
+
+  echo "WARNING: $REASON" >&2
 fi
 
 exit 0

@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "ui-action-coverage-hardening",
+  "title": "UI Action Coverage Hardening",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "claude/ui/ui-action-coverage-hardening"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "codex/state/ui-action-coverage-hardening"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/ui-action-coverage-hardening"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/ui-action-coverage-hardening"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/ui-action-coverage-hardening"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/ui-action-coverage-hardening",
+      "branch_trigger": "handoff/qa-codex/ui-action-coverage-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/ui-action-coverage-hardening",
+      "branch_trigger": "handoff/qa-claude/ui-action-coverage-hardening",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

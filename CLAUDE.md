@@ -140,6 +140,13 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 Use `typecheck` or `quick` during iteration. Use `smoke` or higher before committing. Full `bun build` is required when: changing `@coop/shared` exports consumed by downstream packages, modifying CSS tokens in `shared/src/styles/`, or as part of pre-commit validation.
 
+**Agentic Engineering Loop**:
+- Treat review attention as scarce. Keep changes inside the smallest owned surface that can solve the task cleanly.
+- `owned_paths` are primary ownership boundaries, not loose hints. If work must expand beyond them, split it or justify the spillover in handoff notes and review.
+- Separate mechanical fixes from human judgment callouts. Always call out dependencies, migrations or persisted-state changes, auth/session/permit/policy changes, public contract changes, runtime or toolchain boundary changes, and ownership-blurred diffs.
+- Prefer explicit behavior over hidden magic: avoid silent fallbacks, bare catch-alls, and recovery that hides intent unless it is clearly deliberate and tested.
+- Large mixed diffs are a workflow smell. If a change cannot be explained cleanly, mixes unrelated concerns, or crosses multiple ownership surfaces without need, split it or route it through migration/review accordingly.
+
 **UI Component Reuse**: Before creating new UI elements, check `packages/extension/src/views/shared/` for existing components and `packages/extension/src/global.css` for existing CSS classes. Reusable patterns already available:
 
 - **Tooltip** — `shared/Tooltip.tsx` (position-aware, portal-rendered)

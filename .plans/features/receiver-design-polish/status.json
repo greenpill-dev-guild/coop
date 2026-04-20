@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "receiver-design-polish",
+  "title": "Receiver Design Polish",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "claude/ui/receiver-design-polish"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/state/receiver-design-polish"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/receiver-design-polish"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/receiver-design-polish"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/receiver-design-polish"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/receiver-design-polish",
+      "branch_trigger": "handoff/qa-codex/receiver-design-polish",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/receiver-design-polish",
+      "branch_trigger": "handoff/qa-claude/receiver-design-polish",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

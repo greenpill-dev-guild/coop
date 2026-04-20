@@ -27,14 +27,18 @@ Claude runs the second QA pass only after Codex QA is done and `handoff/qa-claud
 - Interaction gaps
 - End-to-end behavior
 - Accessibility and visual issues
+- Human judgment callouts that remain unresolved after QA pass 1
 
 ## Tasks
 
 - [ ] Validate the primary flow from the user perspective
+- [ ] Verify that judgment-heavy decisions still read clearly in the UI and operator workflow
 - [ ] Note findings with file references
+- [ ] Call out any unresolved human judgment decisions explicitly
 - [ ] Fix or hand off issues as appropriate
 
 ## Verification
 
 - [ ] Appropriate E2E or manual validation was run
 - [ ] Findings are captured in `../eval/qa-report.md`
+- [ ] Remaining judgment callouts are explicit in `../eval/qa-report.md`

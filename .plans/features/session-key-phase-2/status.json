@@ -1,11 +1,12 @@
 {
+  "$schema": "status-schema",
   "feature": "session-key-phase-2",
   "title": "Session Key Phase 2 — Scope Expansion & Lifecycle",
   "stage": "active",
   "lanes": {
     "contracts": {
       "owner": "codex",
-      "status": "todo",
+      "status": "backlog",
       "depends_on": [],
       "branch": "codex/contracts/session-key-phase-2",
       "ready_when_dependencies_met": true,
@@ -25,7 +26,7 @@
     },
     "state": {
       "owner": "codex",
-      "status": "todo",
+      "status": "blocked",
       "depends_on": ["contracts"],
       "branch": "codex/state/session-key-phase-2",
       "ready_when_dependencies_met": true,
@@ -42,11 +43,22 @@
     },
     "ui": {
       "owner": "claude",
-      "status": "blocked",
-      "depends_on": ["contracts"],
+      "status": "n/a",
+      "depends_on": [],
       "branch": "claude/ui/session-key-phase-2",
-      "ready_when_dependencies_met": true,
       "note": "Phase 5: GG cockpit visibility — runs in GG repo"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/session-key-phase-2"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/session-key-phase-2"
     },
     "qa_pass_1": {
       "owner": "codex",
@@ -97,5 +109,5 @@
       "rationale": "Existing capabilities must keep working with sensible defaults"
     }
   ],
-  "updated_at": "2026-04-06"
+  "updated_at": "2026-04-09"
 }

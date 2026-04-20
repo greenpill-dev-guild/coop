@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint & Format
+  quick:
+    name: Quick Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,11 +20,10 @@ jobs:
         with:
           bun-version: "1.3.10"
       - run: bun install --frozen-lockfile
-      - run: bun format
-      - run: bun lint
+      - run: bun run validate quick
 
   test:
-    name: Unit Tests
+    name: Unit Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +36,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [quick, test]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -56,8 +55,8 @@ jobs:
           path: packages/app/dist/
           retention-days: 14
 
-  validate:
-    name: Validate
+  core-loop:
+    name: Core Loop E2E
     runs-on: ubuntu-latest
     needs: [build]
     steps:
@@ -66,4 +65,4 @@ jobs:
         with:
           bun-version: "1.3.10"
       - run: bun install --frozen-lockfile
-      - run: bun run validate smoke
+      - run: bun run test:e2e:extension

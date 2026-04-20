@@ -17,14 +17,58 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 
 export const PLAN_ROOT = '.plans';
 export const FEATURE_ROOT = join(PLAN_ROOT, 'features');
+const README_PATH = join(PLAN_ROOT, 'README.md');
+const STATUS_TEMPLATE_PATH = join(PLAN_ROOT, 'templates', 'status.json');
 const TEMPLATE_ROOT = join(PLAN_ROOT, 'templates', 'feature');
 const TODO_SUFFIX = '.todo.md';
 const IMPLEMENTATION_LANES = new Set(['state', 'api', 'contracts']);
 const COMPLETE_PLAN_STATUSES = new Set(['done', 'archived']);
 const AUTOMATION_NOTES_HEADING = '## Automation Notes';
 const DEFAULT_VALIDATION_COMMAND = 'bun run validate smoke';
+const CANONICAL_PLAN_STATUSES = [
+  'backlog',
+  'n/a',
+  'ready',
+  'in_progress',
+  'blocked',
+  'in_review',
+  'done',
+  'archived',
+] as const;
+const CANONICAL_STATUS_LANES = [
+  'ui',
+  'state',
+  'api',
+  'contracts',
+  'docs',
+  'qa_pass_1',
+  'qa_pass_2',
+] as const;
+const ACTIVE_FEATURE_STAGES = new Set(['active', 'backlog']);
 
 type FrontmatterValue = string | string[];
+type CanonicalPlanStatus = (typeof CANONICAL_PLAN_STATUSES)[number];
+type CanonicalStatusLane = (typeof CANONICAL_STATUS_LANES)[number];
+
+interface FeatureStatusLane {
+  owner?: string;
+  status?: string;
+  depends_on?: string[];
+  branch?: string;
+  branch_trigger?: string;
+  ready_when_dependencies_met?: boolean;
+  [key: string]: unknown;
+}
+
+interface FeatureStatus {
+  $schema?: string;
+  feature?: string;
+  title?: string;
+  stage?: string;
+  lanes?: Partial<Record<CanonicalStatusLane, FeatureStatusLane>>;
+  decisions?: unknown[];
+  updated_at?: string;
+}
 
 export interface PlanEntry {
   path: string;
@@ -46,6 +90,7 @@ export interface PlanEntry {
   updated: string;
   missingDependencies: string[];
   blockedBy: string[];
+  metadataIssues: string[];
   handoffReady: boolean;
   runnable: boolean;
 }
@@ -96,7 +141,12 @@ export interface ReconcileInspection {
   path: string;
   feature: string;
   lane: string;
-  classification: 'complete' | 'incomplete' | 'ambiguous' | 'environment_blocked';
+  classification:
+    | 'complete'
+    | 'incomplete'
+    | 'ambiguous'
+    | 'environment_blocked'
+    | 'metadata_mismatch';
   statusBefore: string;
   statusAfter: string;
   note: string;
@@ -226,6 +276,59 @@ function relativeRepoPath(rootDir: string, absolutePath: string): string {
 
 function isImplementationLane(lane: string): boolean {
   return IMPLEMENTATION_LANES.has(lane);
+}
+
+function isCanonicalPlanStatus(value: string): value is CanonicalPlanStatus {
+  return (CANONICAL_PLAN_STATUSES as readonly string[]).includes(value);
+}
+
+function mapPlanToStatusLane(lane: string, qaOrder?: number): CanonicalStatusLane | undefined {
+  if (lane === 'qa') {
+    if (qaOrder === 1) {
+      return 'qa_pass_1';
+    }
+    if (qaOrder === 2) {
+      return 'qa_pass_2';
+    }
+    return undefined;
+  }
+
+  if ((CANONICAL_STATUS_LANES as readonly string[]).includes(lane)) {
+    return lane as CanonicalStatusLane;
+  }
+
+  return undefined;
+}
+
+function extractFeatureFromIssue(issue: string): string | undefined {
+  const match = issue.match(/\.plans\/features\/([^/]+)/);
+  return match?.[1];
+}
+
+function mapIssuesByFeature(issues: string[]): Map<string, string[]> {
+  const byFeature = new Map<string, string[]>();
+
+  for (const issue of issues) {
+    const feature = extractFeatureFromIssue(issue);
+    if (!feature) {
+      continue;
+    }
+
+    const existing = byFeature.get(feature) ?? [];
+    existing.push(issue);
+    byFeature.set(feature, existing);
+  }
+
+  return byFeature;
+}
+
+function loadFeatureStatus(featureDir: string): FeatureStatus | undefined {
+  const statusPath = join(featureDir, 'status.json');
+  if (!existsSync(statusPath)) {
+    return undefined;
+  }
+
+  return JSON.parse(readFileSync(statusPath, 'utf8')) as FeatureStatus;
 }
 
 function resolveDefaultLanes(agent: string | undefined, command: string): string[] | undefined {
@@ -533,6 +636,7 @@ export function collectPlans(
 ): PlanEntry[] {
   const featureRoot = resolve(rootDir, FEATURE_ROOT);
   const files = walkFiles(featureRoot).filter((file) => file.endsWith(TODO_SUFFIX));
+  const metadataIssuesByFeature = mapIssuesByFeature(validateFeaturePlans(rootDir).issues);
   const parsed = files.map((file) => {
     const content = readFileSync(file, 'utf8');
     const { data } = parseFrontmatter(content);
@@ -559,6 +663,7 @@ export function collectPlans(
       updated: asString(data.updated),
       missingDependencies: [],
       blockedBy: [],
+      metadataIssues: metadataIssuesByFeature.get(feature) ?? [],
       handoffReady: false,
       runnable: false,
     } satisfies PlanEntry;
@@ -590,12 +695,14 @@ export function collectPlans(
       ...plan,
       missingDependencies,
       blockedBy,
+      metadataIssues: plan.metadataIssues,
       handoffReady,
       runnable:
         plan.status === 'ready' &&
         missingDependencies.length === 0 &&
         blockedBy.length === 0 &&
-        handoffReady,
+        handoffReady &&
+        plan.metadataIssues.length === 0,
     };
   });
 }
@@ -636,15 +743,7 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
 
   const allowedAgents = new Set(['claude', 'codex']);
   const allowedLanes = new Set(['ui', 'state', 'api', 'contracts', 'docs', 'qa']);
-  const allowedStatuses = new Set([
-    'backlog',
-    'ready',
-    'in_progress',
-    'blocked',
-    'in_review',
-    'done',
-    'archived',
-  ]);
+  const allowedStatuses = new Set<string>(CANONICAL_PLAN_STATUSES);
 
   const issues: string[] = [];
   const legacyPlans = findLegacyPlans(rootDir);
@@ -657,8 +756,14 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
       issues.push(`${relativeRepoPath(rootDir, specPath)}: missing spec.md`);
     }
 
+    const statusPath = join(featureDir, 'status.json');
+    if (!existsSync(statusPath)) {
+      issues.push(`${relativeRepoPath(rootDir, statusPath)}: missing status.json`);
+    }
+
     const todoFiles = walkFiles(featureDir).filter((file) => file.endsWith(TODO_SUFFIX));
     planCount += todoFiles.length;
+    const plansForFeature: Array<PlanEntry & { statusKey?: CanonicalStatusLane }> = [];
 
     for (const file of todoFiles) {
       const content = readFileSync(file, 'utf8');
@@ -686,6 +791,8 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
       const status = asString(data.status);
       const ownedPaths = asList(data.owned_paths);
       const doneWhen = asList(data.done_when);
+      const qaOrder = Number.parseInt(asString(data.qa_order), 10);
+      const statusKey = mapPlanToStatusLane(lane, Number.isNaN(qaOrder) ? undefined : qaOrder);
 
       if (feature && feature !== featureSlug) {
         issues.push(`${rel}: feature "${feature}" does not match directory "${featureSlug}"`);
@@ -705,10 +812,10 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
       if (agent && !basename(file).includes(agent)) {
         issues.push(`${rel}: filename should include agent "${agent}"`);
       }
-      if (isImplementationLane(lane) && ownedPaths.length === 0) {
+      if (isImplementationLane(lane) && status !== 'n/a' && ownedPaths.length === 0) {
         issues.push(`${rel}: implementation lane requires owned_paths`);
       }
-      if (isImplementationLane(lane) && doneWhen.length === 0) {
+      if (isImplementationLane(lane) && status !== 'n/a' && doneWhen.length === 0) {
         issues.push(`${rel}: implementation lane requires done_when`);
       }
 
@@ -728,6 +835,158 @@ export function validateFeaturePlans(rootDir = process.cwd()): ValidationResult 
           issues.push(`${rel}: handoff branch must start with "handoff/" -> ${handoff}`);
         }
       }
+
+      plansForFeature.push({
+        path: file,
+        featureDir,
+        feature: feature || featureSlug,
+        title: asString(data.title),
+        lane,
+        agent,
+        status,
+        sourceBranch: asString(data.source_branch),
+        workBranch: asString(data.work_branch) || undefined,
+        skills: asList(data.skills),
+        dependsOn: asList(data.depends_on),
+        ownedPaths,
+        doneWhen,
+        handoffIn: handoffIn || undefined,
+        handoffOut: handoffOut || undefined,
+        qaOrder: Number.isNaN(qaOrder) ? undefined : qaOrder,
+        updated: asString(data.updated),
+        missingDependencies: [],
+        blockedBy: [],
+        metadataIssues: [],
+        handoffReady: false,
+        runnable: false,
+        statusKey,
+      });
+    }
+
+    let statusConfig: FeatureStatus | undefined;
+    if (existsSync(statusPath)) {
+      try {
+        statusConfig = loadFeatureStatus(featureDir);
+      } catch {
+        issues.push(`${relativeRepoPath(rootDir, statusPath)}: status.json is not valid JSON`);
+      }
+    }
+
+    if (statusConfig) {
+      const relStatusPath = relativeRepoPath(rootDir, statusPath);
+      if (statusConfig.feature !== featureSlug) {
+        issues.push(
+          `${relStatusPath}: feature "${statusConfig.feature ?? ''}" does not match directory "${featureSlug}"`,
+        );
+      }
+      if (!statusConfig.title) {
+        issues.push(`${relStatusPath}: missing title`);
+      }
+      if (!statusConfig.stage || !ACTIVE_FEATURE_STAGES.has(statusConfig.stage)) {
+        issues.push(
+          `${relStatusPath}: invalid stage "${statusConfig.stage ?? ''}" (expected active or backlog)`,
+        );
+      }
+      if (!statusConfig.updated_at) {
+        issues.push(`${relStatusPath}: missing updated_at`);
+      }
+      if (!statusConfig.lanes || typeof statusConfig.lanes !== 'object') {
+        issues.push(`${relStatusPath}: missing lanes`);
+      } else {
+        const statusLanes = statusConfig.lanes;
+        const plansByStatusLane = new Map<CanonicalStatusLane, PlanEntry[]>();
+
+        for (const plan of plansForFeature) {
+          if (!plan.statusKey) {
+            continue;
+          }
+          const current = plansByStatusLane.get(plan.statusKey) ?? [];
+          current.push(plan);
+          plansByStatusLane.set(plan.statusKey, current);
+        }
+
+        for (const laneKey of CANONICAL_STATUS_LANES) {
+          const laneConfig = statusLanes[laneKey];
+          if (!laneConfig) {
+            issues.push(`${relStatusPath}: missing lane "${laneKey}"`);
+            continue;
+          }
+
+          if (!isCanonicalPlanStatus(laneConfig.status ?? '')) {
+            issues.push(
+              `${relStatusPath}: invalid status "${laneConfig.status ?? ''}" for lane "${laneKey}"`,
+            );
+            continue;
+          }
+
+          const matchingPlans = plansByStatusLane.get(laneKey) ?? [];
+          for (const plan of matchingPlans) {
+            if (plan.status !== laneConfig.status) {
+              issues.push(
+                `${relativeRepoPath(rootDir, plan.path)}: frontmatter status "${plan.status}" disagrees with status.json lane "${laneKey}" status "${laneConfig.status}"`,
+              );
+            }
+          }
+          if (laneConfig.status === 'n/a') {
+            continue;
+          }
+
+          if (matchingPlans.length === 0) {
+            issues.push(
+              `${relStatusPath}: lane "${laneKey}" is "${laneConfig.status}" but no matching lane file exists`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  const statusTemplatePath = resolve(rootDir, STATUS_TEMPLATE_PATH);
+  if (!existsSync(statusTemplatePath)) {
+    issues.push(`${relativeRepoPath(rootDir, statusTemplatePath)}: missing status template`);
+  } else {
+    try {
+      const template = JSON.parse(readFileSync(statusTemplatePath, 'utf8')) as FeatureStatus;
+      const templateLanes = Object.keys(template.lanes ?? {}).sort();
+      const canonicalLanes = [...CANONICAL_STATUS_LANES].sort();
+      if (JSON.stringify(templateLanes) !== JSON.stringify(canonicalLanes)) {
+        issues.push(
+          `${relativeRepoPath(rootDir, statusTemplatePath)}: lane keys diverge from canonical planning taxonomy`,
+        );
+      }
+      for (const laneKey of CANONICAL_STATUS_LANES) {
+        const laneConfig = template.lanes?.[laneKey];
+        if (!laneConfig || !isCanonicalPlanStatus(laneConfig.status ?? '')) {
+          issues.push(
+            `${relativeRepoPath(rootDir, statusTemplatePath)}: lane "${laneKey}" must use a canonical status`,
+          );
+        }
+      }
+    } catch {
+      issues.push(
+        `${relativeRepoPath(rootDir, statusTemplatePath)}: status template is not valid JSON`,
+      );
+    }
+  }
+
+  const readmePath = resolve(rootDir, README_PATH);
+  if (!existsSync(readmePath)) {
+    issues.push(`${relativeRepoPath(rootDir, readmePath)}: missing plans README`);
+  } else {
+    const readme = readFileSync(readmePath, 'utf8');
+    for (const laneKey of CANONICAL_STATUS_LANES) {
+      if (!readme.includes(`\`${laneKey}\``)) {
+        issues.push(
+          `${relativeRepoPath(rootDir, readmePath)}: missing canonical lane token "${laneKey}"`,
+        );
+      }
+    }
+    for (const status of CANONICAL_PLAN_STATUSES) {
+      if (!readme.includes(`\`${status}\``)) {
+        issues.push(
+          `${relativeRepoPath(rootDir, readmePath)}: missing canonical status token "${status}"`,
+        );
+      }
     }
   }
 
@@ -746,6 +1005,7 @@ export function scaffoldFeature(
 ): string {
   const rootDir = resolve(options.rootDir ?? process.cwd());
   const templateDir = resolve(rootDir, TEMPLATE_ROOT);
+  const statusTemplatePath = resolve(rootDir, STATUS_TEMPLATE_PATH);
   const targetDir = resolve(rootDir, FEATURE_ROOT, featureSlug);
 
   if (!existsSync(templateDir)) {
@@ -778,13 +1038,37 @@ export function scaffoldFeature(
     writeFileSync(file, next);
   }
 
+  if (existsSync(statusTemplatePath)) {
+    let statusTemplate = readFileSync(statusTemplatePath, 'utf8');
+    statusTemplate = statusTemplate
+      .split('FEATURE_SLUG')
+      .join(featureSlug)
+      .split('FEATURE_TITLE')
+      .join(options.title ?? featureSlug)
+      .split('YYYY-MM-DD')
+      .join(today);
+    writeFileSync(join(targetDir, 'status.json'), statusTemplate);
+  }
+
   return targetDir;
 }
 
 export function reconcileQueue(options: ReconcileOptions = {}): ReconcileResult {
   const rootDir = resolve(options.rootDir ?? process.cwd());
   const agent = options.agent ?? 'codex';
-  const plans = filterPlans(collectPlans(rootDir), {
+  const allPlans = collectPlans(rootDir);
+  const consistencyBlockedPlan = filterPlans(allPlans, {
+    agent,
+    lane: options.lane ?? resolveDefaultLanes(agent, 'reconcile'),
+    status: 'ready',
+  }).find(
+    (plan) =>
+      plan.metadataIssues.length > 0 &&
+      plan.missingDependencies.length === 0 &&
+      plan.blockedBy.length === 0 &&
+      plan.handoffReady,
+  );
+  const plans = filterPlans(allPlans, {
     agent,
     lane: options.lane ?? resolveDefaultLanes(agent, 'reconcile'),
     status: 'ready',
@@ -806,6 +1090,31 @@ export function reconcileQueue(options: ReconcileOptions = {}): ReconcileResult 
     createdBranches: [],
     inspected: [],
   };
+
+  if (consistencyBlockedPlan) {
+    const note = `Blocked by plan metadata drift: ${consistencyBlockedPlan.metadataIssues.join(' | ')}`;
+    result.action = 'blocked';
+    result.inboxItem = {
+      title: `${consistencyBlockedPlan.feature} metadata drift blocks reconciliation`,
+      summary: 'Normalize status.json and lane files before automation selects work',
+    };
+    result.inspected.push({
+      path: consistencyBlockedPlan.path,
+      feature: consistencyBlockedPlan.feature,
+      lane: consistencyBlockedPlan.lane,
+      classification: 'metadata_mismatch',
+      statusBefore: consistencyBlockedPlan.status,
+      statusAfter: consistencyBlockedPlan.status,
+      note,
+    });
+    if (memoryPath) {
+      appendMemoryLine(
+        memoryPath,
+        `${relativeRepoPath(rootDir, consistencyBlockedPlan.path)} metadata drift blocked`,
+      );
+    }
+    return result;
+  }
 
   if (plans.length === 0) {
     if (memoryPath) {

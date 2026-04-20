@@ -68,7 +68,7 @@ bun install            # Install dependencies
 bun dev                # Start app + extension concurrently
 bun dev:api            # Start API server
 bun run test           # Run tests
-bun build              # Build everything
+bun run build          # Build everything
 bun run validate:production-readiness  # Staged-launch validation
 ```
 

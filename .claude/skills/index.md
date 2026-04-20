@@ -10,7 +10,7 @@ When you open Claude Code in the coop repo, you'll see:
 
 ```
 Coop Claude Code
-  /plan /debug /review /audit /monitor
+  /status /plan /debug /review /audit /monitor
   Agents: oracle | cracked-coder | code-reviewer | migration | triage
 ```
 
@@ -22,6 +22,8 @@ These are your entry points. Type a slash command or describe your task — Clau
 
 ```text
 What do you need?
+│
+├─ Start your day / lay of the land ──── /status
 │
 ├─ Build or change something ──────────── /plan
 │   ├─ UI / component work ────────────── react, ui-compliance, frontend-design
@@ -56,6 +58,7 @@ Slash commands are the primary way to start structured workflows.
 
 | Command | What it does | Example |
 |---------|-------------|---------|
+| `/status` | Morning briefing — pipeline, health, journeys, focus | `/status` or `/status --quick` |
 | `/plan` | Creates a step-by-step implementation plan | `/plan` add receiver pairing flow |
 | `/debug` | Systematic root cause investigation | `/debug` sync fails when sidepanel is closed |
 | `/review` | 6-pass code review (read-only by default) | `/review` |
@@ -141,6 +144,7 @@ Skills are domain knowledge that Claude loads when relevant. Most activate autom
 
 | Skill | Invocation | What it does |
 |-------|-----------|--------------|
+| **status** | `/status` | Morning briefing — pipeline, health, journeys, daily focus |
 | **plan** | `/plan` | Step-by-step implementation planning |
 | **debug** | `/debug` | Root cause investigation with hypothesis testing |
 | **review** | `/review` | 6-pass systematic code review |

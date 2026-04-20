@@ -1075,7 +1075,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 ### Must Pass
 - [ ] `bun format && bun lint`: Zero warnings
 - [ ] `bun run test`: All unit tests pass
-- [ ] `bun build`: Clean build (shared → app → extension)
+- [ ] `bun run build`: Clean build (shared → app → extension)
 - [ ] `bun run validate core-loop`: Two-profile coop lifecycle
 - [ ] `bun run validate flow-board`: Board visualization + archive
 - [ ] `bun run validate receiver-slice`: Receiver pairing + sync

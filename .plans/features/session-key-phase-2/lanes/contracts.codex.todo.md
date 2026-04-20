@@ -3,7 +3,7 @@ feature: session-key-phase-2
 title: Session key phase 2 contracts lane
 lane: contracts
 agent: codex
-status: todo
+status: backlog
 source_branch: feature/agent-autonomy-onchain
 work_branch: codex/contracts/session-key-phase-2
 depends_on:

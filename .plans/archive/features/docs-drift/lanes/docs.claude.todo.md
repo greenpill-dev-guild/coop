@@ -3,7 +3,7 @@ feature: docs-drift
 title: Docs drift maintenance Claude lane
 lane: docs
 agent: claude
-status: ready
+status: done
 source_branch: chore/docs-drift
 work_branch: claude/docs/docs-drift
 depends_on:
@@ -11,7 +11,7 @@ depends_on:
 skills:
   - docs
   - ui
-updated: 2026-03-26
+updated: 2026-04-12
 ---
 
 # Docs Lane

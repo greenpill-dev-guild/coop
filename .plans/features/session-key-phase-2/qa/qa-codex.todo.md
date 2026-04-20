@@ -4,12 +4,15 @@ title: Session key phase 2 QA pass 1
 lane: qa
 agent: codex
 status: blocked
+source_branch: feature/agent-autonomy-onchain
+work_branch: qa/codex/session-key-phase-2
 depends_on:
-  - contracts
-  - state
-branch: handoff/qa-codex/session-key-phase-2
-branch_trigger: handoff/qa-codex/session-key-phase-2
-updated: 2026-04-06
+  - ../lanes/contracts.codex.todo.md
+  - ../lanes/state.codex.todo.md
+qa_order: 1
+handoff_in: handoff/qa-codex/session-key-phase-2
+handoff_out: handoff/qa-claude/session-key-phase-2
+updated: 2026-04-09
 ---
 
 # QA Pass 1 — Codex

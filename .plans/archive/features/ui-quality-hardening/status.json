@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "ui-quality-hardening",
+  "title": "UI Quality Hardening",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": [],
+      "branch": "claude/ui/ui-quality-hardening"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/state/ui-quality-hardening"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/ui-quality-hardening"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/ui-quality-hardening"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/ui-quality-hardening"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/ui-quality-hardening",
+      "branch_trigger": "handoff/qa-codex/ui-quality-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/ui-quality-hardening",
+      "branch_trigger": "handoff/qa-claude/ui-quality-hardening",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

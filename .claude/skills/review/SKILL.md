@@ -70,7 +70,6 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 - Does the PR description match what the code actually does?
 - Are there unrelated changes mixed in?
 
-
 ### Pass 0.5: Issue Coverage (MANDATORY)
 
 - Map every requirement from the issue/task to implementation
@@ -89,6 +88,30 @@ Use **TodoWrite** when available. If unavailable, keep a Markdown checklist in t
 > - Requirement 2: "Show sync status" -> `SyncIndicator` component added
 > - Requirement 3: "Retry failed publishes" -> No retry UI found
 ```
+
+### Pass 0.75: Human Judgment Callouts (MANDATORY)
+
+List the changes that are not merely "bugs to fix" but places where a human needs to make an
+engineering decision even if the code is mechanically fine.
+
+**Always check for these callouts:**
+
+- new dependencies
+- schema, migration, Dexie, Yjs, or persisted-state changes
+- auth, permissions, session, permit, or policy changes
+- destructive or irreversible operations
+- public API, export-surface, or cross-package contract changes
+- build, model, provider, runtime, or toolchain boundary changes
+- oversized diffs, overlapping ownership, or changes that violate lane discipline
+
+If none apply, explicitly write `None.`
+
+Qualitatively flag diffs when they:
+
+- cannot be explained cleanly in one sentence
+- mix unrelated concerns
+- cross multiple ownership surfaces without clear need
+- blur lane boundaries or introduce review fatigue
 
 
 ### Pass 1: Technical Issues
@@ -233,6 +256,9 @@ Do NOT commit until the verdict is `COMMIT`.
 
 ### Summary
 [Scope + change explanation + requirement coverage]
+
+### Human Judgment Callouts
+- [Risk area] - `file.ts:123` -- [what needs human judgment]
 
 ### Severity Mapping
 - `Critical|High -> must-fix`

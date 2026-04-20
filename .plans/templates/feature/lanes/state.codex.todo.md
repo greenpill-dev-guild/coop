@@ -27,6 +27,8 @@ Describe the shared state, runtime, storage, and orchestration changes Codex sho
 
 `done_when` should use concrete, searchable evidence strings that will exist under `owned_paths`
 when the lane is truly complete.
+Keep changes inside `owned_paths` where possible. If work spills beyond them, explain why in
+`Handoff Notes`.
 
 ## Files
 
@@ -39,6 +41,7 @@ when the lane is truly complete.
 - [ ] Update schemas/types first
 - [ ] Implement state transitions and persistence behavior
 - [ ] Add or update unit/integration coverage
+- [ ] Keep work inside `owned_paths` or document justified spillover
 - [ ] Note any message-contract changes
 
 ## Verification
@@ -49,3 +52,5 @@ when the lane is truly complete.
 ## Handoff Notes
 
 Risks or edge cases QA should target.
+List any human judgment callouts: dependencies, migrations/persisted state, auth/session/policy,
+public contracts, runtime/toolchain boundaries, or ownership blur.

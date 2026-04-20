@@ -8,6 +8,16 @@ source_branch: main
 work_branch: codex/state/production-readiness
 depends_on:
   - ../spec.md
+owned_paths:
+  - vitest.config.ts
+  - packages/app/src/hooks
+  - packages/extension/src/views/Sidepanel
+  - .plans/features/production-readiness/eval/implementation-notes.md
+  - .plans/features/production-readiness/eval/qa-report.md
+done_when:
+  - Coverage gate: green
+  - Store-readiness gate: green
+  - Production-readiness gate: green
 skills:
   - testing
   - debug

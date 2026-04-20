@@ -27,11 +27,13 @@ Codex runs the first QA pass after implementation lanes finish and the `handoff/
 - Runtime messaging
 - API boundaries
 - Contracts, permissions, and schema behavior
+- Human judgment callouts from implementation handoff notes
 
 ## Tasks
 
 - [ ] Verify state/API/contracts paths
 - [ ] Run targeted validation suites
+- [ ] Verify any human judgment callouts from implementation lanes
 - [ ] Capture findings and residual risks
 - [ ] Create `handoff/qa-claude/<feature-slug>` when pass 2 should start
 

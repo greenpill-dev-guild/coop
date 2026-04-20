@@ -3,7 +3,7 @@ feature: production-readiness
 title: Production readiness API verification lane
 lane: api
 agent: codex
-status: backlog
+status: n/a
 source_branch: main
 work_branch: codex/api/production-readiness
 depends_on:

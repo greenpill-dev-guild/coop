@@ -30,8 +30,9 @@ This is the Chrome Web Store subset of the
 6. Verify the built extension surface does not expose remote knowledge-skill import.
 7. Use DevTools on first local-AI initialization and record the actual model-download endpoints.
 
-As of March 28, 2026, the manual popup `Capture Tab` and `Screenshot` success check remains the
-last staged-launch blocker after the automated bar passes.
+As of April 9, 2026, the automated staged-launch bar is still blocked before this checklist can be
+used as a release sign-off. Once that automated bar is green again, the manual popup `Capture Tab`
+and `Screenshot` success check remains the last staged-launch blocker.
 
 ## Listing And Policy Artifacts
 

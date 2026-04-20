@@ -1,3 +1,25 @@
+---
+feature: agent-knowledge-sandbox
+title: Agent knowledge sandbox QA pass 1
+lane: qa
+agent: codex
+status: blocked
+source_branch: feature/agent-knowledge-sandbox
+work_branch: qa/codex/agent-knowledge-sandbox
+depends_on:
+  - ../lanes/state.codex.todo.md
+  - ../lanes/ui.claude.todo.md
+skills:
+  - qa
+  - state-logic
+  - api
+  - contracts
+qa_order: 1
+handoff_in: handoff/qa-codex/agent-knowledge-sandbox
+handoff_out: handoff/qa-claude/agent-knowledge-sandbox
+updated: 2026-04-09
+---
+
 # QA Pass 1 — Codex
 
 Branch: `handoff/qa-codex/agent-knowledge-sandbox`

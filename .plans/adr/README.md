@@ -12,3 +12,4 @@ This directory documents the key architectural decisions made in Coop. Each ADR 
 | [ADR-006](ADR-006-safe-erc4337-onchain.md) | Safe + ERC-4337 Onchain Integration | Accepted |
 | [ADR-007](ADR-007-yjs-crdt-sync.md) | Yjs CRDT Sync Architecture | Accepted |
 | [ADR-008](ADR-008-extension-mv3-architecture.md) | MV3 Extension Architecture | Accepted |
+| [ADR-009](ADR-009-agentic-development-friction.md) | Agentic Development Friction in the Coding Loop | Accepted |

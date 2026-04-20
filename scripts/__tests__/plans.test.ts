@@ -26,6 +26,93 @@ function write(rootDir: string, relativePath: string, content: string): void {
   writeFileSync(target, content);
 }
 
+function writePlanningBaseline(rootDir: string): void {
+  write(
+    rootDir,
+    '.plans/README.md',
+    [
+      '# Plans',
+      '',
+      'Canonical lanes:',
+      '- `ui`',
+      '- `state`',
+      '- `api`',
+      '- `contracts`',
+      '- `docs`',
+      '- `qa_pass_1`',
+      '- `qa_pass_2`',
+      '',
+      'Canonical statuses:',
+      '- `backlog`',
+      '- `n/a`',
+      '- `ready`',
+      '- `in_progress`',
+      '- `blocked`',
+      '- `in_review`',
+      '- `done`',
+      '- `archived`',
+      '',
+    ].join('\n'),
+  );
+
+  write(
+    rootDir,
+    '.plans/templates/status.json',
+    JSON.stringify(
+      {
+        $schema: './status.schema.json',
+        feature: 'FEATURE_SLUG',
+        title: 'FEATURE_TITLE',
+        stage: 'active',
+        updated_at: 'YYYY-MM-DD',
+        lanes: {
+          ui: { status: 'n/a' },
+          state: { status: 'n/a' },
+          api: { status: 'n/a' },
+          contracts: { status: 'n/a' },
+          docs: { status: 'n/a' },
+          qa_pass_1: { status: 'n/a' },
+          qa_pass_2: { status: 'n/a' },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+function writeFeatureStatus(
+  rootDir: string,
+  feature: string,
+  title: string,
+  laneStatuses: Partial<Record<string, string>>,
+): void {
+  write(
+    rootDir,
+    `.plans/features/${feature}/status.json`,
+    JSON.stringify(
+      {
+        $schema: '../../templates/status.schema.json',
+        feature,
+        title,
+        stage: 'active',
+        updated_at: '2026-03-26',
+        lanes: {
+          ui: { status: laneStatuses.ui ?? 'n/a' },
+          state: { status: laneStatuses.state ?? 'n/a' },
+          api: { status: laneStatuses.api ?? 'n/a' },
+          contracts: { status: laneStatuses.contracts ?? 'n/a' },
+          docs: { status: laneStatuses.docs ?? 'n/a' },
+          qa_pass_1: { status: laneStatuses.qa_pass_1 ?? 'n/a' },
+          qa_pass_2: { status: laneStatuses.qa_pass_2 ?? 'n/a' },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 afterEach(() => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -105,8 +192,13 @@ describe('scaffoldFeature', () => {
 describe('collectPlans and validateFeaturePlans', () => {
   it('marks second QA pass runnable only when dependencies and handoff branch are ready', () => {
     const rootDir = makeTempDir();
+    writePlanningBaseline(rootDir);
 
     write(rootDir, '.plans/features/receiver-shell-polish/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'receiver-shell-polish', 'Receiver shell polish', {
+      qa_pass_1: 'done',
+      qa_pass_2: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/receiver-shell-polish/qa/qa-claude.todo.md',
@@ -155,8 +247,12 @@ updated: 2026-03-26
 
   it('separates docs lanes from the default Codex implementation queue', () => {
     const rootDir = makeTempDir();
+    writePlanningBaseline(rootDir);
 
     write(rootDir, '.plans/features/docs-drift/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'docs-drift', 'Docs drift', {
+      docs: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/docs-drift/lanes/docs.codex.todo.md',
@@ -172,6 +268,9 @@ updated: 2026-03-26
 `,
     );
     write(rootDir, '.plans/features/ui-action/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'ui-action', 'UI action', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/ui-action/lanes/state.codex.todo.md',
@@ -182,6 +281,10 @@ lane: state
 agent: codex
 status: ready
 source_branch: refactor/ui-action
+owned_paths:
+  - packages/shared/src/modules/receiver
+done_when:
+  - receiverCaptureContract
 updated: 2026-03-26
 ---
 `,
@@ -209,8 +312,12 @@ updated: 2026-03-26
 
   it('includes owned_paths and done_when in collected queue entries', () => {
     const rootDir = makeTempDir();
+    writePlanningBaseline(rootDir);
 
     write(rootDir, '.plans/features/media-sync/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'media-sync', 'Media sync', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/media-sync/lanes/state.codex.todo.md',
@@ -237,8 +344,12 @@ updated: 2026-03-26
 
   it('fails validation when implementation lanes omit stale-lane metadata', () => {
     const rootDir = makeTempDir();
+    writePlanningBaseline(rootDir);
 
     write(rootDir, '.plans/features/media-sync/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'media-sync', 'Media sync', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/media-sync/lanes/state.codex.todo.md',
@@ -266,6 +377,7 @@ updated: 2026-03-26
 
 describe('reconcileQueue', () => {
   function writeValidationReadyProject(rootDir: string): void {
+    writePlanningBaseline(rootDir);
     write(
       rootDir,
       'package.json',
@@ -288,6 +400,9 @@ describe('reconcileQueue', () => {
     writeValidationReadyProject(rootDir);
 
     write(rootDir, '.plans/features/a-stale/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'a-stale', 'A stale', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/a-stale/lanes/state.codex.todo.md',
@@ -314,6 +429,9 @@ updated: 2026-03-26
     );
 
     write(rootDir, '.plans/features/b-next/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'b-next', 'B next', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/b-next/lanes/state.codex.todo.md',
@@ -361,6 +479,9 @@ updated: 2026-03-26
     writeValidationReadyProject(rootDir);
 
     write(rootDir, '.plans/features/a-ambiguous/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'a-ambiguous', 'A ambiguous', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/a-ambiguous/lanes/state.codex.todo.md',
@@ -407,6 +528,9 @@ updated: 2026-03-26
     writeValidationReadyProject(rootDir);
 
     write(rootDir, '.plans/features/a-next/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'a-next', 'A next', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/a-next/lanes/state.codex.todo.md',
@@ -449,6 +573,7 @@ updated: 2026-03-26
 
   it('returns an inbox item when validation tooling is unavailable', () => {
     const rootDir = makeTempDir();
+    writePlanningBaseline(rootDir);
     write(
       rootDir,
       'package.json',
@@ -465,6 +590,9 @@ updated: 2026-03-26
     );
 
     write(rootDir, '.plans/features/a-blocked/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'a-blocked', 'A blocked', {
+      state: 'ready',
+    });
     write(
       rootDir,
       '.plans/features/a-blocked/lanes/state.codex.todo.md',
@@ -503,5 +631,59 @@ updated: 2026-03-26
       'utf8',
     );
     expect(lane).toContain('status: ready');
+  });
+
+  it('blocks reconciliation when status.json and the lane frontmatter disagree', () => {
+    const rootDir = makeTempDir();
+    writeValidationReadyProject(rootDir);
+
+    write(rootDir, '.plans/features/a-drift/spec.md', '# Spec\n');
+    writeFeatureStatus(rootDir, 'a-drift', 'A drift', {
+      state: 'blocked',
+    });
+    write(
+      rootDir,
+      '.plans/features/a-drift/lanes/state.codex.todo.md',
+      `---
+feature: a-drift
+title: Drifted state lane
+lane: state
+agent: codex
+status: ready
+source_branch: feature/a-drift
+owned_paths:
+  - packages/shared/src/modules/blob
+done_when:
+  - resolveBlob(
+updated: 2026-03-26
+---
+`,
+    );
+    write(
+      rootDir,
+      'packages/shared/src/modules/blob/complete.ts',
+      'export function resolveBlob() {}\n',
+    );
+
+    const result = reconcileQueue({
+      rootDir,
+      agent: 'codex',
+      write: true,
+    });
+
+    expect(result.action).toBe('blocked');
+    expect(result.inboxItem?.title).toContain('metadata drift');
+    expect(result.inspected[0]).toMatchObject({
+      classification: 'metadata_mismatch',
+      statusBefore: 'ready',
+      statusAfter: 'ready',
+    });
+
+    const lane = readFileSync(
+      join(rootDir, '.plans/features/a-drift/lanes/state.codex.todo.md'),
+      'utf8',
+    );
+    expect(lane).toContain('status: ready');
+    expect(lane).not.toContain('## Automation Notes');
   });
 });

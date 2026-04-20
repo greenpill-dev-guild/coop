@@ -152,7 +152,7 @@ Use the workspace scripts rather than package-local ad hoc commands:
 bun format && bun lint
 bun run test
 bun run test:coverage
-bun build
+bun run build
 bun run validate list
 bun run validate smoke
 bun run validate core-loop

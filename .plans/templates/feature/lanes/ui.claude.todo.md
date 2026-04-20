@@ -21,6 +21,8 @@ updated: <YYYY-MM-DD>
 ## Objective
 
 Describe the user-interface slice Claude should own.
+Keep file ownership tight. If work spills into state/api/contracts surfaces without an explicit
+handoff, stop and call it out in `Handoff Notes`.
 
 ## Files
 
@@ -32,6 +34,7 @@ Describe the user-interface slice Claude should own.
 - [ ] Audit existing UI patterns/components before adding new ones
 - [ ] Implement the UI changes
 - [ ] Add or update UI tests where appropriate
+- [ ] Keep file ownership tight or document justified spillover
 - [ ] Document any UX tradeoffs
 
 ## Verification
@@ -42,3 +45,5 @@ Describe the user-interface slice Claude should own.
 ## Handoff Notes
 
 What the first QA lane should pay attention to after UI work is done.
+List any human judgment callouts: new dependencies, shared-contract implications, runtime boundary
+changes, or ownership blur introduced by the UI work.

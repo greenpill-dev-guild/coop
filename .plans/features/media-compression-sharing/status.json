@@ -1,0 +1,56 @@
+{
+  "$schema": "status-schema",
+  "feature": "media-compression-sharing",
+  "title": "Media Compression And Sharing",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "claude/ui/media-compression-sharing"
+    },
+    "state": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": [],
+      "branch": "codex/state/media-compression-sharing"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/media-compression-sharing"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/media-compression-sharing"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/media-compression-sharing"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "handoff/qa-codex/media-compression-sharing",
+      "branch_trigger": "handoff/qa-codex/media-compression-sharing",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/media-compression-sharing",
+      "branch_trigger": "handoff/qa-claude/media-compression-sharing",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [],
+  "updated_at": "2026-04-09"
+}

@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '%s\\n' 'Coop Claude Code' '  /plan /debug /review /audit /monitor' '  Agents: oracle | cracked-coder | code-reviewer | migration | triage'",
+            "command": "printf '%s\\n' 'Coop Claude Code' '  /status /plan /debug /review /audit /monitor' '  Agents: oracle | cracked-coder | code-reviewer | migration | triage'",
             "once": true
           }
         ]
@@ -84,7 +84,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '⚠️  Before finishing: did you verify your changes? Choose the right tier:\\n  typecheck (~10s) — single-package, no shared exports\\n  quick (~15s) — typecheck + lint\\n  smoke (~1m) — cross-package changes\\n  build (~45s) — CSS tokens, new shared exports\\nRun: bun run validate <tier>'",
+            "command": "echo '⚠️  Before finishing: did you verify your changes? Choose the right tier:\\n  typecheck (~10s) — single-package, no shared exports\\n  quick (~15s) — typecheck + lint\\n  smoke (~1m) — cross-package changes\\n  build (~45s) — CSS tokens, new shared exports\\nRun: bun run validate <tier>\\nIf you touched dependencies, migrations, auth/session/policy, public contracts, or crossed ownership boundaries, call that out explicitly in handoff notes and review.'",
             "statusMessage": "Verification reminder"
           }
         ]
@@ -108,6 +108,18 @@
             "type": "command",
             "command": "echo 'Task marked complete — ensure verification was run before reporting done to user.'",
             "statusMessage": "Task completion check"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "oracle|cracked-coder|code-reviewer|migration|triage",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/afo/Code/greenpill/coop && .claude/scripts/agent-output-gate.sh",
+            "statusMessage": "Checking agent output contract..."
           }
         ]
       }
@@ -139,6 +151,16 @@
             "type": "command",
             "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(css|tsx)$' && echo \"$FILE\" | grep -q 'views/'; then echo 'UI file modified — verify visually in Chrome before reporting done. Use Chrome MCP screenshot or manual check.'; fi; exit 0",
             "statusMessage": "Checking for UI impact..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && printf '%s' \"$FILE\" | grep -qE '(^|/)(package\\.json|package-lock\\.json|bun\\.lockb|biome\\.json|tsconfig[^/]*\\.json|.*schema.*\\.ts|.*db-schema.*\\.ts|.*sync\\.ts|.*(auth|policy|permit|session|onchain).*[.](ts|tsx|js|jsx|json)$)'; then echo 'Judgment-heavy file modified — keep scope tight, avoid silent fallback or hidden magic, and call this out in handoff/review.'; fi; exit 0",
+            "statusMessage": "Checking for judgment-heavy edits..."
           }
         ]
       }

@@ -6,14 +6,14 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "todo",
+      "status": "backlog",
       "depends_on": [],
       "branch": "claude/ui/FEATURE_SLUG",
       "ready_when_dependencies_met": true
     },
     "state": {
       "owner": "codex",
-      "status": "todo",
+      "status": "backlog",
       "depends_on": [],
       "branch": "codex/state/FEATURE_SLUG",
       "ready_when_dependencies_met": true
@@ -29,6 +29,12 @@
       "status": "n/a",
       "depends_on": [],
       "branch": "codex/contracts/FEATURE_SLUG"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/FEATURE_SLUG"
     },
     "qa_pass_1": {
       "owner": "codex",

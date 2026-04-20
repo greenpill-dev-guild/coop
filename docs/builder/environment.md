@@ -26,7 +26,7 @@ prefixed variables are baked into bundles at build time by Vite -- rebuild after
 | --- | --- | --- | --- |
 | `VITE_COOP_SIGNALING_URLS` | Comma-separated ws/wss/http/https URLs | `wss://api.coop.town` | Signaling URLs passed into y-webrtc room setup |
 | `VITE_COOP_RECEIVER_APP_URL` | URL | `http://127.0.0.1:3001` | Receiver PWA base URL and receiver-bridge host-permission source |
-| `VITE_COOP_TURN_URLS` | Comma-separated TURN URIs | -- | TURN relay servers for NAT traversal |
+| `VITE_COOP_TURN_URLS` | Comma-separated TURN URIs | -- | TURN relay servers for NAT traversal; required for production direct-peer connectivity |
 | `VITE_COOP_TURN_USERNAME` | String | -- | TURN authentication username |
 | `VITE_COOP_TURN_CREDENTIAL` | String | -- | TURN authentication credential |
 
@@ -124,7 +124,7 @@ VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
 - The shared sync layer also uses the API package's base WebSocket document-sync URL
   (`wss://api.coop.town/yws`) under the hood. That base URL is code-configured today rather than
   exposed as a user-set frontend env var.
-- TURN credentials are only needed when peers cannot establish direct WebRTC connections.
+- TURN credentials are optional for local development on open networks, but production direct-peer sync should treat them as required.
 - Trusted-node archive variables are only needed by operators running with live archive enabled.
 - FVM variables are only needed when interacting with the ERC-8004 agent registry on Filecoin. The
   extension now provisions a member-local Filecoin signer on first use, so no FVM private-key env
