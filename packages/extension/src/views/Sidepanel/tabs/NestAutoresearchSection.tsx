@@ -16,6 +16,13 @@ export interface NestAutoresearchSectionProps {
 
 const WEBLLM_SKILLS = (manifests: SkillManifest[]) => manifests.filter((m) => m.model === 'webllm');
 
+function formatRuntimeError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function formatDuration(ms: number) {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
@@ -40,37 +47,74 @@ export function NestAutoresearchSection({ skillManifests }: NestAutoresearchSect
   const [expandedExperiment, setExpandedExperiment] = useState<string | null>(null);
   const [runningSkill, setRunningSkill] = useState<string | null>(null);
   const [journalFilter, setJournalFilter] = useState<'all' | 'kept' | 'reverted'>('all');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // --- Load configs + journal ---
   const loadConfigs = useCallback(async () => {
-    const result = await sendRuntimeMessage<Record<string, AutoresearchConfig>>({
-      type: 'list-autoresearch-configs',
-    });
-    if (result.ok && result.data) {
-      setConfigs(new Map(Object.entries(result.data)));
+    try {
+      const result = await sendRuntimeMessage<Record<string, AutoresearchConfig>>({
+        type: 'list-autoresearch-configs',
+      });
+      if (!result.ok) {
+        return result.error ?? 'Could not load autoresearch settings.';
+      }
+
+      setConfigs(new Map(Object.entries(result.data ?? {})));
+      return null;
+    } catch (error) {
+      return formatRuntimeError(error, 'Could not load autoresearch settings.');
     }
   }, []);
 
   const loadJournal = useCallback(async () => {
-    const result = await sendRuntimeMessage<ExperimentRecord[]>({
-      type: 'list-experiment-records',
-    });
-    if (result.ok && result.data) setJournal(result.data);
+    try {
+      const result = await sendRuntimeMessage<ExperimentRecord[]>({
+        type: 'list-experiment-records',
+      });
+      if (!result.ok) {
+        return result.error ?? 'Could not load the experiment journal.';
+      }
+
+      setJournal(result.data ?? []);
+      return null;
+    } catch (error) {
+      return formatRuntimeError(error, 'Could not load the experiment journal.');
+    }
   }, []);
 
   useEffect(() => {
-    void loadConfigs();
-    void loadJournal();
+    let cancelled = false;
+
+    void (async () => {
+      const [configError, journalError] = await Promise.all([loadConfigs(), loadJournal()]);
+      if (!cancelled) {
+        setErrorMessage(configError ?? journalError ?? null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadConfigs, loadJournal]);
 
   // --- Toggle skill ---
   const handleToggle = useCallback(
     async (skillId: string, enabled: boolean) => {
-      await sendRuntimeMessage({
-        type: 'set-autoresearch-config',
-        payload: { skillId, enabled },
-      });
-      void loadConfigs();
+      try {
+        const result = await sendRuntimeMessage({
+          type: 'set-autoresearch-config',
+          payload: { skillId, enabled },
+        });
+        if (!result.ok) {
+          setErrorMessage(result.error ?? 'Could not update autoresearch settings.');
+          return;
+        }
+
+        const configError = await loadConfigs();
+        setErrorMessage(configError);
+      } catch (error) {
+        setErrorMessage(formatRuntimeError(error, 'Could not update autoresearch settings.'));
+      }
     },
     [loadConfigs],
   );
@@ -80,9 +124,19 @@ export function NestAutoresearchSection({ skillManifests }: NestAutoresearchSect
     async (skillId: string) => {
       setRunningSkill(skillId);
       try {
-        await sendRuntimeMessage({ type: 'run-autoresearch-cycle', payload: { skillId } });
-        void loadJournal();
-        void loadConfigs();
+        const result = await sendRuntimeMessage({
+          type: 'run-autoresearch-cycle',
+          payload: { skillId },
+        });
+        if (!result.ok) {
+          setErrorMessage(result.error ?? 'Could not run autoresearch right now.');
+          return;
+        }
+
+        const [journalError, configError] = await Promise.all([loadJournal(), loadConfigs()]);
+        setErrorMessage(journalError ?? configError ?? null);
+      } catch (error) {
+        setErrorMessage(formatRuntimeError(error, 'Could not run autoresearch right now.'));
       } finally {
         setRunningSkill(null);
       }
@@ -110,6 +164,11 @@ export function NestAutoresearchSection({ skillManifests }: NestAutoresearchSect
             Self-optimizing prompt experiments for WebLLM skills. Enabled skills run experiments
             against eval fixtures and keep only improvements.
           </p>
+          {errorMessage ? (
+            <p aria-live="polite" className="helper-text" style={{ color: 'var(--error)' }}>
+              {errorMessage}
+            </p>
+          ) : null}
 
           {webllmSkills.map((manifest) => {
             const config = configs.get(manifest.id);
