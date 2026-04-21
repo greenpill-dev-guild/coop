@@ -217,6 +217,7 @@ export function RoostTab({
         />
         <nav className="nest-sub-tabs" aria-label="Roost sections">
           <button
+            aria-pressed={roostSubTab === 'focus'}
             className={roostSubTab === 'focus' ? 'is-active' : ''}
             onClick={() => setRoostSubTab('focus')}
             type="button"
@@ -227,6 +228,7 @@ export function RoostTab({
             ) : null}
           </button>
           <button
+            aria-pressed={roostSubTab === 'agent'}
             className={roostSubTab === 'agent' ? 'is-active' : ''}
             onClick={() => setRoostSubTab('agent')}
             type="button"
@@ -237,6 +239,7 @@ export function RoostTab({
             ) : null}
           </button>
           <button
+            aria-pressed={roostSubTab === 'garden'}
             className={roostSubTab === 'garden' ? 'is-active' : ''}
             onClick={() => setRoostSubTab('garden')}
             type="button"

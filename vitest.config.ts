@@ -60,6 +60,11 @@ export default defineConfig({
         'packages/extension/src/runtime/agent-webllm-bridge.ts',
         'packages/extension/src/runtime/agent-webllm-worker.ts',
         'packages/extension/src/runtime/agent-config.ts',
+        // Orphaned duplicate of runtime/agent/runner-skills-*.ts. Zero external
+        // consumers (see .plans/features/production-readiness/eval/implementation-notes.md
+        // 2026-04-19 entry). Excluded from the staged-launch coverage gate;
+        // flagged for deletion in a follow-up source-ownership lane.
+        'packages/extension/src/runtime/skills/**',
         'packages/shared/src/modules/greengoods/greengoods.ts',
         'packages/shared/src/modules/session/session.ts',
         'packages/extension/src/runtime/agent-models.ts',

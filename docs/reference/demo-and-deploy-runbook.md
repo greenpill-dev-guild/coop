@@ -5,7 +5,7 @@ slug: /reference/demo-and-deploy-runbook
 
 # Coop Demo And Deploy Runbook
 
-Date: April 9, 2026
+Date: April 20, 2026
 
 This is the canonical runbook for local demos, peer pairing, and production deployment. Keep the
 stage-based checklist aligned to [Production Release Checklist](/reference/production-release-checklist).
@@ -243,9 +243,9 @@ Manual staged-launch checks still include:
 - confirmation that public builds do not embed operator-only signing material
 - confirmation that remote knowledge-skill import remains quarantined in the shipped build
 
-As of April 9, 2026, the automated staged-launch bar is still blocked on release-critical coverage
-and broader production-readiness validation. Those popup success-path checks remain required after
-the automated bar is green again.
+As of April 19, 2026, the automated staged-launch bar is green. The remaining manual staged-launch
+gate is successful popup `Capture Tab` and `Screenshot` saves in real Chrome, plus the rest of the
+manual checks above.
 
 ### Live Modes
 

@@ -1075,19 +1075,27 @@ describe('NestTab', () => {
     return { orchestration };
   }
 
-  it('renders sub-tab navigation with Members, Agent, and Settings pills', () => {
+  it('renders sub-tab navigation with Members, Agent, Settings, and Sources pills', () => {
     render(<NestTab {...baseOrchestration()} />);
 
     expect(screen.getByRole('button', { name: /members/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /agent/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sources/i })).toBeInTheDocument();
   });
 
   it('defaults to the Members sub-tab', () => {
     render(<NestTab {...baseOrchestration()} />);
 
     const membersButton = screen.getByRole('button', { name: /members/i });
+    const agentButton = screen.getByRole('button', { name: /^agent$/i });
+    const settingsButton = screen.getByRole('button', { name: /settings/i });
+    const sourcesButton = screen.getByRole('button', { name: /sources/i });
     expect(membersButton.className).toContain('is-active');
+    expect(membersButton).toHaveAttribute('aria-pressed', 'true');
+    expect(agentButton).toHaveAttribute('aria-pressed', 'false');
+    expect(settingsButton).toHaveAttribute('aria-pressed', 'false');
+    expect(sourcesButton).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('switches to Agent sub-tab on click', async () => {
@@ -1097,8 +1105,21 @@ describe('NestTab', () => {
 
     await user.click(screen.getByRole('button', { name: /^agent$/i }));
 
+    expect(screen.getByRole('button', { name: /members/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     const agentButton = screen.getByRole('button', { name: /^agent$/i });
     expect(agentButton.className).toContain('is-active');
+    expect(agentButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /settings/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /sources/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     // Operator console should be rendered
     expect(screen.getByTestId('operator-console')).toBeInTheDocument();
   });
@@ -1110,8 +1131,21 @@ describe('NestTab', () => {
 
     await user.click(screen.getByRole('button', { name: /settings/i }));
 
+    expect(screen.getByRole('button', { name: /members/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /^agent$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     const settingsButton = screen.getByRole('button', { name: /settings/i });
     expect(settingsButton.className).toContain('is-active');
+    expect(settingsButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /sources/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     // Settings content should be visible
     expect(screen.getByText('My Preferences')).toBeInTheDocument();
     // Archive section visible in settings

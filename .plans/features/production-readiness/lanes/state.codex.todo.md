@@ -3,7 +3,7 @@ feature: production-readiness
 title: Production readiness stabilization lane
 lane: state
 agent: codex
-status: blocked
+status: done
 source_branch: main
 work_branch: codex/state/production-readiness
 depends_on:
@@ -22,7 +22,7 @@ skills:
   - testing
   - debug
   - react
-updated: 2026-03-27
+updated: 2026-04-19
 ---
 
 # State Lane
@@ -39,9 +39,22 @@ updated: 2026-03-27
   - `bun build` passes
   - `bun run validate:store-readiness` passes
 
-## Current Result
+## Current Result (2026-04-19)
 
 - lint is green
 - targeted test stability work is green
-- release-critical coverage scope is now more honest
-- staged launch remains blocked because the broadened coverage run lands at `77.29/76.41/77.57/77.29`, below the `85/85/85/70` gate
+- release-critical coverage scope is green: `86.56 / 78.02 / 87.19 / 86.56`
+  against the `85 / 70 / 85 / 85` gate
+- `bun run build` is green; dist size 52.88 MB
+- `bun run validate:store-readiness` is green
+- `bun run validate:production-readiness` is green (second attempt; one
+  `@flow-board` E2E flake on the first run, documented in the QA report)
+- lane closed `done`; details in `../eval/qa-report.md` and
+  `../eval/implementation-notes.md`
+
+## Historical Result (2026-03-27)
+
+- lint was green
+- targeted test stability work was green
+- release-critical coverage scope was more honest but under the gate at
+  `77.29 / 76.41 / 77.57 / 77.29`

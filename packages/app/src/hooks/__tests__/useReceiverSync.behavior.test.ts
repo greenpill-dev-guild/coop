@@ -639,6 +639,104 @@ describe('useReceiverSync behavior', () => {
     expect(doc.off).toHaveBeenCalledWith('update', expect.any(Function));
   });
 
+  it('ignores relay acks that reference a different pairing', async () => {
+    const doc = { on: vi.fn(), off: vi.fn() };
+    const relay = { publishCapture: vi.fn(), disconnect: vi.fn() };
+    const providers = { disconnect: vi.fn() };
+    const pairing = makePairing();
+
+    createReceiverSyncDocMock.mockReturnValue(doc);
+    connectReceiverSyncProvidersMock.mockReturnValue(providers);
+    connectReceiverSyncRelayMock.mockImplementation(
+      (config: { onAck: (frame: unknown) => Promise<void> }) => {
+        (relay as typeof relay & { onAck?: (frame: unknown) => Promise<void> }).onAck =
+          config.onAck;
+        return relay;
+      },
+    );
+    listReceiverCapturesMock.mockResolvedValue([]);
+
+    const deps = makeDeps({ pairing });
+    renderHook(() => useReceiverSync({} as never, deps as never));
+
+    await waitFor(() => expect(connectReceiverSyncRelayMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await (relay as typeof relay & { onAck?: (frame: unknown) => Promise<void> }).onAck?.({
+        pairingId: 'unrelated-pairing',
+      });
+    });
+
+    expect(assertReceiverSyncRelayAckMock).not.toHaveBeenCalled();
+  });
+
+  it('swallows malformed relay ack errors without tearing down the binding', async () => {
+    const doc = { on: vi.fn(), off: vi.fn() };
+    const relay = { publishCapture: vi.fn(), disconnect: vi.fn() };
+    const providers = { disconnect: vi.fn() };
+    const pairing = makePairing();
+
+    createReceiverSyncDocMock.mockReturnValue(doc);
+    connectReceiverSyncProvidersMock.mockReturnValue(providers);
+    connectReceiverSyncRelayMock.mockImplementation(
+      (config: { onAck: (frame: unknown) => Promise<void> }) => {
+        (relay as typeof relay & { onAck?: (frame: unknown) => Promise<void> }).onAck =
+          config.onAck;
+        return relay;
+      },
+    );
+    listReceiverCapturesMock.mockResolvedValue([]);
+    assertReceiverSyncRelayAckMock.mockRejectedValueOnce(new Error('invalid ack'));
+
+    const deps = makeDeps({ pairing });
+    renderHook(() => useReceiverSync({} as never, deps as never));
+
+    await waitFor(() => expect(connectReceiverSyncRelayMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await (relay as typeof relay & { onAck?: (frame: unknown) => Promise<void> }).onAck?.({
+        pairingId: 'pairing-1',
+      });
+    });
+
+    expect(assertReceiverSyncRelayAckMock).toHaveBeenCalledTimes(1);
+    expect(updateReceiverCaptureMock).not.toHaveBeenCalled();
+    expect(relay.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('reconciles the pairing each time the Yjs doc emits an update', async () => {
+    const docHandlers = new Map<string, () => void>();
+    const doc = {
+      on: vi.fn((event: string, handler: () => void) => {
+        docHandlers.set(event, handler);
+      }),
+      off: vi.fn(),
+    };
+    const relay = { publishCapture: vi.fn(), disconnect: vi.fn() };
+    const providers = { disconnect: vi.fn() };
+    const pairing = makePairing();
+
+    createReceiverSyncDocMock.mockReturnValue(doc);
+    connectReceiverSyncProvidersMock.mockReturnValue(providers);
+    connectReceiverSyncRelayMock.mockReturnValue(relay);
+    listReceiverCapturesMock.mockResolvedValue([]);
+
+    const deps = makeDeps({ pairing });
+    renderHook(() => useReceiverSync({} as never, deps as never));
+
+    await waitFor(() => expect(listReceiverCapturesMock).toHaveBeenCalledTimes(1));
+
+    const updateHandler = docHandlers.get('update');
+    expect(updateHandler).toBeDefined();
+
+    listReceiverCapturesMock.mockClear();
+    await act(async () => {
+      updateHandler?.();
+    });
+
+    await waitFor(() => expect(listReceiverCapturesMock).toHaveBeenCalled());
+  });
+
   it('resets retries to local-only when no active pairing remains', async () => {
     const capture = makeCapture({
       pairingId: undefined,

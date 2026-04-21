@@ -5,7 +5,7 @@ slug: /reference/testing-and-validation
 
 # Coop Testing And Validation
 
-Date: April 9, 2026
+Date: April 20, 2026
 
 This document maps the release-facing validation commands to the actual suite graph in
 `scripts/validate.ts`. The canonical stage-based checklist lives in
@@ -14,11 +14,17 @@ boundary lives in [Current Release Status](/reference/current-release-status). T
 deployment steps live in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook). Operator-only
 second-gate guidance lives in [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
-As of April 9, 2026, the automated mock-first release bar is blocked. The current staged-launch
-blockers are the broadened release-critical coverage gate and the broader
-`bun run validate:production-readiness` suite staying red. Manual real-Chrome confirmation of
-popup `Capture Tab` and `Screenshot` success paths remains required after that automated bar is
-green again.
+As of April 19, 2026, the automated mock-first release bar is green. The latest staged-launch
+validation snapshot is:
+
+- `bun run test:coverage` green at `86.56 / 78.02 / 87.19 / 86.56`
+  (statements / branches / functions / lines)
+- `bun run build` green
+- `bun run validate:store-readiness` green
+- `bun run validate:production-readiness` green
+
+Manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths remains
+required before a public Chrome Web Store release candidate is called fully signed off.
 
 ## Core Commands
 

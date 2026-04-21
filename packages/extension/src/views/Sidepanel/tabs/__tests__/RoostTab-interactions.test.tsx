@@ -142,7 +142,12 @@ describe('RoostTab interactions', () => {
     render(<RoostTab {...buildProps()} />);
 
     const focusButton = screen.getByRole('button', { name: /focus/i });
+    const agentButton = screen.getByRole('button', { name: /^agent$/i });
+    const gardenButton = screen.getByRole('button', { name: /^garden$/i });
     expect(focusButton.className).toContain('is-active');
+    expect(focusButton).toHaveAttribute('aria-pressed', 'true');
+    expect(agentButton).toHaveAttribute('aria-pressed', 'false');
+    expect(gardenButton).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByText(/what's next/i)).toBeInTheDocument();
   });
 
@@ -155,16 +160,43 @@ describe('RoostTab interactions', () => {
 
     // Switch to Agent
     await user.click(screen.getByRole('button', { name: /^agent$/i }));
+    expect(screen.getByRole('button', { name: /focus/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /^agent$/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /^garden$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(screen.queryByText(/what's next/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /run now/i })).toBeInTheDocument();
 
     // Switch to Garden
-    await user.click(screen.getByRole('button', { name: /garden/i }));
+    await user.click(screen.getByRole('button', { name: /^garden$/i }));
+    expect(screen.getByRole('button', { name: /focus/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /^agent$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /^garden$/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.queryByRole('button', { name: /run now/i })).not.toBeInTheDocument();
     expect(screen.getByText(/capital & payouts/i)).toBeInTheDocument();
 
     // Switch back to Focus
     await user.click(screen.getByRole('button', { name: /focus/i }));
+    expect(screen.getByRole('button', { name: /focus/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^agent$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /^garden$/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(screen.getByText(/what's next/i)).toBeInTheDocument();
   });
 

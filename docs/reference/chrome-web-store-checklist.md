@@ -5,7 +5,7 @@ slug: /reference/chrome-web-store-checklist
 
 # Chrome Web Store Submission Checklist
 
-Date: March 30, 2026
+Date: April 20, 2026
 
 This is the Chrome Web Store subset of the
 [Production Release Checklist](/reference/production-release-checklist).
@@ -30,9 +30,9 @@ This is the Chrome Web Store subset of the
 6. Verify the built extension surface does not expose remote knowledge-skill import.
 7. Use DevTools on first local-AI initialization and record the actual model-download endpoints.
 
-As of April 9, 2026, the automated staged-launch bar is still blocked before this checklist can be
-used as a release sign-off. Once that automated bar is green again, the manual popup `Capture Tab`
-and `Screenshot` success check remains the last staged-launch blocker.
+As of April 19, 2026, the automated staged-launch bar is green. The remaining staged-launch manual
+gate before sign-off is successful popup `Capture Tab` and `Screenshot` saves in real Chrome,
+alongside the rest of the manual verification list above.
 
 ## Listing And Policy Artifacts
 

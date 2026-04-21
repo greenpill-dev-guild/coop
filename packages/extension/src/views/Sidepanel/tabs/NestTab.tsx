@@ -190,6 +190,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
           {activeCoop ? (
             <nav className="nest-sub-tabs" aria-label="Nest sections">
               <button
+                aria-pressed={nestSubTab === 'members'}
                 className={nestSubTab === 'members' ? 'is-active' : ''}
                 onClick={() => setNestSubTab('members')}
                 type="button"
@@ -202,6 +203,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
                 ) : null}
               </button>
               <button
+                aria-pressed={nestSubTab === 'agent'}
                 className={nestSubTab === 'agent' ? 'is-active' : ''}
                 onClick={() => setNestSubTab('agent')}
                 type="button"
@@ -214,6 +216,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
                 ) : null}
               </button>
               <button
+                aria-pressed={nestSubTab === 'settings'}
                 className={nestSubTab === 'settings' ? 'is-active' : ''}
                 onClick={() => setNestSubTab('settings')}
                 type="button"
@@ -221,6 +224,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
                 Settings
               </button>
               <button
+                aria-pressed={nestSubTab === 'sources'}
                 className={nestSubTab === 'sources' ? 'is-active' : ''}
                 onClick={() => setNestSubTab('sources')}
                 type="button"

@@ -6,14 +6,14 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "backlog",
+      "status": "done",
       "depends_on": ["state"],
       "branch": "claude/ui/production-readiness",
       "ready_when_dependencies_met": true
     },
     "state": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "done",
       "depends_on": [],
       "branch": "codex/state/production-readiness",
       "ready_when_dependencies_met": true
@@ -38,7 +38,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "done",
       "depends_on": ["state"],
       "branch": "handoff/qa-codex/production-readiness",
       "branch_trigger": "handoff/qa-codex/production-readiness",
@@ -46,7 +46,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "backlog",
+      "status": "done",
       "depends_on": ["qa_pass_1", "ui"],
       "branch": "handoff/qa-claude/production-readiness",
       "branch_trigger": "handoff/qa-claude/production-readiness",
@@ -65,5 +65,5 @@
       "rationale": "Validate all flows with mocked onchain/archive before requiring API keys"
     }
   ],
-  "updated_at": "2026-04-09"
+  "updated_at": "2026-04-19"
 }

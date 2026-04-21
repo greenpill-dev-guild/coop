@@ -5,7 +5,7 @@ slug: /reference/current-release-status
 
 # Coop Current Release Status
 
-Date: April 9, 2026
+Date: April 20, 2026
 
 This is the canonical current-state release posture for Coop. Keep `README.md`,
 [Production Release Checklist](/reference/production-release-checklist), [Testing & Validation](/reference/testing-and-validation),
@@ -14,15 +14,13 @@ this page.
 
 ## Current Status
 
-As of April 9, 2026:
+As of April 19, 2026:
 
-- the automated mock-first staged-launch bar is blocked
-- Coop is still documentable and demoable in a mock-first posture, but the automated release gate
-  is not yet honest enough to call green
-- the immediate staged-launch blocker is the broadened release-critical coverage gate and the
-  broader `validate:production-readiness` suite staying red
-- manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths remains
-  required after the automated bar is green again
+- the automated mock-first staged-launch bar is green
+- Coop is documentable and demoable in a mock-first posture with the automated release gate aligned
+  to the shipped surfaces
+- the remaining staged-launch gate before a public Chrome Web Store release is manual real-Chrome
+  confirmation of popup `Capture Tab` and `Screenshot` success paths
 - live Safe, Green Goods, archive, session-capability, and Filecoin registry rails remain a
   separate second gate
 
@@ -40,20 +38,17 @@ bun run validate:production-readiness
 
 What the current result means:
 
-- the bar is currently red because the broadened release-critical coverage run remains below the
-  `85/85/85/70` threshold captured in
-  `.plans/features/production-readiness/eval/qa-report.md`
-- the biggest measured gaps remain in release-critical app hooks and sidepanel codepaths
-- `validate:store-readiness` and the manual Chrome checks still matter, but they do not override a
-  red `production-readiness` gate
+- the bar is green on the latest validated run from April 19, 2026
+- the broadened release-critical coverage run cleared the `85/70/85/85` thresholds at
+  `86.56/78.02/87.19/86.56` (statements / branches / functions / lines)
+- `validate:store-readiness` and `validate:production-readiness` are both green on the current tree
+- manual Chrome checks still matter, but they are now the remaining staged-launch gate rather than
+  a follow-up after a red automated bar
 
-## Remaining Public-Release Blocker
+## Remaining Public-Release Gate
 
-The staged-launch blocker before a public Chrome Web Store release is still the automated
-`production-readiness` bar.
-
-Even after that bar is green again, manual QA in real Chrome is still required for popup `Capture
-Tab` and `Screenshot` success paths.
+Before a public Chrome Web Store release, manual QA in real Chrome is still required for popup
+`Capture Tab` and `Screenshot` success paths even though the automated staged-launch bar is green.
 
 Reason:
 
@@ -120,7 +115,8 @@ Safe to claim:
 - browser-first capture, review, and local AI refinement are implemented
 - receiver pairing and private intake sync are implemented
 - local-first sync uses Yjs with y-webrtc peers and y-websocket support
-- Chrome Web Store packaging and review docs are in place for a mock-first staged launch
+- Chrome Web Store packaging, review docs, and the automated mock-first staged-launch bar are in
+  place for a public candidate
 
 Not safe to blur together:
 
