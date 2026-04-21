@@ -4,6 +4,7 @@ import {
   formatActionRiskAcknowledgementLabel,
   formatActionRiskReviewSummary,
   formatActionRiskTagLabel,
+  hasAcknowledgementRisk,
   requiresExplicitAcknowledgementForItems,
 } from '@coop/shared';
 import type { ReactNode } from 'react';
@@ -24,9 +25,19 @@ function splitRiskBadges(tags: readonly ActionRiskTag[], visibleCount = 2) {
   };
 }
 
-function formatJudgmentHelperLine(tags: readonly ActionRiskTag[]) {
+function formatReviewHelperLine(tags: readonly ActionRiskTag[]) {
   const summary = formatActionRiskReviewSummary(tags);
-  return summary ? `Needs judgment: ${summary}` : null;
+  if (!summary) {
+    return null;
+  }
+
+  if (hasAcknowledgementRisk(tags)) {
+    return `Needs judgment: ${summary}`;
+  }
+
+  return summary.startsWith('this will ')
+    ? `Approval will ${summary.slice('this will '.length)}`
+    : `${summary[0]?.toUpperCase() ?? ''}${summary.slice(1)}`;
 }
 
 function formatAcknowledgementLabel(tags: readonly ActionRiskTag[]) {
@@ -44,7 +55,7 @@ function buildJudgmentCueState(
     riskTags,
     visibleTags: riskBadges.visibleTags,
     overflowCount: riskBadges.overflowCount,
-    helperLine: formatJudgmentHelperLine(riskTags),
+    helperLine: formatReviewHelperLine(riskTags),
     acknowledgementLabel,
     requiresAcknowledgement: requiresExplicitAcknowledgement && Boolean(acknowledgementLabel),
   };
@@ -59,7 +70,7 @@ export function getBundleRiskTags(bundle: ActionBundle): ActionRiskTag[] {
 }
 
 export function planNeedsJudgment(plan: AgentPlan) {
-  return getPlanRiskTags(plan).length > 0;
+  return hasAcknowledgementRisk(getPlanRiskTags(plan));
 }
 
 export function getPlanJudgmentCue(plan: AgentPlan): JudgmentCueState {

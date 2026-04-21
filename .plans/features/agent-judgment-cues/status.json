@@ -46,7 +46,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "ready",
+      "status": "done",
       "depends_on": ["qa_pass_1"],
       "branch": "handoff/qa-claude/agent-judgment-cues",
       "branch_trigger": "handoff/qa-claude/agent-judgment-cues",
@@ -66,9 +66,9 @@
     },
     {
       "id": "D3",
-      "choice": "Require explicit acknowledgement only for live, permission, and destructive risks",
-      "rationale": "Low-risk work should stay passive while high-stakes actions pull the human back into the loop."
+      "choice": "Require explicit acknowledgement only for live, permission, destructive, and permanent-record risks",
+      "rationale": "Low-risk work should stay passive while high-stakes and permanent public-record actions pull the human back into the loop."
     }
   ],
-  "updated_at": "2026-04-19"
+  "updated_at": "2026-04-20"
 }

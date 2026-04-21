@@ -123,7 +123,7 @@ describe('AgentObservationsSection', () => {
     const approveButton = screen.getByRole('button', { name: 'Approve plan' });
     expect(approveButton).toBeDisabled();
 
-    await user.click(screen.getByLabelText('I reviewed the live effect'));
+    await user.click(screen.getByLabelText('I reviewed the irreversible effect'));
     expect(approveButton).toBeEnabled();
 
     await user.click(approveButton);

@@ -637,11 +637,57 @@ describe('operator console', () => {
       const approveButton = screen.getByRole('button', { name: /^approve$/i });
       expect(approveButton).toBeDisabled();
 
-      await user.click(screen.getByLabelText('I reviewed the live effect'));
+      await user.click(screen.getByLabelText('I reviewed the irreversible effect'));
       expect(approveButton).toBeEnabled();
 
       await user.click(approveButton);
       expect(onApproveAction).toHaveBeenCalledWith('bundle-risk');
+    });
+
+    it('renders a permanence-specific warning for irreversible public-record chores', async () => {
+      const user = userEvent.setup();
+      const onApproveAction = vi.fn();
+      const actionQueue: ActionBundle[] = [
+        {
+          id: 'bundle-record',
+          replayId: 'replay-record',
+          actionClass: 'erc8004-register-agent',
+          coopId: 'coop-1',
+          memberId: 'member-1',
+          payload: {},
+          createdAt: '2026-03-12T00:00:00.000Z',
+          expiresAt: '2026-03-13T00:00:00.000Z',
+          policyId: 'policy-1',
+          status: 'proposed',
+          digest: `0x${'aa'.repeat(32)}`,
+          riskTags: ['permanent-record', 'live'],
+          requiresExplicitAcknowledgement: true,
+        },
+      ];
+
+      render(
+        <OperatorConsole
+          {...baseProps}
+          actionQueue={actionQueue}
+          onApproveAction={onApproveAction}
+        />,
+      );
+
+      await expandSection(user, 'Waiting Chores');
+      expect(screen.getByText('Permanent Record')).toBeVisible();
+      expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/Needs judgment: this will create a permanent public record/i),
+      ).toBeVisible();
+
+      const approveButton = screen.getByRole('button', { name: /^approve$/i });
+      expect(approveButton).toBeDisabled();
+
+      await user.click(screen.getByLabelText('I reviewed the permanent public record'));
+      expect(approveButton).toBeEnabled();
+
+      await user.click(approveButton);
+      expect(onApproveAction).toHaveBeenCalledWith('bundle-record');
     });
   });
 

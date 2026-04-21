@@ -4,6 +4,7 @@ import {
   collectActionRiskTags,
   formatActionRiskAcknowledgementLabel,
   formatActionRiskReviewSummary,
+  formatActionRiskTagLabel,
   requiresExplicitAcknowledgementForItems,
 } from '../risk';
 
@@ -50,17 +51,65 @@ describe('action risk classifier', () => {
   });
 
   it('returns permission and destructive risk for irreversible permission changes', () => {
-    expect(
-      classifyActionRisks({ actionClass: 'green-goods-remove-gardener', onchainMode: 'mock' }),
-    ).toEqual({
-      riskTags: ['permission', 'destructive'],
-      requiresExplicitAcknowledgement: true,
-    });
+    const permissionDestructiveActionClasses = [
+      'safe-remove-owner',
+      'safe-swap-owner',
+      'safe-change-threshold',
+      'green-goods-remove-gardener',
+    ] as const;
+
+    for (const actionClass of permissionDestructiveActionClasses) {
+      const mockRisk = classifyActionRisks({ actionClass, onchainMode: 'mock' });
+      expect(mockRisk).toEqual({
+        riskTags: ['permission', 'destructive'],
+        requiresExplicitAcknowledgement: true,
+      });
+      expect(formatActionRiskAcknowledgementLabel(mockRisk.riskTags)).toBe(
+        'I reviewed the irreversible effect',
+      );
+
+      const liveRisk = classifyActionRisks({ actionClass, onchainMode: 'live' });
+      expect(liveRisk).toEqual({
+        riskTags: ['live', 'permission', 'destructive'],
+        requiresExplicitAcknowledgement: true,
+      });
+      expect(formatActionRiskAcknowledgementLabel(liveRisk.riskTags)).toBe(
+        'I reviewed the irreversible effect',
+      );
+    }
+  });
+
+  it('adds permanent-record risk to irreversible public-record actions in live mode only', () => {
+    const permanentRecordActionClasses = [
+      'green-goods-create-garden',
+      'green-goods-create-garden-pools',
+      'green-goods-create-assessment',
+      'green-goods-mint-hypercert',
+      'green-goods-submit-work-submission',
+      'green-goods-submit-impact-report',
+      'erc8004-register-agent',
+      'erc8004-give-feedback',
+    ] as const;
+
+    for (const actionClass of permanentRecordActionClasses) {
+      expect(classifyActionRisks({ actionClass, onchainMode: 'live' })).toEqual({
+        riskTags: ['permanent-record', 'live'],
+        requiresExplicitAcknowledgement: true,
+      });
+
+      expect(classifyActionRisks({ actionClass, onchainMode: 'mock' })).toEqual({
+        riskTags: [],
+        requiresExplicitAcknowledgement: false,
+      });
+    }
   });
 });
 
 describe('action risk formatters', () => {
   it('formats the deterministic review summaries', () => {
+    expect(formatActionRiskReviewSummary(['permanent-record', 'live'])).toBe(
+      'this will create a permanent public record',
+    );
     expect(formatActionRiskReviewSummary(['live', 'sync'])).toBe(
       'this will affect live external state',
     );
@@ -82,11 +131,20 @@ describe('action risk formatters', () => {
   });
 
   it('formats acknowledgement labels for the high-risk tags only', () => {
+    expect(formatActionRiskAcknowledgementLabel(['permanent-record', 'live'])).toBe(
+      'I reviewed the permanent public record',
+    );
+    expect(formatActionRiskAcknowledgementLabel(['permanent-record', 'live', 'destructive'])).toBe(
+      'I reviewed the permanent public record',
+    );
     expect(formatActionRiskAcknowledgementLabel(['live', 'sync'])).toBe(
       'I reviewed the live effect',
     );
     expect(formatActionRiskAcknowledgementLabel(['permission'])).toBe(
       'I reviewed the permission change',
+    );
+    expect(formatActionRiskAcknowledgementLabel(['permission', 'destructive'])).toBe(
+      'I reviewed the irreversible effect',
     );
     expect(formatActionRiskAcknowledgementLabel(['destructive'])).toBe(
       'I reviewed the irreversible effect',
@@ -94,15 +152,20 @@ describe('action risk formatters', () => {
     expect(formatActionRiskAcknowledgementLabel(['publish'])).toBeNull();
   });
 
+  it('formats the permanence badge label', () => {
+    expect(formatActionRiskTagLabel('permanent-record')).toBe('Permanent Record');
+  });
+
   it('collects and orders risk tags deterministically across multiple items', () => {
     expect(
       collectActionRiskTags([
         { riskTags: ['sync', 'archive'] },
         null,
+        { riskTags: ['permanent-record'] },
         { riskTags: ['permission', 'archive'] },
         { riskTags: ['live'] },
       ]),
-    ).toEqual(['live', 'permission', 'archive', 'sync']);
+    ).toEqual(['permanent-record', 'live', 'permission', 'archive', 'sync']);
   });
 
   it('requires acknowledgement when an item explicitly requests it or carries a high-risk tag', () => {

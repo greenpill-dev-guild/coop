@@ -1,6 +1,7 @@
 import type { ActionRiskTag, IntegrationMode, PolicyActionClass } from '../../contracts/schema';
 
 export const actionRiskPriority: readonly ActionRiskTag[] = [
+  'permanent-record',
   'live',
   'permission',
   'destructive',
@@ -14,6 +15,7 @@ const ACTION_RISK_PRIORITY_INDEX = new Map(
 );
 
 const ACTION_RISKS_REQUIRING_ACKNOWLEDGEMENT = new Set<ActionRiskTag>([
+  'permanent-record',
   'live',
   'permission',
   'destructive',
@@ -42,6 +44,17 @@ const DESTRUCTIVE_ACTION_CLASSES = new Set<PolicyActionClass>([
   'safe-swap-owner',
   'safe-change-threshold',
   'green-goods-remove-gardener',
+]);
+
+const PERMANENT_RECORD_ACTION_CLASSES = new Set<PolicyActionClass>([
+  'green-goods-create-garden',
+  'green-goods-create-garden-pools',
+  'green-goods-create-assessment',
+  'green-goods-mint-hypercert',
+  'green-goods-submit-work-submission',
+  'green-goods-submit-impact-report',
+  'erc8004-register-agent',
+  'erc8004-give-feedback',
 ]);
 
 const ONCHAIN_ACTION_CLASSES = new Set<PolicyActionClass>([
@@ -104,6 +117,9 @@ export function classifyActionRisks(input: {
   if (DESTRUCTIVE_ACTION_CLASSES.has(input.actionClass)) {
     tags.push('destructive');
   }
+  if (input.onchainMode === 'live' && PERMANENT_RECORD_ACTION_CLASSES.has(input.actionClass)) {
+    tags.push('permanent-record');
+  }
   if (input.onchainMode === 'live' && ONCHAIN_ACTION_CLASSES.has(input.actionClass)) {
     tags.push('live');
   }
@@ -151,6 +167,8 @@ export function formatActionRiskTagLabel(tag: ActionRiskTag) {
       return 'Archive';
     case 'sync':
       return 'Sync';
+    case 'permanent-record':
+      return 'Permanent Record';
     case 'permission':
       return 'Permission';
     case 'live':
@@ -162,6 +180,8 @@ export function formatActionRiskTagLabel(tag: ActionRiskTag) {
 
 export function formatActionRiskReviewSummary(tags: readonly ActionRiskTag[]): string | null {
   switch (getHighestPriorityActionRiskTag(tags)) {
+    case 'permanent-record':
+      return 'this will create a permanent public record';
     case 'live':
       return 'this will affect live external state';
     case 'permission':
@@ -183,6 +203,15 @@ export function formatActionRiskAcknowledgementLabel(
   tags: readonly ActionRiskTag[],
 ): string | null {
   const prioritized = sortActionRiskTags(tags);
+
+  if (prioritized.includes('permanent-record')) {
+    return 'I reviewed the permanent public record';
+  }
+
+  if (prioritized.includes('permission') && prioritized.includes('destructive')) {
+    return 'I reviewed the irreversible effect';
+  }
+
   const primaryHighRisk = prioritized.find((tag) =>
     ACTION_RISKS_REQUIRING_ACKNOWLEDGEMENT.has(tag),
   );

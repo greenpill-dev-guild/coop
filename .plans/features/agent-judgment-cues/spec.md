@@ -4,7 +4,7 @@
 **Status**: Active
 **Source Branch**: `main`
 **Created**: `2026-04-18`
-**Last Updated**: `2026-04-18`
+**Last Updated**: `2026-04-20`
 
 ## Summary
 
@@ -17,7 +17,7 @@ cards.
 - The harness already had proposal-first review boundaries, but users still had to infer which
   approvals were routine and which needed judgment.
 - Agent output is now faster than review attention; passive cues keep low-risk work light while
-  making live, permission, and destructive actions visibly heavier.
+  making live, permission, destructive, and permanent-record actions visibly heavier.
 
 ## Scope
 
@@ -33,13 +33,14 @@ cards.
 
 - new screens, tabs, modals, or standalone review components
 - approval policy rewrites or auto-run eligibility changes
-- API or contract changes
+- API changes or chain contract changes
 
 ## User-Facing Outcome
 
 - low-risk chores keep the same lightweight review flow
-- publish, sync, archive, permission, destructive, and live actions now show passive risk badges and
-  one-line review framing
+- publish, sync, and archive actions now show passive risk badges with lightweight approval copy
+- permanent public-record actions now show an explicit permanence cue
+- permission, destructive, live, and permanent-record actions keep one-line judgment framing
 - high-risk approvals and executions require a narrow inline acknowledgement before the primary
   button enables
 
@@ -65,7 +66,8 @@ cards.
 ## Acceptance Criteria
 
 - [x] Action proposals and bundles persist deterministic risk metadata.
-- [x] Roost shows “Needs Judgment” only when pending plans carry risk tags.
+- [x] Roost shows “Needs Judgment” only when pending plans carry live, permission, destructive, or
+      permanent-record risk.
 - [x] Nest helper plans and waiting chores render matching risk cues.
 - [x] High-risk actions require inline acknowledgement before approval or execution.
 - [x] `bun run validate quick` passes.

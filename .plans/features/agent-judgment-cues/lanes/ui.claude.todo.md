@@ -12,13 +12,16 @@ depends_on:
 owned_paths:
   - packages/extension/src/views/Sidepanel/operator-sections
   - packages/extension/src/views/Sidepanel/tabs
-  - packages/extension/src/views/Sidepanel/review-risk.ts
-updated: 2026-04-18
+  - packages/extension/src/views/Sidepanel/review-risk.tsx
+updated: 2026-04-20
 ---
 
 # UI Lane
 
 - Reused existing badges, helper text, and action rows in Roost and Nest.
-- Added passive risk badges plus deterministic “Needs judgment” helper copy.
-- Added inline acknowledgement only for live, permission, and destructive actions.
+- Added passive risk badges plus deterministic review helper copy.
+- Added inline acknowledgement only for live, permission, destructive, and permanent-record actions.
 - Kept low-risk approvals visually light and unchanged in flow.
+- Post-release simplification pass (2026-04-20): publish, archive, and sync-only plans stay in
+  approval framing; “Needs judgment” helper copy remains reserved for live, permission,
+  destructive, and permanent-record work.

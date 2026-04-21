@@ -44,6 +44,7 @@ export const actionRiskTagSchema = z.enum([
   'publish',
   'archive',
   'sync',
+  'permanent-record',
   'permission',
   'live',
   'destructive',
