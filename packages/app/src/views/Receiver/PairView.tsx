@@ -21,6 +21,93 @@ type PairViewProps = {
   onCancelPairing: () => void;
 };
 
+const LockIcon = (
+  <svg
+    className="receiver-label__icon"
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const CloseIcon = (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const AlertIcon = (
+  <svg
+    className="pair-error-banner__icon"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+const ShieldIcon = (
+  <svg
+    className="pair-confirm-header__icon"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
+const CheckIcon = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export function PairView({
   pairingInput,
   onPairingInputChange,
@@ -55,6 +142,7 @@ export function PairView({
           }}
         >
           <label className="receiver-label" htmlFor="pairing-payload">
+            {LockIcon}
             Nest code or coop link
           </label>
           <textarea
@@ -63,8 +151,8 @@ export function PairView({
             placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../pair#payload=..."
             value={pairingInput}
           />
-          <div className="cta-row">
-            <Button variant="primary" type="submit">
+          <div className="cta-row pair-cta-row">
+            <Button variant="primary" type="submit" className="pair-cta-primary">
               Check nest code
             </Button>
             <Button variant="secondary" onClick={() => void onStartQrScanner()}>
@@ -88,24 +176,41 @@ export function PairView({
             }}
             onClose={onStopQrScanner}
           >
-            <video autoPlay className="nest-photo" muted playsInline ref={qrVideoRef} />
-            <div className="cta-row">
-              <button
-                className="button button-secondary"
-                onClick={onStopQrScanner}
-                ref={qrStopButtonRef}
-                type="button"
-              >
-                Stop scanner
-              </button>
+            <div className="qr-scanner-viewport">
+              <video autoPlay className="nest-photo" muted playsInline ref={qrVideoRef} />
+              <div className="qr-viewfinder" aria-hidden="true" />
             </div>
+            <button
+              className="qr-scanner-close"
+              onClick={onStopQrScanner}
+              ref={qrStopButtonRef}
+              type="button"
+              aria-label="Close scanner"
+            >
+              {CloseIcon}
+            </button>
           </dialog>
         ) : null}
-        {qrScanError ? <p className="receiver-error">{qrScanError}</p> : null}
-        {pairingError ? <p className="receiver-error">{pairingError}</p> : null}
+        {qrScanError ? (
+          <div className="pair-error-banner" role="alert">
+            {AlertIcon}
+            <span>{qrScanError}</span>
+          </div>
+        ) : null}
+        {pairingError ? (
+          <div className="pair-error-banner" role="alert">
+            {AlertIcon}
+            <span>{pairingError}</span>
+          </div>
+        ) : null}
         {pendingPairing ? (
-          <div className="stack">
-            <p className="quiet-note">Check this code before this phone joins the private nest.</p>
+          <div className="pair-confirm-card">
+            <div className="pair-confirm-header">
+              {ShieldIcon}
+              <p className="quiet-note">
+                Check this code before this phone joins the private nest.
+              </p>
+            </div>
             <div className="detail-grid">
               <div>
                 <strong>Coop</strong>
@@ -125,7 +230,7 @@ export function PairView({
               </div>
             </div>
             <div className="cta-row">
-              <Button variant="primary" onClick={onConfirmPairing}>
+              <Button variant="primary" onClick={onConfirmPairing} className="pair-join-button">
                 Join this coop
               </Button>
               <Button variant="secondary" onClick={onCancelPairing}>
@@ -137,17 +242,31 @@ export function PairView({
       </Card>
 
       <Card>
-        <p className="eyebrow">What this nest code adds</p>
-        <ul className="check-list">
-          <li>Device-local receiver identity</li>
-          <li>Current coop and member context</li>
-          <li>Private sync room details for extension intake</li>
-          <li>Nothing publishes to shared coop memory automatically</li>
-        </ul>
-        <p className="quiet-note">
-          Existing local captures stay local until a valid nest code is accepted, whether the
-          extension is running locally or against the production PWA.
-        </p>
+        <div className="pair-info-card">
+          <p className="eyebrow">What this nest code adds</p>
+          <ul className="pair-checklist">
+            <li>
+              {CheckIcon}
+              <span>Device-local receiver identity</span>
+            </li>
+            <li>
+              {CheckIcon}
+              <span>Current coop and member context</span>
+            </li>
+            <li>
+              {CheckIcon}
+              <span>Private sync room details for extension intake</span>
+            </li>
+            <li>
+              {CheckIcon}
+              <span>Nothing publishes to shared coop memory automatically</span>
+            </li>
+          </ul>
+          <p className="quiet-note">
+            Existing local captures stay local until a valid nest code is accepted, whether the
+            extension is running locally or against the production PWA.
+          </p>
+        </div>
       </Card>
     </section>
   );

@@ -3932,20 +3932,162 @@ html.has-receiver {
 }
 
 .receiver-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-weight: 700;
   color: var(--coop-brown);
+}
+
+.receiver-label__icon {
+  color: var(--coop-green);
+  flex-shrink: 0;
 }
 
 .receiver-form textarea {
   width: 100%;
   min-height: 11rem;
   padding: 1rem 1.1rem;
-  border-radius: var(--coop-radius-card);
-  border: 1px solid var(--coop-line);
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: var(--coop-radius-input);
+  border: 2px solid var(--coop-line);
+  background: var(--coop-surface-input);
   color: var(--coop-brown);
   resize: vertical;
   font: inherit;
+  font-family: var(--coop-font-mono);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  transition: border-color var(--coop-ease), box-shadow var(--coop-ease);
+}
+
+.receiver-form textarea::placeholder {
+  color: var(--coop-placeholder);
+  font-family: var(--coop-font-body);
+  font-size: 0.88rem;
+  opacity: 0.7;
+}
+
+.receiver-form textarea:focus {
+  outline: none;
+  border-color: var(--coop-green);
+  box-shadow: 0 0 0 3px var(--coop-green-16);
+}
+
+/* ── Pairing CTA row ── */
+
+.pair-cta-row {
+  margin-top: 0.4rem;
+}
+
+.pair-cta-primary {
+  flex: 1 1 auto;
+  min-width: 10rem;
+}
+
+/* ── Pairing error banner ── */
+
+.pair-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--coop-radius-chip);
+  border-left: 3px solid var(--coop-error);
+  background: color-mix(in srgb, var(--coop-error) 8%, transparent);
+  color: var(--coop-error);
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.pair-error-banner__icon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+/* ── Pending pairing confirmation card ── */
+
+.pair-confirm-card {
+  display: grid;
+  gap: var(--coop-space-md);
+  padding: 1rem 1.1rem;
+  border-radius: var(--coop-radius-input);
+  border-left: 4px solid var(--coop-green);
+  background: var(--coop-green-12);
+}
+
+.pair-confirm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.pair-confirm-header__icon {
+  flex-shrink: 0;
+  color: var(--coop-green);
+  margin-top: 0.1rem;
+}
+
+.pair-confirm-header .quiet-note {
+  margin: 0;
+  opacity: 1;
+  font-weight: 600;
+  color: var(--coop-text);
+}
+
+.pair-confirm-card .detail-grid {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--coop-radius-sm);
+  background: var(--coop-surface-card);
+}
+
+.button.pair-join-button {
+  background: var(--coop-green);
+  color: white;
+}
+
+/* ── Info card with checklist ── */
+
+.pair-info-card {
+  position: relative;
+}
+
+.pair-info-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -12% -18% auto;
+  width: 10rem;
+  height: 10rem;
+  border-radius: var(--coop-radius-pill);
+  background: radial-gradient(circle, var(--coop-green-14), transparent 68%);
+  pointer-events: none;
+}
+
+.pair-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pair-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--coop-text);
+}
+
+.pair-checklist li svg {
+  flex-shrink: 0;
+  color: var(--coop-green);
+  margin-top: 0.15rem;
+}
+
+.pair-info-card .quiet-note {
+  margin-top: 0.65rem;
 }
 
 .receiver-error {
@@ -4516,18 +4658,97 @@ audio {
 /* ── QR scanner dialog ── */
 
 .qr-scanner-dialog {
+  position: relative;
   border: none;
-  padding: var(--coop-space-md);
+  padding: var(--coop-space-lg);
   max-width: min(24rem, calc(100vw - 2rem));
   width: 100%;
-  border-radius: var(--coop-radius-card);
+  border-radius: var(--coop-radius-card-xl);
   background: rgba(255, 252, 249, 0.96);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--coop-shadow-lg);
+  overflow: hidden;
 }
 
 .qr-scanner-dialog::backdrop {
+  background: rgba(39, 20, 14, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.qr-scanner-viewport {
+  position: relative;
+  border-radius: var(--coop-radius-input);
+  overflow: hidden;
+}
+
+.qr-scanner-viewport video {
+  display: block;
+  border-radius: var(--coop-radius-input);
+}
+
+/* Viewfinder corner markers — 4 L-shaped corners in orange */
+.qr-viewfinder {
+  position: absolute;
+  inset: 12%;
+  pointer-events: none;
+  /* Top-right and bottom-right corners via background gradients */
+  background:
+    linear-gradient(var(--coop-orange), var(--coop-orange)) 100% 0 / 24px 3px no-repeat,
+    linear-gradient(var(--coop-orange), var(--coop-orange)) 100% 0 / 3px 24px no-repeat,
+    linear-gradient(var(--coop-orange), var(--coop-orange)) 100% 100% / 24px 3px no-repeat,
+    linear-gradient(var(--coop-orange), var(--coop-orange)) 100% 100% / 3px 24px no-repeat;
+}
+
+/* Top-left corner */
+.qr-viewfinder::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-top: 3px solid var(--coop-orange);
+  border-left: 3px solid var(--coop-orange);
+  border-top-left-radius: 6px;
+}
+
+/* Bottom-left corner */
+.qr-viewfinder::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-bottom: 3px solid var(--coop-orange);
+  border-left: 3px solid var(--coop-orange);
+  border-bottom-left-radius: 6px;
+}
+
+/* Floating close button */
+.qr-scanner-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
   background: rgba(39, 20, 14, 0.6);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--coop-ease);
+  z-index: var(--coop-z-sticky);
+}
+
+.qr-scanner-close:hover {
+  background: rgba(39, 20, 14, 0.8);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -5374,6 +5595,22 @@ audio {
 
   .receiver-form textarea {
     background: rgba(30, 24, 20, 0.82);
+  }
+
+  .pair-error-banner {
+    background: color-mix(in srgb, var(--coop-error) 12%, transparent);
+  }
+
+  .pair-confirm-card {
+    background: color-mix(in srgb, var(--coop-green) 10%, transparent);
+  }
+
+  .qr-scanner-close {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .qr-scanner-close:hover {
+    background: rgba(0, 0, 0, 0.7);
   }
 
   .board-topbar,
