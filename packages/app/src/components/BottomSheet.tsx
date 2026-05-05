@@ -68,7 +68,9 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <div className="bottom-sheet-handle" aria-hidden="true" />
+        <div className="bottom-sheet-handle" aria-hidden="true">
+          <div className="bottom-sheet-handle-bar" />
+        </div>
         {title ? <h2 className="bottom-sheet-title">{title}</h2> : null}
         <div className="bottom-sheet-body">{children}</div>
       </div>
