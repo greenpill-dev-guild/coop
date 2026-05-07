@@ -1,0 +1,89 @@
+{
+  "$schema": "status-schema",
+  "feature": "ux-surface-clarity",
+  "title": "UX Surface Clarity",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": [],
+      "branch": "claude/ui/ux-surface-clarity",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/state/ux-surface-clarity",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/ux-surface-clarity"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/ux-surface-clarity"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/ux-surface-clarity"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["ui", "state"],
+      "branch": "handoff/qa-codex/ux-surface-clarity",
+      "branch_trigger": "handoff/qa-codex/ux-surface-clarity",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/ux-surface-clarity",
+      "branch_trigger": "handoff/qa-claude/ux-surface-clarity",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Position v1 as a local-first browser assistant for turning scattered knowledge into reviewed opportunities and shared memory for a community or project",
+      "rationale": "The v1 promise should be readable in one line and should not require users to understand agent control planes, onchain rails, or internal graph mechanics."
+    },
+    {
+      "id": "D2",
+      "choice": "Hide advanced rails by default instead of deleting code",
+      "rationale": "Store-readiness and production-readiness are green; removing working modules before submission adds release risk while hiding them improves surface clarity."
+    },
+    {
+      "id": "D3",
+      "choice": "Add a persisted simple/advanced UI mode through existing UI preferences",
+      "rationale": "The existing Dexie plus chrome.storage sync path already carries browser UI preferences, so this avoids build flags, env sprawl, or a new feature-flag system."
+    },
+    {
+      "id": "D4",
+      "choice": "Default simple mode should expose capture, review, focus, sharing, members, and basic settings",
+      "rationale": "A new user should understand Coop as a friendly project/community tool, not as an agent dashboard."
+    },
+    {
+      "id": "D5",
+      "choice": "Keep advanced mode available for trusted operators and builders",
+      "rationale": "Autoresearch, sources, proof details, FVM, stealth, policy, permits, and debugging surfaces are useful for builders but should not be part of the default product story."
+    },
+    {
+      "id": "D6",
+      "choice": "Keep popup changes conservative",
+      "rationale": "The popup is already the strongest simple surface; this pass should only hide obvious advanced controls and avoid broad layout churn."
+    }
+  ],
+  "updated_at": "2026-05-06"
+}

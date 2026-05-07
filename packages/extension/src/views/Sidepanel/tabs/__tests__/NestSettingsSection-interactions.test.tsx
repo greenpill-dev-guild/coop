@@ -93,6 +93,7 @@ function buildProps(overrides: Partial<NestSettingsSectionProps> = {}): NestSett
       },
       uiPreferences: {
         localInferenceOptIn: false,
+        uiMode: 'simple',
         agentCadenceMinutes: 64,
         captureOnClose: false,
         notificationsEnabled: true,
@@ -148,6 +149,47 @@ function buildProps(overrides: Partial<NestSettingsSectionProps> = {}): NestSett
 }
 
 describe('NestSettingsSection interactions', () => {
+  it('updates the advanced controls preference from the browser-local settings card', async () => {
+    const user = userEvent.setup();
+    const updateUiPreferences = vi.fn(async () => null);
+
+    render(<NestSettingsSection {...buildProps({ updateUiPreferences })} />);
+
+    await user.selectOptions(screen.getByLabelText(/show advanced controls/i), 'advanced');
+
+    expect(updateUiPreferences).toHaveBeenCalledWith({ uiMode: 'advanced' });
+  });
+
+  it('hides advanced settings cards in simple mode', () => {
+    render(<NestSettingsSection {...buildProps()} />);
+
+    expect(screen.queryByRole('heading', { name: /privacy exclusions/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /nest setup/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /local helper/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^data$/i })).not.toBeInTheDocument();
+  });
+
+  it('restores advanced settings cards in advanced mode', () => {
+    render(
+      <NestSettingsSection
+        {...buildProps({
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as NestSettingsSectionProps['dashboard'],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: /privacy exclusions/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /nest setup/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /local helper/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^data$/i })).toBeInTheDocument();
+  });
+
   it('updates coop cadence and capture-on-close preferences', async () => {
     const user = userEvent.setup();
     const tabCapture = {
@@ -160,6 +202,13 @@ describe('NestSettingsSection interactions', () => {
     render(
       <NestSettingsSection
         {...buildProps({
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as NestSettingsSectionProps['dashboard'],
           tabCapture: tabCapture as unknown as NestSettingsSectionProps['tabCapture'],
         })}
       />,
@@ -227,6 +276,7 @@ describe('NestSettingsSection interactions', () => {
             ...buildProps().dashboard,
             uiPreferences: {
               ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
               customExcludedDomains: ['already-blocked.com', 'remove-me.com'],
             },
           } as NestSettingsSectionProps['dashboard'],
@@ -264,6 +314,13 @@ describe('NestSettingsSection interactions', () => {
     render(
       <NestSettingsSection
         {...buildProps({
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as NestSettingsSectionProps['dashboard'],
           toggleLocalInferenceOptIn,
         })}
       />,

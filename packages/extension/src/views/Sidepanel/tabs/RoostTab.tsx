@@ -46,6 +46,7 @@ export interface RoostTabProps {
   onApproveAgentPlan: (planId: string) => Promise<void>;
   onRejectAgentPlan: (planId: string, reason?: string) => Promise<void>;
   onOpenSynthesisSegment: (segment: Extract<SidepanelIntentSegment, 'review'>) => void;
+  uiMode?: 'simple' | 'advanced';
 }
 
 export function RoostTab({
@@ -63,6 +64,7 @@ export function RoostTab({
   onApproveAgentPlan,
   onRejectAgentPlan,
   onOpenSynthesisSegment,
+  uiMode = 'simple',
 }: RoostTabProps) {
   // ---------------------------------------------------------------------------
   // Sub-tab state
@@ -119,6 +121,9 @@ export function RoostTab({
       [],
     [agentDashboard],
   );
+  const isAdvancedMode = uiMode === 'advanced';
+  const showAgentTab = isAdvancedMode || pendingPlans.length > 0;
+  const showGardenTab = isAdvancedMode || Boolean(activeCoop?.greenGoods?.enabled);
 
   const recentObservations = useMemo(
     () => agentDashboard?.observations.slice(0, 5) ?? [],
@@ -163,8 +168,16 @@ export function RoostTab({
   }, [activeCoopId]);
 
   useEffect(() => {
-    if (roostSubTab === 'agent') void fetchKnowledgeStats();
-  }, [roostSubTab, fetchKnowledgeStats]);
+    if (roostSubTab === 'agent' && !showAgentTab) {
+      setRoostSubTab('focus');
+      return;
+    }
+    if (roostSubTab === 'garden' && !showGardenTab) {
+      setRoostSubTab('focus');
+      return;
+    }
+    if (roostSubTab === 'agent' && isAdvancedMode) void fetchKnowledgeStats();
+  }, [fetchKnowledgeStats, isAdvancedMode, roostSubTab, showAgentTab, showGardenTab]);
 
   const focusBadge = (summary?.pendingDrafts ?? 0) + (summary?.staleObservationCount ?? 0);
   const agentBadge = pendingPlans.length;
@@ -227,28 +240,32 @@ export function RoostTab({
               <span className="nest-badge">{focusBadge > 99 ? '99+' : focusBadge}</span>
             ) : null}
           </button>
-          <button
-            aria-pressed={roostSubTab === 'agent'}
-            className={roostSubTab === 'agent' ? 'is-active' : ''}
-            onClick={() => setRoostSubTab('agent')}
-            type="button"
-          >
-            Agent
-            {agentBadge > 0 ? (
-              <span className="nest-badge">{agentBadge > 99 ? '99+' : agentBadge}</span>
-            ) : null}
-          </button>
-          <button
-            aria-pressed={roostSubTab === 'garden'}
-            className={roostSubTab === 'garden' ? 'is-active' : ''}
-            onClick={() => setRoostSubTab('garden')}
-            type="button"
-          >
-            Garden
-            {gardenBadge > 0 ? (
-              <span className="nest-badge">{gardenBadge > 99 ? '99+' : gardenBadge}</span>
-            ) : null}
-          </button>
+          {showAgentTab ? (
+            <button
+              aria-pressed={roostSubTab === 'agent'}
+              className={roostSubTab === 'agent' ? 'is-active' : ''}
+              onClick={() => setRoostSubTab('agent')}
+              type="button"
+            >
+              Agent
+              {agentBadge > 0 ? (
+                <span className="nest-badge">{agentBadge > 99 ? '99+' : agentBadge}</span>
+              ) : null}
+            </button>
+          ) : null}
+          {showGardenTab ? (
+            <button
+              aria-pressed={roostSubTab === 'garden'}
+              className={roostSubTab === 'garden' ? 'is-active' : ''}
+              onClick={() => setRoostSubTab('garden')}
+              type="button"
+            >
+              Garden
+              {gardenBadge > 0 ? (
+                <span className="nest-badge">{gardenBadge > 99 ? '99+' : gardenBadge}</span>
+              ) : null}
+            </button>
+          ) : null}
         </nav>
       </SidepanelSubheader>
 
@@ -269,7 +286,7 @@ export function RoostTab({
       {/* ================================================================= */}
       {/* Agent sub-tab                                                     */}
       {/* ================================================================= */}
-      {roostSubTab === 'agent' ? (
+      {roostSubTab === 'agent' && showAgentTab ? (
         <AgentSection
           summary={summary}
           lastCompletedRun={lastCompletedRun}
@@ -280,6 +297,7 @@ export function RoostTab({
           knowledgeTopics={knowledgeTopics}
           knowledgeStats={knowledgeStats}
           decisions={decisions}
+          advancedControls={isAdvancedMode}
           onRunAgentCycle={onRunAgentCycle}
           onApproveAgentPlan={onApproveAgentPlan}
           onRejectAgentPlan={onRejectAgentPlan}
@@ -289,7 +307,7 @@ export function RoostTab({
       {/* ================================================================= */}
       {/* Garden sub-tab                                                    */}
       {/* ================================================================= */}
-      {roostSubTab === 'garden' ? (
+      {roostSubTab === 'garden' && showGardenTab ? (
         <GardenSection
           activeCoop={activeCoop}
           activeMember={activeMember}

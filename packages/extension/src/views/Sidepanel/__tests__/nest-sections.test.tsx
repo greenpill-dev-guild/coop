@@ -732,6 +732,7 @@ describe('NestSettingsSection', () => {
         },
         uiPreferences: {
           localInferenceOptIn: false,
+          uiMode: 'advanced',
           agentCadenceMinutes: 64,
           captureOnClose: false,
           notificationsEnabled: true,
@@ -930,6 +931,14 @@ describe('NestArchiveSection', () => {
     expect(screen.getByRole('button', { name: /export saved proof json/i })).toBeInTheDocument();
   });
 
+  it('hides Export saved proof JSON when advanced controls are off', () => {
+    render(<NestArchiveSection {...baseProps({ advancedControls: false })} />);
+
+    expect(
+      screen.queryByRole('button', { name: /export saved proof json/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('fires archiveSnapshot on Save click', async () => {
     const archiveSnapshot = vi.fn();
     const user = userEvent.setup();
@@ -986,6 +995,7 @@ describe('NestTab', () => {
         },
         uiPreferences: {
           localInferenceOptIn: false,
+          uiMode: 'advanced',
           agentCadenceMinutes: 64,
           captureOnClose: false,
           notificationsEnabled: true,
@@ -1150,6 +1160,43 @@ describe('NestTab', () => {
     expect(screen.getByText('My Preferences')).toBeInTheDocument();
     // Archive section visible in settings
     expect(screen.getByText('Save and Export')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /export saved proof json/i })).toBeInTheDocument();
+    expect(screen.getByTestId('archive-setup-wizard')).toBeInTheDocument();
+  });
+
+  it('hides proof export and Filecoin setup in simple settings mode', async () => {
+    const user = userEvent.setup();
+    const { orchestration } = baseOrchestration();
+    const dashboard = orchestration.dashboard;
+    if (!dashboard) {
+      throw new Error('Expected dashboard fixture to be initialized');
+    }
+
+    render(
+      <NestTab
+        orchestration={
+          {
+            ...orchestration,
+            dashboard: {
+              ...dashboard,
+              uiPreferences: {
+                ...dashboard.uiPreferences,
+                uiMode: 'simple',
+              },
+            },
+          } as SidepanelOrchestration
+        }
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /settings/i }));
+
+    expect(screen.getByText('My Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Save and Export')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /export saved proof json/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('archive-setup-wizard')).not.toBeInTheDocument();
   });
 
   it('does not show sub-tab navigation when no activeCoop', () => {

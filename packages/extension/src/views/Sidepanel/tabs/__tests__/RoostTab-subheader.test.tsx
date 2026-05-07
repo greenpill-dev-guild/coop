@@ -153,13 +153,42 @@ describe('RoostTab subheader integration', () => {
     expect(activeTag?.textContent).toBe('Alpha Coop');
   });
 
-  it('renders Focus, Agent, and Garden sub-tab pills', () => {
+  it('renders only Focus by default in simple mode', () => {
     render(<RoostTab {...buildProps()} />);
 
     const nav = document.querySelector('.nest-sub-tabs');
     expect(nav).not.toBeNull();
     expect(screen.getByRole('button', { name: /focus/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^agent$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /garden/i })).not.toBeInTheDocument();
+  });
+
+  it('restores Agent and Garden sub-tab pills in advanced mode', () => {
+    render(<RoostTab {...buildProps({ uiMode: 'advanced' })} />);
+
+    expect(screen.getByRole('button', { name: /focus/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^agent$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /garden/i })).toBeInTheDocument();
+  });
+
+  it('shows Garden in simple mode when Green Goods is enabled', () => {
+    const props = buildProps();
+    const activeCoop = props.activeCoop;
+    if (!activeCoop) {
+      throw new Error('Expected active coop fixture to be initialized');
+    }
+    const greenGoodsCoop = {
+      ...activeCoop,
+      greenGoods: {
+        enabled: true,
+        memberBindings: [],
+      },
+    } as unknown as CoopSharedState;
+
+    render(<RoostTab {...props} activeCoop={greenGoodsCoop} allCoops={[greenGoodsCoop]} />);
+
+    expect(screen.getByRole('button', { name: /focus/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^agent$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /garden/i })).toBeInTheDocument();
   });
 

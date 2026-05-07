@@ -122,6 +122,7 @@ export const preferredExportMethodSchema = z.enum(['download', 'file-picker']);
 export const uiPreferencesSchema = z.object({
   notificationsEnabled: z.boolean().default(true),
   localInferenceOptIn: z.boolean().default(true),
+  uiMode: z.enum(['simple', 'advanced']).default('simple'),
   preferredExportMethod: preferredExportMethodSchema.default('download'),
   heartbeatEnabled: z.boolean().default(true),
   agentCadenceMinutes: z

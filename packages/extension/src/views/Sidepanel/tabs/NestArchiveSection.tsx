@@ -9,6 +9,7 @@ export interface NestArchiveSectionProps {
   archiveSnapshot: () => Promise<void>;
   exportSnapshot: (format: 'json' | 'text') => Promise<void>;
   exportLatestReceipt: (format: 'json' | 'text') => Promise<void>;
+  advancedControls?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,7 @@ export function NestArchiveSection({
   archiveSnapshot,
   exportSnapshot,
   exportLatestReceipt,
+  advancedControls = true,
 }: NestArchiveSectionProps) {
   return (
     <article className="panel-card">
@@ -30,13 +32,15 @@ export function NestArchiveSection({
         <button className="secondary-button" onClick={() => exportSnapshot('json')} type="button">
           Export JSON snapshot
         </button>
-        <button
-          className="secondary-button"
-          onClick={() => exportLatestReceipt('json')}
-          type="button"
-        >
-          Export saved proof JSON
-        </button>
+        {advancedControls ? (
+          <button
+            className="secondary-button"
+            onClick={() => exportLatestReceipt('json')}
+            type="button"
+          >
+            Export saved proof JSON
+          </button>
+        ) : null}
       </div>
     </article>
   );

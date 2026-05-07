@@ -128,6 +128,7 @@ function buildProps(overrides: Partial<RoostTabProps> = {}): RoostTabProps {
     onApproveAgentPlan: vi.fn(),
     onRejectAgentPlan: vi.fn(),
     onOpenSynthesisSegment: vi.fn(),
+    uiMode: 'simple',
     ...overrides,
   };
 }
@@ -138,22 +139,21 @@ afterEach(() => {
 });
 
 describe('RoostTab interactions', () => {
-  it('defaults to the Focus sub-tab', () => {
+  it('defaults to the Focus sub-tab and hides advanced subtabs in simple mode', () => {
     render(<RoostTab {...buildProps()} />);
 
     const focusButton = screen.getByRole('button', { name: /focus/i });
-    const agentButton = screen.getByRole('button', { name: /^agent$/i });
     const gardenButton = screen.getByRole('button', { name: /^garden$/i });
     expect(focusButton.className).toContain('is-active');
     expect(focusButton).toHaveAttribute('aria-pressed', 'true');
-    expect(agentButton).toHaveAttribute('aria-pressed', 'false');
     expect(gardenButton).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: /^agent$/i })).not.toBeInTheDocument();
     expect(screen.getByText(/what's next/i)).toBeInTheDocument();
   });
 
   it('switches between Focus, Agent, and Garden sub-tabs', async () => {
     const user = userEvent.setup();
-    render(<RoostTab {...buildProps()} />);
+    render(<RoostTab {...buildProps({ uiMode: 'advanced' })} />);
 
     // Focus is default
     expect(screen.getByText(/what's next/i)).toBeInTheDocument();
@@ -200,11 +200,11 @@ describe('RoostTab interactions', () => {
     expect(screen.getByText(/what's next/i)).toBeInTheDocument();
   });
 
-  it("shows What's Next items when drafts and stale observations exist", () => {
+  it("shows What's Next items when drafts and items need a fresh look", () => {
     render(<RoostTab {...buildProps()} />);
 
     expect(screen.getByText(/3 drafts ready for review/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 stale observation/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 item needs a fresh look/i)).toBeInTheDocument();
   });
 
   it('shows "All caught up" when no items need attention', () => {
@@ -258,7 +258,7 @@ describe('RoostTab interactions', () => {
     const user = userEvent.setup();
     const onRunAgentCycle = vi.fn();
 
-    render(<RoostTab {...buildProps({ onRunAgentCycle })} />);
+    render(<RoostTab {...buildProps({ onRunAgentCycle, uiMode: 'advanced' })} />);
 
     await user.click(screen.getByRole('button', { name: /^agent$/i }));
     await user.click(screen.getByRole('button', { name: /run now/i }));
@@ -269,7 +269,7 @@ describe('RoostTab interactions', () => {
   it('disables Run Now button and shows Running label while agent is running', async () => {
     const user = userEvent.setup();
 
-    render(<RoostTab {...buildProps({ agentRunning: true })} />);
+    render(<RoostTab {...buildProps({ agentRunning: true, uiMode: 'advanced' })} />);
 
     await user.click(screen.getByRole('button', { name: /^agent$/i }));
 
@@ -283,6 +283,7 @@ describe('RoostTab interactions', () => {
     render(
       <RoostTab
         {...buildProps({
+          uiMode: 'advanced',
           activeCoop: createCoop({
             greenGoods: makeGreenGoodsState({
               status: 'requested',
@@ -305,6 +306,7 @@ describe('RoostTab interactions', () => {
     render(
       <RoostTab
         {...buildProps({
+          uiMode: 'advanced',
           activeCoop: createCoop({
             greenGoods: makeGreenGoodsState({
               status: 'linked',
@@ -330,6 +332,7 @@ describe('RoostTab interactions', () => {
     render(
       <RoostTab
         {...buildProps({
+          uiMode: 'advanced',
           activeCoop: createCoop({
             greenGoods: makeGreenGoodsState({
               enabled: false,
@@ -377,6 +380,7 @@ describe('RoostTab interactions', () => {
     render(
       <RoostTab
         {...buildProps({
+          uiMode: 'advanced',
           activeCoop,
           activeMember: activeCoop.members[0],
           greenGoodsActionQueue: [

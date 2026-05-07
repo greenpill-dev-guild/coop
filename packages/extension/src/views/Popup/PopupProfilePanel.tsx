@@ -24,6 +24,7 @@ export function PopupProfilePanel(props: {
     onSetAgentCadence,
     onSetTheme,
   } = props;
+  const isAdvancedMode = uiPreferences.uiMode === 'advanced';
 
   return (
     <section aria-labelledby="popup-profile-title" className="popup-screen">
@@ -93,21 +94,23 @@ export function PopupProfilePanel(props: {
         />
       </section>
 
-      <section className="popup-profile-panel__section">
-        <strong>Agent Cadence</strong>
-        <PopupChoiceGroup
-          ariaLabel="Agent cadence"
-          onChange={(value) => void onSetAgentCadence(value)}
-          options={[
-            { id: 4, label: '4m' },
-            { id: 8, label: '8m' },
-            { id: 16, label: '16m' },
-            { id: 32, label: '32m' },
-            { id: 64, label: '64m' },
-          ]}
-          value={uiPreferences.agentCadenceMinutes}
-        />
-      </section>
+      {isAdvancedMode ? (
+        <section className="popup-profile-panel__section">
+          <strong>Agent Cadence</strong>
+          <PopupChoiceGroup
+            ariaLabel="Agent cadence"
+            onChange={(value) => void onSetAgentCadence(value)}
+            options={[
+              { id: 4, label: '4m' },
+              { id: 8, label: '8m' },
+              { id: 16, label: '16m' },
+              { id: 32, label: '32m' },
+              { id: 64, label: '64m' },
+            ]}
+            value={uiPreferences.agentCadenceMinutes}
+          />
+        </section>
+      ) : null}
     </section>
   );
 }

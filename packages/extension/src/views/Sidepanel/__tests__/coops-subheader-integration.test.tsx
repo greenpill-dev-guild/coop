@@ -88,6 +88,7 @@ const defaultRuntimeConfig = {
 };
 
 function baseProps(overrides?: Partial<CoopsTabProps>): CoopsTabProps {
+  const uiMode = overrides?.dashboard?.uiPreferences?.uiMode ?? 'simple';
   return {
     dashboard: {
       coops: [],
@@ -105,6 +106,7 @@ function baseProps(overrides?: Partial<CoopsTabProps>): CoopsTabProps {
       },
       uiPreferences: {
         localInferenceOptIn: false,
+        uiMode,
         agentCadenceMinutes: 64,
         captureOnClose: false,
         notificationsEnabled: true,
@@ -216,9 +218,9 @@ describe('CoopsTab — SidepanelSubheader integration (Step 13)', () => {
   // --- Level 2: Detail view ---
 
   describe('Level 2 — detail view', () => {
-    async function drillInto(coopId = 'a') {
+    async function drillInto(coopId = 'a', overrides?: Partial<CoopsTabProps>) {
       const user = userEvent.setup();
-      const result = render(<CoopsTab {...baseProps()} />);
+      const result = render(<CoopsTab {...baseProps(overrides)} />);
 
       await user.click(screen.getByTestId(`coop-card-${coopId}`));
       return { user, ...result };
@@ -238,11 +240,26 @@ describe('CoopsTab — SidepanelSubheader integration (Step 13)', () => {
       expect(screen.getByText('Alpha Coop')).toBeInTheDocument();
     });
 
-    it('renders action icons for Open Board, Save Snapshot, Export Proof', async () => {
+    it('renders simple-mode action icons without Export Proof', async () => {
       await drillInto();
 
       expect(screen.getByRole('button', { name: /open.*board/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /save.*snapshot/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /export.*proof/i })).not.toBeInTheDocument();
+    });
+
+    it('restores Export Proof in advanced mode', async () => {
+      const advancedProps = baseProps();
+      await drillInto('a', {
+        dashboard: {
+          ...advancedProps.dashboard,
+          uiPreferences: {
+            ...advancedProps.dashboard?.uiPreferences,
+            uiMode: 'advanced',
+          },
+        } as CoopsTabProps['dashboard'],
+      });
+
       expect(screen.getByRole('button', { name: /export.*proof/i })).toBeInTheDocument();
     });
 

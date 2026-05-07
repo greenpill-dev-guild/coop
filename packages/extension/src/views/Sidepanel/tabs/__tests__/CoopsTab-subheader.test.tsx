@@ -71,11 +71,23 @@ function buildRuntimeConfig(): DashboardResponse['runtimeConfig'] {
 
 function buildProps(overrides: Partial<CoopsTabProps> = {}): CoopsTabProps {
   const coop = createMinimalCoop();
+  const uiMode = overrides.dashboard?.uiPreferences?.uiMode ?? 'simple';
   return {
     dashboard: {
       candidates: [],
       coops: [],
       runtimeConfig: buildRuntimeConfig(),
+      uiPreferences: {
+        localInferenceOptIn: false,
+        uiMode,
+        agentCadenceMinutes: 64,
+        captureOnClose: false,
+        notificationsEnabled: true,
+        preferredExportMethod: 'download',
+        excludedCategories: [],
+        customExcludedDomains: [],
+        heartbeatEnabled: true,
+      },
     } as unknown as DashboardResponse,
     activeCoop: coop,
     allCoops: [coop],
@@ -162,7 +174,7 @@ describe('CoopsTab subheader — Level 2 (detail view)', () => {
     expect(strong?.textContent).toBe('Alpha Coop');
   });
 
-  it('renders Board, Snapshot, Export as popup-icon-button actions', async () => {
+  it('hides proof export in simple mode', async () => {
     await enterDetailView();
 
     const boardBtn = screen.getByLabelText('Open Board');
@@ -170,6 +182,29 @@ describe('CoopsTab subheader — Level 2 (detail view)', () => {
 
     const snapshotBtn = screen.getByLabelText('Save Snapshot');
     expect(snapshotBtn.classList.contains('popup-icon-button')).toBe(true);
+
+    expect(screen.queryByLabelText('Export Proof')).not.toBeInTheDocument();
+  });
+
+  it('restores proof export in advanced mode', async () => {
+    const user = userEvent.setup();
+    render(
+      <CoopsTab
+        {...buildProps({
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as CoopsTabProps['dashboard'],
+        })}
+      />,
+    );
+
+    const coopCardBtn = document.querySelector('.coop-card-button') as HTMLElement;
+    expect(coopCardBtn).not.toBeNull();
+    await user.click(coopCardBtn);
 
     const exportBtn = screen.getByLabelText('Export Proof');
     expect(exportBtn.classList.contains('popup-icon-button')).toBe(true);

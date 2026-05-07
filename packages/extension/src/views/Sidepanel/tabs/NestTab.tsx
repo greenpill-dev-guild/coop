@@ -51,6 +51,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
   const [inviteFocusRequest, setInviteFocusRequest] = useState(0);
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const activeCoopId = activeCoop?.profile.id;
+  const isAdvancedMode = dashboard?.uiPreferences.uiMode === 'advanced';
 
   // --- Knowledge sources ---
   const fetchSources = useCallback(async () => {
@@ -63,8 +64,14 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
   }, [activeCoopId]);
 
   useEffect(() => {
-    if (nestSubTab === 'sources') void fetchSources();
-  }, [nestSubTab, fetchSources]);
+    if (nestSubTab === 'sources' && isAdvancedMode) void fetchSources();
+  }, [isAdvancedMode, nestSubTab, fetchSources]);
+
+  useEffect(() => {
+    if (!isAdvancedMode && (nestSubTab === 'agent' || nestSubTab === 'sources')) {
+      setNestSubTab('members');
+    }
+  }, [isAdvancedMode, nestSubTab]);
 
   const handleAddSource = useCallback(
     async (sourceType: string, identifier: string, label: string) => {
@@ -202,19 +209,21 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
                   </span>
                 ) : null}
               </button>
-              <button
-                aria-pressed={nestSubTab === 'agent'}
-                className={nestSubTab === 'agent' ? 'is-active' : ''}
-                onClick={() => setNestSubTab('agent')}
-                type="button"
-              >
-                Agent
-                {pendingActionCount > 0 ? (
-                  <span className="nest-badge">
-                    {pendingActionCount > 99 ? '99+' : pendingActionCount}
-                  </span>
-                ) : null}
-              </button>
+              {isAdvancedMode ? (
+                <button
+                  aria-pressed={nestSubTab === 'agent'}
+                  className={nestSubTab === 'agent' ? 'is-active' : ''}
+                  onClick={() => setNestSubTab('agent')}
+                  type="button"
+                >
+                  Agent
+                  {pendingActionCount > 0 ? (
+                    <span className="nest-badge">
+                      {pendingActionCount > 99 ? '99+' : pendingActionCount}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
               <button
                 aria-pressed={nestSubTab === 'settings'}
                 className={nestSubTab === 'settings' ? 'is-active' : ''}
@@ -223,14 +232,16 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
               >
                 Settings
               </button>
-              <button
-                aria-pressed={nestSubTab === 'sources'}
-                className={nestSubTab === 'sources' ? 'is-active' : ''}
-                onClick={() => setNestSubTab('sources')}
-                type="button"
-              >
-                Sources
-              </button>
+              {isAdvancedMode ? (
+                <button
+                  aria-pressed={nestSubTab === 'sources'}
+                  className={nestSubTab === 'sources' ? 'is-active' : ''}
+                  onClick={() => setNestSubTab('sources')}
+                  type="button"
+                >
+                  Sources
+                </button>
+              ) : null}
             </nav>
           ) : null}
         </SidepanelSubheader>
@@ -258,13 +269,14 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
           inviteControlsOpen={inviteControlsOpen}
           inviteFocusRequest={inviteFocusRequest}
           setInviteControlsOpen={setInviteControlsOpen}
+          advancedControls={isAdvancedMode}
         />
       ) : null}
 
       {/* ================================================================= */}
       {/* Agent sub-tab                                                      */}
       {/* ================================================================= */}
-      {nestSubTab === 'agent' && activeCoop ? (
+      {nestSubTab === 'agent' && activeCoop && isAdvancedMode ? (
         <>
           <NestAgentSection
             dashboard={orchestration.dashboard}
@@ -333,21 +345,24 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
             archiveSnapshot={orchestration.archiveSnapshot}
             exportSnapshot={orchestration.exportSnapshot}
             exportLatestReceipt={orchestration.exportLatestReceipt}
+            advancedControls={isAdvancedMode}
           />
 
           {/* --- Archive setup wizard --- */}
-          <NestArchiveWizardSection
-            activeCoop={orchestration.activeCoop}
-            loadDashboard={orchestration.loadDashboard}
-            setMessage={orchestration.setMessage}
-          />
+          {isAdvancedMode ? (
+            <NestArchiveWizardSection
+              activeCoop={orchestration.activeCoop}
+              loadDashboard={orchestration.loadDashboard}
+              setMessage={orchestration.setMessage}
+            />
+          ) : null}
         </>
       ) : null}
 
       {/* ================================================================= */}
       {/* Sources sub-tab                                                    */}
       {/* ================================================================= */}
-      {nestSubTab === 'sources' && activeCoop ? (
+      {nestSubTab === 'sources' && activeCoop && isAdvancedMode ? (
         <NestSourcesSection
           sources={sources}
           onAddSource={handleAddSource}

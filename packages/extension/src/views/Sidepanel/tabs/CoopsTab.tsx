@@ -146,6 +146,7 @@ export function CoopsTab({
 }: CoopsTabProps) {
   const [selectedCoopId, setSelectedCoopId] = useState<string | null>(null);
   const [filterCoopId, setFilterCoopId] = useState<string>('all');
+  const isAdvancedMode = dashboard?.uiPreferences.uiMode === 'advanced';
 
   // ---------------------------------------------------------------------------
   // Level 1 — Coop List
@@ -270,12 +271,14 @@ export function CoopsTab({
     onClick: () => void archiveSnapshot(),
   });
 
-  detailActions.push({
-    key: 'export',
-    icon: <ExportIcon />,
-    label: 'Export Proof',
-    onClick: () => void exportLatestReceipt('text'),
-  });
+  if (isAdvancedMode) {
+    detailActions.push({
+      key: 'export',
+      icon: <ExportIcon />,
+      label: 'Export Proof',
+      onClick: () => void exportLatestReceipt('text'),
+    });
+  }
 
   return (
     <section className="stack">
@@ -372,27 +375,29 @@ export function CoopsTab({
         ) : null}
       </article>
 
-      <article className="panel-card">
-        <h2>Saved Proof</h2>
-        <div className="artifact-grid">
-          {archiveReceipts.map((receipt) => (
-            <ArchiveReceiptCard
-              key={receipt.id}
-              receipt={receipt}
-              runtimeConfig={runtimeConfig}
-              liveArchiveAvailable={dashboard?.operator.liveArchiveAvailable ?? true}
-              refreshArchiveStatus={refreshArchiveStatus}
-              onAnchorOnChain={onAnchorOnChain}
-              onFvmRegister={onFvmRegister}
-            />
-          ))}
-        </div>
-        {archiveReceipts.length === 0 ? (
-          <div className="empty-state">
-            Saved proof appears here after a shared find or snapshot is preserved.
+      {isAdvancedMode ? (
+        <article className="panel-card">
+          <h2>Saved Proof</h2>
+          <div className="artifact-grid">
+            {archiveReceipts.map((receipt) => (
+              <ArchiveReceiptCard
+                key={receipt.id}
+                receipt={receipt}
+                runtimeConfig={runtimeConfig}
+                liveArchiveAvailable={dashboard?.operator.liveArchiveAvailable ?? true}
+                refreshArchiveStatus={refreshArchiveStatus}
+                onAnchorOnChain={onAnchorOnChain}
+                onFvmRegister={onFvmRegister}
+              />
+            ))}
           </div>
-        ) : null}
-      </article>
+          {archiveReceipts.length === 0 ? (
+            <div className="empty-state">
+              Saved proof appears here after a shared find or snapshot is preserved.
+            </div>
+          ) : null}
+        </article>
+      ) : null}
     </section>
   );
 }

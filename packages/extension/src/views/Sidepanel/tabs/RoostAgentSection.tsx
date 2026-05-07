@@ -27,6 +27,7 @@ export interface AgentSectionProps {
   knowledgeTopics?: KnowledgeTopic[];
   knowledgeStats?: { entities: number; relationships: number; sources: number };
   decisions?: DecisionEntry[];
+  advancedControls?: boolean;
   onRunAgentCycle: () => Promise<void>;
   onApproveAgentPlan: (planId: string) => Promise<void>;
   onRejectAgentPlan: (planId: string, reason?: string) => Promise<void>;
@@ -42,6 +43,7 @@ export function AgentSection({
   knowledgeTopics = [],
   knowledgeStats = { entities: 0, relationships: 0, sources: 0 },
   decisions = [],
+  advancedControls = true,
   onRunAgentCycle,
   onApproveAgentPlan,
   onRejectAgentPlan,
@@ -52,31 +54,34 @@ export function AgentSection({
 
   return (
     <>
-      {/* --- Heartbeat --- */}
-      <article className="panel-card roost-hero-card">
-        <h2>Agent</h2>
-        <div className="roost-activity-list">
-          <div className="roost-activity-item">
-            <span className="roost-activity-item__title">
-              {lastCompletedRun?.completedAt
-                ? `Last cycle ${timeAgo(lastCompletedRun.completedAt)}`
-                : 'No cycles yet'}
-            </span>
-            <span className="roost-activity-item__meta">Runs every ~{cadence} min</span>
+      {advancedControls ? (
+        <article className="panel-card roost-hero-card">
+          <h2>Agent</h2>
+          <div className="roost-activity-list">
+            <div className="roost-activity-item">
+              <span className="roost-activity-item__title">
+                {lastCompletedRun?.completedAt
+                  ? `Last cycle ${timeAgo(lastCompletedRun.completedAt)}`
+                  : 'No cycles yet'}
+              </span>
+              <span className="roost-activity-item__meta">Runs every ~{cadence} min</span>
+            </div>
           </div>
-        </div>
-        <button
-          className="primary-button"
-          disabled={agentRunning}
-          onClick={() => void onRunAgentCycle()}
-          type="button"
-        >
-          {agentRunning ? 'Running...' : 'Run Now'}
-        </button>
-      </article>
+          <button
+            className="primary-button"
+            disabled={agentRunning}
+            onClick={() => void onRunAgentCycle()}
+            type="button"
+          >
+            {agentRunning ? 'Running...' : 'Run Now'}
+          </button>
+        </article>
+      ) : null}
 
       {/* --- Knowledge --- */}
-      <RoostKnowledgeSection topics={knowledgeTopics} stats={knowledgeStats} />
+      {advancedControls ? (
+        <RoostKnowledgeSection topics={knowledgeTopics} stats={knowledgeStats} />
+      ) : null}
 
       {/* --- Pending approvals --- */}
       {pendingPlans.length > 0 ? (
@@ -133,7 +138,7 @@ export function AgentSection({
       ) : null}
 
       {/* --- Recent observations --- */}
-      {recentObservations.length > 0 ? (
+      {advancedControls && recentObservations.length > 0 ? (
         <article className="panel-card">
           <h2>Recent Observations</h2>
           <div className="roost-activity-list">
@@ -150,10 +155,10 @@ export function AgentSection({
       ) : null}
 
       {/* --- Decision History --- */}
-      <RoostDecisionHistory decisions={decisions} />
+      {advancedControls ? <RoostDecisionHistory decisions={decisions} /> : null}
 
       {/* --- Agent memories --- */}
-      {recentMemories.length > 0 ? (
+      {advancedControls && recentMemories.length > 0 ? (
         <details className="panel-card collapsible-card">
           <summary>
             <h2>Agent Memories</h2>

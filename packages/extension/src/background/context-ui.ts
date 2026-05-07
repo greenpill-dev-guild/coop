@@ -12,6 +12,7 @@ import { db, getLocalSetting, setLocalSetting, stateKeys } from './context-db';
 
 export let localInferenceOptIn = false;
 export let uiPreferences = uiPreferencesSchema.parse({});
+let uiPreferenceOperation: Promise<unknown> = Promise.resolve();
 
 export const uiPreferenceStorageKey = 'coop:uiPreferences';
 export const extensionCaptureDeviceId = 'extension-browser';
@@ -41,24 +42,44 @@ export async function writeSyncedUiPreferences(value: UiPreferences) {
   }
 }
 
+async function runUiPreferenceOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const previousOperation = uiPreferenceOperation;
+  let releaseOperation: () => void = () => undefined;
+  uiPreferenceOperation = new Promise<void>((resolve) => {
+    releaseOperation = resolve;
+  });
+
+  await previousOperation.catch(() => undefined);
+
+  try {
+    return await operation();
+  } finally {
+    releaseOperation();
+  }
+}
+
 export async function hydrateUiPreferences() {
-  const [localValue, syncedValue] = await Promise.all([
-    getUiPreferences(db),
-    readSyncedUiPreferences(),
-  ]);
-  const next = uiPreferencesSchema.parse(syncedValue ?? localValue ?? {});
-  uiPreferences = next;
-  localInferenceOptIn = next.localInferenceOptIn;
-  await Promise.all([setUiPreferences(db, next), writeSyncedUiPreferences(next)]);
-  return next;
+  return runUiPreferenceOperation(async () => {
+    const [localValue, syncedValue] = await Promise.all([
+      getUiPreferences(db),
+      readSyncedUiPreferences(),
+    ]);
+    const next = uiPreferencesSchema.parse(syncedValue ?? localValue ?? {});
+    uiPreferences = next;
+    localInferenceOptIn = next.localInferenceOptIn;
+    await Promise.all([setUiPreferences(db, next), writeSyncedUiPreferences(next)]);
+    return next;
+  });
 }
 
 export async function saveResolvedUiPreferences(value: UiPreferences) {
-  const next = uiPreferencesSchema.parse(value);
-  uiPreferences = next;
-  localInferenceOptIn = next.localInferenceOptIn;
-  await Promise.all([setUiPreferences(db, next), writeSyncedUiPreferences(next)]);
-  return next;
+  return runUiPreferenceOperation(async () => {
+    const next = uiPreferencesSchema.parse(value);
+    uiPreferences = next;
+    localInferenceOptIn = next.localInferenceOptIn;
+    await Promise.all([setUiPreferences(db, next), writeSyncedUiPreferences(next)]);
+    return next;
+  });
 }
 
 // ---- Notification System ----

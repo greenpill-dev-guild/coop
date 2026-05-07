@@ -20,6 +20,7 @@ export interface NestMembersSectionProps {
   inviteControlsOpen: boolean;
   inviteFocusRequest: number;
   setInviteControlsOpen: (open: boolean) => void;
+  advancedControls: boolean;
 }
 
 export function NestMembersSection({
@@ -30,6 +31,7 @@ export function NestMembersSection({
   inviteControlsOpen,
   inviteFocusRequest,
   setInviteControlsOpen,
+  advancedControls,
 }: NestMembersSectionProps) {
   const currentMemberId = orchestration.authSession
     ? activeCoop.members.find(
@@ -106,7 +108,7 @@ export function NestMembersSection({
               );
             })}
           </ul>
-          {runtimeConfig?.privacyMode === 'on' && stealthMetaAddress ? (
+          {advancedControls && runtimeConfig?.privacyMode === 'on' && stealthMetaAddress ? (
             <details className="card" style={{ marginTop: '0.75rem' }}>
               <summary className="card-header" style={{ cursor: 'pointer' }}>
                 Private payment address

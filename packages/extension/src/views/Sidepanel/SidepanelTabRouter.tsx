@@ -125,6 +125,7 @@ export function SidepanelTabRouter({
             onRunAgentCycle={handleRunAgentCycle}
             onApproveAgentPlan={handleApproveAgentPlan}
             onRejectAgentPlan={handleRejectAgentPlan}
+            uiMode={dashboard?.uiPreferences.uiMode ?? 'simple'}
             onOpenSynthesisSegment={(segment) =>
               void onApplySidepanelIntent({
                 tab: 'chickens',

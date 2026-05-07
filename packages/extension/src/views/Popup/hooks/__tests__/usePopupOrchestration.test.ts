@@ -291,6 +291,65 @@ describe('usePopupOrchestration', () => {
     expect(result.current.showWorkspaceAction).toBe(false);
   });
 
+  it('hides the Sources home status item in simple mode', async () => {
+    const { result } = renderHook(() => usePopupOrchestration());
+
+    await waitFor(() => {
+      expect(result.current.homeStatusItems.length).toBeGreaterThan(0);
+    });
+
+    expect(result.current.homeStatusItems.map((item) => item.label)).not.toContain('Sources');
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'list-knowledge-sources' }),
+    );
+  });
+
+  it('restores the Sources home status item in advanced mode', async () => {
+    const currentDashboard = state.dashboard;
+    if (!currentDashboard) {
+      throw new Error('Expected dashboard fixture to be initialized');
+    }
+
+    state.dashboard = makeDashboard({
+      uiPreferences: {
+        ...currentDashboard.uiPreferences,
+        uiMode: 'advanced',
+      },
+    });
+    state.coops = state.dashboard.coops;
+
+    sendRuntimeMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-sidepanel-state') {
+        return { ok: true, data: { open: false, canClose: true } };
+      }
+      if (message.type === 'list-knowledge-sources') {
+        return {
+          ok: true,
+          data: [
+            {
+              id: 'source-1',
+              coopId: state.dashboard?.activeCoopId,
+              type: 'rss',
+              label: 'Research feed',
+              active: true,
+              lastFetchedAt: new Date().toISOString(),
+            },
+          ],
+        };
+      }
+      return { ok: true };
+    });
+
+    const { result } = renderHook(() => usePopupOrchestration());
+
+    expect(result.current.homeStatusItems.map((item) => item.label)).toContain('Sources');
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'list-knowledge-sources' }),
+      );
+    });
+  });
+
   it('routes away from draft detail when the selected draft is missing', async () => {
     state.navigationState = {
       ...state.navigationState,

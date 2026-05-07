@@ -22,6 +22,9 @@ import { hydrateUiPreferences } from './context-ui';
 // Re-export so barrel consumers can still reach these from context-runtime
 export { stateKeys, alarmNames } from './context-db';
 
+let defaultsReady = false;
+let defaultsReadyPromise: Promise<void> | null = null;
+
 // ---- Types ----
 
 export type RuntimeHealth = {
@@ -136,20 +139,33 @@ export async function resolveArchiveConfigForCoop(coopId: string, coop: CoopShar
 // ---- Initialization ----
 
 export async function ensureDefaults() {
-  const sound = await getSoundPreferences(db);
-  if (!sound) {
-    await setSoundPreferences(db, defaultSoundPreferences);
+  if (defaultsReady) {
+    return;
   }
-  await ensureTrustedNodeArchiveBootstrap();
-  await hydrateUiPreferences();
-  const captureMode = await getLocalSetting(stateKeys.captureMode, null);
-  if (!captureMode) {
-    await setLocalSetting(stateKeys.captureMode, 'manual');
+
+  if (!defaultsReadyPromise) {
+    defaultsReadyPromise = (async () => {
+      const sound = await getSoundPreferences(db);
+      if (!sound) {
+        await setSoundPreferences(db, defaultSoundPreferences);
+      }
+      await ensureTrustedNodeArchiveBootstrap();
+      await hydrateUiPreferences();
+      const captureMode = await getLocalSetting(stateKeys.captureMode, null);
+      if (!captureMode) {
+        await setLocalSetting(stateKeys.captureMode, 'manual');
+      }
+      const runtimeHealth = await getLocalSetting(stateKeys.runtimeHealth, null);
+      if (!runtimeHealth) {
+        await setLocalSetting(stateKeys.runtimeHealth, defaultRuntimeHealth);
+      }
+      defaultsReady = true;
+    })().finally(() => {
+      defaultsReadyPromise = null;
+    });
   }
-  const runtimeHealth = await getLocalSetting(stateKeys.runtimeHealth, null);
-  if (!runtimeHealth) {
-    await setLocalSetting(stateKeys.runtimeHealth, defaultRuntimeHealth);
-  }
+
+  await defaultsReadyPromise;
 }
 
 export async function syncAgentCadenceAlarm(

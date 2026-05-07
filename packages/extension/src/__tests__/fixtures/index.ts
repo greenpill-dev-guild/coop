@@ -123,6 +123,7 @@ export function makeUiPreferences(
   return {
     notificationsEnabled: true,
     localInferenceOptIn: true,
+    uiMode: 'simple',
     preferredExportMethod: 'download',
     heartbeatEnabled: true,
     agentCadenceMinutes: 64,
@@ -447,6 +448,7 @@ export function makeDashboardResponse(
     candidates: [],
     tabRoutings: [],
     proactiveSignals: [],
+    activeReviewItemFeedbacks: [],
     summary: {
       iconState: 'ready',
       iconLabel: 'Synced',

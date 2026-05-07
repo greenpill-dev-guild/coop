@@ -14,6 +14,7 @@ import type {
   PermitLogEntry,
   PrivilegedActionLogEntry,
   ReviewDraft,
+  ReviewItemFeedback,
   SessionCapability,
   SessionCapabilityLogEntry,
   SkillRun,
@@ -59,6 +60,7 @@ import {
   listActionBundlesByStatus,
   listActionLogEntries,
   listActionPolicies,
+  listActiveReviewItemFeedbacks,
   listAgentObservations,
   listAgentObservationsByStatus,
   listAgentPlans,
@@ -72,6 +74,7 @@ import {
   listReceiverPairings,
   listRecordedReplayIds,
   listReviewDrafts,
+  listReviewItemFeedbacks,
   listSessionCapabilities,
   listSessionCapabilitiesByCoopId,
   listSessionCapabilityLogEntries,
@@ -92,6 +95,7 @@ import {
   savePermitLogEntry,
   saveReceiverCapture,
   saveReviewDraft,
+  saveReviewItemFeedback,
   saveSessionCapability,
   saveSessionCapabilityLogEntry,
   saveSkillRun,
@@ -375,6 +379,20 @@ function buildTabRouting(overrides: Partial<TabRouting> = {}): TabRouting {
   };
 }
 
+function buildReviewItemFeedback(overrides: Partial<ReviewItemFeedback> = {}): ReviewItemFeedback {
+  return {
+    id: `review-feedback-${crypto.randomUUID()}`,
+    itemKind: 'draft',
+    itemId: 'draft-1',
+    coopId: 'coop-1',
+    action: 'not-useful',
+    draftId: 'draft-1',
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...overrides,
+  };
+}
+
 afterEach(async () => {
   while (databases.length > 0) {
     const db = databases.pop();
@@ -586,6 +604,7 @@ describe('settings persistence', () => {
     await setUiPreferences(db, {
       notificationsEnabled: false,
       localInferenceOptIn: true,
+      uiMode: 'advanced',
       preferredExportMethod: 'file-picker',
       heartbeatEnabled: true,
       agentCadenceMinutes: 64,
@@ -597,6 +616,7 @@ describe('settings persistence', () => {
     expect(await getUiPreferences(db)).toEqual({
       notificationsEnabled: false,
       localInferenceOptIn: true,
+      uiMode: 'advanced',
       preferredExportMethod: 'file-picker',
       heartbeatEnabled: true,
       agentCadenceMinutes: 64,
@@ -621,6 +641,7 @@ describe('settings persistence', () => {
     expect(await getUiPreferences(db)).toEqual({
       notificationsEnabled: true,
       localInferenceOptIn: false,
+      uiMode: 'simple',
       preferredExportMethod: 'download',
       heartbeatEnabled: true,
       agentCadenceMinutes: 64,
@@ -1836,5 +1857,33 @@ describe('tab routing persistence', () => {
     expect(stored?.relevanceScore).toBe(0.31);
     expect(stored?.status).toBe('drafted');
     expect(await listTabRoutings(db, { coopId: first.coopId })).toHaveLength(1);
+  });
+});
+
+describe('review item feedback persistence', () => {
+  it('saves and lists active feedback records', async () => {
+    const db = freshDb();
+    const feedback = buildReviewItemFeedback();
+
+    await saveReviewItemFeedback(db, feedback);
+
+    expect(await listReviewItemFeedbacks(db)).toMatchObject([feedback]);
+    expect(
+      await listActiveReviewItemFeedbacks(db, { coopId: 'coop-1' }, Date.parse(NOW)),
+    ).toMatchObject([feedback]);
+  });
+
+  it('expires remind-later feedback after remindAt', async () => {
+    const db = freshDb();
+    const feedback = buildReviewItemFeedback({
+      id: 'review-feedback-reminder',
+      action: 'remind-later',
+      remindAt: LATER,
+    });
+
+    await saveReviewItemFeedback(db, feedback);
+
+    expect(await listActiveReviewItemFeedbacks(db, {}, Date.parse(NOW))).toHaveLength(1);
+    expect(await listActiveReviewItemFeedbacks(db, {}, Date.parse(MUCH_LATER))).toHaveLength(0);
   });
 });

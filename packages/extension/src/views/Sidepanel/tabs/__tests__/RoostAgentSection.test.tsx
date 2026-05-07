@@ -4,6 +4,69 @@ import { describe, expect, it, vi } from 'vitest';
 import { AgentSection } from '../RoostAgentSection';
 
 describe('Roost AgentSection', () => {
+  it('hides advanced telemetry while preserving pending approvals in simple mode', () => {
+    render(
+      <AgentSection
+        summary={{ agentCadenceMinutes: 8 } as never}
+        lastCompletedRun={{ completedAt: '2026-03-01T00:00:00.000Z' }}
+        pendingPlans={[
+          {
+            id: 'plan-approval',
+            goal: 'Publish the reviewed draft',
+            confidence: 0.76,
+            actionProposals: [],
+          } as never,
+        ]}
+        recentObservations={[
+          {
+            id: 'observation-1',
+            title: 'Raw observation',
+            status: 'pending',
+            createdAt: '2026-03-01T00:00:00.000Z',
+          } as never,
+        ]}
+        recentMemories={[
+          {
+            id: 'memory-1',
+            type: 'source',
+            domain: 'example.com',
+            content: 'Agent memory',
+            createdAt: '2026-03-01T00:00:00.000Z',
+          } as never,
+        ]}
+        knowledgeTopics={[
+          {
+            topic: 'Watershed',
+            depth: 2,
+            sourceCount: 1,
+          },
+        ]}
+        knowledgeStats={{ entities: 1, relationships: 1, sources: 1 }}
+        decisions={[
+          {
+            id: 'decision-1',
+            skillId: 'Decision history',
+            confidence: 0.8,
+            timestamp: '2026-03-01T00:00:00.000Z',
+            outcome: 'approved',
+            sourceRefs: [],
+          } as never,
+        ]}
+        advancedControls={false}
+        onRunAgentCycle={vi.fn(async () => undefined)}
+        onApproveAgentPlan={vi.fn(async () => undefined)}
+        onRejectAgentPlan={vi.fn(async () => undefined)}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Needs Approval' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Agent' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Watershed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Raw observation')).not.toBeInTheDocument();
+    expect(screen.queryByText('Decision history')).not.toBeInTheDocument();
+    expect(screen.queryByText('Agent memory')).not.toBeInTheDocument();
+  });
+
   it('switches to judgment framing and gates approval for high-risk plans', async () => {
     const user = userEvent.setup();
     const onApproveAgentPlan = vi.fn();

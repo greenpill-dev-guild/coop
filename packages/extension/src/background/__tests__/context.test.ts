@@ -124,6 +124,7 @@ describe('background context helpers', () => {
       excludedCategories: [],
       customExcludedDomains: [],
       captureOnClose: false,
+      uiMode: 'simple',
     });
     sharedMocks.getCoopArchiveSecrets.mockResolvedValue({
       secret: 'coop-secret',
@@ -205,9 +206,58 @@ describe('background context helpers', () => {
 
     expect(preferences.notificationsEnabled).toBe(true);
     expect(preferences.localInferenceOptIn).toBe(true);
+    expect(preferences.uiMode).toBe('simple');
     expect(sharedMocks.setUiPreferences).toHaveBeenCalledWith(expect.anything(), preferences);
     expect(chromeMocks.storageSyncSet).toHaveBeenCalledWith({
       [context.uiPreferenceStorageKey]: preferences,
+    });
+  });
+
+  it('keeps an explicit UI preference save from being overwritten by an in-flight hydrate', async () => {
+    let releaseHydrateRead: () => void = () => undefined;
+    const hydrateReadReady = new Promise<void>((resolve) => {
+      releaseHydrateRead = resolve;
+    });
+    const simplePreferences = {
+      notificationsEnabled: false,
+      localInferenceOptIn: false,
+      preferredExportMethod: 'download',
+      heartbeatEnabled: true,
+      agentCadenceMinutes: 64,
+      excludedCategories: [],
+      customExcludedDomains: [],
+      captureOnClose: false,
+      uiMode: 'simple',
+    } satisfies UiPreferences;
+    const advancedPreferences = {
+      ...simplePreferences,
+      localInferenceOptIn: true,
+      uiMode: 'advanced',
+    } satisfies UiPreferences;
+
+    sharedMocks.getUiPreferences.mockImplementationOnce(async () => {
+      await hydrateReadReady;
+      return simplePreferences;
+    });
+    chromeMocks.storageSyncGet.mockImplementationOnce(async () => {
+      await hydrateReadReady;
+      return {
+        [context.uiPreferenceStorageKey]: simplePreferences,
+      };
+    });
+
+    const hydratePromise = context.hydrateUiPreferences();
+    const savePromise = context.saveResolvedUiPreferences(advancedPreferences);
+
+    releaseHydrateRead();
+    await Promise.all([hydratePromise, savePromise]);
+
+    expect(sharedMocks.setUiPreferences).toHaveBeenLastCalledWith(
+      expect.anything(),
+      advancedPreferences,
+    );
+    expect(chromeMocks.storageSyncSet).toHaveBeenLastCalledWith({
+      [context.uiPreferenceStorageKey]: advancedPreferences,
     });
   });
 
@@ -215,6 +265,7 @@ describe('background context helpers', () => {
     await context.saveResolvedUiPreferences({
       notificationsEnabled: true,
       localInferenceOptIn: false,
+      uiMode: 'advanced',
     } as UiPreferences);
 
     await context.notifyExtensionEvent({

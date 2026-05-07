@@ -208,10 +208,12 @@ export function usePopupOrchestration(): PopupOrchestrationState {
   const [noteDraftText, setNoteDraftText] = useState('');
   const [subscreenReturnTab, setSubscreenReturnTab] = useState<PopupFooterTab>('home');
   const defaultWorkspaceCoopId = dashboard?.activeCoopId ?? coops[0]?.profile.id;
+  const isAdvancedMode = dashboard?.uiPreferences.uiMode === 'advanced';
 
   // --- Source health counts for home status ---
   const [sourceHealth, setSourceHealth] = useState({ active: 0, stale: 0, total: 0 });
   const fetchSourceHealth = useCallback(async () => {
+    if (!isAdvancedMode) return;
     const coopId = dashboard?.activeCoopId ?? coops[0]?.profile.id;
     if (!coopId) return;
     const result = await sendRuntimeMessage<KnowledgeSource[]>({
@@ -229,11 +231,11 @@ export function usePopupOrchestration(): PopupOrchestrationState {
       ).length;
       setSourceHealth({ active, stale, total: sources.length });
     }
-  }, [dashboard?.activeCoopId, coops]);
+  }, [dashboard?.activeCoopId, coops, isAdvancedMode]);
 
   useEffect(() => {
-    if (hasCoops) void fetchSourceHealth();
-  }, [hasCoops, fetchSourceHealth]);
+    if (hasCoops && isAdvancedMode) void fetchSourceHealth();
+  }, [hasCoops, isAdvancedMode, fetchSourceHealth]);
 
   // Sync draft text with persisted note when it first hydrates from storage
   const homeNoteHydrated = useRef(false);
@@ -802,26 +804,30 @@ export function usePopupOrchestration(): PopupOrchestrationState {
           intent: { tab: 'chickens', segment: 'summary', coopId: workspaceTargetCoopId },
         }),
     },
-    {
-      id: 'sources',
-      label: 'Sources',
-      value:
-        sourceHealth.total === 0
-          ? 'none'
-          : sourceHealth.stale > 0
-            ? `${sourceHealth.active} · ${sourceHealth.stale} stale`
-            : `${sourceHealth.active} active`,
-      tone: sourceHealth.stale > 0 ? 'warning' : sourceHealth.total > 0 ? 'ok' : undefined,
-      detail:
-        sourceHealth.total === 0
-          ? 'No knowledge sources configured'
-          : `${sourceHealth.total} sources · ${sourceHealth.active} active · ${sourceHealth.stale} stale`,
-      onClick: () =>
-        void openWorkspace({
-          targetCoopId: workspaceTargetCoopId,
-          intent: { tab: 'nest', coopId: workspaceTargetCoopId },
-        }),
-    },
+    ...(isAdvancedMode
+      ? [
+          {
+            id: 'sources',
+            label: 'Sources',
+            value:
+              sourceHealth.total === 0
+                ? 'none'
+                : sourceHealth.stale > 0
+                  ? `${sourceHealth.active} · ${sourceHealth.stale} stale`
+                  : `${sourceHealth.active} active`,
+            tone: sourceHealth.stale > 0 ? 'warning' : sourceHealth.total > 0 ? 'ok' : undefined,
+            detail:
+              sourceHealth.total === 0
+                ? 'No knowledge sources configured'
+                : `${sourceHealth.total} sources · ${sourceHealth.active} active · ${sourceHealth.stale} stale`,
+            onClick: () =>
+              void openWorkspace({
+                targetCoopId: workspaceTargetCoopId,
+                intent: { tab: 'nest', coopId: workspaceTargetCoopId },
+              }),
+          } satisfies PopupSubheaderTag,
+        ]
+      : []),
   ];
 
   const mainScreens = ['home', 'drafts', 'feed'];

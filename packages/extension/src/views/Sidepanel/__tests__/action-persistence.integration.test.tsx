@@ -257,6 +257,7 @@ function makeDashboard(): DashboardResponse {
     uiPreferences: {
       notificationsEnabled: true,
       localInferenceOptIn: false,
+      uiMode: 'simple',
       preferredExportMethod: 'download',
       heartbeatEnabled: true,
       agentCadenceMinutes: 64,
