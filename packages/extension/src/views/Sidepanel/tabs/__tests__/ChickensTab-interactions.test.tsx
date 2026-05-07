@@ -35,6 +35,9 @@ function makeCandidate(overrides: Partial<TabCandidate> = {}): TabCandidate {
 function makeDraft(overrides: Partial<ReviewDraft> = {}): ReviewDraft {
   return {
     id: 'draft-1',
+    interpretationId: 'interp-1',
+    extractId: 'extract-1',
+    sourceCandidateId: 'candidate-1',
     title: 'Restore wetland corridor',
     summary: 'Draft summary',
     category: 'insight',
@@ -125,6 +128,7 @@ function buildDashboard(overrides: Partial<DashboardResponse> = {}): DashboardRe
     drafts: [],
     tabRoutings: [],
     proactiveSignals: [makeSignal()],
+    activeReviewItemFeedbacks: [],
     runtimeConfig: {
       chainKey: 'sepolia',
       onchainMode: 'mock',
@@ -225,6 +229,7 @@ function buildDraftEditor(): ReturnType<typeof useDraftEditor> {
     toggleReceiverCaptureArchiveWorthiness: vi.fn(),
     promoteSignalToDraft: vi.fn(),
     promoteSignalAndPublish: vi.fn(),
+    recordReviewFeedback: vi.fn(),
   } as unknown as ReturnType<typeof useDraftEditor>;
 }
 
@@ -594,5 +599,83 @@ describe('ChickensTab interactions', () => {
     await user.click(pushBtn);
 
     expect(draftEditor.publishDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('records lightweight feedback from review cards', async () => {
+    const user = userEvent.setup();
+    const draftEditor = buildDraftEditor();
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          draftEditor,
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /not useful/i }));
+
+    expect(draftEditor.recordReviewFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemKind: 'draft',
+        itemId: 'draft-1',
+        draftId: 'draft-1',
+        sourceCandidateId: 'candidate-1',
+        action: 'not-useful',
+      }),
+    );
+  });
+
+  it('filters active feedback from merged signal+draft review items', () => {
+    render(
+      <ChickensTab
+        {...buildProps({
+          dashboard: buildDashboard({
+            activeReviewItemFeedbacks: [
+              {
+                id: 'feedback-1',
+                itemKind: 'draft',
+                itemId: 'draft-1',
+                action: 'not-useful',
+                draftId: 'draft-1',
+                createdAt: '2026-03-01T12:10:00.000Z',
+                updatedAt: '2026-03-01T12:10:00.000Z',
+              },
+            ],
+          }),
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    expect(screen.queryByText('Restore wetland corridor')).not.toBeInTheDocument();
+    expect(screen.getByText(/round up your loose chickens/i)).toBeInTheDocument();
+  });
+
+  it('restores snoozed review items after remindAt passes', () => {
+    render(
+      <ChickensTab
+        {...buildProps({
+          dashboard: buildDashboard({
+            activeReviewItemFeedbacks: [
+              {
+                id: 'feedback-1',
+                itemKind: 'draft',
+                itemId: 'draft-1',
+                action: 'remind-later',
+                draftId: 'draft-1',
+                remindAt: '2026-03-01T11:00:00.000Z',
+                createdAt: '2026-03-01T10:00:00.000Z',
+                updatedAt: '2026-03-01T10:00:00.000Z',
+              },
+            ],
+          }),
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Restore wetland corridor')).toBeInTheDocument();
   });
 });

@@ -26,6 +26,7 @@ import type {
   ReceiverCapture,
   ReceiverPairingRecord,
   ReviewDraft,
+  ReviewItemFeedback,
   SessionCapability,
   SessionCapabilityLogEntry,
   SkillRun,
@@ -110,6 +111,7 @@ export class CoopDexie extends Dexie {
   coopKnowledgeSkillOverrides!: EntityTable<CoopKnowledgeSkillOverride, 'id'>;
   agentLogs!: EntityTable<AgentLog, 'id'>;
   agentTraceRecords!: EntityTable<AgentTraceRecord, 'id'>;
+  reviewItemFeedbacks!: EntityTable<ReviewItemFeedback, 'id'>;
   privacyIdentities!: EntityTable<PrivacyIdentityRecord, 'id'>;
   stealthKeyPairs!: EntityTable<StealthKeyPairRecord, 'id'>;
   agentMemories!: EntityTable<AgentMemory, 'id'>;
@@ -525,6 +527,10 @@ export class CoopDexie extends Dexie {
     this.version(23).stores({
       agentTraceRecords:
         'id, traceId, [observationId+startedAt], [skillId+startedAt], providerId, outcome, startedAt, createdAt',
+    });
+    this.version(24).stores({
+      reviewItemFeedbacks:
+        'id, itemKind, itemId, [itemKind+itemId], coopId, action, remindAt, updatedAt',
     });
   }
 }

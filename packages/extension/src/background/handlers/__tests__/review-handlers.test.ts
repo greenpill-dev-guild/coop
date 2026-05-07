@@ -67,8 +67,12 @@ const { getCoops } = await import('../../context');
 const { refreshBadge } = await import('../../dashboard');
 const { getActiveReviewContextForSession } = await import('../../operator');
 const { requestAgentCycle } = await import('../agent');
-const { handleUpdateReviewDraft, handleUpdateMeetingSettings, publishDraftWithContext } =
-  await import('../review');
+const {
+  handleRecordReviewFeedback,
+  handleUpdateReviewDraft,
+  handleUpdateMeetingSettings,
+  publishDraftWithContext,
+} = await import('../review');
 
 function buildSetupInsights() {
   return {
@@ -234,6 +238,95 @@ describe('review handlers', () => {
       expect(data.rituals[0]?.namedMoments).toEqual(['Check-in', 'Harvest']);
       expect(data.rituals[0]?.facilitatorExpectation).toBe('Mina leads, Ari takes notes');
     }
+  });
+
+  it('records not-useful signal feedback and dismisses matching routings', async () => {
+    const shared = await import('@coop/shared');
+    vi.spyOn(shared, 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+    const saveReviewItemFeedback = vi
+      .spyOn(shared, 'saveReviewItemFeedback')
+      .mockResolvedValue(undefined);
+    const matchingRouting = {
+      id: 'routing-1',
+      sourceCandidateId: 'candidate-1',
+      extractId: 'extract-1',
+      coopId: coopState.profile.id,
+      relevanceScore: 0.72,
+      matchedRitualLenses: [],
+      category: 'insight',
+      tags: [],
+      rationale: 'Relevant.',
+      suggestedNextStep: 'Review it.',
+      archiveWorthinessHint: false,
+      provider: 'heuristic',
+      status: 'routed',
+      createdAt: '2026-03-11T18:00:00.000Z',
+      updatedAt: '2026-03-11T18:00:00.000Z',
+    } as import('@coop/shared').TabRouting;
+    vi.spyOn(shared, 'listTabRoutings').mockResolvedValue([matchingRouting]);
+    const saveTabRouting = vi.spyOn(shared, 'saveTabRouting').mockResolvedValue(undefined);
+
+    const result = await handleRecordReviewFeedback({
+      type: 'record-review-feedback',
+      payload: {
+        itemKind: 'signal',
+        itemId: 'signal:candidate-1',
+        action: 'not-useful',
+        coopId: coopState.profile.id,
+        sourceCandidateId: 'candidate-1',
+        extractId: 'extract-1',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(saveReviewItemFeedback).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        itemKind: 'signal',
+        itemId: 'signal:candidate-1',
+        action: 'not-useful',
+        sourceCandidateId: 'candidate-1',
+        extractId: 'extract-1',
+      }),
+    );
+    expect(saveTabRouting).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        id: 'routing-1',
+        status: 'dismissed',
+      }),
+    );
+  });
+
+  it('snoozes review feedback without dismissing source routings', async () => {
+    const shared = await import('@coop/shared');
+    vi.spyOn(shared, 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+    const saveReviewItemFeedback = vi
+      .spyOn(shared, 'saveReviewItemFeedback')
+      .mockResolvedValue(undefined);
+    const listTabRoutings = vi.spyOn(shared, 'listTabRoutings').mockResolvedValue([]);
+
+    const result = await handleRecordReviewFeedback({
+      type: 'record-review-feedback',
+      payload: {
+        itemKind: 'draft',
+        itemId: 'draft-1',
+        action: 'remind-later',
+        draftId: 'draft-1',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(saveReviewItemFeedback).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        itemKind: 'draft',
+        itemId: 'draft-1',
+        action: 'remind-later',
+        remindAt: expect.any(String),
+      }),
+    );
+    expect(listTabRoutings).not.toHaveBeenCalled();
   });
 
   // --- Agent draft feedback memory tests ---

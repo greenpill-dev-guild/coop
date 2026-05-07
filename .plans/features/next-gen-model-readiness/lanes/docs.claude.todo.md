@@ -22,12 +22,24 @@ done_when:
   - rules/tests.md lines < 100
 skills:
   - architecture
-updated: 2026-04-02
+updated: 2026-05-07
 ---
 
 # Phase 1: Simplify the Prompt Surface
 
 Target: ~8,500 lines → ~3,000 lines. Remove library docs, static code maps, procedural recipes, duplicated constraints. Keep outcomes, constraints, anti-patterns, product intent.
+
+## Required guardrail
+
+Before deleting or shortening any instruction, classify it using `../context.md`:
+
+- `deterministic-gate`: keep or move to code, hooks, schemas, validators, tests, or validation scripts.
+- `repo-constraint`: keep once in the canonical repo instruction/rule surface.
+- `product-intent`: preserve in product context or another short pointer.
+- `soft-guidance`: remove or replace with a source pointer.
+
+Do not convert a deterministic gate into prompt-only guidance. If the old prose was the only place a
+gate existed, stop and route it to an executable surface or record the gap.
 
 ## Step 1: Replace context code maps with pointer files
 
@@ -52,6 +64,9 @@ Read the source files above for architecture details.
 **Keep `product.md` (196 lines) unchanged** — it contains non-derivable product intent.
 
 **Verify**: Each pointer file < 20 lines. No constraint lost (cross-reference against rules/ files).
+
+**Guardrail audit**: Record any removed `deterministic-gate`, `repo-constraint`, or `product-intent`
+in the implementation notes with its new canonical home.
 
 ## Step 2: Reduce skills to constraint cards
 
@@ -92,6 +107,9 @@ For each `.claude/skills/*/SKILL.md`, reduce to 30-50 lines:
 - [ ] `architecture/SKILL.md`: if exists, → ~40 (keep Cathedral Test, entropy reduction)
 
 **Verify**: `wc -l .claude/skills/*/SKILL.md` shows each file 20-50 lines.
+
+**Guardrail audit**: For each skill, keep Coop-specific constraints and anti-patterns; remove generic
+methodology only after confirming enforcement-sensitive behavior lives in a rule, hook, schema, or test.
 
 ## Step 3: Delete meta-documentation
 
@@ -139,6 +157,9 @@ Remove ~120 lines from CLAUDE.md:
 
 **Verify**: `wc -l CLAUDE.md` shows < 200 lines. `bun run validate quick` passes.
 
+**Guardrail audit**: Any removed release, permission, env, or command rule must still be enforced by a
+hook, rule file, validator, test, or script.
+
 ## Step 6: Deduplicate constraints
 
 For each constraint in the deduplication map (see context.md), ensure it appears in exactly one canonical location:
@@ -166,4 +187,5 @@ Review each `.claude/agents/*.md` for duplicated Coop rules:
 - [ ] `bun run validate quick` passes
 - [ ] Total `.claude/` line count < 3,500 (down from ~8,500)
 - [ ] No constraint was removed without being present elsewhere (audit trail in commit message)
+- [ ] Every removed `deterministic-gate`, `repo-constraint`, and `product-intent` has an implementation-note entry naming its durable home
 - [ ] `product.md` unchanged

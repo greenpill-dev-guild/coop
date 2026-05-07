@@ -250,7 +250,7 @@ describe('summarizeSyncStatus', () => {
     expect(result.badgeText).toBe('5');
     expect(result.badgeColor).toBe('#fd8a01');
     expect(result.title).toBe(
-      'Coop: 5 pending review (2 drafts, 1 signal, 1 action, 1 stale observation)',
+      'Coop: 5 pending review (2 drafts, 1 signal, 1 action, 1 item needing a fresh look)',
     );
   });
 

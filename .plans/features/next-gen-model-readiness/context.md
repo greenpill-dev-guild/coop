@@ -8,6 +8,24 @@ Analysis based on Nate B Jones transcript re: Claude Mythos and four parallel au
 3. Validation pipeline redundancy analysis
 4. Multi-agent coordination overhead assessment
 
+Additional source: "Dive into Claude Code: The Design Space of Today's and Future AI Agent
+Systems" (arXiv:2604.14228v1). The relevant takeaway is not to copy Claude Code wholesale; it is
+to preserve deterministic harness boundaries while simplifying model-facing scaffolding.
+
+## Harness Guardrail Classification
+
+Use this table during Phase 1 cleanup before removing or rewriting prompt/context material.
+
+| Classification | Examples in this repo | Where it must live |
+|---|---|---|
+| `deterministic-gate` | permission checks, deny/allow rules, hook enforcement, schema validation, `bun run test` enforcement, release gates | Code, hook config, schemas, validators, tests, or `scripts/validate.ts` |
+| `repo-constraint` | barrel imports, root `.env.local`, no Dexie access from views, MV3 service-worker constraints | One canonical repo instruction or rule file |
+| `product-intent` | local-first, passkey-first, explicit publish, community/project framing, friendly non-console UX | `CLAUDE.md`, product context, or current plan spec |
+| `soft-guidance` | library tutorials, static file maps, generic debugging recipes, boilerplate test snippets | Remove or replace with file pointers |
+
+If a cleanup step touches a `deterministic-gate`, the implementation note must name the executable
+surface that still enforces it after the prose is removed.
+
 ## Key Files by Phase
 
 ### Phase 1: Prompt Surface

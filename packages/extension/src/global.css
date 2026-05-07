@@ -1431,6 +1431,11 @@ button.sidepanel-header__brand {
   flex-wrap: wrap;
 }
 
+.compact-card__actions--feedback {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .compact-card__target-pill {
   padding: 0.25rem 0.6rem;
   border: 1px solid rgba(90, 125, 16, 0.25);
@@ -1473,6 +1478,11 @@ button.sidepanel-header__brand {
 .compact-card__push-btn:hover {
   background: rgba(90, 125, 16, 0.1);
   transform: translateY(-1px);
+}
+
+.compact-card__push-btn--quiet {
+  color: var(--coop-muted);
+  font-weight: 500;
 }
 
 .compact-card__coop-picker {

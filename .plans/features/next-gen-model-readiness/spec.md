@@ -2,6 +2,7 @@
 
 **Status**: Active
 **Created**: 2026-04-02
+**Updated**: 2026-05-07
 **Motivation**: Prepare Coop's agentic development flow and in-browser agent pipeline for next-generation models (larger context, stronger reasoning, autonomous planning). Based on a four-axis audit: prompt scaffolding, agent pipeline, eval pipeline, and multi-agent coordination.
 
 ## Problem Statement
@@ -17,12 +18,45 @@ As models improve, simpler works best. Specify **outcomes and constraints**, not
 4. Build comprehensive eval gates
 5. Get out of the way
 
+## Harness Guardrail
+
+The prompt surface should shrink, but deterministic harness boundaries should not. The Claude Code
+design-space paper sharpens the line: soft instructions can be simplified aggressively; permission,
+sandbox, validation, eval, trace, and recovery gates must stay executable and inspectable outside the
+model prompt.
+
+For every Phase 1 deletion or rewrite, classify the removed material before landing the change:
+
+| Classification | Meaning | Required action |
+|---|---|---|
+| `deterministic-gate` | Enforced by code, hook, schema, validator, permission rule, or test | Keep or move to the executable gate; do not leave it as prompt prose only |
+| `repo-constraint` | Coop-specific behavior that agents must know but code cannot fully enforce | Keep once in the canonical repo instruction surface |
+| `product-intent` | Non-derivable product direction, voice, trust posture, or user promise | Preserve in product context or a short pointer |
+| `soft-guidance` | Generic method, library knowledge, static map, or procedural walkthrough | Remove or replace with a source pointer |
+
+No simplification pass is complete until it proves that every removed `deterministic-gate`,
+`repo-constraint`, and `product-intent` still has a durable home.
+
+## Workflow Continuity Rule
+
+Model routing is an internal runtime decision, not the user-facing product. The stable user promise
+is the work loop: capture useful context, refine it locally, review what matters, and explicitly
+share or publish approved outputs. Stronger, cheaper, local, or experimental providers may handle
+different steps, but the workflow identity, memory contract, approval gates, and trace evidence must
+survive provider churn.
+
+Provider/model names belong in advanced diagnostics, benchmark evidence, and promotion gates. Simple
+mode should show task state, source/provenance, confidence, and next action in plain language.
+
 ## Phases
 
 ### Phase 1: Simplify the Prompt Surface
 **Goal**: Reduce ~8,500 lines to ~3,000 lines by removing library documentation, static code maps, procedural recipes, and duplicated constraints. Keep outcomes, constraints, anti-patterns, and product intent.
 
 **Impact**: Every conversation starts with less noise. Models spend tokens on the task, not on reading Vitest API docs they already know.
+
+**Gate**: Each removed instruction is classified using the Harness Guardrail table above. Deterministic
+gates must remain executable, not merely rewritten as shorter prompt text.
 
 ### Phase 2: Consolidate the Eval Pipeline
 **Goal**: Replace 67 validation suites with a clear hierarchy: fast iteration tiers for developers + one comprehensive release gate. Extract duplicated E2E helpers.
@@ -32,7 +66,9 @@ As models improve, simpler works best. Specify **outcomes and constraints**, not
 ### Phase 3: Prepare the Agent Pipeline for Model Upgrade
 **Goal**: Introduce a "capable model" code path alongside the 0.5B path. Define tools from deterministic skills. Collapse output handlers into generic tools. Feature-flag via `VITE_COOP_AGENT_MODE`.
 
-**Impact**: When a stronger model becomes available (WebGPU, cloud API, or larger local model), we flip a flag and the agent plans autonomously instead of following a hardcoded skill chain.
+**Impact**: When a stronger model becomes available (WebGPU, cloud API, or larger local model), we
+can route suitable steps through it without changing the user's mental model or weakening approval,
+memory, trace, and fallback boundaries.
 
 ### Phase 4: Close the Development Agent Dispatch Loop
 **Goal**: Add structured output to `plans.ts` queue/reconcile commands. Build a dispatch loop. Make lane assignment dynamic.
@@ -53,6 +89,8 @@ As models improve, simpler works best. Specify **outcomes and constraints**, not
 | 8 | State each constraint once, in one canonical location | The barrel import rule appears in 5+ places — deduplication reduces drift |
 | 9 | Convert deterministic skills to tool definitions | Green Goods/ERC-8004 skills never use the model — they're already tools wearing skill costumes |
 | 10 | Make lane assignment dynamic in Phase 4 | Static Claude=UI/Codex=state split is compensatory — a capable planner handles both |
+| 11 | Preserve deterministic harness gates while shrinking prompts | Stronger models benefit from less scaffolding, but authority, safety, eval, and recovery must stay outside probabilistic prompt compliance |
+| 12 | Keep model routing internal and workflow continuity user-facing | Coop should survive provider churn by keeping memory, approval, trace, and fallback contracts stable while hiding routing details from simple mode |
 
 ## Execution Order
 
@@ -79,12 +117,15 @@ Phase 4 builds on Phases 2 and 3.
 | Agent pipeline orchestration (Layer 1) | ~3,500 lines | ~800 lines (tool defs + routing) |
 | Constraint duplication | 5+ locations per rule | 1 canonical location |
 | Dev agent dispatch | Manual queue → execute | Structured queue → auto-dispatch |
+| Harness guardrail audit | Not explicit | Every Phase 1 deletion classified; no deterministic gate moved into prompt-only guidance |
+| Model routing UX | Provider details leak into operator surfaces | Simple mode shows workflow state and provenance; provider details stay in advanced diagnostics |
 
 ## Risk Assessment
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
 | Removing a constraint that actually matters | Medium | Each removal verified against test suite; constraints backed by hooks survive regardless |
+| Demoting executable safety/eval behavior into shorter prompt prose | High | Classify deleted guidance first; deterministic gates must remain in code, hooks, schemas, validators, or tests |
 | Breaking agent pipeline during refactor | High | Feature flag (`VITE_COOP_AGENT_MODE=legacy\|autonomous`); legacy path unchanged |
 | E2E test interference when consolidated | Medium | Run full E2E suite before and after consolidation; keep per-spec isolation via Playwright projects |
 | Skill simplification loses Coop-specific nuance | Low | Each skill reviewed individually; anti-patterns extracted before deletion |

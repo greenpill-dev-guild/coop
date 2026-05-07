@@ -117,6 +117,25 @@ export const actionProposalSchema = z.object({
 
 export const tabRoutingStatusSchema = z.enum(['routed', 'drafted', 'dismissed', 'published']);
 
+export const reviewItemFeedbackItemKindSchema = z.enum(['signal', 'draft', 'observation']);
+
+export const reviewItemFeedbackActionSchema = z.enum(['not-useful', 'remind-later']);
+
+export const reviewItemFeedbackSchema = z.object({
+  id: z.string().min(1),
+  itemKind: reviewItemFeedbackItemKindSchema,
+  itemId: z.string().min(1),
+  coopId: z.string().min(1).optional(),
+  action: reviewItemFeedbackActionSchema,
+  extractId: z.string().min(1).optional(),
+  sourceCandidateId: z.string().min(1).optional(),
+  draftId: z.string().min(1).optional(),
+  observationId: z.string().min(1).optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  remindAt: z.string().datetime().optional(),
+});
+
 export const tabRoutingSchema = z.object({
   id: z.string().min(1),
   sourceCandidateId: z.string().min(1),
@@ -466,6 +485,9 @@ export const archiveWorthinessSchema = z.object({
 export type AgentObservationTrigger = z.infer<typeof agentObservationTriggerSchema>;
 export type AgentObservationStatus = z.infer<typeof agentObservationStatusSchema>;
 export type AgentObservation = z.infer<typeof agentObservationSchema>;
+export type ReviewItemFeedbackItemKind = z.infer<typeof reviewItemFeedbackItemKindSchema>;
+export type ReviewItemFeedbackAction = z.infer<typeof reviewItemFeedbackActionSchema>;
+export type ReviewItemFeedback = z.infer<typeof reviewItemFeedbackSchema>;
 export type AgentPlanStatus = z.infer<typeof agentPlanStatusSchema>;
 export type AgentPlanStepStatus = z.infer<typeof agentPlanStepStatusSchema>;
 export type AgentProvider = z.infer<typeof agentProviderSchema>;

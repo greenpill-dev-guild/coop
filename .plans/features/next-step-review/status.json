@@ -1,0 +1,65 @@
+{
+  "$schema": "status-schema",
+  "feature": "next-step-review",
+  "title": "Next-Step Review",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": ["state", "api"],
+      "branch": "claude/ui/next-step-review",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/state/next-step-review",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["state"],
+      "branch": "codex/api/next-step-review",
+      "ready_when_dependencies_met": true
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/next-step-review"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/next-step-review"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "ready",
+      "depends_on": ["ui", "state", "api"],
+      "branch": "handoff/qa-codex/next-step-review",
+      "branch_trigger": "handoff/qa-codex/next-step-review",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/next-step-review",
+      "branch_trigger": "handoff/qa-claude/next-step-review",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    "Use the community/project wedge from UX Surface Clarity; do not add broad consumer-life connectors.",
+    "Persist review feedback locally only; do not sync, publish, or write feedback onchain.",
+    "Hide or snooze review items without deleting drafts; not-useful may dismiss matching routings or observations.",
+    "Default Remind later to three days because existing review cadence is free text and not parsed in v1.",
+    "Review cards should explain what Coop noticed, why it matters, where it came from, and the suggested next move without exposing raw agent telemetry in simple mode."
+  ],
+  "updated_at": "2026-05-07"
+}

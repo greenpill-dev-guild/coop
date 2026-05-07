@@ -37,8 +37,8 @@ describe('Roost FocusSection', () => {
       />,
     );
 
-    expect(screen.getByText('2 agent plans need approval')).toBeInTheDocument();
-    expect(screen.queryByText('2 agent plans need judgment')).toBeNull();
+    expect(screen.getByText('2 prepared actions need your review')).toBeInTheDocument();
+    expect(screen.queryByText('2 prepared actions need your judgment')).toBeNull();
   });
 
   it('keeps judgment framing for mixed high-risk plans', () => {
@@ -75,7 +75,24 @@ describe('Roost FocusSection', () => {
       />,
     );
 
-    expect(screen.getByText('2 agent plans need judgment')).toBeInTheDocument();
-    expect(screen.queryByText('2 agent plans need approval')).toBeNull();
+    expect(screen.getByText('2 prepared actions need your judgment')).toBeInTheDocument();
+    expect(screen.queryByText('2 prepared actions need your review')).toBeNull();
+  });
+
+  it('uses plain fresh-look copy for stale helper work', () => {
+    render(
+      <FocusSection
+        summary={{ pendingDrafts: 0, staleObservationCount: 1 } as never}
+        pendingPlans={[]}
+        recentArtifacts={[]}
+        onOpenSynthesisSegment={vi.fn()}
+        onRunAgentCycle={vi.fn(async () => undefined)}
+      />,
+    );
+
+    expect(screen.getByText('1 item needs a fresh look')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh suggestions' })).toBeInTheDocument();
+    expect(screen.queryByText(/stale observation/i)).toBeNull();
+    expect(screen.queryByText(/run agent/i)).toBeNull();
   });
 });

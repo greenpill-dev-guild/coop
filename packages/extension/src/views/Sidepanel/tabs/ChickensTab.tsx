@@ -179,6 +179,7 @@ export function ChickensTab({
 
   // Gather all review items
   const proactiveSignals = dashboard?.proactiveSignals ?? [];
+  const activeReviewItemFeedbacks = dashboard?.activeReviewItemFeedbacks ?? [];
   const staleObservations = useMemo(
     () =>
       (agentDashboard?.observations ?? []).filter((obs) =>
@@ -188,8 +189,15 @@ export function ChickensTab({
   );
 
   const reviewItems = useMemo(
-    () => buildReviewItems(proactiveSignals, visibleDrafts, staleObservations, coops),
-    [proactiveSignals, visibleDrafts, staleObservations, coops],
+    () =>
+      buildReviewItems(
+        proactiveSignals,
+        visibleDrafts,
+        staleObservations,
+        coops,
+        activeReviewItemFeedbacks,
+      ),
+    [proactiveSignals, visibleDrafts, staleObservations, coops, activeReviewItemFeedbacks],
   );
 
   // Apply category filter

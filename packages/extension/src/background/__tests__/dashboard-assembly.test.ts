@@ -23,6 +23,7 @@ const sharedMocks = vi.hoisted(() => ({
   getSoundPreferences: vi.fn(),
   listActionBundles: vi.fn(),
   listActionLogEntries: vi.fn(),
+  listActiveReviewItemFeedbacks: vi.fn(),
   listAgentObservations: vi.fn(),
   listExecutionPermits: vi.fn(),
   listLocalIdentities: vi.fn(),
@@ -81,6 +82,7 @@ vi.mock('@coop/shared', async (importOriginal) => {
     getSoundPreferences: sharedMocks.getSoundPreferences,
     listActionBundles: sharedMocks.listActionBundles,
     listActionLogEntries: sharedMocks.listActionLogEntries,
+    listActiveReviewItemFeedbacks: sharedMocks.listActiveReviewItemFeedbacks,
     listAgentObservations: sharedMocks.listAgentObservations,
     listExecutionPermits: sharedMocks.listExecutionPermits,
     listLocalIdentities: sharedMocks.listLocalIdentities,
@@ -313,6 +315,7 @@ describe('dashboard assembly', () => {
       reducedSound: false,
     });
     sharedMocks.listReviewDrafts.mockResolvedValue(drafts);
+    sharedMocks.listActiveReviewItemFeedbacks.mockResolvedValue([]);
     sharedMocks.listTabCandidates.mockResolvedValue([
       makeCandidate(),
       makeCandidate({ id: 'candidate-2' }),
@@ -464,6 +467,35 @@ describe('dashboard assembly', () => {
         agentCadenceMinutes: 16,
       }),
     );
+  });
+
+  it('excludes active review feedback from summary and proactive signal counts', async () => {
+    sharedMocks.listActiveReviewItemFeedbacks.mockResolvedValue([
+      {
+        id: 'feedback-1',
+        itemKind: 'signal',
+        itemId: 'signal:candidate-1',
+        action: 'not-useful',
+        coopId: 'coop-1',
+        sourceCandidateId: 'candidate-1',
+        extractId: 'extract-1',
+        createdAt: '2026-03-29T01:00:00.000Z',
+        updatedAt: '2026-03-29T01:00:00.000Z',
+      },
+    ]);
+
+    const result = await buildSummary();
+    const signals = await buildProactiveSignals({
+      coops: await contextMocks.getCoops(),
+      drafts: await sharedMocks.listReviewDrafts(),
+      candidates: await sharedMocks.listTabCandidates(),
+      tabRoutings: await sharedMocks.listTabRoutings(),
+      activeReviewItemFeedbacks: await sharedMocks.listActiveReviewItemFeedbacks(),
+      activeCoopId: 'coop-1',
+    });
+
+    expect(result.summary.routedTabs).toBe(0);
+    expect(signals).toHaveLength(0);
   });
 
   it('refreshes the badge, writes a popup snapshot, and notifies listeners', async () => {

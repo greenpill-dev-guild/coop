@@ -21,14 +21,17 @@ done_when:
 skills:
   - architecture
   - testing
-updated: 2026-04-02
+updated: 2026-05-07
 ---
 
 # Phase 3: Prepare the Agent Pipeline for Model Upgrade
 
 Target: Introduce a "capable model" code path alongside the 0.5B legacy path. Define tools from deterministic skills. Collapse output handlers into generic tools. Feature-flagged via `VITE_COOP_AGENT_MODE`.
 
-**Principle**: The legacy path (0.5B + heuristic fallbacks) continues working unchanged. The autonomous path is additive — same observation lifecycle, same approval gates, same memory system, different execution strategy.
+**Principle**: The legacy path (0.5B + heuristic fallbacks) continues working unchanged. The
+autonomous path is additive — same observation lifecycle, same approval gates, same memory system,
+same trace evidence, same fallback semantics, different execution strategy. Model routing remains
+internal runtime evidence; simple mode should not become a provider-management surface.
 
 ## Step 1: Add `VITE_COOP_AGENT_MODE` environment variable
 
@@ -162,6 +165,8 @@ export async function runAutonomousAgentCycle(options: {
 - The plan goes through the same approval gate as the legacy path
 - Memory is queried the same way (via `queryMemoriesForSkill`)
 - Observations are created/updated the same way
+- Provider/model details are persisted for traces, benchmarks, and advanced diagnostics, but user
+  workflow state stays provider-independent
 
 **Model bridge interface** (abstract — concrete implementation depends on model provider):
 ```typescript

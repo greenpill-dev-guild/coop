@@ -19,6 +19,9 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - The agent has no way to learn from YouTube channels, GitHub repos, or RSS feeds that the coop follows
 - Reasoning traces evaporate after skill execution — no institutional memory, no precedent system
 - The Neo4j Context Graph talk validated that graph memory + reasoning traces + hybrid retrieval is production-ready and the patterns map directly to Coop's architecture
+- The durable-agent runtime lesson is clear: if models can change, memory needs independent
+  provenance, confirmation status, and retrieval rules so Coop behaves continuously without
+  turning model output into unaccountable truth.
 
 ## Scope
 
@@ -57,7 +60,7 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - Context assembly for skill prompts (token-budgeted)
 - No LLM calls during retrieval (hard requirement)
 
-**Phase 6 — Reasoning Traces + Compound Loop** (learning)
+**Phase 6 — Reasoning Traces + Memory Provenance** (learning)
 - Record decision traces as precedent nodes linked to skill runs
 - Precedent query by observation similarity
 - Confidence adjustment based on past decision outcomes
@@ -66,6 +69,14 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - Rejection weakens: decrease edge confidence, temporal invalidation (not deletion)
 - Validated insight entities: approved draft summaries become first-class graph nodes
 - Append-only activity log: chronological record of ingests, queries, lint passes
+- Memory write-back labels each durable entry as `observed`, `inferred`, `user-confirmed`,
+  `imported`, or `stale`
+- Confirmation status controls retrieval weight and whether a memory can be used as instruction-like
+  context later
+- Retrieval-before-work gathers relevant sources, decisions, prior failures, open questions, and
+  constraints before meaningful agent work starts
+- Write-back-after-work records output summary, source channel, provider/model use, trace or task ID,
+  confidence, unresolved questions, and confirmation status
 
 **Phase 7 — Lint + Integration** (wiring + health)
 - Knowledge lint skill: orphan entities, stale sources, contradictions, coverage gaps, graph health
@@ -91,12 +102,14 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - Add YouTube channels, GitHub repos, RSS feeds, subreddits, NPM packages as knowledge sources
 - See what the agent knows (topic bars) and why it recommended something (sourced from + track record)
 - Review agent decisions with full provenance (which sources, which precedents)
+- Distinguish user-confirmed memory from inferred or imported memory without opening an agent log
 - See source health at a glance (popup dot, Nest freshness indicators)
 
 **Operators can:**
 - Configure source allowlists per coop
 - Monitor graph size and entity counts
 - Review agent decision history with reasoning traces
+- Audit which memories are model-inferred, source-observed, imported, stale, or confirmed by a member
 - See cascade effects before removing sources
 
 **What stays the same:**
@@ -118,6 +131,10 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - Entity extraction must use existing inference cascade — no new model infrastructure
 - No LLM calls during graph retrieval (performance requirement)
 - Source adapters must go through `assertAllowedSource()` — no direct fetch from unapproved URLs
+- Provenance labels extend the existing memory/trace contracts; do not introduce a parallel
+  repo-level memory truth surface.
+- Raw source fetch state stays local. Only approved outputs and user-confirmed memory projections may
+  become shared coop memory.
 
 ### New dependencies
 - `@kuzu/kuzu-wasm` — embedded graph DB (or Vela-Engineering fork for concurrent writes)
@@ -192,18 +209,25 @@ The "YouTube Kids for agents" model: sandbox the knowledge, not just the executi
 - [ ] Precedent query finds similar past decisions
 - [ ] Positive precedents boost confidence >= 0.05
 - [ ] Negative precedents decrease confidence >= 0.05
+- [ ] Memory write-back records provenance label, confirmation status, source channel, provider or
+  model use, trace/task ID, confidence, and unresolved questions where applicable
+- [ ] Unconfirmed inferred memory is retrievable as context but never elevated to instruction-like
+  guidance without member confirmation
+- [ ] Stale memory is visible as stale and ranked below current observed or confirmed context
 
 ### Phase 7 — Integration
 - [ ] All existing eval cases pass at or above current thresholds (zero regression)
 - [ ] Agent cycle time stays within 120% of baseline
 - [ ] Graph-enhanced skills show >= 10% quality improvement (A/B evaluation)
 - [ ] UI surfaces work: Nest Sources, Roost Knowledge, DraftCard provenance, Popup pulse
+- [ ] Recommendation surfaces can answer "where did this come from?" without exposing raw prompts,
+  model output, or internal trace payloads in simple mode
 
 ## Validation Plan
 
 - **Unit**: Source registry CRUD, adapter parsing, entity extraction, graph CRUD, retrieval relevance, temporal correctness, reasoning traces
-- **Integration**: Full pipeline: source → adapter → extraction → graph → retrieval → skill context → output
-- **E2E**: Member adds source → agent ingests → agent uses in recommendation → member sees provenance
+- **Integration**: Full pipeline: source → adapter → extraction → graph → retrieval → skill context → output → provenance-labeled write-back
+- **E2E**: Member adds source → agent ingests → agent uses in recommendation → member sees provenance and can distinguish inferred from confirmed memory
 - **A/B**: Baseline (flat memory) vs graph-enhanced (graph retrieval) quality comparison on eval corpus
 - **Regression**: All existing skill eval cases + unit tests must pass at pre-implementation thresholds
 

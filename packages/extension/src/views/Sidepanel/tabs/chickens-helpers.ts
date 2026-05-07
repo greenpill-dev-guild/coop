@@ -1,4 +1,4 @@
-import type { Artifact, CoopSharedState, ReviewDraft } from '@coop/shared';
+import type { Artifact, CoopSharedState, ReviewDraft, ReviewItemFeedback } from '@coop/shared';
 import type { AgentDashboardResponse, ProactiveSignal } from '../../../runtime/messages';
 import { resolvePreviewCardImageUrl } from '../../shared/dashboard-selectors';
 
@@ -57,6 +57,16 @@ export function formatCategoryLabel(value: string) {
 
 export type ReviewItemKind = 'signal' | 'draft' | 'stale';
 
+export interface ReviewItemFeedbackSubject {
+  itemKind: ReviewItemFeedback['itemKind'];
+  itemId: string;
+  coopId?: string;
+  extractId?: string;
+  sourceCandidateId?: string;
+  draftId?: string;
+  observationId?: string;
+}
+
 export interface ReviewItem {
   id: string;
   kind: ReviewItemKind;
@@ -66,6 +76,8 @@ export interface ReviewItem {
   category: string;
   timestamp: string;
   targetCoops: { id: string; name: string }[];
+  feedbackSubject: ReviewItemFeedbackSubject;
+  feedbackSubjects: ReviewItemFeedbackSubject[];
   /** Original data for progressive disclosure */
   signal?: ProactiveSignal;
   draft?: ReviewDraft;
@@ -101,6 +113,36 @@ export function resolveSourceUrl(item: ReviewItem): string | undefined {
   return undefined;
 }
 
+function isActiveFeedback(feedback: ReviewItemFeedback, now = Date.now()) {
+  if (feedback.action === 'not-useful') return true;
+  if (!feedback.remindAt) return true;
+  const remindAt = Date.parse(feedback.remindAt);
+  return Number.isNaN(remindAt) || remindAt > now;
+}
+
+function feedbackMatchesSubject(feedback: ReviewItemFeedback, subject: ReviewItemFeedbackSubject) {
+  if (feedback.itemKind !== subject.itemKind) return false;
+  return Boolean(
+    feedback.itemId === subject.itemId ||
+      (subject.draftId && feedback.draftId === subject.draftId) ||
+      (subject.observationId && feedback.observationId === subject.observationId) ||
+      (subject.extractId && feedback.extractId === subject.extractId) ||
+      (subject.sourceCandidateId && feedback.sourceCandidateId === subject.sourceCandidateId),
+  );
+}
+
+export function isReviewItemSuppressed(
+  item: ReviewItem,
+  activeFeedbacks: ReviewItemFeedback[],
+  now = Date.now(),
+) {
+  return activeFeedbacks.some(
+    (feedback) =>
+      isActiveFeedback(feedback, now) &&
+      item.feedbackSubjects.some((subject) => feedbackMatchesSubject(feedback, subject)),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Build review items
 // ---------------------------------------------------------------------------
@@ -110,6 +152,7 @@ export function buildReviewItems(
   drafts: ReviewDraft[],
   staleObservations: NonNullable<AgentDashboardResponse>['observations'][number][],
   coops: CoopSharedState[],
+  activeFeedbacks: ReviewItemFeedback[] = [],
 ): ReviewItem[] {
   const coopNameById = new Map(coops.map((c) => [c.profile.id, c.profile.name]));
 
@@ -126,6 +169,22 @@ export function buildReviewItems(
       // Skip if another signal already merged this draft
       if (mergedDraftIds.has(linkedDraft.id)) continue;
 
+      const draftSubject: ReviewItemFeedbackSubject = {
+        itemKind: 'draft',
+        itemId: linkedDraft.id,
+        coopId: linkedDraft.suggestedTargetCoopIds[0],
+        draftId: linkedDraft.id,
+        extractId: linkedDraft.extractId,
+        sourceCandidateId: linkedDraft.sourceCandidateId,
+      };
+      const signalSubject: ReviewItemFeedbackSubject = {
+        itemKind: 'signal',
+        itemId: signal.id,
+        coopId: primary?.coopId,
+        extractId: signal.extractId,
+        sourceCandidateId: signal.sourceCandidateId,
+        draftId: linkedDraft.id,
+      };
       // Merge: use draft as the actionable base but carry signal support data
       mergedDraftIds.add(linkedDraft.id);
       items.push({
@@ -140,10 +199,19 @@ export function buildReviewItems(
           id,
           name: coopNameById.get(id) ?? 'Coop',
         })),
+        feedbackSubject: draftSubject,
+        feedbackSubjects: [draftSubject, signalSubject],
         draft: linkedDraft,
         signal,
       });
     } else {
+      const signalSubject: ReviewItemFeedbackSubject = {
+        itemKind: 'signal',
+        itemId: signal.id,
+        coopId: primary?.coopId,
+        extractId: signal.extractId,
+        sourceCandidateId: signal.sourceCandidateId,
+      };
       // Orphan signal — no draft yet, still reviewable and pushable
       items.push({
         id: `signal-${signal.id}`,
@@ -154,6 +222,8 @@ export function buildReviewItems(
         category: signal.category,
         timestamp: signal.updatedAt,
         targetCoops: signal.targetCoops.map((t) => ({ id: t.coopId, name: t.coopName })),
+        feedbackSubject: signalSubject,
+        feedbackSubjects: [signalSubject],
         signal,
       });
     }
@@ -162,6 +232,14 @@ export function buildReviewItems(
   // Emit remaining drafts that were not merged with a signal
   for (const draft of drafts) {
     if (mergedDraftIds.has(draft.id)) continue;
+    const draftSubject: ReviewItemFeedbackSubject = {
+      itemKind: 'draft',
+      itemId: draft.id,
+      coopId: draft.suggestedTargetCoopIds[0],
+      draftId: draft.id,
+      extractId: draft.extractId,
+      sourceCandidateId: draft.sourceCandidateId,
+    };
     items.push({
       id: `draft-${draft.id}`,
       kind: 'draft',
@@ -174,11 +252,19 @@ export function buildReviewItems(
         id,
         name: coopNameById.get(id) ?? 'Coop',
       })),
+      feedbackSubject: draftSubject,
+      feedbackSubjects: [draftSubject],
       draft,
     });
   }
 
   for (const obs of staleObservations) {
+    const observationSubject: ReviewItemFeedbackSubject = {
+      itemKind: 'observation',
+      itemId: obs.id,
+      coopId: obs.coopId,
+      observationId: obs.id,
+    };
     items.push({
       id: `stale-${obs.id}`,
       kind: 'stale',
@@ -188,9 +274,13 @@ export function buildReviewItems(
       category: 'observation',
       timestamp: obs.createdAt,
       targetCoops: [],
+      feedbackSubject: observationSubject,
+      feedbackSubjects: [observationSubject],
       staleObservation: obs,
     });
   }
 
-  return items.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  return items
+    .filter((item) => !isReviewItemSuppressed(item, activeFeedbacks))
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }

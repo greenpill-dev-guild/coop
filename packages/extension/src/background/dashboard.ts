@@ -1,6 +1,7 @@
 import {
   type AgentObservation,
   type ReviewDraft,
+  type ReviewItemFeedback,
   type UiPreferences,
   createPermitLogEntry,
   defaultSoundPreferences,
@@ -12,8 +13,10 @@ import {
   getAuthSession,
   getPendingOutboxCount,
   getSoundPreferences,
+  isReviewItemFeedbackActive,
   listActionBundles,
   listActionLogEntries,
+  listActiveReviewItemFeedbacks,
   listAgentObservations,
   listExecutionPermits,
   listLocalIdentities,
@@ -250,9 +253,7 @@ function formatAttentionBreakdown(summary: {
       ? `${summary.pendingActions} action${summary.pendingActions === 1 ? '' : 's'}`
       : null,
     summary.staleObservationCount > 0
-      ? `${summary.staleObservationCount} stale observation${
-          summary.staleObservationCount === 1 ? '' : 's'
-        }`
+      ? `${summary.staleObservationCount} item${summary.staleObservationCount === 1 ? '' : 's'} needing a fresh look`
       : null,
   ].filter((value): value is string => Boolean(value));
 
@@ -330,6 +331,53 @@ export function isStalePendingObservation(observation: AgentObservation, now = D
   );
 }
 
+function feedbackMatchesDraft(feedback: ReviewItemFeedback, draft: ReviewDraft) {
+  return (
+    feedback.itemKind === 'draft' &&
+    (feedback.itemId === draft.id ||
+      feedback.draftId === draft.id ||
+      feedback.extractId === draft.extractId ||
+      feedback.sourceCandidateId === draft.sourceCandidateId)
+  );
+}
+
+function feedbackMatchesRouting(
+  feedback: ReviewItemFeedback,
+  routing: Awaited<ReturnType<typeof listTabRoutings>>[number],
+) {
+  if (feedback.itemKind === 'signal') {
+    const signalId = `signal:${routing.sourceCandidateId || routing.extractId}`;
+    return (
+      feedback.itemId === signalId ||
+      feedback.extractId === routing.extractId ||
+      feedback.sourceCandidateId === routing.sourceCandidateId
+    );
+  }
+
+  return (
+    feedback.itemKind === 'draft' &&
+    typeof routing.draftId === 'string' &&
+    (feedback.itemId === routing.draftId || feedback.draftId === routing.draftId)
+  );
+}
+
+function feedbackMatchesObservation(feedback: ReviewItemFeedback, observation: AgentObservation) {
+  return (
+    feedback.itemKind === 'observation' &&
+    (feedback.itemId === observation.id || feedback.observationId === observation.id)
+  );
+}
+
+function hasActiveReviewFeedback(
+  feedbacks: ReviewItemFeedback[],
+  matcher: (feedback: ReviewItemFeedback) => boolean,
+  now = Date.now(),
+) {
+  return feedbacks.some(
+    (feedback) => isReviewItemFeedbackActive(feedback, now) && matcher(feedback),
+  );
+}
+
 function summarizeSupportDetail(value: string, maxLength = 140) {
   const normalized = value.replace(/\s+/g, ' ').trim();
   return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 1)}…`;
@@ -340,12 +388,17 @@ export async function buildProactiveSignals(input: {
   drafts: ReviewDraft[];
   candidates: Awaited<ReturnType<typeof listTabCandidates>>;
   tabRoutings: Awaited<ReturnType<typeof listTabRoutings>>;
+  activeReviewItemFeedbacks?: ReviewItemFeedback[];
   activeCoopId?: string;
 }): Promise<ProactiveSignal[]> {
+  const activeFeedbacks = input.activeReviewItemFeedbacks ?? [];
   const scopedRoutings = input.tabRoutings.filter(
     (routing) =>
       (routing.status === 'routed' || routing.status === 'drafted') &&
-      (!input.activeCoopId || routing.coopId === input.activeCoopId),
+      (!input.activeCoopId || routing.coopId === input.activeCoopId) &&
+      !hasActiveReviewFeedback(activeFeedbacks, (feedback) =>
+        feedbackMatchesRouting(feedback, routing),
+      ),
   );
   const groups = scopedRoutings.reduce((acc, routing) => {
     const key = routing.sourceCandidateId || routing.extractId;
@@ -480,6 +533,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     actionBundles,
     agentCycleState,
     observations,
+    reviewItemFeedbacks,
   ] = await Promise.all([
     listReviewDrafts(db),
     getCoops(),
@@ -492,17 +546,33 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     listActionBundles(db),
     getAgentCycleState(),
     listAgentObservations(db, 500),
+    listActiveReviewItemFeedbacks(db),
   ]);
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
+  const activeReviewItemFeedbacks = reviewItemFeedbacks.filter(
+    (feedback) =>
+      !activeContext.activeCoopId ||
+      !feedback.coopId ||
+      feedback.coopId === activeContext.activeCoopId,
+  );
   const visibleDrafts = filterVisibleReviewDrafts(
     drafts,
     activeContext.activeCoopId,
     activeContext.activeMemberId,
+  ).filter(
+    (draft) =>
+      !hasActiveReviewFeedback(activeReviewItemFeedbacks, (feedback) =>
+        feedbackMatchesDraft(feedback, draft),
+      ),
   );
   const routedTabs = new Set(
     tabRoutings
       .filter(
-        (routing) => !activeContext.activeCoopId || routing.coopId === activeContext.activeCoopId,
+        (routing) =>
+          (!activeContext.activeCoopId || routing.coopId === activeContext.activeCoopId) &&
+          !hasActiveReviewFeedback(activeReviewItemFeedbacks, (feedback) =>
+            feedbackMatchesRouting(feedback, routing),
+          ),
       )
       .map((routing) => routing.sourceCandidateId),
   ).size;
@@ -518,7 +588,10 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
   const staleObservationCount = observations.filter(
     (observation) =>
       isStalePendingObservation(observation) &&
-      (!activeContext.activeCoopId || observation.coopId === activeContext.activeCoopId),
+      (!activeContext.activeCoopId || observation.coopId === activeContext.activeCoopId) &&
+      !hasActiveReviewFeedback(activeReviewItemFeedbacks, (feedback) =>
+        feedbackMatchesObservation(feedback, observation),
+      ),
   ).length;
   const pendingAttentionCount =
     visibleDrafts.length + routedTabs + pendingActions + staleObservationCount;
@@ -636,6 +709,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     receiverPairings,
     receiverIntake,
     recentCaptureRuns,
+    reviewItemFeedbacks,
   ] = await Promise.all([
     getCoops(),
     listReviewDrafts(db),
@@ -649,6 +723,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     listReceiverPairings(db),
     listReceiverCaptures(db),
     db.captureRuns.orderBy('capturedAt').reverse().limit(5).toArray(),
+    listActiveReviewItemFeedbacks(db),
   ]);
   // Dedup: listTabCandidates returns capturedAt-descending, so the first
   // occurrence of each canonicalUrlHash is the most recent capture.  Keeping
@@ -662,10 +737,21 @@ export async function getDashboard(): Promise<DashboardResponse> {
   const { summary } = summaryResult;
   const activeContext = await getActiveReviewContextForSession(coops, authSession);
   const orderedDrafts = drafts;
+  const activeReviewItemFeedbacks = reviewItemFeedbacks.filter(
+    (feedback) =>
+      !activeContext.activeCoopId ||
+      !feedback.coopId ||
+      feedback.coopId === activeContext.activeCoopId,
+  );
   const visibleDrafts = filterVisibleReviewDrafts(
     orderedDrafts,
     activeContext.activeCoopId,
     activeContext.activeMemberId,
+  ).filter(
+    (draft) =>
+      !hasActiveReviewFeedback(activeReviewItemFeedbacks, (feedback) =>
+        feedbackMatchesDraft(feedback, draft),
+      ),
   );
   const visibleReceiverIntake = filterReceiverCapturesForMemberContext(
     receiverIntake,
@@ -723,6 +809,12 @@ export async function getDashboard(): Promise<DashboardResponse> {
     : [];
   const visibleTabRoutings = [...tabRoutings]
     .filter((routing) => routing.status !== 'dismissed')
+    .filter(
+      (routing) =>
+        !hasActiveReviewFeedback(activeReviewItemFeedbacks, (feedback) =>
+          feedbackMatchesRouting(feedback, routing),
+        ),
+    )
     .reduce((grouped, routing) => {
       const bucket = grouped.get(routing.sourceCandidateId) ?? [];
       bucket.push(routing);
@@ -733,50 +825,54 @@ export async function getDashboard(): Promise<DashboardResponse> {
     [...routings].sort((left, right) => right.relevanceScore - left.relevanceScore).slice(0, 3),
   );
 
-  const coopBadges: CoopBadgeSummary[] = coops.map((coop) => ({
-    coopId: coop.profile.id,
-    coopName: coop.profile.name,
-    pendingDrafts: orderedDrafts.filter((d) => d.suggestedTargetCoopIds.includes(coop.profile.id))
-      .length,
-    routedTabs: new Set(
+  const coopBadges: CoopBadgeSummary[] = coops.map((coop) => {
+    const scopedFeedbacks = activeReviewItemFeedbacks.filter(
+      (feedback) => !feedback.coopId || feedback.coopId === coop.profile.id,
+    );
+    const pendingDrafts = orderedDrafts.filter(
+      (draft) =>
+        draft.suggestedTargetCoopIds.includes(coop.profile.id) &&
+        !hasActiveReviewFeedback(scopedFeedbacks, (feedback) =>
+          feedbackMatchesDraft(feedback, draft),
+        ),
+    );
+    const routedTabs = new Set(
       tabRoutings
         .filter(
           (routing) =>
             routing.coopId === coop.profile.id &&
-            (routing.status === 'routed' || routing.status === 'drafted'),
+            (routing.status === 'routed' || routing.status === 'drafted') &&
+            !hasActiveReviewFeedback(scopedFeedbacks, (feedback) =>
+              feedbackMatchesRouting(feedback, routing),
+            ),
         )
         .map((routing) => routing.sourceCandidateId),
-    ).size,
-    insightDrafts: orderedDrafts.filter(
-      (draft) =>
-        draft.suggestedTargetCoopIds.includes(coop.profile.id) &&
-        draft.provenance.type === 'agent' &&
-        draft.provenance.skillId === 'memory-insight-synthesizer',
-    ).length,
-    artifactCount: coop.artifacts.length,
-    pendingActions: operatorAccess
+    ).size;
+    const pendingActions = operatorAccess
       ? pendingBundles(actionBundles.filter((b) => b.coopId === coop.profile.id)).length
-      : 0,
-    pendingAttentionCount:
-      orderedDrafts.filter((d) => d.suggestedTargetCoopIds.includes(coop.profile.id)).length +
-      new Set(
-        tabRoutings
-          .filter(
-            (routing) =>
-              routing.coopId === coop.profile.id &&
-              (routing.status === 'routed' || routing.status === 'drafted'),
-          )
-          .map((routing) => routing.sourceCandidateId),
-      ).size +
-      (operatorAccess
-        ? pendingBundles(actionBundles.filter((b) => b.coopId === coop.profile.id)).length
-        : 0),
-  }));
+      : 0;
+
+    return {
+      coopId: coop.profile.id,
+      coopName: coop.profile.name,
+      pendingDrafts: pendingDrafts.length,
+      routedTabs,
+      insightDrafts: pendingDrafts.filter(
+        (draft) =>
+          draft.provenance.type === 'agent' &&
+          draft.provenance.skillId === 'memory-insight-synthesizer',
+      ).length,
+      artifactCount: coop.artifacts.length,
+      pendingActions,
+      pendingAttentionCount: pendingDrafts.length + routedTabs + pendingActions,
+    };
+  });
   const proactiveSignals = await buildProactiveSignals({
     coops,
     drafts: orderedDrafts,
     candidates,
     tabRoutings,
+    activeReviewItemFeedbacks,
     activeCoopId: activeContext.activeCoopId,
   });
 
@@ -788,6 +884,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     candidates: candidates.slice(0, 12),
     tabRoutings: topTabRoutings,
     proactiveSignals,
+    activeReviewItemFeedbacks,
     summary,
     soundPreferences: soundPreferences ?? defaultSoundPreferences,
     uiPreferences: resolvedUiPreferences,

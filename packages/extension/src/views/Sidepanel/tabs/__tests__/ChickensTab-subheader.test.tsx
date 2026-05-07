@@ -25,6 +25,7 @@ function buildDashboard(overrides: Partial<DashboardResponse> = {}): DashboardRe
     drafts: [],
     tabRoutings: [],
     proactiveSignals: [],
+    activeReviewItemFeedbacks: [],
     runtimeConfig: {
       chainKey: 'sepolia',
       onchainMode: 'mock',
@@ -113,6 +114,9 @@ function buildDraftEditor(): ReturnType<typeof useDraftEditor> {
     convertReceiverCapture: vi.fn(),
     archiveReceiverCapture: vi.fn(),
     toggleReceiverCaptureArchiveWorthiness: vi.fn(),
+    promoteSignalToDraft: vi.fn(),
+    promoteSignalAndPublish: vi.fn(),
+    recordReviewFeedback: vi.fn(),
   } as unknown as ReturnType<typeof useDraftEditor>;
 }
 

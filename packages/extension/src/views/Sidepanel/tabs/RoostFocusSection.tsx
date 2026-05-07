@@ -53,7 +53,7 @@ export function FocusSection({
             {stale > 0 ? (
               <div className="roost-activity-item">
                 <span className="roost-activity-item__title">
-                  {stale} stale observation{stale !== 1 ? 's' : ''} need refresh
+                  {stale} item{stale !== 1 ? 's' : ''} need{stale === 1 ? 's' : ''} a fresh look
                 </span>
                 <button
                   className="secondary-button"
@@ -61,17 +61,17 @@ export function FocusSection({
                   onClick={() => void onRunAgentCycle()}
                   type="button"
                 >
-                  {agentRunning ? 'Running...' : 'Run Agent'}
+                  {agentRunning ? 'Refreshing...' : 'Refresh suggestions'}
                 </button>
               </div>
             ) : null}
             {pendingPlans.length > 0 ? (
               <div className="roost-activity-item">
                 <span className="roost-activity-item__title">
-                  {pendingPlans.length} agent plan{pendingPlans.length !== 1 ? 's' : ''}{' '}
-                  {pendingPlansNeedJudgment ? 'need judgment' : 'need approval'}
+                  {pendingPlans.length} prepared action{pendingPlans.length !== 1 ? 's' : ''}{' '}
+                  {pendingPlansNeedJudgment ? 'need your judgment' : 'need your review'}
                 </span>
-                <span className="roost-activity-item__meta">Review in Agent tab</span>
+                <span className="roost-activity-item__meta">Review before anything happens</span>
               </div>
             ) : null}
             {insights > 0 ? (
@@ -106,7 +106,7 @@ export function FocusSection({
         </div>
         <div className="roost-stat-cell">
           <strong className="roost-stat-cell__value">{summary?.staleObservationCount ?? 0}</strong>
-          <span className="roost-stat-cell__label">Stale</span>
+          <span className="roost-stat-cell__label">Fresh look</span>
         </div>
       </div>
 

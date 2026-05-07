@@ -2,7 +2,7 @@
 # See also: AGENTS.md (shared instructions), .claude/ (Claude Code config)
 
 # Model defaults
-model = "gpt-5.4"
+model = "gpt-5.5"
 
 # Sandbox: keep work inside the repo by default; approval covers anything broader.
 sandbox_mode = "workspace-write"
@@ -25,7 +25,7 @@ multi_agent = true
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
-approval_policy = "never"
+approval_policy = "on-request"
 
 [profiles.quick]
 model = "gpt-4.1-mini"
@@ -35,13 +35,13 @@ model_reasoning_effort = "low"
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
-approval_policy = "never"
+approval_policy = "on-request"
 
 [profiles.triage]
 model = "gpt-4.1-mini"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
-approval_policy = "never"
+approval_policy = "on-request"
 
 [profiles.migrate]
 model = "gpt-5.4"

@@ -47,6 +47,9 @@
       "branch": "handoff/qa-claude/next-gen-model-readiness"
     }
   },
-  "decisions": [],
-  "updated_at": "2026-04-09"
+  "decisions": [
+    "Model routing is internal runtime evidence, not the user-facing product surface; simple mode should show workflow state, provenance, confidence, and next action while provider details stay in advanced diagnostics.",
+    "Provider churn must not change the durable workflow contract: memory retrieval, approval gates, trace evidence, fallback behavior, and explicit publish boundaries remain stable across model upgrades."
+  ],
+  "updated_at": "2026-05-07"
 }

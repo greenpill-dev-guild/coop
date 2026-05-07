@@ -10,7 +10,11 @@ import { isArchiveWorthy, withArchiveWorthiness } from '@coop/shared';
 import { useState } from 'react';
 import { playCoopSound } from '../../../runtime/audio';
 import type { InferenceBridge } from '../../../runtime/inference-bridge';
-import { type ProactiveSignal, sendRuntimeMessage } from '../../../runtime/messages';
+import {
+  type ProactiveSignal,
+  type RuntimeRequest,
+  sendRuntimeMessage,
+} from '../../../runtime/messages';
 import type { SidepanelTab } from '../sidepanel-tabs';
 
 export function useDraftEditor(deps: {
@@ -357,6 +361,25 @@ export function useDraftEditor(deps: {
     await publishDraft(publishableDraft);
   }
 
+  async function recordReviewFeedback(
+    payload: Extract<RuntimeRequest, { type: 'record-review-feedback' }>['payload'],
+  ) {
+    const response = await sendRuntimeMessage({
+      type: 'record-review-feedback',
+      payload,
+    });
+    if (!response.ok) {
+      setMessage(response.error ?? 'Could not update this review item.');
+      return;
+    }
+    setMessage(
+      payload.action === 'remind-later'
+        ? 'Coop will bring this back later.'
+        : 'Coop will quiet similar suggestions.',
+    );
+    await loadDashboard();
+  }
+
   return {
     draftEdits,
     refineResults,
@@ -378,6 +401,7 @@ export function useDraftEditor(deps: {
     toggleDraftArchiveWorthiness,
     promoteSignalToDraft,
     promoteSignalAndPublish,
+    recordReviewFeedback,
   };
 }
 

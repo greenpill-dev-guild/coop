@@ -60,8 +60,9 @@
     "No LLM during retrieval (hard perf requirement)",
     "Vellum material language for all UI surfaces",
     "7-phase dependency-ordered build with gates",
-    "Entity extraction as new skill using existing cascade"
+    "Entity extraction as new skill using existing cascade",
+    "Memory provenance and confirmation labels are part of the product contract: observed, inferred, user-confirmed, imported, and stale memories must behave differently in retrieval and UI."
   ],
-  "updated_at": "2026-04-19",
-  "notes": "UI + state lanes materially landed; graph backend still snapshot-persisted (Kuzu-WASM deferred). QA pass 1 is now ready to run."
+  "updated_at": "2026-05-07",
+  "notes": "UI + state lanes materially landed; graph backend still snapshot-persisted (Kuzu-WASM deferred). QA pass 1 is now ready to run, including provenance, confirmation, and retrieval-before-work checks."
 }

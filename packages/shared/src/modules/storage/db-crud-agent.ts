@@ -7,6 +7,7 @@ import type {
   AgentTraceRecord,
   CoopKnowledgeSkillOverride,
   KnowledgeSkill,
+  ReviewItemFeedback,
   SkillRun,
   TabRouting,
 } from '../../contracts/schema';
@@ -16,6 +17,7 @@ import {
   agentObservationSchema,
   agentPlanSchema,
   agentTraceRecordSchema,
+  reviewItemFeedbackSchema,
   skillRunSchema,
   tabRoutingSchema,
 } from '../../contracts/schema';
@@ -198,6 +200,55 @@ export async function listTabRoutings(
     results = results.filter((routing) => allowed.has(routing.status));
   }
   return typeof options.limit === 'number' ? results.slice(0, options.limit) : results;
+}
+
+// --- Review item feedback persistence ---
+
+export async function saveReviewItemFeedback(db: CoopDexie, feedback: ReviewItemFeedback) {
+  await db.reviewItemFeedbacks.put(reviewItemFeedbackSchema.parse(feedback));
+}
+
+export async function listReviewItemFeedbacks(
+  db: CoopDexie,
+  options: {
+    coopId?: string;
+    itemKind?: ReviewItemFeedback['itemKind'];
+    action?: ReviewItemFeedback['action'][];
+    limit?: number;
+  } = {},
+) {
+  let results = await db.reviewItemFeedbacks.orderBy('updatedAt').reverse().toArray();
+  if (options.coopId) {
+    results = results.filter((feedback) => !feedback.coopId || feedback.coopId === options.coopId);
+  }
+  if (options.itemKind) {
+    results = results.filter((feedback) => feedback.itemKind === options.itemKind);
+  }
+  if (options.action?.length) {
+    const allowed = new Set(options.action);
+    results = results.filter((feedback) => allowed.has(feedback.action));
+  }
+  return typeof options.limit === 'number' ? results.slice(0, options.limit) : results;
+}
+
+export function isReviewItemFeedbackActive(feedback: ReviewItemFeedback, now = Date.now()) {
+  if (feedback.action === 'not-useful') {
+    return true;
+  }
+  if (!feedback.remindAt) {
+    return true;
+  }
+  const remindAt = Date.parse(feedback.remindAt);
+  return Number.isNaN(remindAt) || remindAt > now;
+}
+
+export async function listActiveReviewItemFeedbacks(
+  db: CoopDexie,
+  options: Parameters<typeof listReviewItemFeedbacks>[1] = {},
+  now = Date.now(),
+) {
+  const feedback = await listReviewItemFeedbacks(db, options);
+  return feedback.filter((item) => isReviewItemFeedbackActive(item, now));
 }
 
 // --- Knowledge skills ---

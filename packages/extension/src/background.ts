@@ -171,6 +171,7 @@ import {
 import {
   handlePromoteSignalToDraft,
   handlePublishDraft,
+  handleRecordReviewFeedback,
   handleUpdateMeetingSettings,
   handleUpdateReviewDraft,
 } from './background/handlers/review';
@@ -511,6 +512,9 @@ export function startBackground() {
           return;
         case 'promote-signal-to-draft':
           sendResponse(await handlePromoteSignalToDraft(message));
+          return;
+        case 'record-review-feedback':
+          sendResponse(await handleRecordReviewFeedback(message));
           return;
         case 'update-meeting-settings':
           sendResponse(await handleUpdateMeetingSettings(message));

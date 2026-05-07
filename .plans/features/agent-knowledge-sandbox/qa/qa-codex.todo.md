@@ -17,7 +17,7 @@ skills:
 qa_order: 1
 handoff_in: handoff/qa-codex/agent-knowledge-sandbox
 handoff_out: handoff/qa-claude/agent-knowledge-sandbox
-updated: 2026-04-19
+updated: 2026-05-07
 ---
 
 # QA Pass 1 — Codex
@@ -75,6 +75,9 @@ Triggered by: UI + State lanes complete
 - [ ] Positive precedents boost confidence >= 0.05
 - [ ] Negative precedents decrease confidence >= 0.05
 - [ ] Trace quota enforcement (max 500) works with oldest-first pruning
+- [ ] Memory write-back records provenance label, confirmation status, source channel, provider/model use, trace/task ID, confidence, and unresolved questions where applicable
+- [ ] Inferred but unconfirmed memory is retrievable as context but is not treated as instruction-like guidance
+- [ ] Stale memory is visibly labeled and ranked below current observed or user-confirmed context
 
 ## Integration
 
@@ -82,3 +85,4 @@ Triggered by: UI + State lanes complete
 - [ ] All existing eval cases pass at current thresholds
 - [ ] Agent cycle time within 120% of baseline
 - [ ] Flat agentMemories table still works (backwards compat)
+- [ ] Recommendation UI can answer "where did this come from?" without exposing raw prompts, model output, or internal trace payloads in simple mode

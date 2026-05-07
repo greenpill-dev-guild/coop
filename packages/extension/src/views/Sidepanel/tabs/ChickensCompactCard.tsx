@@ -34,6 +34,17 @@ export function CompactCard(props: CompactCardProps) {
   // Unified detail fields — prefer draft data when present, fall back to signal
   const summary = item.draft?.summary ?? item.signal?.targetCoops[0]?.rationale;
   const nextMove = item.draft?.suggestedNextStep ?? item.signal?.targetCoops[0]?.suggestedNextStep;
+  const canRecordFeedback = Boolean(draftEditor?.recordReviewFeedback);
+
+  function recordFeedback(action: 'not-useful' | 'remind-later') {
+    if (!draftEditor?.recordReviewFeedback) {
+      return;
+    }
+    void draftEditor.recordReviewFeedback({
+      ...item.feedbackSubject,
+      action,
+    });
+  }
 
   return (
     <article className="compact-card" data-focused={focused || undefined}>
@@ -101,6 +112,25 @@ export function CompactCard(props: CompactCardProps) {
       {/* Push controls — unified across all actionable items */}
       <PushControls item={item} coops={coops} draftEditor={draftEditor} />
 
+      {canRecordFeedback ? (
+        <div className="compact-card__actions compact-card__actions--feedback">
+          <button
+            className="compact-card__push-btn compact-card__push-btn--quiet"
+            onClick={() => recordFeedback('remind-later')}
+            type="button"
+          >
+            Remind later
+          </button>
+          <button
+            className="compact-card__push-btn compact-card__push-btn--quiet"
+            onClick={() => recordFeedback('not-useful')}
+            type="button"
+          >
+            Not useful
+          </button>
+        </div>
+      ) : null}
+
       <details className="compact-card__more">
         <summary>Details</summary>
         <div className="compact-card__expanded">
@@ -113,10 +143,19 @@ export function CompactCard(props: CompactCardProps) {
               ))}
             </div>
           ) : null}
-          {summary ? <p className="compact-card__detail-summary">{summary}</p> : null}
+          <div className="compact-card__detail-row">
+            <span className="compact-card__detail-label">What Coop noticed</span>
+            <p>{summary ?? item.title}</p>
+          </div>
+          {item.insight ? (
+            <div className="compact-card__detail-row">
+              <span className="compact-card__detail-label">Why it may matter</span>
+              <p>{item.insight}</p>
+            </div>
+          ) : null}
           {nextMove ? (
             <div className="compact-card__detail-row">
-              <span className="compact-card__detail-label">Next move</span>
+              <span className="compact-card__detail-label">Suggested next move</span>
               <p>{nextMove}</p>
             </div>
           ) : null}
@@ -133,7 +172,7 @@ export function CompactCard(props: CompactCardProps) {
           {item.staleObservation ? (
             <div className="compact-card__detail-row">
               <span className="compact-card__detail-label">Status</span>
-              <p>Pending for over 24 hours — needs review</p>
+              <p>This has been waiting for over 24 hours and needs a fresh look.</p>
             </div>
           ) : null}
         </div>

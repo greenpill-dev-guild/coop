@@ -1,19 +1,24 @@
 import {
   type CoopSharedState,
   type ReviewDraft,
+  type ReviewItemFeedback,
   addOutboxEntry,
   createAgentMemory,
   createId,
   createOutboxEntry,
   deleteReviewDraft,
+  getAgentObservation,
   getAuthSession,
   getReviewDraft,
   getTabRoutingByExtractAndCoop,
   listTabRoutings,
   nowIso,
   publishDraftAcrossCoops,
+  saveAgentObservation,
   saveReviewDraft,
+  saveReviewItemFeedback,
   saveTabRouting,
+  updateAgentObservation,
   updateCoopMeetingSettings,
 } from '@coop/shared';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
@@ -24,6 +29,54 @@ import { getActiveReviewContextForSession } from '../operator';
 import { requestAgentCycle } from './agent';
 import { queueFollowUp } from './follow-up';
 import { syncReceiverCaptureFromDraft } from './receiver';
+
+const REVIEW_FEEDBACK_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
+
+function defaultReviewFeedbackRemindAt(now = Date.now()) {
+  return new Date(now + REVIEW_FEEDBACK_SNOOZE_MS).toISOString();
+}
+
+function routingMatchesReviewFeedback(
+  routing: Awaited<ReturnType<typeof listTabRoutings>>[number],
+  feedback: Pick<ReviewItemFeedback, 'coopId' | 'extractId' | 'sourceCandidateId' | 'draftId'>,
+) {
+  if (feedback.coopId && routing.coopId !== feedback.coopId) {
+    return false;
+  }
+  return Boolean(
+    (feedback.extractId && routing.extractId === feedback.extractId) ||
+      (feedback.sourceCandidateId && routing.sourceCandidateId === feedback.sourceCandidateId) ||
+      (feedback.draftId && routing.draftId === feedback.draftId),
+  );
+}
+
+async function dismissMatchingRoutings(
+  feedback: Pick<ReviewItemFeedback, 'coopId' | 'extractId' | 'sourceCandidateId' | 'draftId'>,
+) {
+  if (!feedback.extractId && !feedback.sourceCandidateId && !feedback.draftId) {
+    return;
+  }
+
+  const routings = await listTabRoutings(db, {
+    extractId: feedback.extractId,
+    sourceCandidateId: feedback.extractId ? undefined : feedback.sourceCandidateId,
+    limit: 500,
+  });
+
+  for (const routing of routings) {
+    if (routing.status === 'published' || routing.status === 'dismissed') {
+      continue;
+    }
+    if (!routingMatchesReviewFeedback(routing, feedback)) {
+      continue;
+    }
+    await saveTabRouting(db, {
+      ...routing,
+      status: 'dismissed',
+      updatedAt: nowIso(),
+    });
+  }
+}
 
 export async function publishDraftWithContext(input: {
   draft: ReviewDraft;
@@ -304,6 +357,61 @@ export async function handleUpdateMeetingSettings(
       error: error instanceof Error ? error.message : 'Could not update meeting settings.',
     } satisfies RuntimeActionResponse;
   }
+}
+
+export async function handleRecordReviewFeedback(
+  message: Extract<RuntimeRequest, { type: 'record-review-feedback' }>,
+) {
+  const now = nowIso();
+  const authSession = await getAuthSession(db);
+  const coops = await getCoops();
+  const activeContext = await getActiveReviewContextForSession(coops, authSession);
+  const payload = message.payload;
+  const feedback: ReviewItemFeedback = {
+    id: createId('review-feedback'),
+    itemKind: payload.itemKind,
+    itemId: payload.itemId,
+    coopId: payload.coopId ?? activeContext.activeCoopId,
+    action: payload.action,
+    extractId: payload.extractId,
+    sourceCandidateId: payload.sourceCandidateId,
+    draftId: payload.draftId,
+    observationId: payload.observationId,
+    remindAt:
+      payload.action === 'remind-later'
+        ? (payload.remindAt ?? defaultReviewFeedbackRemindAt())
+        : payload.remindAt,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await saveReviewItemFeedback(db, feedback);
+
+  if (feedback.action === 'not-useful') {
+    await dismissMatchingRoutings(feedback);
+
+    const observationId =
+      feedback.itemKind === 'observation' ? (feedback.observationId ?? feedback.itemId) : undefined;
+    if (observationId) {
+      const observation = await getAgentObservation(db, observationId);
+      if (observation && observation.status !== 'dismissed') {
+        await saveAgentObservation(
+          db,
+          updateAgentObservation(observation, {
+            status: 'dismissed',
+            blockedReason: 'Marked not useful from review.',
+          }),
+        );
+      }
+    }
+  }
+
+  queueFollowUp('review', 'refresh-badge', refreshBadge());
+
+  return {
+    ok: true,
+    data: feedback,
+  } satisfies RuntimeActionResponse<ReviewItemFeedback>;
 }
 
 export async function handlePublishDraft(

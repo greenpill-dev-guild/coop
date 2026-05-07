@@ -12,6 +12,8 @@
 - Retrieval and provenance surfaces need an honest regression pass before this pack can move beyond
   blocked QA.
 - Earlier plan notes described a more ambitious graph backend than the one currently implemented.
+- QA must also verify the newer memory-provenance contract: observed, inferred, user-confirmed,
+  imported, and stale memories should not collapse into the same retrieval or UI behavior.
 
 ## QA Pass 1: Codex
 

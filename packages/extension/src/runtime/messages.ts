@@ -40,6 +40,7 @@ import type {
   RefineRequest,
   RefineResult,
   ReviewDraft,
+  ReviewItemFeedback,
   SessionCapability,
   SessionCapabilityLogEntry,
   SessionCapableActionClass,
@@ -176,6 +177,7 @@ export interface DashboardResponse {
   candidates: TabCandidate[];
   tabRoutings: TabRouting[];
   proactiveSignals: ProactiveSignal[];
+  activeReviewItemFeedbacks: ReviewItemFeedback[];
   summary: RuntimeSummary;
   soundPreferences: SoundPreferences;
   uiPreferences: UiPreferences;
@@ -508,6 +510,20 @@ export type RuntimeRequest =
           suggestedNextStep: string;
           matchedRitualLenses: string[];
         }[];
+      };
+    }
+  | {
+      type: 'record-review-feedback';
+      payload: {
+        itemKind: ReviewItemFeedback['itemKind'];
+        itemId: string;
+        action: ReviewItemFeedback['action'];
+        coopId?: string;
+        extractId?: string;
+        sourceCandidateId?: string;
+        draftId?: string;
+        observationId?: string;
+        remindAt?: string;
       };
     }
   | {

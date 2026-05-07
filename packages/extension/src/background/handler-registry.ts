@@ -130,6 +130,7 @@ import {
 import {
   handlePromoteSignalToDraft,
   handlePublishDraft,
+  handleRecordReviewFeedback,
   handleUpdateMeetingSettings,
   handleUpdateReviewDraft,
 } from './handlers/review';
@@ -338,6 +339,7 @@ export const handlerRegistry: HandlerRecord = {
   'publish-draft': async (message) => handlePublishDraft(message),
   'update-review-draft': async (message) => handleUpdateReviewDraft(message),
   'promote-signal-to-draft': async (message) => handlePromoteSignalToDraft(message),
+  'record-review-feedback': async (message) => handleRecordReviewFeedback(message),
   'update-meeting-settings': async (message) => handleUpdateMeetingSettings(message),
 
   // ---- Archive ----
