@@ -19,7 +19,7 @@ updated: 2026-05-08
 # QA Pass 1 — State & Schema Validation
 
 > Completed on 2026-05-08 against the backend/state/runtime surface. This pass does not close the
-> feature: `ui` remains backlog, and QA pass 2 remains blocked until the UI lane is complete.
+> feature by itself. UI and QA pass 2 were completed separately on 2026-05-08.
 
 ## Objective
 
@@ -69,10 +69,9 @@ Validate schema correctness, table operations, eval determinism, and experiment 
 ### Required Validation
 - [x] Targeted autoresearch/shared/runtime tests passed.
 - [x] `bun run plans validate` passed.
-- [ ] `bun run validate:quick` passed.
-  - Run result: typecheck passed, then lint failed on existing Receiver app issues outside this QA
-    diff (`packages/app/src/views/Receiver/ReceiverShell.tsx` SVG title rules and
-    `packages/app/src/styles.css` formatting).
+- [x] `bun run validate:quick` passed.
+  - Initial QA pass 1 run found Receiver app lint/format drift outside the autoresearch backend diff.
+    QA pass 2 corrected that drift and reran `validate:quick` successfully.
 
 ## Verification
 

@@ -14,9 +14,9 @@
   "lanes": {
     "ui": {
       "owner": "claude",
-      "status": "backlog",
+      "status": "done",
       "depends_on": ["contracts"],
-      "branch": "claude/ui/autoresearch",
+      "branch": "main",
       "ready_when_dependencies_met": true
     },
     "state": {
@@ -55,13 +55,13 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "done",
       "depends_on": ["qa_pass_1", "ui"],
-      "branch": "handoff/qa-claude/autoresearch",
+      "branch": "main",
       "branch_trigger": "handoff/qa-claude/autoresearch",
       "ready_when_dependencies_met": true
     }
   },
   "updated_at": "2026-05-08",
-  "notes": "api+state+contracts complete; qa_pass_1 completed on 2026-05-08 with targeted autoresearch/shared/runtime tests and plans validate passing. validate:quick was run; typecheck passed, but lint is blocked by pre-existing Receiver app issues outside the autoresearch QA diff. UI lane still backlog — budget slider, quality-floor editor, pagination, and explicit loading states are not yet implemented, so the feature remains active and qa_pass_2 stays blocked on UI."
+  "notes": "api+state+contracts complete; qa_pass_1 completed on 2026-05-08 with targeted autoresearch/shared/runtime tests, plans validate, and validate:quick passing after Receiver lint/format drift was corrected. UI and qa_pass_2 completed on main on 2026-05-08: Nest Autoresearch now exposes per-skill enablement, experiments-per-cycle/time-budget/quality-floor controls, run-now loading/error feedback, journal sorting/filtering/pagination, and trend/score cues. Implementation and QA lanes are closed; stage remains active until the plan pack is archived because status.json only supports active/backlog stages."
 }

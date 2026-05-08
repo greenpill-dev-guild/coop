@@ -130,7 +130,7 @@ export function ReceiverShell({
         >
           <span className="receiver-settings-trigger-icon" aria-hidden="true">
             {online && isPaired ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z"
                   stroke="var(--coop-green)"
@@ -145,12 +145,12 @@ export function ReceiverShell({
                 />
               </svg>
             ) : online ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="6.5" stroke="var(--coop-orange)" strokeWidth="1.5" />
                 <circle cx="8" cy="8" r="2" fill="var(--coop-orange)" />
               </svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="6.5" stroke="var(--coop-mist)" strokeWidth="1.5" />
                 <path
                   d="M5.5 5.5l5 5M10.5 5.5l-5 5"
@@ -190,7 +190,7 @@ export function ReceiverShell({
         {showInstallNudge ? (
           <section className="receiver-install-banner">
             <div className="receiver-install-banner-icon" aria-hidden="true">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect
                   x="4"
                   y="6"

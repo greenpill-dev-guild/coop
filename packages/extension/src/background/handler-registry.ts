@@ -1,6 +1,7 @@
 import {
   type UiPreferences,
   authSessionToLocalIdentity,
+  autoresearchConfigSchema,
   buildAgentLogExport,
   buildAgentManifest,
   clearSensitiveLocalData,
@@ -371,16 +372,17 @@ export const handlerRegistry: HandlerRecord = {
   },
 
   'set-autoresearch-config': async (message) => {
-    const { skillId, enabled } = message.payload;
+    const { skillId } = message.payload;
     const existing = await db.autoresearchConfigs.get(skillId);
-    const config = {
+    const config = autoresearchConfigSchema.parse({
       skillId,
-      enabled,
-      maxExperimentsPerCycle: existing?.maxExperimentsPerCycle ?? 5,
-      timeBudgetMs: existing?.timeBudgetMs ?? 60000,
-      qualityFloor: existing?.qualityFloor ?? 0.3,
+      enabled: message.payload.enabled ?? existing?.enabled ?? false,
+      maxExperimentsPerCycle:
+        message.payload.maxExperimentsPerCycle ?? existing?.maxExperimentsPerCycle ?? 5,
+      timeBudgetMs: message.payload.timeBudgetMs ?? existing?.timeBudgetMs ?? 60000,
+      qualityFloor: message.payload.qualityFloor ?? existing?.qualityFloor ?? 0.3,
       updatedAt: Date.now(),
-    };
+    });
     await db.autoresearchConfigs.put(config);
     return { ok: true };
   },

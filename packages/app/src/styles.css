@@ -3559,8 +3559,7 @@ html.has-receiver {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 20% 10%, rgba(90, 125, 16, 0.09), transparent 28rem),
+  background: radial-gradient(circle at 20% 10%, rgba(90, 125, 16, 0.09), transparent 28rem),
     radial-gradient(circle at 80% 5%, rgba(253, 138, 1, 0.08), transparent 22rem),
     radial-gradient(circle at 50% 60%, rgba(79, 46, 31, 0.03), transparent 32rem),
     linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 40%, #fffdfb 100%);
@@ -4131,16 +4130,8 @@ html.has-receiver {
   aspect-ratio: 0.84;
   border: none;
   border-radius: 48% 48% 46% 46% / 60% 60% 34% 34%;
-  background: linear-gradient(
-    180deg,
-    #fffbf6 0%,
-    #ffe8c9 42%,
-    #ffd499 72%,
-    #ffc06d 100%
-  );
-  box-shadow:
-    0 22px 50px var(--coop-brown-18),
-    0 4px 16px rgba(253, 138, 1, 0.1);
+  background: linear-gradient(180deg, #fffbf6 0%, #ffe8c9 42%, #ffd499 72%, #ffc06d 100%);
+  box-shadow: 0 22px 50px var(--coop-brown-18), 0 4px 16px rgba(253, 138, 1, 0.1);
   color: var(--coop-brown);
   display: grid;
   place-items: center;
@@ -4176,9 +4167,7 @@ html.has-receiver {
   inset: -8%;
   border-radius: inherit;
   border: 2px solid rgba(253, 138, 1, 0.15);
-  box-shadow:
-    0 0 24px rgba(253, 138, 1, 0.08),
-    inset 0 0 16px rgba(255, 248, 240, 0.2);
+  box-shadow: 0 0 24px rgba(253, 138, 1, 0.08), inset 0 0 16px rgba(255, 248, 240, 0.2);
   pointer-events: none;
   transition: border-color 240ms ease, box-shadow 240ms ease;
 }
@@ -4202,23 +4191,13 @@ html.has-receiver {
 
 .egg-button.is-recording {
   animation: egg-pulse 1.2s ease-in-out infinite;
-  background: linear-gradient(
-    180deg,
-    #fff9f0 0%,
-    #ffd8a8 40%,
-    #ffb060 68%,
-    #fd8a01 100%
-  );
-  box-shadow:
-    0 22px 50px rgba(253, 138, 1, 0.3),
-    0 0 40px rgba(253, 138, 1, 0.18);
+  background: linear-gradient(180deg, #fff9f0 0%, #ffd8a8 40%, #ffb060 68%, #fd8a01 100%);
+  box-shadow: 0 22px 50px rgba(253, 138, 1, 0.3), 0 0 40px rgba(253, 138, 1, 0.18);
 }
 
 .egg-button.is-recording .egg-halo {
   border-color: rgba(253, 138, 1, 0.35);
-  box-shadow:
-    0 0 36px rgba(253, 138, 1, 0.2),
-    inset 0 0 24px rgba(253, 138, 1, 0.1);
+  box-shadow: 0 0 36px rgba(253, 138, 1, 0.2), inset 0 0 24px rgba(253, 138, 1, 0.1);
 }
 
 .egg-pulse-ring {
@@ -4252,11 +4231,7 @@ html.has-receiver {
   padding: 0.75rem 1rem;
   border: 1.5px solid var(--coop-brown-12);
   border-radius: var(--coop-radius-input);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(252, 245, 239, 0.88) 100%
-  );
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(252, 245, 239, 0.88) 100%);
   box-shadow: 0 2px 8px var(--coop-brown-6);
   color: var(--coop-brown);
   font: inherit;
@@ -4265,8 +4240,7 @@ html.has-receiver {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--coop-ease), box-shadow var(--coop-ease),
-    border-color var(--coop-ease);
+  transition: transform var(--coop-ease), box-shadow var(--coop-ease), border-color var(--coop-ease);
 }
 
 .capture-action-btn:active {
@@ -4300,11 +4274,7 @@ html.has-receiver {
   border-radius: var(--coop-radius-card);
   padding: 1.6rem;
   border: 1.5px dashed color-mix(in srgb, var(--coop-brown) 18%, transparent);
-  background: radial-gradient(
-      circle at 50% 30%,
-      rgba(253, 138, 1, 0.06),
-      transparent 60%
-    ),
+  background: radial-gradient(circle at 50% 30%, rgba(253, 138, 1, 0.06), transparent 60%),
     rgba(255, 255, 255, 0.64);
   color: var(--coop-brown-soft);
   text-align: center;
@@ -4514,16 +4484,12 @@ audio {
   0%,
   100% {
     transform: translateY(0) scale(1);
-    box-shadow:
-      0 22px 50px rgba(253, 138, 1, 0.3),
-      0 0 40px rgba(253, 138, 1, 0.18);
+    box-shadow: 0 22px 50px rgba(253, 138, 1, 0.3), 0 0 40px rgba(253, 138, 1, 0.18);
   }
 
   50% {
     transform: translateY(-3px) scale(1.035);
-    box-shadow:
-      0 28px 60px rgba(253, 138, 1, 0.36),
-      0 0 56px rgba(253, 138, 1, 0.24);
+    box-shadow: 0 28px 60px rgba(253, 138, 1, 0.36), 0 0 56px rgba(253, 138, 1, 0.24);
   }
 }
 
@@ -4889,7 +4855,8 @@ audio {
   color: var(--coop-brown-soft);
   width: 100%;
   text-align: left;
-  transition: background var(--coop-ease), box-shadow var(--coop-ease), border-color var(--coop-ease);
+  transition: background var(--coop-ease), box-shadow var(--coop-ease), border-color
+    var(--coop-ease);
 }
 
 .receiver-settings-trigger:hover {
@@ -5524,8 +5491,7 @@ audio {
   }
 
   .receiver-shell {
-    background:
-      radial-gradient(circle at 20% 10%, rgba(138, 184, 64, 0.06), transparent 28rem),
+    background: radial-gradient(circle at 20% 10%, rgba(138, 184, 64, 0.06), transparent 28rem),
       radial-gradient(circle at 80% 5%, rgba(255, 170, 68, 0.06), transparent 22rem),
       radial-gradient(circle at 50% 60%, rgba(0, 0, 0, 0.06), transparent 32rem),
       linear-gradient(180deg, #1a1410 0%, #1a1410 40%, #1e1814 100%);

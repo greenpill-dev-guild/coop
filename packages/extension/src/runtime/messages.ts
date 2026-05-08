@@ -763,7 +763,13 @@ export type RuntimeRequest =
   | { type: 'list-autoresearch-configs' }
   | {
       type: 'set-autoresearch-config';
-      payload: { skillId: string; enabled: boolean };
+      payload: {
+        skillId: string;
+        enabled?: boolean;
+        maxExperimentsPerCycle?: number;
+        timeBudgetMs?: number;
+        qualityFloor?: number;
+      };
     }
   | {
       type: 'run-autoresearch-cycle';
