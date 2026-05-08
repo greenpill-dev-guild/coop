@@ -17,7 +17,10 @@ export function assembleGraphContext(results: RetrievalResult[], tokenBudget: nu
   let totalChars = 0;
 
   for (const r of sorted) {
-    const line = `- ${r.entity.name} (${r.entity.type}): ${r.entity.description} [source: ${r.entity.sourceRef}]`;
+    const sourceLabel = r.entity.stale
+      ? `source: ${r.entity.sourceRef}; stale`
+      : `source: ${r.entity.sourceRef}`;
+    const line = `- ${r.entity.name} (${r.entity.type}): ${r.entity.description} [${sourceLabel}]`;
 
     if (totalChars + line.length > maxChars) break;
 

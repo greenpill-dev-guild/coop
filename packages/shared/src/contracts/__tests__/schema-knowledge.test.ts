@@ -46,6 +46,24 @@ describe('graphEntitySchema', () => {
     expect(parsed.embedding).toEqual([0.1, 0.2, 0.3]);
   });
 
+  it('accepts stale source metadata on entities', () => {
+    const entity = {
+      id: 'ent-stale',
+      name: 'Legacy Source Entity',
+      type: 'object',
+      description: 'Entity from a removed source',
+      sourceRef: 'source:ks-removed',
+      stale: true,
+      staleAt: '2026-05-08T00:00:00.000Z',
+      staleReason: 'source-removed:ks-removed',
+    };
+
+    const parsed = graphEntitySchema.parse(entity);
+
+    expect(parsed.stale).toBe(true);
+    expect(parsed.staleReason).toBe('source-removed:ks-removed');
+  });
+
   it('rejects entity missing required fields', () => {
     expect(() => graphEntitySchema.parse({ id: 'ent-3' })).toThrow();
   });

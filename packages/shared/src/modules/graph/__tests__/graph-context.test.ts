@@ -42,6 +42,27 @@ describe('assembleGraphContext', () => {
     expect(context).toContain('test:x');
   });
 
+  it('labels stale source context explicitly', () => {
+    const results: RetrievalResult[] = [
+      {
+        entity: makeEntity({
+          id: 'stale',
+          name: 'Stale Entity',
+          sourceRef: 'source:removed',
+          stale: true,
+          staleAt: '2026-05-08T00:00:00.000Z',
+          staleReason: 'source-removed:removed',
+        }),
+        score: 0.8,
+        sources: ['text'],
+      },
+    ];
+
+    const context = assembleGraphContext(results, 2000);
+
+    expect(context).toContain('source: source:removed; stale');
+  });
+
   it('prioritizes by relevance score', () => {
     const results = [makeResult('low', 0.3), makeResult('high', 0.95)];
     const context = assembleGraphContext(results, 2000);

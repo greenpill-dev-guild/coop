@@ -13,13 +13,16 @@ const mocks = vi.hoisted(() => ({
   getLocalSetting: vi.fn(),
   resolveReceiverPairingMember: vi.fn(),
   loadGraphSnapshot: vi.fn(),
+  saveGraphSnapshot: vi.fn(),
   updateKnowledgeSourceMeta: vi.fn(),
   nowIso: vi.fn(() => '2026-04-06T00:00:00.000Z'),
   emitSourceContentObservation: vi.fn(),
+  fetchStructuredContentForSource: vi.fn(),
 }));
 
 const mockDb = {
   knowledgeSources: {
+    get: vi.fn(),
     update: vi.fn(),
   },
 };
@@ -50,6 +53,11 @@ vi.mock('../../../runtime/receiver', () => ({
 
 vi.mock('../../../runtime/agent/graph-store-singleton', () => ({
   loadGraphSnapshot: mocks.loadGraphSnapshot,
+  saveGraphSnapshot: mocks.saveGraphSnapshot,
+}));
+
+vi.mock('../../../runtime/agent/adapters', () => ({
+  fetchStructuredContentForSource: mocks.fetchStructuredContentForSource,
 }));
 
 vi.mock('../agent-observation-emitters', () => ({
@@ -170,7 +178,20 @@ describe('knowledge-source handlers', () => {
   // ---- Remove ----
   describe('handleRemoveKnowledgeSource', () => {
     it('removes the source and returns ok', async () => {
-      mocks.removeKnowledgeSource.mockResolvedValue(undefined);
+      const fakeStore = {
+        entities: new Map(),
+        relationships: [],
+        traces: [],
+        insights: [],
+        entityHistory: new Map(),
+      };
+      mockDb.knowledgeSources.get.mockResolvedValue(fakeSource);
+      mocks.loadGraphSnapshot.mockResolvedValue(fakeStore);
+      mocks.removeKnowledgeSource.mockResolvedValue({
+        staleEntityCount: 1,
+        invalidatedRelationshipCount: 1,
+      });
+      mocks.saveGraphSnapshot.mockResolvedValue(undefined);
 
       const result = await handleRemoveKnowledgeSource({
         type: 'remove-knowledge-source',
@@ -178,7 +199,12 @@ describe('knowledge-source handlers', () => {
       });
 
       expect(result.ok).toBe(true);
-      expect(mocks.removeKnowledgeSource).toHaveBeenCalledWith(mockDb, SOURCE_ID);
+      expect(mocks.removeKnowledgeSource).toHaveBeenCalledWith(
+        mockDb,
+        SOURCE_ID,
+        expect.objectContaining({ graphStore: fakeStore, source: fakeSource }),
+      );
+      expect(mocks.saveGraphSnapshot).toHaveBeenCalledWith(mockDb, COOP_ID);
     });
 
     it('returns error when removal fails', async () => {
@@ -382,6 +408,15 @@ describe('handleRefreshKnowledgeSource', () => {
 
   it('refreshes all active sources and emits observations', async () => {
     mocks.listKnowledgeSources.mockResolvedValue([fakeSource]);
+    mocks.fetchStructuredContentForSource.mockResolvedValue([
+      {
+        title: 'Source Dispatch Result',
+        body: 'content',
+        metadata: {},
+        sourceRef: 'youtube:video',
+        fetchedAt: '2026-04-06T00:00:00.000Z',
+      },
+    ]);
     mocks.updateKnowledgeSourceMeta.mockResolvedValue(undefined);
     mocks.emitSourceContentObservation.mockResolvedValue(undefined);
 
@@ -392,21 +427,42 @@ describe('handleRefreshKnowledgeSource', () => {
 
     expect(result.ok).toBe(true);
     expect((result.data as { refreshedCount: number }).refreshedCount).toBe(1);
+    expect(mocks.fetchStructuredContentForSource).toHaveBeenCalledWith({
+      db: mockDb,
+      source: fakeSource,
+    });
+    expect(mocks.updateKnowledgeSourceMeta).toHaveBeenCalledWith(mockDb, SOURCE_ID, {
+      lastFetchedAt: '2026-04-06T00:00:00.000Z',
+      entityCount: 1,
+    });
     expect(mocks.listKnowledgeSources).toHaveBeenCalledWith(expect.anything(), {
       coopId: COOP_ID,
       active: true,
     });
     expect(mocks.emitSourceContentObservation).toHaveBeenCalledWith(
-      expect.objectContaining({ sourceId: SOURCE_ID, sourceLabel: 'My Channel' }),
+      expect.objectContaining({
+        sourceId: SOURCE_ID,
+        sourceLabel: 'My Channel',
+        contentTitle: 'Source Dispatch Result',
+      }),
     );
   });
 
   it('continues refreshing when one source fails', async () => {
     const secondSource = { ...fakeSource, id: 'ks-def', label: 'Second' };
     mocks.listKnowledgeSources.mockResolvedValue([fakeSource, secondSource]);
-    mocks.updateKnowledgeSourceMeta
+    mocks.fetchStructuredContentForSource
       .mockRejectedValueOnce(new Error('fail'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce([
+        {
+          title: 'Second content',
+          body: 'content',
+          metadata: {},
+          sourceRef: 'youtube:video',
+          fetchedAt: '2026-04-06T00:00:00.000Z',
+        },
+      ]);
+    mocks.updateKnowledgeSourceMeta.mockResolvedValue(undefined);
     mocks.emitSourceContentObservation.mockResolvedValue(undefined);
 
     const result = await handleRefreshKnowledgeSource({

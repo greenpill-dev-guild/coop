@@ -47,6 +47,9 @@ export const graphEntitySchema = z.object({
   description: z.string().min(1),
   sourceRef: z.string().min(1),
   embedding: z.array(z.number()).optional(),
+  stale: z.boolean().optional(),
+  staleAt: z.string().datetime().optional(),
+  staleReason: z.string().min(1).optional(),
 });
 
 export type GraphEntity = z.infer<typeof graphEntitySchema>;

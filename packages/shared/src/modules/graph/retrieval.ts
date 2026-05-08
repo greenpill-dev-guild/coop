@@ -11,7 +11,8 @@ export interface RetrievalResult {
 
 export interface HybridSearchOptions {
   maxResults?: number;
-  weights?: { text?: number; traversal?: number };
+  queryEmbedding?: number[];
+  weights?: { text?: number; traversal?: number; vector?: number };
   temporalFilter?: 'current' | 'all';
 }
 
@@ -53,6 +54,10 @@ function bm25Score(queryTerms: string[], docTerms: string[]): number {
   return score / queryTerms.length;
 }
 
+function entityStalenessPenalty(entity: GraphEntity): number {
+  return entity.stale ? 0.2 : 1;
+}
+
 /**
  * Search entities by text query using BM25-style scoring.
  * Matches against entity name, description, type, and sourceRef.
@@ -70,11 +75,52 @@ export function searchByText(store: GraphStore, query: string): RetrievalResult[
     const score = bm25Score(queryTerms, docTerms);
 
     if (score > 0) {
-      results.push({ entity, score, sources: ['text'] });
+      results.push({ entity, score: score * entityStalenessPenalty(entity), sources: ['text'] });
     }
   }
 
   return results.sort((a, b) => b.score - a.score);
+}
+
+// ---------------------------------------------------------------------------
+// Vector search
+// ---------------------------------------------------------------------------
+
+function cosineSimilarity(left: number[], right: number[]): number {
+  if (left.length === 0 || left.length !== right.length) return 0;
+
+  let dot = 0;
+  let leftMagnitude = 0;
+  let rightMagnitude = 0;
+  for (let index = 0; index < left.length; index++) {
+    dot += left[index] * right[index];
+    leftMagnitude += left[index] ** 2;
+    rightMagnitude += right[index] ** 2;
+  }
+
+  if (leftMagnitude === 0 || rightMagnitude === 0) return 0;
+  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
+}
+
+export function searchByVector(
+  store: GraphStore,
+  queryEmbedding: number[],
+  options: { maxResults?: number; minScore?: number } = {},
+): RetrievalResult[] {
+  const maxResults = options.maxResults ?? 10;
+  const minScore = options.minScore ?? 0.01;
+  const results: RetrievalResult[] = [];
+
+  for (const entity of store.entities.values()) {
+    if (!entity.embedding) continue;
+    const score =
+      cosineSimilarity(queryEmbedding, entity.embedding) * entityStalenessPenalty(entity);
+    if (score >= minScore) {
+      results.push({ entity, score, sources: ['vector'] });
+    }
+  }
+
+  return results.sort((a, b) => b.score - a.score).slice(0, maxResults);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +166,7 @@ export function searchByTraversal(
 
     // Simple distance-based score: entities found in later hops get lower scores
     // Since we don't track exact hop distance here, use a flat traversal score
-    results.push({ entity, score: 0.6, sources: ['traversal'] });
+    results.push({ entity, score: 0.6 * entityStalenessPenalty(entity), sources: ['traversal'] });
   }
 
   return results;
@@ -141,12 +187,14 @@ export function hybridSearch(
 ): RetrievalResult[] {
   const {
     maxResults = 10,
-    weights = { text: 0.7, traversal: 0.3 },
+    queryEmbedding,
+    weights = { text: 0.6, traversal: 0.25, vector: 0.15 },
     temporalFilter = 'all',
   } = options;
 
-  const textWeight = weights.text ?? 0.7;
-  const traversalWeight = weights.traversal ?? 0.3;
+  const textWeight = weights.text ?? 0.6;
+  const traversalWeight = weights.traversal ?? 0.25;
+  const vectorWeight = weights.vector ?? 0.15;
 
   // 1. Text search
   const textResults = searchByText(store, query);
@@ -154,6 +202,9 @@ export function hybridSearch(
   // 2. Graph traversal from top text results
   const topTextIds = textResults.slice(0, 3).map((r) => r.entity.id);
   const traversalResults = topTextIds.length > 0 ? searchByTraversal(store, topTextIds, 2) : [];
+  const vectorResults = queryEmbedding
+    ? searchByVector(store, queryEmbedding, { maxResults: maxResults * 2 })
+    : [];
 
   // 3. Merge and deduplicate
   const merged = new Map<string, RetrievalResult>();
@@ -182,11 +233,28 @@ export function hybridSearch(
     }
   }
 
+  for (const r of vectorResults) {
+    const existing = merged.get(r.entity.id);
+    if (existing) {
+      existing.score += r.score * vectorWeight;
+      if (!existing.sources.includes('vector')) {
+        existing.sources.push('vector');
+      }
+    } else {
+      merged.set(r.entity.id, {
+        entity: r.entity,
+        score: r.score * vectorWeight,
+        sources: ['vector'],
+      });
+    }
+  }
+
   // 4. Apply temporal filter
   let results = [...merged.values()];
 
   if (temporalFilter === 'current') {
     results = results.filter((r) => {
+      if (r.entity.stale) return false;
       const facts = currentFacts(store, r.entity.id);
       return facts.length > 0;
     });

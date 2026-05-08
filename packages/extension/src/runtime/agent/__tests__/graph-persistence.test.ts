@@ -74,6 +74,7 @@ describe('persistEntityExtractionOutputToGraph', () => {
     });
     expect(store.entities.get('ent-anthropic')?.sourceRef).toBe('source:ks-1');
     expect(store.entities.get('ent-claude-code')?.sourceRef).toBe('source:ks-1');
+    expect(store.entities.get('ent-anthropic')?.embedding?.length).toBeGreaterThan(0);
     expect(store.relationships).toHaveLength(1);
     expect(store.relationships[0]).toMatchObject({
       from: 'ent-anthropic',

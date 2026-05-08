@@ -17,26 +17,27 @@ skills:
 qa_order: 1
 handoff_in: handoff/qa-codex/agent-knowledge-sandbox
 handoff_out: handoff/qa-claude/agent-knowledge-sandbox
-updated: 2026-05-07
+updated: 2026-05-08
 ---
 
 # QA Pass 1 - Codex
 
-Status: closed with blockers on 2026-05-07.
+Status: closed on 2026-05-08 after QA pass 2 follow-up.
 
 This pass validates the landed state/UI work honestly. The snapshot-backed graph store is the
-current shipped backend; Kuzu-WASM remains deferred. QA pass 2 should stay blocked until the
-unimplemented product-contract gaps below are resolved or explicitly descoped.
+current shipped backend; Kuzu-WASM remains deferred. The pass 1 blockers were resolved in the owned
+state/runtime/UI surfaces during QA pass 2.
 
 ## Validation Evidence
 
 - [x] Source registry, Yjs sync, graph, graph retrieval, graph context, reasoning, agent-memory, and
-  storage tests passed: 16 files / 215 tests.
-- [x] Source adapter parser, sanitizer, graph snapshot, graph persistence, knowledge-source handler,
-  and agent-knowledge tests passed: 12 files / 66 tests.
-- [x] Relevant provenance/source-health UI tests passed: 9 files / 65 tests.
-- [x] Final plan/quick gates recorded in `../eval/qa-report.md` (`plans validate` passed;
-  `validate:quick` failed on unrelated Receiver/app lint outside this lane).
+  storage tests passed: 17 files / 236 tests.
+- [x] Source adapter parser/dispatch, sanitizer, graph snapshot, graph persistence,
+  knowledge-source handler, agent-knowledge, provenance, and source-health UI tests passed: 23 files
+  / 136 tests.
+- [x] `bun run plans validate` passed for this closeout, 64 plan files across 15 feature packs.
+  Later rerun in the dirty worktree failed on unrelated `next-step-review` QA status drift.
+- [x] `bun run validate:quick` passed.
 
 ## Result By Area
 
@@ -48,8 +49,8 @@ unimplemented product-contract gaps below are resolved or explicitly descoped.
   `source-sync.test.ts`.
 - [x] `assertAllowedSource()` blocks unregistered URLs, private/local addresses, credential paths,
   and path traversal; registered YouTube/GitHub/RSS examples pass.
-- [ ] Blocker: source removal does not cascade to ingested graph content. `removeKnowledgeSource()`
-  deletes the registry row only, and graph entities have no stale marker.
+- [x] Source removal cascades to ingested graph content when graph context is available:
+  `removeKnowledgeSource()` marks matching entities stale and invalidates active relationships.
 - [ ] Partial: duplicate source detection is exact `[coopId+identifier]`; normalized equivalent
   identifiers are not proven.
 
@@ -57,10 +58,9 @@ unimplemented product-contract gaps below are resolved or explicitly descoped.
 
 - [x] Fixture parsers exist for YouTube, GitHub, RSS, Reddit, NPM, and Wikipedia.
 - [x] Sanitizer strips the known prompt-injection patterns and enforces the content-size boundary.
-- [ ] Blocker: adapter modules are parse helpers, not allowlist-checked fetch wrappers. The QA plan's
-  "reject non-allowlisted source before fetch" contract is not yet implemented at the adapter layer.
-- [ ] Partial: `handleRefreshKnowledgeSource()` updates `lastFetchedAt` and emits observations but
-  does not dispatch the adapters or exercise network/404/rate-limit behavior.
+- [x] Adapter dispatch rejects non-allowlisted sources before fetch.
+- [x] `handleRefreshKnowledgeSource()` dispatches adapters, updates source metadata, emits one
+  source-content observation per structured content item, and continues after per-source failures.
 
 ### Graph Memory And Retrieval
 
@@ -70,8 +70,10 @@ unimplemented product-contract gaps below are resolved or explicitly descoped.
   retrieval are covered by targeted tests.
 - [x] Retrieval-before-work is wired: `buildSkillContext()` queries flat memories and graph context
   before prompt assembly when a graph store is populated.
+- [x] Vector retrieval is implemented over entity embeddings and participates in hybrid search.
+- [x] Persisted entity extraction output receives deterministic local embeddings when no embedding is
+  supplied.
 - [ ] Deferred: Kuzu-WASM/IDBFS backend is not implemented and remains out of scope for this pass.
-- [ ] Deferred: vector retrieval / embedding generation is not implemented.
 - [ ] Partial: current temporal filtering is result-level; traversal still scans all relationships
   before filtering returned entities.
 - [ ] Not proven: 1000-entity / 5000-edge IndexedDB size, graph schema migration, and 100-entity
@@ -82,17 +84,17 @@ unimplemented product-contract gaps below are resolved or explicitly descoped.
 - [x] Graph context carries source refs, DraftCard provenance shows "Sourced from" badges for agent
   drafts, and source health surfaces show stale/fresh state in Nest and the popup.
 - [x] Flat memory retrieval ranks fresh memories above old memories when the age gap is large.
-- [ ] Blocker: `AgentMemory` has no durable provenance label, confirmation status, source channel,
-  provider/model metadata, task/trace ID, or unresolved-question fields.
-- [ ] Blocker: inferred/unconfirmed memories are included in prompts as ordinary ordered memories;
-  they are not distinguished from user-confirmed guidance.
-- [ ] Partial: stale memory is ranked lower by age, but not visibly labeled in memory prompt context
-  or UI.
+- [x] `AgentMemory` records provenance label, confirmation status, source channel, provider/model
+  metadata, task/trace ID, and unresolved questions.
+- [x] Confirmed/user-confirmed memory ranks ahead of unconfirmed inferred memory in the same
+  freshness band.
+- [x] Inferred/unconfirmed memories are labeled as context-only in prompts; stale memories are labeled
+  as stale context.
+- [x] Agent memory UI surfaces provenance, confirmation, source channel, and provider/model labels.
 
 ## Handoff
 
-- QA pass 1 is complete as an evidence-gathering pass.
-- QA pass 2 remains blocked.
-- Required follow-up is state/runtime work, not Kuzu-WASM: close the adapter allowlist/fetch wrapper
-  gap, source-removal cascade/stale marking, vector retrieval descoping or implementation, and
-  durable memory provenance/confirmation semantics.
+- QA pass 1 blockers are resolved and revalidated.
+- QA pass 2 is complete on `main`.
+- Kuzu-WASM remains deferred; snapshot-backed graph persistence is the shipped backend for this
+  plan closeout.

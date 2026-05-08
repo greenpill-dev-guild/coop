@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createRelationship, initGraphStore, upsertEntity } from '../../graph';
 import { type CoopDexie, createCoopDb } from '../../storage/db';
 import {
   createKnowledgeSource,
@@ -104,6 +105,50 @@ describe('removeKnowledgeSource', () => {
     await removeKnowledgeSource(db, source.id);
     const stored = await db.knowledgeSources.get(source.id);
     expect(stored).toBeUndefined();
+  });
+
+  it('marks ingested graph entities stale when removing a source with graph context', async () => {
+    const source = await createKnowledgeSource(db, {
+      type: 'github',
+      identifier: 'greenpill/coop',
+      label: 'Coop',
+      coopId: 'coop-1',
+      addedBy: 'member-1',
+    });
+    const graphStore = initGraphStore();
+    upsertEntity(graphStore, {
+      id: 'entity-from-source',
+      name: 'Coop Repo',
+      type: 'organization',
+      description: 'Repo entity',
+      sourceRef: 'github:greenpill/coop',
+    });
+    upsertEntity(graphStore, {
+      id: 'entity-other',
+      name: 'Other',
+      type: 'object',
+      description: 'Other entity',
+      sourceRef: 'rss:https://example.com/feed.xml',
+    });
+    createRelationship(graphStore, {
+      from: 'entity-from-source',
+      to: 'entity-other',
+      type: 'mentions',
+      confidence: 0.8,
+      t_valid: '2026-01-01T00:00:00.000Z',
+      t_invalid: null,
+      provenance: 'github:greenpill/coop',
+    });
+
+    const result = await removeKnowledgeSource(db, source.id, {
+      graphStore,
+      staleAt: '2026-05-08T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({ staleEntityCount: 1, invalidatedRelationshipCount: 1 });
+    expect(graphStore.entities.get('entity-from-source')?.stale).toBe(true);
+    expect(graphStore.entities.get('entity-other')?.stale).toBeUndefined();
+    expect(graphStore.relationships[0].t_invalid).toBe('2026-05-08T00:00:00.000Z');
   });
 });
 

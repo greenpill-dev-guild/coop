@@ -6,6 +6,7 @@ import {
   getEntityNeighbors,
   initGraphStore,
   invalidateRelationship,
+  markEntitiesFromSourceStale,
   upsertEntity,
 } from '../store';
 import type { GraphStore } from '../store';
@@ -105,6 +106,45 @@ describe('invalidateRelationship', () => {
     const edges = store.relationships.filter((r) => r.from === 'a' && r.to === 'b');
     expect(edges).toHaveLength(1);
     expect(edges[0].t_invalid).toBe('2024-01-01T00:00:00.000Z');
+  });
+});
+
+describe('markEntitiesFromSourceStale', () => {
+  it('marks source entities stale and invalidates active relationships without deleting graph history', () => {
+    const activeSource = {
+      id: 'ks-source',
+      type: 'github' as const,
+      identifier: 'greenpill/coop',
+      label: 'Coop',
+      coopId: 'coop-1',
+      addedBy: 'member-1',
+      addedAt: '2026-05-08T00:00:00.000Z',
+      lastFetchedAt: null,
+      entityCount: 0,
+      active: true,
+    };
+    upsertEntity(store, makeEntity({ id: 'a', sourceRef: 'github:greenpill/coop' }));
+    upsertEntity(store, makeEntity({ id: 'b', sourceRef: 'source:other' }));
+    createRelationship(
+      store,
+      makeRelationship({
+        from: 'a',
+        to: 'b',
+        type: 'mentions',
+        provenance: 'github:greenpill/coop:readme',
+      }),
+    );
+
+    const result = markEntitiesFromSourceStale(store, activeSource, '2026-05-08T12:00:00.000Z');
+
+    expect(result).toEqual({ staleEntityCount: 1, invalidatedRelationshipCount: 1 });
+    expect(getEntity(store, 'a')).toMatchObject({
+      stale: true,
+      staleAt: '2026-05-08T12:00:00.000Z',
+      staleReason: 'source-removed:ks-source',
+    });
+    expect(store.relationships[0].t_invalid).toBe('2026-05-08T12:00:00.000Z');
+    expect(store.entityHistory.get('a')?.length).toBeGreaterThanOrEqual(2);
   });
 });
 

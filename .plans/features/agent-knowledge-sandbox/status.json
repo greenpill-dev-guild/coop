@@ -46,7 +46,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "done",
       "depends_on": ["qa_pass_1"],
       "branch": "handoff/qa-claude/agent-knowledge-sandbox",
       "branch_trigger": "handoff/qa-claude/agent-knowledge-sandbox",
@@ -61,8 +61,9 @@
     "Vellum material language for all UI surfaces",
     "7-phase dependency-ordered build with gates",
     "Entity extraction as new skill using existing cascade",
-    "Memory provenance and confirmation labels are part of the product contract: observed, inferred, user-confirmed, imported, and stale memories must behave differently in retrieval and UI."
+    "Memory provenance and confirmation labels are part of the product contract: observed, inferred, user-confirmed, imported, and stale memories must behave differently in retrieval and UI.",
+    "Vector retrieval is implemented over persisted entity embeddings; Kuzu-WASM remains deferred."
   ],
-  "updated_at": "2026-05-07",
-  "notes": "QA pass 1 closed on main with green targeted validation and honest blockers recorded. Snapshot-backed graph storage is the shipped backend and Kuzu-WASM remains deferred. QA pass 2 stays blocked until adapter allowlist/fetch dispatch, source-removal cascade, vector retrieval, and durable memory provenance/confirmation semantics are either implemented or explicitly descoped."
+  "updated_at": "2026-05-08",
+  "notes": "QA pass 2 closed on main. Snapshot-backed graph storage is the shipped backend and Kuzu-WASM remains deferred. The pass 1 blockers were resolved in the owned state/runtime/UI surfaces: source removal now stales graph content, source refresh dispatches allowlist-checked adapters, vector retrieval uses persisted local embeddings, and durable memory provenance/confirmation labels are modeled, ranked, and surfaced."
 }

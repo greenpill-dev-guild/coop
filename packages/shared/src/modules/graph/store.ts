@@ -1,6 +1,7 @@
 import type {
   GraphEntity,
   GraphRelationship,
+  KnowledgeSource,
   ReasoningTrace,
   ValidatedInsight,
 } from '../../contracts/schema-knowledge';
@@ -94,6 +95,73 @@ export function invalidateRelationship(
       return;
     }
   }
+}
+
+export interface MarkSourceStaleResult {
+  staleEntityCount: number;
+  invalidatedRelationshipCount: number;
+}
+
+function sourceRefsForSource(source: KnowledgeSource): string[] {
+  return [
+    source.id,
+    `source:${source.id}`,
+    `${source.type}:${source.identifier}`,
+    `${source.type}:${source.identifier}:`,
+  ];
+}
+
+export function isGraphRefFromSource(ref: string, source: KnowledgeSource): boolean {
+  return sourceRefsForSource(source).some((candidate) => {
+    if (candidate.endsWith(':')) {
+      return ref.startsWith(candidate);
+    }
+    return ref === candidate;
+  });
+}
+
+export function markEntitiesFromSourceStale(
+  store: GraphStore,
+  source: KnowledgeSource,
+  staleAt: string,
+): MarkSourceStaleResult {
+  const staleEntityIds = new Set<string>();
+
+  for (const entity of store.entities.values()) {
+    if (!isGraphRefFromSource(entity.sourceRef, source)) {
+      continue;
+    }
+
+    staleEntityIds.add(entity.id);
+    upsertEntity(store, {
+      ...entity,
+      stale: true,
+      staleAt,
+      staleReason: `source-removed:${source.id}`,
+    });
+  }
+
+  let invalidatedRelationshipCount = 0;
+  for (const relationship of store.relationships) {
+    if (relationship.t_invalid !== null) {
+      continue;
+    }
+
+    const touchesStaleEntity =
+      staleEntityIds.has(relationship.from) || staleEntityIds.has(relationship.to);
+    const hasSourceProvenance = isGraphRefFromSource(relationship.provenance, source);
+    if (!touchesStaleEntity && !hasSourceProvenance) {
+      continue;
+    }
+
+    relationship.t_invalid = staleAt;
+    invalidatedRelationshipCount++;
+  }
+
+  return {
+    staleEntityCount: staleEntityIds.size,
+    invalidatedRelationshipCount,
+  };
 }
 
 /** Destroy the graph store and clear all data. */

@@ -4,6 +4,8 @@ import {
   knowledgeSourceSchema,
 } from '../../contracts/schema-knowledge';
 import { createId, nowIso } from '../../utils';
+import type { GraphStore, MarkSourceStaleResult } from '../graph';
+import { markEntitiesFromSourceStale } from '../graph';
 import type { CoopDexie } from '../storage/db-schema';
 
 export async function createKnowledgeSource(
@@ -46,8 +48,23 @@ export async function createKnowledgeSource(
   return validated;
 }
 
-export async function removeKnowledgeSource(db: CoopDexie, id: string): Promise<void> {
+export async function removeKnowledgeSource(
+  db: CoopDexie,
+  id: string,
+  options: {
+    graphStore?: GraphStore;
+    source?: KnowledgeSource;
+    staleAt?: string;
+  } = {},
+): Promise<MarkSourceStaleResult> {
+  const source = options.source ?? (await db.knowledgeSources.get(id));
+  const result =
+    source && options.graphStore
+      ? markEntitiesFromSourceStale(options.graphStore, source, options.staleAt ?? nowIso())
+      : { staleEntityCount: 0, invalidatedRelationshipCount: 0 };
+
   await db.knowledgeSources.delete(id);
+  return result;
 }
 
 export interface KnowledgeSourceFilters {

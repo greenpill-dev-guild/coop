@@ -6,3 +6,4 @@ export { parseRedditPosts } from './reddit';
 export { parseNPMPackageInfo } from './npm';
 export { parseWikipediaArticle } from './wikipedia';
 export { sanitizeIngested } from './sanitizer';
+export { fetchStructuredContentForSource, sourceToPublicUrl } from './dispatch';

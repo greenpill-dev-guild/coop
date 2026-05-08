@@ -84,6 +84,48 @@ describe('createAgentMemory', () => {
     expect(memory.sourceSkillRunId).toBe('run-1');
     expect(memory.authorMemberId).toBe('member-1');
   });
+
+  it('defaults user feedback to confirmed member provenance', async () => {
+    const memory = await createAgentMemory(db, {
+      coopId: 'coop-1',
+      type: 'user-feedback',
+      content: 'Member confirmed this routing preference.',
+      confidence: 0.9,
+    });
+
+    expect(memory.provenanceLabel).toBe('user-confirmed');
+    expect(memory.confirmationStatus).toBe('confirmed');
+    expect(memory.sourceChannel).toBe('member');
+    expect(memory.unresolvedQuestions).toEqual([]);
+  });
+
+  it('stores explicit provenance, provider, trace, and unresolved question metadata', async () => {
+    const memory = await createAgentMemory(db, {
+      coopId: 'coop-1',
+      type: 'decision-context',
+      content: 'Imported briefing noted a funding constraint.',
+      confidence: 0.75,
+      provenanceLabel: 'imported',
+      confirmationStatus: 'unconfirmed',
+      sourceChannel: 'import',
+      providerId: 'webllm',
+      modelId: 'llama-3.2-local',
+      traceId: 'trace-1',
+      taskId: 'task-1',
+      unresolvedQuestions: ['Confirm whether this is still true.'],
+    });
+
+    expect(memory).toMatchObject({
+      provenanceLabel: 'imported',
+      confirmationStatus: 'unconfirmed',
+      sourceChannel: 'import',
+      providerId: 'webllm',
+      modelId: 'llama-3.2-local',
+      traceId: 'trace-1',
+      taskId: 'task-1',
+      unresolvedQuestions: ['Confirm whether this is still true.'],
+    });
+  });
 });
 
 /* ---------------------------------------------------------------------------
@@ -503,6 +545,36 @@ describe('queryMemoriesForSkill', () => {
     expect(results.map((memory) => memory.content).slice(0, 2)).toEqual([
       'Fresh coop signal',
       'Old member preference',
+    ]);
+  });
+
+  it('prioritizes confirmed memory above unconfirmed inferred memory in the same freshness band', async () => {
+    await createAgentMemory(db, {
+      scope: 'coop',
+      coopId: 'coop-1',
+      type: 'skill-pattern',
+      content: 'Inferred pattern from one run',
+      confidence: 0.8,
+      provenanceLabel: 'inferred',
+      confirmationStatus: 'unconfirmed',
+      createdAt: '2026-05-01T00:00:00.000Z',
+    });
+    await createAgentMemory(db, {
+      scope: 'coop',
+      coopId: 'coop-1',
+      type: 'domain-pattern',
+      content: 'Member confirmed operating constraint',
+      confidence: 0.85,
+      provenanceLabel: 'user-confirmed',
+      confirmationStatus: 'confirmed',
+      createdAt: '2026-05-01T00:00:00.000Z',
+    });
+
+    const results = await queryMemoriesForSkill(db, 'coop-1', 'test-skill', { limit: 5 });
+
+    expect(results.map((memory) => memory.content).slice(0, 2)).toEqual([
+      'Member confirmed operating constraint',
+      'Inferred pattern from one run',
     ]);
   });
 

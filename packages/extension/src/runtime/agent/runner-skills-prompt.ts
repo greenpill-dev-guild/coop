@@ -13,6 +13,7 @@ import type {
 } from '@coop/shared';
 import { sanitizeTextForInference, sanitizeValueForInference, truncateWords } from '@coop/shared';
 import { sanitizeIngested } from './adapters';
+import { formatAgentMemoryPromptLabel } from './memory-context';
 import type { RegisteredSkill } from './registry';
 import { compact } from './runner-state';
 
@@ -180,7 +181,7 @@ export async function buildSkillPrompt(input: {
       ? `Ordered memories:\n${input.memories
           .map(
             (memory) =>
-              `- [${memory.scope}:${memory.type}] ${truncateWords(
+              `- [${formatAgentMemoryPromptLabel(memory)}] ${truncateWords(
                 sanitizeTextForInference(sanitizeIngested(memory.content)),
                 40,
               )} (confidence: ${memory.confidence.toFixed(2)})`,

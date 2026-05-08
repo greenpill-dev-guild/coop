@@ -442,6 +442,29 @@ export const agentMemoryTypeSchema = z.enum([
 
 export const agentMemoryScopeSchema = z.enum(['member', 'coop']);
 
+export const agentMemoryProvenanceLabelSchema = z.enum([
+  'observed',
+  'inferred',
+  'user-confirmed',
+  'imported',
+  'stale',
+]);
+
+export const agentMemoryConfirmationStatusSchema = z.enum([
+  'unconfirmed',
+  'confirmed',
+  'rejected',
+  'stale',
+]);
+
+export const agentMemorySourceChannelSchema = z.enum([
+  'source',
+  'skill',
+  'member',
+  'import',
+  'system',
+]);
+
 export const agentMemorySchema = z
   .object({
     id: z.string().min(1),
@@ -456,6 +479,14 @@ export const agentMemorySchema = z
     authorMemberId: z.string().optional(),
     sourceObservationId: z.string().optional(),
     sourceSkillRunId: z.string().optional(),
+    provenanceLabel: agentMemoryProvenanceLabelSchema.optional(),
+    confirmationStatus: agentMemoryConfirmationStatusSchema.optional(),
+    sourceChannel: agentMemorySourceChannelSchema.optional(),
+    providerId: agentRuntimeProviderIdSchema.optional(),
+    modelId: z.string().min(1).optional(),
+    traceId: z.string().min(1).optional(),
+    taskId: z.string().min(1).optional(),
+    unresolvedQuestions: z.array(z.string().min(1)).optional(),
     createdAt: z.string().datetime(),
     expiresAt: z.string().datetime().optional(),
   })
@@ -531,6 +562,9 @@ export type AgentLogLevel = z.infer<typeof agentLogLevelSchema>;
 export type AgentLog = z.infer<typeof agentLogSchema>;
 export type AgentMemoryType = z.infer<typeof agentMemoryTypeSchema>;
 export type AgentMemoryScope = z.infer<typeof agentMemoryScopeSchema>;
+export type AgentMemoryProvenanceLabel = z.infer<typeof agentMemoryProvenanceLabelSchema>;
+export type AgentMemoryConfirmationStatus = z.infer<typeof agentMemoryConfirmationStatusSchema>;
+export type AgentMemorySourceChannel = z.infer<typeof agentMemorySourceChannelSchema>;
 export type AgentMemory = z.infer<typeof agentMemorySchema>;
 export type PrivilegedActionStatus = z.infer<typeof privilegedActionStatusSchema>;
 export type ArchiveWorthiness = z.infer<typeof archiveWorthinessSchema>;

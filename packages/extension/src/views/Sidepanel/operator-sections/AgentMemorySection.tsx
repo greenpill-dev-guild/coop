@@ -18,6 +18,28 @@ function formatTypeLabel(type: AgentMemory['type'] | 'all') {
   }
 }
 
+function formatProvenance(memory: AgentMemory) {
+  if (memory.provenanceLabel) return memory.provenanceLabel;
+  if (memory.type === 'user-feedback') return 'user-confirmed';
+  return 'inferred';
+}
+
+function formatConfirmation(memory: AgentMemory) {
+  if (memory.confirmationStatus) return memory.confirmationStatus;
+  if (formatProvenance(memory) === 'user-confirmed') return 'confirmed';
+  return 'unconfirmed';
+}
+
+function formatSourceChannel(memory: AgentMemory) {
+  if (memory.sourceChannel) return memory.sourceChannel;
+  if (memory.type === 'user-feedback') return 'member';
+  return 'skill';
+}
+
+function formatProviderLabel(memory: AgentMemory) {
+  return [memory.providerId, memory.modelId].filter(Boolean).join(' · ');
+}
+
 export function AgentMemorySection({ memories }: { memories: AgentMemory[] }) {
   const [typeFilter, setTypeFilter] = useState<AgentMemory['type'] | 'all'>('all');
 
@@ -59,6 +81,9 @@ export function AgentMemorySection({ memories }: { memories: AgentMemory[] }) {
                 <div className="badge-row">
                   <span className="badge">{formatTypeLabel(memory.type)}</span>
                   <span className="badge">{memory.domain}</span>
+                  <span className="badge">{formatProvenance(memory)}</span>
+                  <span className="badge">{formatConfirmation(memory)}</span>
+                  <span className="badge">{formatSourceChannel(memory)}</span>
                   <span className="badge">{(memory.confidence * 100).toFixed(0)}%</span>
                 </div>
                 <p className="helper-text" style={{ marginTop: '0.4rem' }}>
@@ -70,6 +95,11 @@ export function AgentMemorySection({ memories }: { memories: AgentMemory[] }) {
                     ? ` · expires ${new Date(memory.expiresAt).toLocaleDateString()}`
                     : ''}
                 </span>
+                {formatProviderLabel(memory) ? (
+                  <span className="meta-text" style={{ display: 'block', fontSize: '0.78rem' }}>
+                    {formatProviderLabel(memory)}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

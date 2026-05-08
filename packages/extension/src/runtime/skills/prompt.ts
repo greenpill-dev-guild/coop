@@ -11,6 +11,7 @@ import type {
   TabRouting,
 } from '@coop/shared';
 import { sanitizeTextForInference, sanitizeValueForInference, truncateWords } from '@coop/shared';
+import { formatAgentMemoryPromptLabel } from '../agent/memory-context';
 import type { RegisteredSkill } from '../agent/registry';
 import { compact } from '../agent/runner-state';
 
@@ -165,7 +166,7 @@ export async function buildSkillPrompt(input: {
       ? `Ordered memories:\n${input.memories
           .map(
             (memory) =>
-              `- [${memory.scope}:${memory.type}] ${truncateWords(
+              `- [${formatAgentMemoryPromptLabel(memory)}] ${truncateWords(
                 sanitizeTextForInference(memory.content),
                 40,
               )} (confidence: ${memory.confidence.toFixed(2)})`,

@@ -1,4 +1,5 @@
 import { listKnowledgeSources, nowIso, updateKnowledgeSourceMeta } from '@coop/shared';
+import { fetchStructuredContentForSource } from '../../runtime/agent/adapters';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { db } from '../context';
 import { emitSourceContentObservation } from './agent-observation-emitters';
@@ -22,19 +23,20 @@ export async function handleRefreshKnowledgeSource(
 
     for (const source of sources) {
       try {
-        // Adapter dispatch will be extended as adapters are built.
-        // For now, mark the source as freshly fetched and emit an observation
-        // so the agent pipeline picks it up.
+        const contents = await fetchStructuredContentForSource({ db, source });
         await updateKnowledgeSourceMeta(db, source.id, {
           lastFetchedAt: nowIso(),
+          entityCount: Math.max(source.entityCount, contents.length),
         });
 
-        await emitSourceContentObservation({
-          sourceId: source.id,
-          sourceLabel: source.label,
-          contentTitle: `${source.type}:${source.identifier}`,
-          coopId: source.coopId,
-        });
+        for (const content of contents) {
+          await emitSourceContentObservation({
+            sourceId: source.id,
+            sourceLabel: source.label,
+            contentTitle: content.title,
+            coopId: source.coopId,
+          });
+        }
 
         refreshedCount++;
       } catch (err) {

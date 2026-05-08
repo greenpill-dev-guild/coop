@@ -8,6 +8,34 @@ import {
   saveAgentMemory,
 } from '../storage/db';
 
+function defaultMemoryProvenance(input: {
+  type: AgentMemory['type'];
+  sourceObservationId?: string;
+  sourceSkillRunId?: string;
+}): Pick<AgentMemory, 'provenanceLabel' | 'confirmationStatus' | 'sourceChannel'> {
+  if (input.type === 'user-feedback') {
+    return {
+      provenanceLabel: 'user-confirmed',
+      confirmationStatus: 'confirmed',
+      sourceChannel: 'member',
+    };
+  }
+
+  if (input.sourceObservationId && !input.sourceSkillRunId) {
+    return {
+      provenanceLabel: 'observed',
+      confirmationStatus: 'unconfirmed',
+      sourceChannel: 'source',
+    };
+  }
+
+  return {
+    provenanceLabel: 'inferred',
+    confirmationStatus: 'unconfirmed',
+    sourceChannel: 'skill',
+  };
+}
+
 export async function createAgentMemory(
   db: CoopDexie,
   input: Omit<AgentMemory, 'id' | 'createdAt' | 'contentHash' | 'domain' | 'scope'> &
@@ -16,6 +44,7 @@ export async function createAgentMemory(
       domain?: string;
     },
 ): Promise<AgentMemory> {
+  const provenanceDefaults = defaultMemoryProvenance(input);
   const memory: AgentMemory = {
     ...input,
     scope: input.scope ?? 'coop',
@@ -28,6 +57,10 @@ export async function createAgentMemory(
     }),
     createdAt: input.createdAt ?? nowIso(),
     domain: input.domain ?? 'general',
+    provenanceLabel: input.provenanceLabel ?? provenanceDefaults.provenanceLabel,
+    confirmationStatus: input.confirmationStatus ?? provenanceDefaults.confirmationStatus,
+    sourceChannel: input.sourceChannel ?? provenanceDefaults.sourceChannel,
+    unresolvedQuestions: input.unresolvedQuestions ?? [],
   };
   const validated = agentMemorySchema.parse(memory);
   await saveAgentMemory(db, validated);
@@ -61,6 +94,40 @@ function memoryTypePriority(memory: AgentMemory) {
   }
 }
 
+function isMemoryStale(memory: AgentMemory, latestCreatedAt: number) {
+  const createdAt = Date.parse(memory.createdAt);
+  const staleByAge =
+    latestCreatedAt > 0 &&
+    Number.isFinite(createdAt) &&
+    latestCreatedAt - createdAt > STALE_MEMORY_RELATIVE_GAP_MS;
+
+  return (
+    staleByAge ||
+    memory.provenanceLabel === 'stale' ||
+    memory.confirmationStatus === 'stale' ||
+    memory.confirmationStatus === 'rejected'
+  );
+}
+
+function memoryConfirmationPriority(memory: AgentMemory) {
+  if (memory.provenanceLabel === 'stale' || memory.confirmationStatus === 'stale') {
+    return 5;
+  }
+  if (memory.confirmationStatus === 'rejected') {
+    return 4;
+  }
+  if (memory.confirmationStatus === 'confirmed' || memory.provenanceLabel === 'user-confirmed') {
+    return 0;
+  }
+  if (memory.provenanceLabel === 'observed' || memory.sourceChannel === 'source') {
+    return 1;
+  }
+  if (memory.provenanceLabel === 'imported' || memory.sourceChannel === 'import') {
+    return 2;
+  }
+  return 3;
+}
+
 function sortMemoriesForSkill(memories: AgentMemory[]) {
   const latestCreatedAt = memories.reduce<number>((latest, memory) => {
     const createdAt = Date.parse(memory.createdAt);
@@ -68,19 +135,16 @@ function sortMemoriesForSkill(memories: AgentMemory[]) {
   }, 0);
 
   return [...memories].sort((left, right) => {
-    const leftCreatedAt = Date.parse(left.createdAt);
-    const rightCreatedAt = Date.parse(right.createdAt);
-    const leftIsStale =
-      latestCreatedAt > 0 &&
-      Number.isFinite(leftCreatedAt) &&
-      latestCreatedAt - leftCreatedAt > STALE_MEMORY_RELATIVE_GAP_MS;
-    const rightIsStale =
-      latestCreatedAt > 0 &&
-      Number.isFinite(rightCreatedAt) &&
-      latestCreatedAt - rightCreatedAt > STALE_MEMORY_RELATIVE_GAP_MS;
+    const leftIsStale = isMemoryStale(left, latestCreatedAt);
+    const rightIsStale = isMemoryStale(right, latestCreatedAt);
 
     if (leftIsStale !== rightIsStale) {
       return leftIsStale ? 1 : -1;
+    }
+
+    const confirmationDelta = memoryConfirmationPriority(left) - memoryConfirmationPriority(right);
+    if (confirmationDelta !== 0) {
+      return confirmationDelta;
     }
 
     const priorityDelta = memoryTypePriority(left) - memoryTypePriority(right);

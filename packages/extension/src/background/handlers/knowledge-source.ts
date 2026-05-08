@@ -5,7 +5,7 @@ import {
   listKnowledgeSources,
   removeKnowledgeSource,
 } from '@coop/shared';
-import { loadGraphSnapshot } from '../../runtime/agent/graph-store-singleton';
+import { loadGraphSnapshot, saveGraphSnapshot } from '../../runtime/agent/graph-store-singleton';
 import type { RuntimeActionResponse, RuntimeRequest } from '../../runtime/messages';
 import { resolveReceiverPairingMember } from '../../runtime/receiver';
 import { db, getCoops, getLocalSetting, stateKeys } from '../context';
@@ -55,8 +55,18 @@ export async function handleRemoveKnowledgeSource(
   message: RemoveRequest,
 ): Promise<RuntimeActionResponse> {
   try {
-    await removeKnowledgeSource(db, message.payload.sourceId);
-    return { ok: true };
+    const source = await db.knowledgeSources.get(message.payload.sourceId);
+    const graphStore = source ? await loadGraphSnapshot(db, source.coopId) : undefined;
+    const result = await removeKnowledgeSource(db, message.payload.sourceId, {
+      graphStore,
+      source,
+    });
+
+    if (source && result.staleEntityCount + result.invalidatedRelationshipCount > 0) {
+      await saveGraphSnapshot(db, source.coopId);
+    }
+
+    return { ok: true, data: result };
   } catch (error) {
     return {
       ok: false,

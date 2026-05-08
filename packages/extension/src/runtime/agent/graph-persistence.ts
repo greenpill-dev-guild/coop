@@ -5,7 +5,7 @@ import type {
   GraphEntity,
   GraphRelationship,
 } from '@coop/shared';
-import { createRelationship, nowIso, upsertEntity } from '@coop/shared';
+import { createEntityEmbedding, createRelationship, nowIso, upsertEntity } from '@coop/shared';
 import { loadGraphSnapshot, scheduleSave } from './graph-store-singleton';
 
 export type PersistedEntityExtractionResult = {
@@ -38,9 +38,18 @@ function shouldUpgradeRef(ref: string | undefined): boolean {
 }
 
 function normalizeEntity(entity: GraphEntity, sourceRef: string): GraphEntity {
-  return {
+  const normalizedSourceRef = shouldUpgradeRef(entity.sourceRef) ? sourceRef : entity.sourceRef;
+  const normalizedEntity = {
     ...entity,
-    sourceRef: shouldUpgradeRef(entity.sourceRef) ? sourceRef : entity.sourceRef,
+    sourceRef: normalizedSourceRef,
+  };
+
+  return {
+    ...normalizedEntity,
+    embedding:
+      entity.embedding && entity.embedding.length > 0
+        ? entity.embedding
+        : createEntityEmbedding(normalizedEntity),
   };
 }
 
