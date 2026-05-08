@@ -47,7 +47,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": ["api", "state", "contracts"],
       "branch": "handoff/qa-codex/autoresearch",
       "branch_trigger": "handoff/qa-codex/autoresearch",
@@ -62,6 +62,6 @@
       "ready_when_dependencies_met": true
     }
   },
-  "updated_at": "2026-04-19",
-  "notes": "api+state+contracts complete; qa_pass_1 deps cleared. UI lane still backlog — budget slider, quality-floor editor, pagination, and explicit loading states are not yet implemented. Run-now error-surfacing fix landed in commit fedbbd5."
+  "updated_at": "2026-05-08",
+  "notes": "api+state+contracts complete; qa_pass_1 completed on 2026-05-08 with targeted autoresearch/shared/runtime tests and plans validate passing. validate:quick was run; typecheck passed, but lint is blocked by pre-existing Receiver app issues outside the autoresearch QA diff. UI lane still backlog — budget slider, quality-floor editor, pagination, and explicit loading states are not yet implemented, so the feature remains active and qa_pass_2 stays blocked on UI."
 }
