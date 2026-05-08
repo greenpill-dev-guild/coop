@@ -7,6 +7,7 @@ playwright-report
 test-results
 output/playwright/*
 **/__screenshots__
+e2e/qa-screenshots/
 !.gitkeep
 
 docs/build

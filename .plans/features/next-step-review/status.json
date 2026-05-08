@@ -47,9 +47,9 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "ready",
+      "status": "done",
       "depends_on": ["qa_pass_1"],
-      "branch": "handoff/qa-claude/next-step-review",
+      "branch": "main",
       "branch_trigger": "handoff/qa-claude/next-step-review",
       "ready_when_dependencies_met": true
     }
