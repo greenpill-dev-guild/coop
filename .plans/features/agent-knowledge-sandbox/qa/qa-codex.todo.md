@@ -3,9 +3,9 @@ feature: agent-knowledge-sandbox
 title: Agent knowledge sandbox QA pass 1
 lane: qa
 agent: codex
-status: ready
-source_branch: feature/agent-knowledge-sandbox
-work_branch: qa/codex/agent-knowledge-sandbox
+status: done
+source_branch: main
+work_branch: main
 depends_on:
   - ../lanes/state.codex.todo.md
   - ../lanes/ui.claude.todo.md
@@ -20,69 +20,79 @@ handoff_out: handoff/qa-claude/agent-knowledge-sandbox
 updated: 2026-05-07
 ---
 
-# QA Pass 1 — Codex
+# QA Pass 1 - Codex
 
-> Status flipped to `ready` on 2026-04-19 because `ui` and `state` lanes are
-> both `done`. Graph backend remains snapshot-based (Kuzu-WASM deferred); see
-> `.plans/audits/2026-04-19-reconciliation.md`.
+Status: closed with blockers on 2026-05-07.
 
-Branch: `handoff/qa-codex/agent-knowledge-sandbox`
-Triggered by: UI + State lanes complete
+This pass validates the landed state/UI work honestly. The snapshot-backed graph store is the
+current shipped backend; Kuzu-WASM remains deferred. QA pass 2 should stay blocked until the
+unimplemented product-contract gaps below are resolved or explicitly descoped.
 
-## Source Registry
+## Validation Evidence
 
-- [ ] Source CRUD round-trips through Dexie without data loss
-- [ ] Y.Map sync converges within 3 Yjs updates between two docs
-- [ ] Concurrent source add from two peers merges correctly
-- [ ] Offline source add syncs on reconnect
-- [ ] `assertAllowedSource()` blocks 100% of denylist entries
-- [ ] `assertAllowedSource()` passes for all registered sources
-- [ ] Source removal cascades correctly to ingested content
-- [ ] Duplicate source detection works by normalized identifier
+- [x] Source registry, Yjs sync, graph, graph retrieval, graph context, reasoning, agent-memory, and
+  storage tests passed: 16 files / 215 tests.
+- [x] Source adapter parser, sanitizer, graph snapshot, graph persistence, knowledge-source handler,
+  and agent-knowledge tests passed: 12 files / 66 tests.
+- [x] Relevant provenance/source-health UI tests passed: 9 files / 65 tests.
+- [x] Final plan/quick gates recorded in `../eval/qa-report.md` (`plans validate` passed;
+  `validate:quick` failed on unrelated Receiver/app lint outside this lane).
 
-## Source Adapters
+## Result By Area
 
-- [ ] Each adapter passes with recorded API response fixtures
-- [ ] Each adapter rejects non-allowlisted sources
-- [ ] Content sanitizer catches all known prompt injection patterns
-- [ ] Content truncation works at size limit boundary
-- [ ] Adapter error handling (network failure, 404, rate limit) is graceful
+### Source Registry
 
-## Graph Memory
+- [x] Dexie CRUD, list filters, metadata updates, exact duplicate rejection, and delete-by-id are
+  covered by `source-registry.test.ts`.
+- [x] Y.Map write/read, concurrent add, remove propagation, and offline add/reconnect are covered by
+  `source-sync.test.ts`.
+- [x] `assertAllowedSource()` blocks unregistered URLs, private/local addresses, credential paths,
+  and path traversal; registered YouTube/GitHub/RSS examples pass.
+- [ ] Blocker: source removal does not cascade to ingested graph content. `removeKnowledgeSource()`
+  deletes the registry row only, and graph entities have no stale marker.
+- [ ] Partial: duplicate source detection is exact `[coopId+identifier]`; normalized equivalent
+  identifiers are not proven.
 
-- [ ] Entity CRUD survives write → close → reopen → read
-- [ ] Temporal correctness: `currentFacts()` never returns invalidated edges
-- [ ] `factsAt(timestamp)` returns edges valid at that point
-- [ ] Conflicting facts detected and newer invalidates older
-- [ ] 100-entity graph queries < 50ms
-- [ ] 1000-entity graph with 5000 edges stays under 10MB IndexedDB
-- [ ] Graph schema migration path works (v1 → v2)
+### Source Adapters
 
-## Graph Retrieval
+- [x] Fixture parsers exist for YouTube, GitHub, RSS, Reddit, NPM, and Wikipedia.
+- [x] Sanitizer strips the known prompt-injection patterns and enforces the content-size boundary.
+- [ ] Blocker: adapter modules are parse helpers, not allowlist-checked fetch wrappers. The QA plan's
+  "reject non-allowlisted source before fetch" contract is not yet implemented at the adapter layer.
+- [ ] Partial: `handleRefreshKnowledgeSource()` updates `lastFetchedAt` and emits observations but
+  does not dispatch the adapters or exercise network/404/rate-limit behavior.
 
-- [ ] BM25 search returns expected entities for test queries
-- [ ] Vector search returns expected entities for embedding queries
-- [ ] Hybrid search deduplicates across methods
-- [ ] Hybrid search respects temporal validity (current facts only)
-- [ ] Retrieval MRR >= 0.6 on 20-query benchmark corpus
-- [ ] Context assembly stays within 2000 token budget
-- [ ] Zero LLM invocations during retrieval (verified via mock assertions)
+### Graph Memory And Retrieval
 
-## Reasoning Traces
+- [x] In-memory entity CRUD, temporal facts, reasoning traces, precedent adjustment, compound loop,
+  snapshot serialization, and coop switching are covered by targeted tests.
+- [x] BM25-style text search, traversal, hybrid dedupe, context assembly, MRR >= 0.6, and no-LLM
+  retrieval are covered by targeted tests.
+- [x] Retrieval-before-work is wired: `buildSkillContext()` queries flat memories and graph context
+  before prompt assembly when a graph store is populated.
+- [ ] Deferred: Kuzu-WASM/IDBFS backend is not implemented and remains out of scope for this pass.
+- [ ] Deferred: vector retrieval / embedding generation is not implemented.
+- [ ] Partial: current temporal filtering is result-level; traversal still scans all relationships
+  before filtering returned entities.
+- [ ] Not proven: 1000-entity / 5000-edge IndexedDB size, graph schema migration, and 100-entity
+  query timing are not covered by the current suite.
 
-- [ ] Trace creation links to skill run and source entities
-- [ ] Precedent query finds similar past decisions
-- [ ] Positive precedents boost confidence >= 0.05
-- [ ] Negative precedents decrease confidence >= 0.05
-- [ ] Trace quota enforcement (max 500) works with oldest-first pruning
-- [ ] Memory write-back records provenance label, confirmation status, source channel, provider/model use, trace/task ID, confidence, and unresolved questions where applicable
-- [ ] Inferred but unconfirmed memory is retrievable as context but is not treated as instruction-like guidance
-- [ ] Stale memory is visibly labeled and ranked below current observed or user-confirmed context
+### Provenance, Confirmation, And Stale Behavior
 
-## Integration
+- [x] Graph context carries source refs, DraftCard provenance shows "Sourced from" badges for agent
+  drafts, and source health surfaces show stale/fresh state in Nest and the popup.
+- [x] Flat memory retrieval ranks fresh memories above old memories when the age gap is large.
+- [ ] Blocker: `AgentMemory` has no durable provenance label, confirmation status, source channel,
+  provider/model metadata, task/trace ID, or unresolved-question fields.
+- [ ] Blocker: inferred/unconfirmed memories are included in prompts as ordinary ordered memories;
+  they are not distinguished from user-confirmed guidance.
+- [ ] Partial: stale memory is ranked lower by age, but not visibly labeled in memory prompt context
+  or UI.
 
-- [ ] All existing unit tests pass (zero regressions)
-- [ ] All existing eval cases pass at current thresholds
-- [ ] Agent cycle time within 120% of baseline
-- [ ] Flat agentMemories table still works (backwards compat)
-- [ ] Recommendation UI can answer "where did this come from?" without exposing raw prompts, model output, or internal trace payloads in simple mode
+## Handoff
+
+- QA pass 1 is complete as an evidence-gathering pass.
+- QA pass 2 remains blocked.
+- Required follow-up is state/runtime work, not Kuzu-WASM: close the adapter allowlist/fetch wrapper
+  gap, source-removal cascade/stale marking, vector retrieval descoping or implementation, and
+  durable memory provenance/confirmation semantics.

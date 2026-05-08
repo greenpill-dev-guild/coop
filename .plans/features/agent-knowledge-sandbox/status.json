@@ -38,7 +38,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": ["ui", "state"],
       "branch": "handoff/qa-codex/agent-knowledge-sandbox",
       "branch_trigger": "handoff/qa-codex/agent-knowledge-sandbox",
@@ -64,5 +64,5 @@
     "Memory provenance and confirmation labels are part of the product contract: observed, inferred, user-confirmed, imported, and stale memories must behave differently in retrieval and UI."
   ],
   "updated_at": "2026-05-07",
-  "notes": "UI + state lanes materially landed; graph backend still snapshot-persisted (Kuzu-WASM deferred). QA pass 1 is now ready to run, including provenance, confirmation, and retrieval-before-work checks."
+  "notes": "QA pass 1 closed on main with green targeted validation and honest blockers recorded. Snapshot-backed graph storage is the shipped backend and Kuzu-WASM remains deferred. QA pass 2 stays blocked until adapter allowlist/fetch dispatch, source-removal cascade, vector retrieval, and durable memory provenance/confirmation semantics are either implemented or explicitly descoped."
 }
