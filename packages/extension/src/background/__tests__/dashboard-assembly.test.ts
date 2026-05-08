@@ -498,6 +498,37 @@ describe('dashboard assembly', () => {
     expect(signals).toHaveLength(0);
   });
 
+  it('excludes snoozed draft feedback from related signal counts by source metadata', async () => {
+    sharedMocks.listActiveReviewItemFeedbacks.mockResolvedValue([
+      {
+        id: 'feedback-1',
+        itemKind: 'draft',
+        itemId: 'draft-1',
+        action: 'remind-later',
+        coopId: 'coop-1',
+        draftId: 'draft-1',
+        sourceCandidateId: 'candidate-1',
+        extractId: 'extract-1',
+        remindAt: '2099-03-29T01:00:00.000Z',
+        createdAt: '2026-03-29T01:00:00.000Z',
+        updatedAt: '2026-03-29T01:00:00.000Z',
+      },
+    ]);
+
+    const result = await buildSummary();
+    const signals = await buildProactiveSignals({
+      coops: await contextMocks.getCoops(),
+      drafts: await sharedMocks.listReviewDrafts(),
+      candidates: await sharedMocks.listTabCandidates(),
+      tabRoutings: await sharedMocks.listTabRoutings(),
+      activeReviewItemFeedbacks: await sharedMocks.listActiveReviewItemFeedbacks(),
+      activeCoopId: 'coop-1',
+    });
+
+    expect(result.summary.routedTabs).toBe(0);
+    expect(signals).toHaveLength(0);
+  });
+
   it('refreshes the badge, writes a popup snapshot, and notifies listeners', async () => {
     await refreshBadge();
 

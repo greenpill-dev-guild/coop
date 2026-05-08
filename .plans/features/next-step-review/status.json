@@ -39,7 +39,7 @@
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": ["ui", "state", "api"],
       "branch": "handoff/qa-codex/next-step-review",
       "branch_trigger": "handoff/qa-codex/next-step-review",
@@ -47,7 +47,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": ["qa_pass_1"],
       "branch": "handoff/qa-claude/next-step-review",
       "branch_trigger": "handoff/qa-claude/next-step-review",

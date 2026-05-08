@@ -3,9 +3,9 @@ feature: next-step-review
 title: Next-Step Review QA pass 1
 lane: qa
 agent: codex
-status: ready
+status: done
 source_branch: feature/next-step-review
-work_branch: qa/codex/next-step-review
+work_branch: main
 skills:
   - qa
   - state-logic
@@ -14,6 +14,7 @@ skills:
 qa_order: 1
 handoff_in: handoff/qa-codex/next-step-review
 handoff_out: handoff/qa-claude/next-step-review
+completed_on: main
 updated: 2026-05-07
 ---
 
@@ -43,14 +44,20 @@ Codex runs the first QA pass after implementation lanes finish and the
 
 ## Tasks
 
-- [ ] Verify state/API/contracts paths.
-- [ ] Run targeted validation suites.
-- [ ] Verify human judgment callouts from implementation lanes.
-- [ ] Confirm review cards preserve source/provenance cues while keeping provider/model and trace internals out of simple mode.
-- [ ] Capture findings and residual risks.
-- [ ] Create `handoff/qa-claude/next-step-review` when pass 2 should start.
+- [x] Verify state/API/contracts paths.
+- [x] Run targeted validation suites.
+- [x] Verify human judgment callouts from implementation lanes.
+- [x] Confirm review cards preserve source/provenance cues while keeping provider/model and trace internals out of simple mode.
+- [x] Capture findings and residual risks.
+- [x] Record QA pass 2 readiness; no handoff branch was created because this pass was explicitly run and committed on `main`.
 
 ## Verification
 
-- [ ] Validation commands are recorded in `../eval/qa-report.md`.
-- [ ] Any remaining risk is explicit.
+- [x] Validation commands are recorded in `../eval/qa-report.md`.
+- [x] Any remaining risk is explicit.
+
+## Result
+
+- Status: done on `main`.
+- Narrow fix applied: draft review feedback now suppresses related routed signals by `draftId`, `extractId`, or `sourceCandidateId`, which keeps snoozed merged review items out of dashboard counts and proactive signals.
+- QA pass 2 is ready for browser/visual validation once the normal `handoff/qa-claude/next-step-review` branch is created outside this direct-main pass.

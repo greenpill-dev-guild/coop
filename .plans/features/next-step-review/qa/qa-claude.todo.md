@@ -3,9 +3,9 @@ feature: next-step-review
 title: Next-Step Review QA pass 2
 lane: qa
 agent: claude
-status: blocked
+status: ready
 source_branch: feature/next-step-review
-work_branch: qa/claude/next-step-review
+work_branch: handoff/qa-claude/next-step-review
 depends_on:
   - qa-codex.todo.md
 skills:
@@ -14,13 +14,16 @@ skills:
   - e2e
 qa_order: 2
 handoff_in: handoff/qa-claude/next-step-review
-updated: 2026-05-06
+updated: 2026-05-07
 ---
 
 # QA Pass 2
 
 Claude runs the second QA pass only after Codex QA is done and
 `handoff/qa-claude/next-step-review` exists.
+
+Codex QA pass 1 closed on `main` by explicit direct-main instruction, so the handoff branch still
+needs to be created before this ready lane is runnable.
 
 ## Focus
 

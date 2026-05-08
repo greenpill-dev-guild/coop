@@ -356,8 +356,10 @@ function feedbackMatchesRouting(
 
   return (
     feedback.itemKind === 'draft' &&
-    typeof routing.draftId === 'string' &&
-    (feedback.itemId === routing.draftId || feedback.draftId === routing.draftId)
+    ((typeof routing.draftId === 'string' &&
+      (feedback.itemId === routing.draftId || feedback.draftId === routing.draftId)) ||
+      feedback.extractId === routing.extractId ||
+      feedback.sourceCandidateId === routing.sourceCandidateId)
   );
 }
 
