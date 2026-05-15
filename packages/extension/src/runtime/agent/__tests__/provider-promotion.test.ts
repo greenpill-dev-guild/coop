@@ -57,8 +57,11 @@ describe('provider promotion', () => {
       });
 
       expect(state.providerId).toBe('webllm');
-      expect(state.evaluatedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
-      expect(state.promotedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
+      // opportunity-extractor opted into the gemma4 provider for the
+      // hackathon function-calling demo, so the WebLLM promotion sweep no
+      // longer claims it as a transformers→webllm upgrade candidate.
+      expect(state.evaluatedSkillIds).toEqual(['tab-router']);
+      expect(state.promotedSkillIds).toEqual(['tab-router']);
       expect(state.promotable).toBe(true);
       expect(state.benchmarkRecordIds).toEqual([]);
       expect(state.traceRecordIds).toEqual([]);
@@ -66,8 +69,8 @@ describe('provider promotion', () => {
       const persisted = await getWebLlmProviderPromotionState(db);
 
       expect(persisted?.providerId).toBe('webllm');
-      expect(persisted?.evaluatedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
-      expect(persisted?.promotedSkillIds).toEqual(['tab-router', 'opportunity-extractor']);
+      expect(persisted?.evaluatedSkillIds).toEqual(['tab-router']);
+      expect(persisted?.promotedSkillIds).toEqual(['tab-router']);
       expect(persisted?.activatedAt).toBeDefined();
     } finally {
       db.close();
@@ -162,8 +165,12 @@ describe('provider promotion', () => {
       expect(state.promotedSkillIds).toEqual([]);
       expect(state.activatedAt).toBeUndefined();
       expect(state.failedChecks).toEqual(['schema-stable', 'malicious-pack-clean']);
+      // opportunity-extractor's manifest now declares model: 'gemma4', so
+      // the legacy fallback for non-promotable WebLLM gates resolves to the
+      // newly-declared gemma4 provider rather than dropping back to
+      // transformers.
       expect(await resolvePreferredProvider(manifest, { db, webLlmPromotionEnabled: true })).toBe(
-        'transformers',
+        'gemma4',
       );
     } finally {
       db.close();

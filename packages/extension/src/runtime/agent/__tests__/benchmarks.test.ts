@@ -161,6 +161,7 @@ describe('agent provider benchmarks', () => {
       'heuristic',
       'transformers',
       'webllm',
+      'gemma4',
       'chrome-prompt-api',
     ]);
     expect(

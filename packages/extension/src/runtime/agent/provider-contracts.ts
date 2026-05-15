@@ -7,12 +7,16 @@ import { validateAgentRuntimeProviderContract } from '@coop/shared';
 import { resolveConfiguredChromePromptApiEnabled } from '../config';
 import {
   buildHeuristicSkillOutput,
+  getAgentGemma4Status,
   getAgentWebLlmStatus,
+  getGemma4ModelId,
   getTransformersModelId,
+  initializeGemma4Engine,
   initializeTransformersPipeline,
   initializeWebLlmEngine,
   isTransformersPipelineReady,
   parseValidatedOutputAttempt,
+  runGemma4TextCompletion,
   runTransformersTextCompletion,
   runWebLlmTextCompletion,
 } from './models';
@@ -117,6 +121,22 @@ const PROVIDER_CONTRACTS = [
       supportsMultimodal: false,
     },
     fallbackOrder: ['transformers', 'heuristic'],
+  },
+  {
+    id: 'gemma4',
+    tier: 'p2',
+    label: 'Gemma 4 (transformers.js)',
+    defaultModelId: getGemma4ModelId(),
+    experimental: false,
+    capabilities: {
+      structuredJson: 'function-calling',
+      workerSafe: true,
+      offscreenSafe: true,
+      requiresWebGpu: true,
+      supportsStreaming: false,
+      supportsMultimodal: true,
+    },
+    fallbackOrder: ['webllm', 'transformers', 'heuristic'],
   },
   {
     id: 'chrome-prompt-api',
@@ -229,6 +249,27 @@ export async function getAgentRuntimeProviderAvailability(
           available: false,
           reason: 'WebLLM requires WebGPU support.',
           fallbackProviderId: 'transformers',
+        };
+      }
+      return { available: true };
+    }
+    case 'gemma4': {
+      const status = getAgentGemma4Status();
+      if (status.ready) {
+        return { available: true };
+      }
+      if (!supportsWorker()) {
+        return {
+          available: false,
+          reason: 'Gemma 4 requires Web Workers in this runtime.',
+          fallbackProviderId: 'webllm',
+        };
+      }
+      if (!supportsWebGpu()) {
+        return {
+          available: false,
+          reason: 'Gemma 4 requires WebGPU support.',
+          fallbackProviderId: 'webllm',
         };
       }
       return { available: true };
@@ -392,6 +433,30 @@ export async function executeRuntimeProviderSkill<T>(input: {
           retryContext,
           signal: input.signal,
         }),
+    });
+  }
+
+  if (input.providerId === 'gemma4') {
+    const status = getAgentGemma4Status();
+    const coldStartMs = status.ready ? null : (await initializeGemma4Engine()).durationMs;
+    return runProviderWithRetry<T>({
+      providerId: input.providerId,
+      modelId: contract.defaultModelId,
+      coldStartMs,
+      schemaRef: input.schemaRef,
+      runText: async (retryContext) => {
+        const result = await runGemma4TextCompletion({
+          system: input.system,
+          prompt: input.prompt,
+          maxTokens: input.maxTokens,
+          retryContext,
+          signal: input.signal,
+        });
+        // Surface a tool-call payload as JSON when present so the existing
+        // schema-validating retry loop sees a structured response.
+        const output = result.toolCall ? JSON.stringify(result.toolCall.arguments) : result.output;
+        return { output, durationMs: result.durationMs };
+      },
     });
   }
 

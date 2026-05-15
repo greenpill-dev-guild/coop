@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Extract ecological, community, and capital-formation opportunity candidates from local knowledge.",
   "runtime": "extension-offscreen",
-  "model": "transformers",
+  "model": "gemma4",
   "triggers": ["high-confidence-draft", "receiver-backlog", "audio-transcript-ready"],
   "inputSchemaRef": "agent-observation",
   "outputSchemaRef": "opportunity-extractor-output",

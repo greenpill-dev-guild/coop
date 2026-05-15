@@ -20,6 +20,11 @@ import type {
 import { validateSkillOutput } from '@coop/shared';
 import { resolveOnnxRuntimeWasmPaths } from '../onnx-assets';
 import { AGENT_SKILL_TIMEOUT_MS } from './config';
+import {
+  AgentGemma4Bridge,
+  type Gemma4ToolDefinition,
+  getDefaultGemma4ModelId,
+} from './gemma4-bridge';
 import { inferPoleEntitiesFromText } from './runner-inference';
 import { AgentWebLlmBridge } from './webllm-bridge';
 
@@ -47,6 +52,7 @@ let transformersPipelinePromise: Promise<TextGenerationPipeline> | null = null;
 let transformersPipelineReady = false;
 let transformersPipelineEpoch = 0;
 const webLlmBridge = new AgentWebLlmBridge();
+const gemma4Bridge = new AgentGemma4Bridge();
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -139,6 +145,18 @@ export function getAgentWebLlmStatus() {
 
 export async function initializeWebLlmEngine() {
   return webLlmBridge.initialize();
+}
+
+export function getAgentGemma4Status() {
+  return gemma4Bridge.status;
+}
+
+export async function initializeGemma4Engine() {
+  return gemma4Bridge.initialize();
+}
+
+export function getGemma4ModelId() {
+  return getDefaultGemma4ModelId();
 }
 
 export function extractJsonBlock(raw: string) {
@@ -705,6 +723,36 @@ export async function completeSkillOutput<T>(input: {
   }
 
   try {
+    if (input.preferredProvider === 'gemma4') {
+      try {
+        return await runGemma4<T>({
+          system: input.system,
+          prompt: input.prompt,
+          schemaRef: input.schemaRef,
+          maxTokens: input.maxTokens,
+          signal: input.signal,
+        });
+      } catch (firstError) {
+        throwIfAborted(input.signal);
+        if (firstError instanceof Error && /timed out/i.test(firstError.message)) {
+          throw firstError;
+        }
+        try {
+          return await runGemma4<T>({
+            system: input.system,
+            prompt: input.prompt,
+            schemaRef: input.schemaRef,
+            maxTokens: input.maxTokens,
+            retryContext: formatRetryContext(firstError),
+            signal: input.signal,
+          });
+        } catch {
+          throwIfAborted(input.signal);
+          // Fall through to webllm/transformers/heuristic chain
+        }
+      }
+    }
+
     if (input.preferredProvider === 'webllm') {
       try {
         return await runWebLlm<T>({
@@ -767,7 +815,7 @@ export async function completeSkillOutput<T>(input: {
     // Fall through to the next provider or heuristic fallback.
   }
 
-  if (input.preferredProvider === 'webllm') {
+  if (input.preferredProvider === 'webllm' || input.preferredProvider === 'gemma4') {
     try {
       return await runTransformers<T>({
         prompt: `${input.system}\n\n${input.prompt}`,
@@ -867,9 +915,78 @@ export async function completeStructuredOutput<T>(input: {
   return fallback();
 }
 
+export type Gemma4SkillCompletionInput = {
+  system: string;
+  prompt: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  audioSamplingRate?: number;
+  tools?: Gemma4ToolDefinition[];
+  forceToolName?: string;
+  maxTokens?: number;
+  retryContext?: string;
+  signal?: AbortSignal;
+};
+
+export async function runGemma4TextCompletion(input: Gemma4SkillCompletionInput) {
+  const promptWithRetry = input.retryContext
+    ? `${input.prompt}\n\n${input.retryContext}`
+    : input.prompt;
+  const start = Date.now();
+  const result = await withTimeoutAndSignal(
+    gemma4Bridge.complete({
+      system: input.system,
+      prompt: promptWithRetry,
+      imageUrl: input.imageUrl,
+      audioUrl: input.audioUrl,
+      audioSamplingRate: input.audioSamplingRate,
+      tools: input.tools,
+      forceToolName: input.forceToolName,
+      maxTokens: input.maxTokens ?? 512,
+      temperature: 0,
+    }),
+    AGENT_SKILL_TIMEOUT_MS,
+    'Gemma4 completion',
+    input.signal,
+  );
+  return {
+    provider: 'gemma4' as const,
+    model: result.model,
+    output: result.output,
+    toolCall: result.toolCall,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function runGemma4<T>(
+  input: Gemma4SkillCompletionInput & { schemaRef: SkillOutputSchemaRef },
+) {
+  const result = await runGemma4TextCompletion(input);
+  // Prefer the parsed tool-call payload — it is the function-calling contract
+  // judges and ARCHITECTURE.md will refer to. Fall back to extracting JSON
+  // from the raw text so the path still completes when the model elects to
+  // emit a JSON object directly instead of wrapping it in a tool_call tag.
+  if (result.toolCall) {
+    const validated = validateSkillOutput<T>(input.schemaRef, result.toolCall.arguments);
+    return {
+      provider: result.provider,
+      model: result.model,
+      output: validated,
+      durationMs: result.durationMs,
+    };
+  }
+  return {
+    provider: result.provider,
+    model: result.model,
+    output: parseValidatedOutput<T>(input.schemaRef, result.output),
+    durationMs: result.durationMs,
+  };
+}
+
 export function teardownAgentModels() {
   transformersPipelineEpoch += 1;
   transformersPipelinePromise = null;
   transformersPipelineReady = false;
   webLlmBridge.teardown();
+  gemma4Bridge.teardown();
 }

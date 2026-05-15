@@ -121,6 +121,9 @@ export function inferPreferredProvider(manifest: SkillManifest): AgentProvider {
   if (manifest.model === 'heuristic') {
     return 'heuristic';
   }
+  if (manifest.model === 'gemma4') {
+    return 'gemma4';
+  }
   if (manifest.model === 'transformers') {
     return 'transformers';
   }

@@ -127,11 +127,13 @@ export async function runObservationPlan(
   };
   const plan = createAgentPlan({
     observationId: observation.id,
-    provider: skillIds.some((skillId) => getPreferredProvider(skillId) === 'webllm')
-      ? 'webllm'
-      : skillIds.some((skillId) => getPreferredProvider(skillId) === 'transformers')
-        ? 'transformers'
-        : 'heuristic',
+    provider: skillIds.some((skillId) => getPreferredProvider(skillId) === 'gemma4')
+      ? 'gemma4'
+      : skillIds.some((skillId) => getPreferredProvider(skillId) === 'webllm')
+        ? 'webllm'
+        : skillIds.some((skillId) => getPreferredProvider(skillId) === 'transformers')
+          ? 'transformers'
+          : 'heuristic',
     confidence: Math.max(0.55, context.draft?.confidence ?? 0.62),
     goal: observation.title,
     rationale: observation.summary,

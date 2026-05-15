@@ -43,12 +43,13 @@ export const agentPlanStatusSchema = z.enum([
 
 export const agentPlanStepStatusSchema = z.enum(['pending', 'completed', 'failed', 'skipped']);
 
-export const agentProviderSchema = z.enum(['heuristic', 'transformers', 'webllm']);
+export const agentProviderSchema = z.enum(['heuristic', 'transformers', 'webllm', 'gemma4']);
 export const agentRuntimeProviderIdSchema = z.enum([
   'heuristic',
   'transformers',
   'webllm',
   'chrome-prompt-api',
+  'gemma4',
 ]);
 export const agentRuntimeProviderTierSchema = z.enum(['p0', 'p1', 'p2', 'p3']);
 export const agentRuntimeStructuredJsonModeSchema = z.enum([
@@ -56,11 +57,12 @@ export const agentRuntimeStructuredJsonModeSchema = z.enum([
   'repairable',
   'grammar-constrained',
   'schema-constrained',
+  'function-calling',
 ]);
 
 export const skillRuntimeSchema = z.enum(['extension-offscreen', 'extension-sidepanel']);
 
-export const skillModelSchema = z.enum(['heuristic', 'transformers', 'webllm', 'hybrid']);
+export const skillModelSchema = z.enum(['heuristic', 'transformers', 'webllm', 'gemma4', 'hybrid']);
 
 export const skillApprovalModeSchema = z.enum(['advisory', 'proposal', 'auto-run-eligible']);
 
