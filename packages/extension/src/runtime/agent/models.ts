@@ -705,6 +705,12 @@ export async function completeSkillOutput<T>(input: {
   heuristicContext: string;
   maxTokens?: number;
   signal?: AbortSignal;
+  // Multimodal context — only consumed by the gemma4 path. Other providers
+  // ignore these fields, so callers can populate them eagerly when an
+  // observation carries an image or audio attachment.
+  imageUrl?: string;
+  audioUrl?: string;
+  audioSamplingRate?: number;
 }): Promise<{ provider: AgentProvider; model?: string; output: T; durationMs: number }> {
   const fallback = () => ({
     provider: 'heuristic' as const,
@@ -746,6 +752,9 @@ export async function completeSkillOutput<T>(input: {
           prompt: input.prompt,
           schemaRef: input.schemaRef,
           maxTokens: input.maxTokens,
+          imageUrl: input.imageUrl,
+          audioUrl: input.audioUrl,
+          audioSamplingRate: input.audioSamplingRate,
           signal: input.signal,
         });
       } catch (firstError) {
@@ -759,6 +768,9 @@ export async function completeSkillOutput<T>(input: {
             prompt: input.prompt,
             schemaRef: input.schemaRef,
             maxTokens: input.maxTokens,
+            imageUrl: input.imageUrl,
+            audioUrl: input.audioUrl,
+            audioSamplingRate: input.audioSamplingRate,
             retryContext: formatRetryContext(firstError),
             signal: input.signal,
           });

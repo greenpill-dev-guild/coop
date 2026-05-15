@@ -78,6 +78,19 @@ export async function completeSkill<T>(input: {
   const { manifest } = input.skill;
   const prepared = input.preparedPrompt ?? (await buildSkillPrompt(input));
   const preferredProvider = input.preferredProvider ?? (await resolvePreferredProvider(manifest));
+  // Surface multimodal attachments from the observation payload to the
+  // gemma4 path. The runner already validates payload as a record; the
+  // agent observation pipeline puts captured screenshot URLs and recorded
+  // audio Blob URLs here for the demo arc.
+  const observationPayload = (input.observation.payload ?? {}) as Record<string, unknown>;
+  const imageUrl =
+    typeof observationPayload.imageUrl === 'string' ? observationPayload.imageUrl : undefined;
+  const audioUrl =
+    typeof observationPayload.audioUrl === 'string' ? observationPayload.audioUrl : undefined;
+  const audioSamplingRate =
+    typeof observationPayload.audioSamplingRate === 'number'
+      ? observationPayload.audioSamplingRate
+      : undefined;
   const result = await completeSkillOutput<T>({
     preferredProvider,
     schemaRef: manifest.outputSchemaRef,
@@ -85,6 +98,9 @@ export async function completeSkill<T>(input: {
     prompt: prepared.prompt,
     heuristicContext: prepared.heuristicContext,
     maxTokens: manifest.maxTokens,
+    imageUrl,
+    audioUrl,
+    audioSamplingRate,
     signal: input.signal,
   });
 
