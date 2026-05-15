@@ -52,11 +52,18 @@ const bundleBudgets = [
   },
 ] as const;
 
-// transformers.js v4 emits a small number of `new Function(...)` calls in its
-// generation/pipelines code paths. They are CSP-safe under MV3's
-// `wasm-unsafe-eval` because Chrome treats worker scripts loaded from the
-// extension origin as `'self'`. The hackathon submission keeps them — a real
-// Web Store publish would require a transformers patch or a custom build.
+// transformers.js v4 pulls in onnxruntime-web's WebGPU backend, whose
+// Embind glue layer JIT-compiles a `methodCaller` via `new Function(...)`
+// (one call site, hot path for any inference). MV3's default
+// `extension_pages` CSP — `script-src 'self' 'wasm-unsafe-eval'` — does
+// NOT permit `new Function()`; only `'unsafe-eval'` would, and the Chrome
+// Web Store rejects that. So this allowlist is a HACKATHON-ONLY
+// relaxation to keep the audit green: it does not make the runtime
+// actually work in a packaged extension. For the unpacked-load demo we
+// rely on the user enabling either an `'unsafe-eval'` manifest override
+// or sideloading with relaxed CSP. A real Web Store ship would need a
+// custom onnxruntime-web build that pre-compiles methodCaller, or
+// running the worker inside a sandboxed iframe with its own CSP.
 const dynamicCodeAllowlist = [
   /^chunks\/transformers-[^/]+\.js$/u,
   /^agent-gemma4-worker\.js$/u,
