@@ -13,8 +13,28 @@ const extensionRoot = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const transformersEntryPath = require.resolve('@huggingface/transformers');
 const transformersDistDir = path.resolve(path.dirname(transformersEntryPath), '../dist');
-const onnxWasmAssetPath = path.join(transformersDistDir, 'ort-wasm-simd-threaded.jsep.wasm');
-const onnxWasmModulePath = path.join(transformersDistDir, 'ort-wasm-simd-threaded.jsep.mjs');
+// transformers.js v4 stopped re-shipping onnxruntime-web's wasm bundle inside
+// its own dist directory. Resolve onnxruntime-web through transformers' own
+// package context so we always pick up the version transformers itself uses.
+const transformersRequire = createRequire(
+  path.join(path.dirname(transformersEntryPath), '..', 'package.json'),
+);
+const onnxRuntimeWebPackageJson = transformersRequire.resolve('onnxruntime-web/package.json');
+const onnxRuntimeWebDistDir = path.join(path.dirname(onnxRuntimeWebPackageJson), 'dist');
+const transformersBundledWasmPath = path.join(
+  transformersDistDir,
+  'ort-wasm-simd-threaded.jsep.wasm',
+);
+const transformersBundledWasmModulePath = path.join(
+  transformersDistDir,
+  'ort-wasm-simd-threaded.jsep.mjs',
+);
+const onnxWasmAssetPath = fs.existsSync(transformersBundledWasmPath)
+  ? transformersBundledWasmPath
+  : path.join(onnxRuntimeWebDistDir, 'ort-wasm-simd-threaded.jsep.wasm');
+const onnxWasmModulePath = fs.existsSync(transformersBundledWasmModulePath)
+  ? transformersBundledWasmModulePath
+  : path.join(onnxRuntimeWebDistDir, 'ort-wasm-simd-threaded.jsep.mjs');
 const receiverBridgeMatches = resolveReceiverBridgeMatches(process.env.VITE_COOP_RECEIVER_APP_URL);
 const localDevStartUrl = `http://127.0.0.1:${process.env.COOP_DEV_APP_PORT ?? '3001'}`;
 const extensionDevServerPort = Number(process.env.COOP_DEV_EXTENSION_PORT ?? '3020');
