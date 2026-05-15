@@ -19,6 +19,54 @@ implemented, and shared coop publishing is implemented. Live Safe, live archive 
 live session-capability rails exist as separate second-gate or operator flows rather than the
 default public posture.
 
+## The Gemma 4 Good Hackathon — Submission
+
+Coop's submission to **The Gemma 4 Good Hackathon** (Kaggle + Google DeepMind, climate / global
+resilience track) ships on the `feature/hackathon-simplify` branch. The submission framing is
+**community garden grants as a low-bandwidth, on-device, multimodal coordination problem** — exactly
+the shape Gemma 4 is best at.
+
+**Demo arc** (60-90s):
+
+1. Open the popup on a fresh install. Hook copy: *"Chicken or egg? Neither — you need a coop
+   first."* Single CTA: **Launch the Coop**.
+2. Launch a coop named *Community Garden Grants*.
+3. Capture three browser tabs of grant pages (text modality).
+4. Attach a screenshot of one grant site with an awkward PDF layout (image modality — Gemma 4
+   reads the visual).
+5. Attach a 15-second voice memo from a community garden meeting voicing what the garden needs
+   (audio modality — Gemma 4 transcribes and uses it as fit-scoring context).
+6. Watch Gemma 4 surface an opportunity brief in the **Chickens** tab — title, deadline,
+   eligibility, fit score, why it matters. One function call (`draft_application_outline`) fires
+   on camera and produces a structured application outline.
+7. Push the brief to the coop. Members see it appear in the Coop feed.
+
+**Gemma 4 specifics.** The new `gemma4` agent provider runs `onnx-community/gemma-4-E2B-it-ONNX`
+(with the E4B variant available as a quality fallback) at `q4f16` precision on `webgpu` via
+`@huggingface/transformers@^4.2.0`, all inside a dedicated MV3 worker
+(`packages/extension/src/runtime/agent/gemma4-worker.ts`). The worker uses
+`Gemma4ForConditionalGeneration`, `AutoProcessor`, `load_image`, and `read_audio` to round-trip
+text + image + audio in a single call. Six skills are migrated to native function calling
+(`extract_opportunity`, `score_grant_fit`, `route_tab`, `cluster_themes`, `review_digest`, plus
+the new `draft_application_outline` for the on-camera moment); the remaining ten skills keep the
+existing JSON-output path with `validateSkillOutput` as the type guard at the boundary.
+
+**Climate / resilience framing.** Community gardens are a frontline climate-adaptation surface.
+Grant discovery for them is fragmented, deadline-sensitive, and low-bandwidth. Coop runs the
+entire capture-refine-review-share loop on-device, syncs peer-to-peer (Yjs over WebRTC) when
+members are co-present, and only crosses the wire when a member explicitly publishes. Nothing
+about the captured signal — text, image, or audio — leaves the device during inference.
+
+**Demo video and architecture.** The 60-90s submission video is referenced from the Kaggle
+submission entry. The technical write-up lives in [ARCHITECTURE.md](./ARCHITECTURE.md) (≈1700
+words covering the agent provider abstraction, the multimodal worker, function-calling, the
+local-first persistence layer, and the simple/advanced UI mode split).
+
+**Run the demo locally.** `git switch feature/hackathon-simplify`, `bun install`, then
+`cd packages/extension && bun run build`. Load `packages/extension/dist/chrome-mv3` as an
+unpacked extension in Chrome (Canary / Beta recommended for stable WebGPU). The first model load
+caches Gemma 4 to the browser; subsequent runs work fully offline.
+
 ## Current Status
 
 As of March 28, 2026:
