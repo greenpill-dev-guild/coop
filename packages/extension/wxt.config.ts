@@ -283,6 +283,18 @@ export default defineConfig({
     },
     content_security_policy: {
       extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+      // The Gemma 4 sandbox iframe runs onnxruntime-web, whose Embind glue
+      // calls `new Function()` on the inference hot path. The default
+      // extension_pages CSP forbids that, so the inference host lives in a
+      // sandboxed page with its own CSP. `allow-same-origin` keeps the
+      // chrome-extension origin so the Transformers.js cache (IndexedDB +
+      // Cache API) survives between sessions; the rest of the script-src
+      // mirrors the upstream Gemma 4 demo's permissions.
+      sandbox:
+        "sandbox allow-scripts allow-same-origin; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; object-src 'self'",
+    },
+    sandbox: {
+      pages: ['agent-sandbox.html'],
     },
     icons: {
       '16': 'icons/icon-16.png',

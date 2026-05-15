@@ -1,7 +1,5 @@
 import { parseGemma4ToolCall } from './gemma4-bridge';
 
-let workerStarted = false;
-
 type Gemma4Tool = {
   type: 'function';
   function: {
@@ -30,29 +28,39 @@ type WorkerInboundMessage =
     }
   | { type: 'teardown' };
 
+export type Gemma4HostTransport = {
+  onMessage: (handler: (message: WorkerInboundMessage) => void) => void;
+  postMessage: (message: unknown) => void;
+};
+
 // biome-ignore lint/suspicious/noExplicitAny: transformers.js exports are runtime-loaded
 let processor: any = null;
 // biome-ignore lint/suspicious/noExplicitAny: transformers.js exports are runtime-loaded
 let model: any = null;
 let activeModelId = '';
+let started = false;
 
-export function startAgentGemma4Worker() {
-  if (workerStarted) {
+// MV3's default `extension_pages` CSP forbids `new Function()`, which
+// onnxruntime-web's Embind glue uses on the inference hot path. The host
+// therefore runs inside a sandboxed iframe page declared in the manifest,
+// where the CSP allows `'unsafe-eval'`. The transport abstraction stays for
+// test injection and so the same module can host alternative transports later.
+export function startGemma4Host(transport: Gemma4HostTransport) {
+  if (started) {
     return;
   }
-  workerStarted = true;
+  started = true;
 
-  self.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
-    const message = event.data;
+  transport.onMessage(async (message) => {
     if (!message || typeof message !== 'object') return;
 
     if (message.type === 'init') {
-      await handleInit(message.modelId);
+      await handleInit(transport, message.modelId);
       return;
     }
 
     if (message.type === 'request') {
-      await handleRequest(message.requestId, message.request);
+      await handleRequest(transport, message.requestId, message.request);
       return;
     }
 
@@ -61,12 +69,12 @@ export function startAgentGemma4Worker() {
       model = null;
       activeModelId = '';
     }
-  };
+  });
 }
 
-async function handleInit(modelId: string) {
+async function handleInit(transport: Gemma4HostTransport, modelId: string) {
   if (model && activeModelId === modelId) {
-    self.postMessage({ type: 'init-ready', modelId, durationMs: 0 });
+    transport.postMessage({ type: 'init-ready', modelId, durationMs: 0 });
     return;
   }
   const start = Date.now();
@@ -88,24 +96,25 @@ async function handleInit(modelId: string) {
       progress_callback: (info: any) => {
         const progress = typeof info?.progress === 'number' ? info.progress : 0;
         const status = typeof info?.status === 'string' ? info.status : '';
-        self.postMessage({ type: 'init-progress', progress, status });
+        transport.postMessage({ type: 'init-progress', progress, status });
       },
     });
     activeModelId = modelId;
-    self.postMessage({ type: 'init-ready', modelId, durationMs: Date.now() - start });
+    transport.postMessage({ type: 'init-ready', modelId, durationMs: Date.now() - start });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    self.postMessage({ type: 'init-error', error: errorMessage });
+    transport.postMessage({ type: 'init-error', error: errorMessage });
   }
 }
 
 async function handleRequest(
+  transport: Gemma4HostTransport,
   requestId: string,
   request: Extract<WorkerInboundMessage, { type: 'request' }>['request'],
 ) {
   const start = Date.now();
   if (!model || !processor) {
-    self.postMessage({
+    transport.postMessage({
       type: 'response',
       requestId,
       ok: false,
@@ -185,7 +194,7 @@ async function handleRequest(
       request.forceToolName && toolCall && toolCall.name !== request.forceToolName
         ? undefined
         : toolCall;
-    self.postMessage({
+    transport.postMessage({
       type: 'response',
       requestId,
       ok: true,
@@ -195,7 +204,7 @@ async function handleRequest(
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    self.postMessage({
+    transport.postMessage({
       type: 'response',
       requestId,
       ok: false,

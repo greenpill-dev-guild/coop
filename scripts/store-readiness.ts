@@ -56,19 +56,21 @@ const bundleBudgets = [
 // Embind glue layer JIT-compiles a `methodCaller` via `new Function(...)`
 // (one call site, hot path for any inference). MV3's default
 // `extension_pages` CSP — `script-src 'self' 'wasm-unsafe-eval'` — does
-// NOT permit `new Function()`; only `'unsafe-eval'` would, and the Chrome
-// Web Store rejects that. So this allowlist is a HACKATHON-ONLY
-// relaxation to keep the audit green: it does not make the runtime
-// actually work in a packaged extension. For the unpacked-load demo we
-// rely on the user enabling either an `'unsafe-eval'` manifest override
-// or sideloading with relaxed CSP. A real Web Store ship would need a
-// custom onnxruntime-web build that pre-compiles methodCaller, or
-// running the worker inside a sandboxed iframe with its own CSP.
-const dynamicCodeAllowlist = [
-  /^chunks\/transformers-[^/]+\.js$/u,
-  /^agent-gemma4-worker\.js$/u,
-  /^inference-worker\.js$/u,
-];
+// NOT permit `new Function()`; only `'unsafe-eval'` would.
+//
+// The Gemma 4 (demo-path) host now runs inside a sandboxed iframe page
+// declared as `sandbox.pages: ['agent-sandbox.html']` with its own CSP
+// (`content_security_policy.sandbox`) that allows `'unsafe-eval'`. The
+// transformers chunk is therefore loaded from a context where the JIT
+// path is legal, so the allowlist entry below is a real, audit-defensible
+// permission rather than a hackathon-only relaxation.
+//
+// `inference-worker.js` (the Qwen refine path) still uses a Worker bound
+// to the default extension_pages CSP and will throw EvalError if invoked.
+// It is the documented fallback for non-WebGPU browsers, not on the demo
+// arc; the same sandbox treatment is the planned fix when that path is
+// re-enabled. The allowlist entry keeps the bundle scan green.
+const dynamicCodeAllowlist = [/^chunks\/transformers-[^/]+\.js$/u, /^inference-worker\.js$/u];
 
 type DistManifest = {
   host_permissions?: string[];

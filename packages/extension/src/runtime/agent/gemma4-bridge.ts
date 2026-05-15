@@ -74,7 +74,15 @@ export type Gemma4BridgeStatus = {
 };
 
 export class AgentGemma4Bridge {
-  private worker: Worker | null = null;
+  // The runtime surface is a sandboxed iframe rather than a Worker. MV3's
+  // default `extension_pages` CSP forbids `new Function()` (used by
+  // onnxruntime-web's Embind glue), and Workers spawned from `chrome-extension`
+  // URLs inherit that CSP. The sandboxed iframe has its own CSP declared in
+  // the manifest (`content_security_policy.sandbox`) that allows
+  // `'unsafe-eval'`, so transformers.js + onnxruntime-web run natively there.
+  private iframe: HTMLIFrameElement | null = null;
+  private iframeReadyPromise: Promise<Window> | null = null;
+  private messageListener: ((event: MessageEvent) => void) | null = null;
   private initPromise: Promise<void> | null = null;
   private ready = false;
   private modelId = GEMMA4_DEFAULT_MODEL_ID;
@@ -122,75 +130,63 @@ export class AgentGemma4Bridge {
     });
   }
 
-  private resolveWorkerUrl(): string {
+  private resolveSandboxUrl(): string {
     if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
-      return chrome.runtime.getURL('agent-gemma4-worker.js');
+      return chrome.runtime.getURL('agent-sandbox.html');
     }
-    return 'agent-gemma4-worker.js';
+    return 'agent-sandbox.html';
   }
 
-  private ensureReady(): Promise<void> {
-    this.bumpIdleTimer();
-    if (this.initPromise) {
-      return this.initPromise;
+  private ensureIframe(): Promise<Window> {
+    if (this.iframeReadyPromise) {
+      return this.iframeReadyPromise;
     }
 
-    const epoch = this.epoch;
-    const workerUrl = this.resolveWorkerUrl();
-    this.worker = new Worker(workerUrl, { type: 'module' });
-    this.attachWorkerListener(this.worker);
+    if (typeof document === 'undefined') {
+      return Promise.reject(
+        new Error('Gemma4 sandbox requires a document context (offscreen or page).'),
+      );
+    }
 
-    this.initPromise = new Promise<void>((resolve, reject) => {
-      const onInitMessage = (event: MessageEvent<WorkerOutboundMessage>) => {
-        const message = event.data;
-        if (epoch !== this.epoch) {
-          return;
-        }
-        if (message.type === 'init-progress') {
-          this.initProgress = message.progress;
-          this.initMessage = message.status;
-          return;
-        }
-        if (message.type === 'init-ready') {
-          this.modelId = message.modelId;
-          this.ready = true;
-          this.lastError = undefined;
-          this.worker?.removeEventListener('message', onInitMessage);
-          resolve();
-          return;
-        }
-        if (message.type === 'init-error') {
-          this.lastError = message.error;
-          this.ready = false;
-          this.worker?.removeEventListener('message', onInitMessage);
-          reject(new Error(message.error));
-        }
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.src = this.resolveSandboxUrl();
+    this.iframe = iframe;
+
+    this.iframeReadyPromise = new Promise<Window>((resolve, reject) => {
+      let settled = false;
+      const onReady = (event: MessageEvent) => {
+        if (event.source !== iframe.contentWindow) return;
+        if (event.data?.type !== 'sandbox-ready') return;
+        settled = true;
+        window.removeEventListener('message', onReady);
+        resolve(iframe.contentWindow as Window);
       };
-      this.worker?.addEventListener('message', onInitMessage);
-      this.postWorkerMessage({ type: 'init', modelId: this.modelId });
-    }).catch((error) => {
-      if (epoch === this.epoch) {
-        this.initPromise = null;
-        this.ready = false;
-        this.worker?.terminate();
-        this.worker = null;
-      }
-      throw error;
+      window.addEventListener('message', onReady);
+      iframe.addEventListener('error', () => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('message', onReady);
+        reject(new Error('Failed to load Gemma4 sandbox iframe.'));
+      });
+      (document.body ?? document.documentElement).appendChild(iframe);
     });
 
-    return this.initPromise;
+    this.attachIframeListener();
+    return this.iframeReadyPromise;
   }
 
-  private attachWorkerListener(worker: Worker) {
-    worker.addEventListener('message', (event: MessageEvent<WorkerOutboundMessage>) => {
+  private attachIframeListener() {
+    if (!this.iframe || this.messageListener) return;
+    const iframe = this.iframe;
+    const listener = (event: MessageEvent<WorkerOutboundMessage>) => {
+      if (event.source !== iframe.contentWindow) return;
       const message = event.data;
-      if (message.type !== 'response') {
-        return;
-      }
+      if (!message || typeof message !== 'object') return;
+      if (message.type !== 'response') return;
       const inflight = this.inflight.get(message.requestId);
-      if (!inflight) {
-        return;
-      }
+      if (!inflight) return;
       this.inflight.delete(message.requestId);
       if (message.ok) {
         inflight.resolve({
@@ -203,14 +199,86 @@ export class AgentGemma4Bridge {
       } else {
         inflight.reject(new Error(message.error));
       }
+    };
+    window.addEventListener('message', listener);
+    this.messageListener = listener;
+  }
+
+  private ensureReady(): Promise<void> {
+    this.bumpIdleTimer();
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    const epoch = this.epoch;
+
+    this.initPromise = (async () => {
+      const target = await this.ensureIframe();
+      if (epoch !== this.epoch) {
+        throw new Error('Gemma4 bridge torn down before init.');
+      }
+
+      return new Promise<void>((resolve, reject) => {
+        const onInitMessage = (event: MessageEvent<WorkerOutboundMessage>) => {
+          if (event.source !== this.iframe?.contentWindow) return;
+          const message = event.data;
+          if (!message || typeof message !== 'object') return;
+          if (epoch !== this.epoch) {
+            return;
+          }
+          if (message.type === 'init-progress') {
+            this.initProgress = message.progress;
+            this.initMessage = message.status;
+            return;
+          }
+          if (message.type === 'init-ready') {
+            this.modelId = message.modelId;
+            this.ready = true;
+            this.lastError = undefined;
+            window.removeEventListener('message', onInitMessage);
+            resolve();
+            return;
+          }
+          if (message.type === 'init-error') {
+            this.lastError = message.error;
+            this.ready = false;
+            window.removeEventListener('message', onInitMessage);
+            reject(new Error(message.error));
+          }
+        };
+        window.addEventListener('message', onInitMessage);
+        target.postMessage({ type: 'init', modelId: this.modelId }, '*');
+      });
+    })().catch((error) => {
+      if (epoch === this.epoch) {
+        this.initPromise = null;
+        this.ready = false;
+        this.destroyIframe();
+      }
+      throw error;
     });
+
+    return this.initPromise;
+  }
+
+  private destroyIframe() {
+    if (this.messageListener) {
+      window.removeEventListener('message', this.messageListener);
+      this.messageListener = null;
+    }
+    if (this.iframe?.parentNode) {
+      this.iframe.parentNode.removeChild(this.iframe);
+    }
+    this.iframe = null;
+    this.iframeReadyPromise = null;
   }
 
   async complete(request: Gemma4Request): Promise<Gemma4CompletionResult> {
     await this.ensureReady();
     this.bumpIdleTimer();
-    if (!this.worker) {
-      throw new Error('Gemma4 worker is not available.');
+    const target = this.iframe?.contentWindow;
+    if (!target) {
+      throw new Error('Gemma4 sandbox iframe is not available.');
     }
 
     const requestId =
@@ -220,12 +288,12 @@ export class AgentGemma4Bridge {
 
     return new Promise<Gemma4CompletionResult>((resolve, reject) => {
       this.inflight.set(requestId, { resolve, reject });
-      this.postWorkerMessage({ type: 'request', requestId, request });
+      this.postSandboxMessage({ type: 'request', requestId, request });
     });
   }
 
-  private postWorkerMessage(message: WorkerInboundMessage) {
-    this.worker?.postMessage(message);
+  private postSandboxMessage(message: WorkerInboundMessage) {
+    this.iframe?.contentWindow?.postMessage(message, '*');
   }
 
   private bumpIdleTimer() {
@@ -244,11 +312,10 @@ export class AgentGemma4Bridge {
       this.idleTimer = null;
     }
     for (const [, inflight] of this.inflight) {
-      inflight.reject(new Error('Gemma4 worker torn down before completion.'));
+      inflight.reject(new Error('Gemma4 sandbox torn down before completion.'));
     }
     this.inflight.clear();
-    this.worker?.terminate();
-    this.worker = null;
+    this.destroyIframe();
     this.initPromise = null;
     this.ready = false;
     this.lastError = undefined;
