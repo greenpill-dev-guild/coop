@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Cluster related local signals into reusable themes for shared memory and coordination.",
   "runtime": "extension-offscreen",
-  "model": "transformers",
+  "model": "gemma4",
   "triggers": ["ritual-review-due", "high-confidence-draft", "memory-insight-due"],
   "inputSchemaRef": "agent-observation",
   "outputSchemaRef": "theme-clusterer-output",

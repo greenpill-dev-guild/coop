@@ -177,13 +177,20 @@ async function handleRequest(
     const output = (Array.isArray(decoded) ? decoded[0] : '') as string;
     const toolCall = parseGemma4ToolCall(output);
 
+    // When the caller bound the request to a specific tool name (e.g.
+    // `extract_opportunity` for the opportunity-extractor skill), only
+    // surface the parsed tool call when the model picked that tool. Stray
+    // calls drop back to the JSON-text path so the validator catches them.
+    const filteredToolCall =
+      request.forceToolName && toolCall && toolCall.name !== request.forceToolName
+        ? undefined
+        : toolCall;
     self.postMessage({
       type: 'response',
       requestId,
       ok: true,
       output,
-      toolCall:
-        request.forceToolName && toolCall?.name === request.forceToolName ? toolCall : toolCall,
+      toolCall: filteredToolCall,
       durationMs: Date.now() - start,
     });
   } catch (error) {

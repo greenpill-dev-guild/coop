@@ -36,6 +36,7 @@ import {
   ecosystemEntityExtractorOutputSchema,
   erc8004FeedbackOutputSchema,
   erc8004RegistrationOutputSchema,
+  grantActionPlannerOutputSchema,
   grantFitScorerOutputSchema,
   greenGoodsAssessmentOutputSchema,
   greenGoodsGapAdminSyncOutputSchema,
@@ -81,6 +82,7 @@ export const skillOutputSchemas: Record<
   'erc8004-feedback-output': erc8004FeedbackOutputSchema,
   'entity-extraction-output': entityExtractionOutputSchema,
   'knowledge-lint-output': knowledgeLintOutputSchema,
+  'grant-action-planner-output': grantActionPlannerOutputSchema,
 };
 
 export function buildAgentObservationFingerprint(input: {

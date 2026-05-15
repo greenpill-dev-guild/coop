@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   AgentGemma4Bridge,
+  buildGemma4ToolForSkill,
   getDefaultGemma4ModelId,
+  getGemma4ToolNameForSkill,
   getQualityGemma4ModelId,
   parseGemma4ToolCall,
 } from '../gemma4-bridge';
@@ -39,6 +41,43 @@ describe('parseGemma4ToolCall', () => {
 
   it('returns undefined for non-JSON content inside the tag', () => {
     expect(parseGemma4ToolCall('<tool_call>not json</tool_call>')).toBeUndefined();
+  });
+});
+
+describe('buildGemma4ToolForSkill', () => {
+  it('returns the extract_opportunity tool for opportunity-extractor', () => {
+    const tool = buildGemma4ToolForSkill('opportunity-extractor-output');
+    expect(tool?.type).toBe('function');
+    expect(tool?.function.name).toBe('extract_opportunity');
+    expect(tool?.function.parameters).toMatchObject({
+      type: 'object',
+      required: ['candidates'],
+    });
+  });
+
+  it('returns the score_grant_fit tool for grant-fit-scorer', () => {
+    const tool = buildGemma4ToolForSkill('grant-fit-scorer-output');
+    expect(tool?.function.name).toBe('score_grant_fit');
+  });
+
+  it('returns the draft_application_outline tool for grant-action-planner', () => {
+    const tool = buildGemma4ToolForSkill('grant-action-planner-output');
+    expect(tool?.function.name).toBe('draft_application_outline');
+    expect(tool?.function.parameters).toMatchObject({
+      type: 'object',
+      required: ['action', 'opportunityTitle', 'rationale'],
+    });
+  });
+
+  it('returns undefined for unmigrated skills', () => {
+    expect(buildGemma4ToolForSkill('publish-readiness-check-output')).toBeUndefined();
+  });
+
+  it('exposes the canonical tool name via getGemma4ToolNameForSkill', () => {
+    expect(getGemma4ToolNameForSkill('tab-router-output')).toBe('route_tab');
+    expect(getGemma4ToolNameForSkill('theme-clusterer-output')).toBe('cluster_themes');
+    expect(getGemma4ToolNameForSkill('review-digest-output')).toBe('review_digest');
+    expect(getGemma4ToolNameForSkill('publish-readiness-check-output')).toBeUndefined();
   });
 });
 

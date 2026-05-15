@@ -1,0 +1,19 @@
+{
+  "id": "grant-action-planner",
+  "version": "0.1.0",
+  "description": "Plan the next action for the top-scored grant opportunity using a Gemma 4 function call.",
+  "runtime": "extension-offscreen",
+  "model": "gemma4",
+  "triggers": ["high-confidence-draft", "audio-transcript-ready"],
+  "inputSchemaRef": "agent-observation",
+  "outputSchemaRef": "grant-action-planner-output",
+  "allowedTools": ["read-observation-context", "read-coop-context", "list-related-drafts"],
+  "allowedActionClasses": [],
+  "requiredCapabilities": [],
+  "approvalMode": "advisory",
+  "timeoutMs": 30000,
+  "maxTokens": 320,
+  "depends": ["grant-fit-scorer"],
+  "skipWhen": "no-candidates",
+  "provides": ["grant-action-plan"]
+}

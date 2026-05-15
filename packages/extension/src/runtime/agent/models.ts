@@ -5,6 +5,7 @@ import type {
   EntityExtractionOutput,
   Erc8004FeedbackOutput,
   Erc8004RegistrationOutput,
+  GrantActionPlannerOutput,
   GrantFitScorerOutput,
   GreenGoodsAssessmentOutput,
   GreenGoodsGapAdminSyncOutput,
@@ -23,7 +24,9 @@ import { AGENT_SKILL_TIMEOUT_MS } from './config';
 import {
   AgentGemma4Bridge,
   type Gemma4ToolDefinition,
+  buildGemma4ToolForSkill,
   getDefaultGemma4ModelId,
+  getGemma4ToolNameForSkill,
 } from './gemma4-bridge';
 import { inferPoleEntitiesFromText } from './runner-inference';
 import { AgentWebLlmBridge } from './webllm-bridge';
@@ -489,6 +492,19 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
         tag2: 'feedback',
         rationale: 'Heuristic ERC-8004 feedback payload.',
       } satisfies Erc8004FeedbackOutput;
+    case 'grant-action-planner-output':
+      return {
+        action: 'request_member_input',
+        opportunityTitle: rawContext.slice(0, 80) || 'Top-scored opportunity',
+        outlineSections: [],
+        memberIds: [],
+        rationale:
+          'Heuristic plan suggests requesting member input until the on-device model picks a richer follow-up.',
+      } satisfies GrantActionPlannerOutput;
+    case 'knowledge-lint-output':
+      return {
+        findings: [],
+      };
   }
 }
 
@@ -961,7 +977,18 @@ export async function runGemma4TextCompletion(input: Gemma4SkillCompletionInput)
 async function runGemma4<T>(
   input: Gemma4SkillCompletionInput & { schemaRef: SkillOutputSchemaRef },
 ) {
-  const result = await runGemma4TextCompletion(input);
+  // Build the Gemma 4 tool schema for this skill on demand and pass it to the
+  // worker so apply_chat_template's `tools:` slot is populated. Skills without
+  // a registered tool schema still produce a JSON answer that the existing
+  // schema validator handles, which keeps the back-half skills working while
+  // the demo-path skills move to native function calling.
+  const tool = buildGemma4ToolForSkill(input.schemaRef);
+  const forceToolName = getGemma4ToolNameForSkill(input.schemaRef);
+  const result = await runGemma4TextCompletion({
+    ...input,
+    tools: tool ? [tool] : input.tools,
+    forceToolName: forceToolName ?? input.forceToolName,
+  });
   // Prefer the parsed tool-call payload — it is the function-calling contract
   // judges and ARCHITECTURE.md will refer to. Fall back to extracting JSON
   // from the raw text so the path still completes when the model elects to

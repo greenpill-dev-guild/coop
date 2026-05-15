@@ -99,6 +99,7 @@ export const skillOutputSchemaRefSchema = z.enum([
   'erc8004-feedback-output',
   'entity-extraction-output',
   'knowledge-lint-output',
+  'grant-action-planner-output',
 ]);
 
 export const actionProposalSchema = z.object({
@@ -294,6 +295,21 @@ export const grantFitScoreSchema = z.object({
 
 export const grantFitScorerOutputSchema = z.object({
   scores: z.array(grantFitScoreSchema).default([]),
+});
+
+export const grantActionPlannerActionSchema = z.enum([
+  'draft_application_outline',
+  'add_to_coop_calendar',
+  'request_member_input',
+]);
+
+export const grantActionPlannerOutputSchema = z.object({
+  action: grantActionPlannerActionSchema,
+  opportunityTitle: z.string().min(1),
+  deadlineIso: z.string().datetime().optional(),
+  outlineSections: z.array(z.string().min(1)).default([]),
+  memberIds: z.array(z.string().min(1)).default([]),
+  rationale: z.string().min(1),
 });
 
 export const capitalFormationBriefOutputSchema = z.object({
@@ -548,6 +564,8 @@ export type OpportunityCandidate = z.infer<typeof opportunityCandidateSchema>;
 export type OpportunityExtractorOutput = z.infer<typeof opportunityExtractorOutputSchema>;
 export type GrantFitScore = z.infer<typeof grantFitScoreSchema>;
 export type GrantFitScorerOutput = z.infer<typeof grantFitScorerOutputSchema>;
+export type GrantActionPlannerAction = z.infer<typeof grantActionPlannerActionSchema>;
+export type GrantActionPlannerOutput = z.infer<typeof grantActionPlannerOutputSchema>;
 export type CapitalFormationBriefOutput = z.infer<typeof capitalFormationBriefOutputSchema>;
 export type ReviewDigestOutput = z.infer<typeof reviewDigestOutputSchema>;
 export type EcosystemEntity = z.infer<typeof ecosystemEntitySchema>;

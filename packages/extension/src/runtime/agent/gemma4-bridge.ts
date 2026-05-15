@@ -265,6 +265,177 @@ export function getQualityGemma4ModelId() {
   return GEMMA4_QUALITY_MODEL_ID;
 }
 
+// Hand-rolled JSON Schemas keyed by SkillOutputSchemaRef. Gemma 4 reads these
+// in `apply_chat_template`'s `tools:` slot and emits a `<tool_call>` payload
+// the bridge parses back into a structured argument object. Keeping these
+// declarative (rather than auto-generated from Zod) avoids a dependency bump
+// and keeps the function-call surface small enough to audit by eye.
+const SKILL_TOOL_SCHEMAS: Record<
+  string,
+  { name: string; description: string; parameters: Record<string, unknown> }
+> = {
+  'opportunity-extractor-output': {
+    name: 'extract_opportunity',
+    description:
+      'Extract grant, funding, or coordination opportunities from the captured material. Always return at least one candidate when the source contains funding, deadline, or eligibility language.',
+    parameters: {
+      type: 'object',
+      required: ['candidates'],
+      properties: {
+        candidates: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['id', 'title', 'summary', 'rationale', 'priority', 'recommendedNextStep'],
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              summary: { type: 'string' },
+              rationale: { type: 'string' },
+              regionTags: { type: 'array', items: { type: 'string' } },
+              ecologyTags: { type: 'array', items: { type: 'string' } },
+              fundingSignals: { type: 'array', items: { type: 'string' } },
+              priority: { type: 'number', minimum: 0, maximum: 1 },
+              recommendedNextStep: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+  'grant-fit-scorer-output': {
+    name: 'score_grant_fit',
+    description:
+      'Score how well each opportunity candidate fits this coop. Use the coop purpose, recent decisions, and any attached audio/image context as fit signal. Score is a number between 0 and 1.',
+    parameters: {
+      type: 'object',
+      required: ['scores'],
+      properties: {
+        scores: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['candidateId', 'candidateTitle', 'score', 'reasons'],
+            properties: {
+              candidateId: { type: 'string' },
+              candidateTitle: { type: 'string' },
+              score: { type: 'number', minimum: 0, maximum: 1 },
+              reasons: { type: 'array', items: { type: 'string' } },
+              recommendedTargetCoopId: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+  'tab-router-output': {
+    name: 'route_tab',
+    description:
+      'Decide which coops the captured tabs should land in and which downstream skill should consume each.',
+    parameters: {
+      type: 'object',
+      required: ['routings'],
+      properties: {
+        routings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['extractId', 'targetCoopId', 'status'],
+            properties: {
+              extractId: { type: 'string' },
+              targetCoopId: { type: 'string' },
+              suggestedSkillIds: { type: 'array', items: { type: 'string' } },
+              status: {
+                type: 'string',
+                enum: ['routed', 'drafted', 'dismissed', 'published'],
+              },
+              rationale: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+  'theme-clusterer-output': {
+    name: 'cluster_themes',
+    description:
+      'Cluster recent captures, drafts, and observations into themes the coop is paying attention to.',
+    parameters: {
+      type: 'object',
+      required: ['themes'],
+      properties: {
+        themes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['name', 'summary'],
+            properties: {
+              name: { type: 'string' },
+              summary: { type: 'string' },
+              memberArtifactIds: { type: 'array', items: { type: 'string' } },
+              memberDraftIds: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
+  },
+  'review-digest-output': {
+    name: 'review_digest',
+    description:
+      'Compose a short review digest summarizing the coop activity since the last review ritual.',
+    parameters: {
+      type: 'object',
+      required: ['title', 'summary', 'whyItMatters', 'suggestedNextStep', 'highlights'],
+      properties: {
+        title: { type: 'string' },
+        summary: { type: 'string' },
+        whyItMatters: { type: 'string' },
+        suggestedNextStep: { type: 'string' },
+        highlights: { type: 'array', items: { type: 'string' } },
+        tags: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
+  'grant-action-planner-output': {
+    name: 'draft_application_outline',
+    description:
+      'Plan the next concrete action on a top-scored grant opportunity. Returns one of: draft an application outline, add to coop calendar, or request input from a member.',
+    parameters: {
+      type: 'object',
+      required: ['action', 'opportunityTitle', 'rationale'],
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['draft_application_outline', 'add_to_coop_calendar', 'request_member_input'],
+        },
+        opportunityTitle: { type: 'string' },
+        deadlineIso: { type: 'string' },
+        outlineSections: { type: 'array', items: { type: 'string' } },
+        memberIds: { type: 'array', items: { type: 'string' } },
+        rationale: { type: 'string' },
+      },
+    },
+  },
+};
+
+export function buildGemma4ToolForSkill(schemaRef: string): Gemma4ToolDefinition | undefined {
+  const tool = SKILL_TOOL_SCHEMAS[schemaRef];
+  if (!tool) return undefined;
+  return {
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
+  };
+}
+
+export function getGemma4ToolNameForSkill(schemaRef: string): string | undefined {
+  return SKILL_TOOL_SCHEMAS[schemaRef]?.name;
+}
+
 export function parseGemma4ToolCall(text: string): Gemma4ToolCall | undefined {
   if (!text) return undefined;
   // Gemma 4 emits tool calls inside <tool_call>...</tool_call> markers.

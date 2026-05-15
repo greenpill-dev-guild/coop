@@ -50,18 +50,28 @@ describe('provider promotion', () => {
         },
       ]);
 
+      // tab-router and opportunity-extractor both opted into the gemma4
+      // provider for the hackathon function-calling demo, so the default
+      // BENCHMARK_SKILL_IDS sweep would now resolve to an empty list. Pass
+      // entity-extractor explicitly to keep this test exercising the
+      // activation persistence path on a real transformers-eligible skill.
       const state = await activateWebLlmProviderPromotion({
         db,
+        // entity-extractor isn't in BENCHMARK_SKILL_IDS, but the activation
+        // path accepts any registered skill id at runtime — cast to silence
+        // the narrowed BenchmarkSkillId union.
+        skillIds: ['entity-extractor'] as unknown as (
+          | 'tab-router'
+          | 'opportunity-extractor'
+          | 'capital-formation-brief'
+        )[],
         persistBenchmarks: false,
         persistTraces: false,
       });
 
       expect(state.providerId).toBe('webllm');
-      // opportunity-extractor opted into the gemma4 provider for the
-      // hackathon function-calling demo, so the WebLLM promotion sweep no
-      // longer claims it as a transformers→webllm upgrade candidate.
-      expect(state.evaluatedSkillIds).toEqual(['tab-router']);
-      expect(state.promotedSkillIds).toEqual(['tab-router']);
+      expect(state.evaluatedSkillIds).toEqual(['entity-extractor']);
+      expect(state.promotedSkillIds).toEqual(['entity-extractor']);
       expect(state.promotable).toBe(true);
       expect(state.benchmarkRecordIds).toEqual([]);
       expect(state.traceRecordIds).toEqual([]);
@@ -69,8 +79,8 @@ describe('provider promotion', () => {
       const persisted = await getWebLlmProviderPromotionState(db);
 
       expect(persisted?.providerId).toBe('webllm');
-      expect(persisted?.evaluatedSkillIds).toEqual(['tab-router']);
-      expect(persisted?.promotedSkillIds).toEqual(['tab-router']);
+      expect(persisted?.evaluatedSkillIds).toEqual(['entity-extractor']);
+      expect(persisted?.promotedSkillIds).toEqual(['entity-extractor']);
       expect(persisted?.activatedAt).toBeDefined();
     } finally {
       db.close();
@@ -98,28 +108,49 @@ describe('provider promotion', () => {
         },
       ]);
 
-      const tabRouterManifest = getRegisteredSkill('tab-router')?.manifest;
+      // tab-router migrated to gemma4 for the hackathon demo, so the
+      // remaining transformers→webllm promotion subjects are the entity
+      // extractors. The behavioural assertion (promotion only fires when
+      // the feature flag and stored state both allow it) is unchanged.
+      const entityExtractorManifest = getRegisteredSkill('entity-extractor')?.manifest;
       const capitalBriefManifest = getRegisteredSkill('capital-formation-brief')?.manifest;
 
-      if (!tabRouterManifest || !capitalBriefManifest) {
+      if (!entityExtractorManifest || !capitalBriefManifest) {
         throw new Error('Expected benchmark skill manifests to be registered.');
       }
 
       expect(
-        await resolvePreferredProvider(tabRouterManifest, { db, webLlmPromotionEnabled: true }),
+        await resolvePreferredProvider(entityExtractorManifest, {
+          db,
+          webLlmPromotionEnabled: true,
+        }),
       ).toBe('transformers');
 
       await activateWebLlmProviderPromotion({
         db,
+        // entity-extractor isn't in BENCHMARK_SKILL_IDS, but the activation
+        // path accepts any registered skill id at runtime — cast to silence
+        // the narrowed BenchmarkSkillId union.
+        skillIds: ['entity-extractor'] as unknown as (
+          | 'tab-router'
+          | 'opportunity-extractor'
+          | 'capital-formation-brief'
+        )[],
         persistBenchmarks: false,
         persistTraces: false,
       });
 
       expect(
-        await resolvePreferredProvider(tabRouterManifest, { db, webLlmPromotionEnabled: false }),
+        await resolvePreferredProvider(entityExtractorManifest, {
+          db,
+          webLlmPromotionEnabled: false,
+        }),
       ).toBe('transformers');
       expect(
-        await resolvePreferredProvider(tabRouterManifest, { db, webLlmPromotionEnabled: true }),
+        await resolvePreferredProvider(entityExtractorManifest, {
+          db,
+          webLlmPromotionEnabled: true,
+        }),
       ).toBe('webllm');
       expect(
         await resolvePreferredProvider(capitalBriefManifest, { db, webLlmPromotionEnabled: true }),
@@ -272,9 +303,11 @@ describe('provider promotion', () => {
   it('ignores stored promotion state when the baseline provider or promoted skills do not match', async () => {
     const db = createCoopDb(`coop-provider-promotion-${crypto.randomUUID()}`);
     try {
-      const manifest = getRegisteredSkill('tab-router')?.manifest;
+      // Use entity-extractor since tab-router migrated to gemma4 — the
+      // assertion tests the baseline-mismatch logic, not which skill is used.
+      const manifest = getRegisteredSkill('entity-extractor')?.manifest;
       if (!manifest) {
-        throw new Error('Expected tab-router manifest to be registered.');
+        throw new Error('Expected entity-extractor manifest to be registered.');
       }
 
       await db.settings.put({
@@ -282,7 +315,7 @@ describe('provider promotion', () => {
         value: createAgentProviderPromotionState({
           providerId: 'webllm',
           baselineProviderId: 'heuristic',
-          evaluatedSkillIds: ['tab-router'],
+          evaluatedSkillIds: ['entity-extractor'],
           promotedSkillIds: ['capital-formation-brief'],
           benchmarkRecordIds: [],
           traceRecordIds: [],

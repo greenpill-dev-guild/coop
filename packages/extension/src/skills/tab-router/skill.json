@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Route newly captured extracts into local coop contexts, preserve weak matches, and seed local drafts for stronger matches.",
   "runtime": "extension-offscreen",
-  "model": "transformers",
+  "model": "gemma4",
   "triggers": ["roundup-batch-ready"],
   "inputSchemaRef": "agent-observation",
   "outputSchemaRef": "tab-router-output",
