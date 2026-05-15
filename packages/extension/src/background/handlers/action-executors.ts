@@ -4,13 +4,6 @@ import type {
   PolicyActionClass,
   getAuthSession,
 } from '@coop/shared';
-import {
-  buildArchiveExecutors,
-  buildErc8004Executors,
-  buildGreenGoodsExecutors,
-  buildOnchainExecutors,
-  buildReviewExecutors,
-} from './executors';
 
 /** Context passed from handleExecuteAction into each executor. */
 export interface ActionExecutorContext {
@@ -28,13 +21,30 @@ export type ExecutorResult = Promise<{ ok: boolean; error?: string; data?: unkno
 /**
  * Build the action executor map used by `handleExecuteAction`.
  *
- * Each entry maps a `PolicyActionClass` string to an async function that
- * receives the bundle payload and returns a result compatible with the
- * shared `executeBundle` contract.
+ * Each executor module is loaded on first call rather than eagerly with the
+ * background bundle. The simple-mode demo only fires a small slice of action
+ * classes (capture/publish); deferring erc8004, green-goods, and onchain
+ * executors keeps them out of the SW cold-start path.
  */
-export function buildActionExecutors(
+export async function buildActionExecutors(
   ctx: ActionExecutorContext,
-): Partial<Record<PolicyActionClass, (payload: Record<string, unknown>) => ExecutorResult>> {
+): Promise<
+  Partial<Record<PolicyActionClass, (payload: Record<string, unknown>) => ExecutorResult>>
+> {
+  const [
+    { buildArchiveExecutors },
+    { buildReviewExecutors },
+    { buildGreenGoodsExecutors },
+    { buildErc8004Executors },
+    { buildOnchainExecutors },
+  ] = await Promise.all([
+    import('./executors/archive'),
+    import('./executors/review'),
+    import('./executors/green-goods'),
+    import('./executors/erc8004'),
+    import('./executors/onchain'),
+  ]);
+
   return {
     ...buildArchiveExecutors(ctx),
     ...buildReviewExecutors(ctx),

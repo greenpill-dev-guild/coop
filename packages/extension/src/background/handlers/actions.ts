@@ -324,7 +324,7 @@ export async function handleExecuteAction(
   const replayIds = await listRecordedReplayIds(db);
   const replayGuard = createReplayGuard(replayIds);
 
-  const handlers = buildActionExecutors({ bundle, trustedNodeContext });
+  const handlers = await buildActionExecutors({ bundle, trustedNodeContext });
 
   const startLogEntry = createActionLogEntry({
     bundle,

@@ -171,6 +171,32 @@ function applySharedChunking(viteConfig: { build?: { rollupOptions?: { output?: 
     if (id.includes('@mlc-ai/web-llm')) {
       return 'webllm';
     }
+    // Lazy-loadable shared modules. Demo path never touches these; keeping
+    // them in dedicated chunks lets Rollup defer their fetch until a code
+    // path that statically imports them actually runs.
+    if (id.includes('/packages/shared/src/modules/erc8004/')) {
+      return 'shared-erc8004';
+    }
+    if (id.includes('/packages/shared/src/modules/fvm/')) {
+      return 'shared-fvm';
+    }
+    if (id.includes('/packages/shared/src/modules/stealth/')) {
+      return 'shared-stealth';
+    }
+    // `privacy` deliberately omitted from manualChunks: forcing it into a
+    // dedicated chunk creates a static-import edge from the background graph
+    // to snarkjs/ffjavascript top-level Worker bootstrap (per sw-safety test).
+    // Rollup's default grouping keeps that code in a chunk reachable only
+    // via dynamic import paths, which is safe for the SW.
+    if (id.includes('/packages/shared/src/modules/archive/')) {
+      return 'shared-archive';
+    }
+    if (id.includes('/packages/shared/src/modules/policy/')) {
+      return 'shared-policy';
+    }
+    if (id.includes('/packages/shared/src/modules/greengoods/')) {
+      return 'shared-greengoods';
+    }
   };
 }
 

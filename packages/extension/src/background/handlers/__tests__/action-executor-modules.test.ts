@@ -247,8 +247,8 @@ describe('action executor modules', () => {
     });
   });
 
-  it('builds a composite executor map with archive, review, Green Goods, ERC-8004, and onchain keys', () => {
-    const handlers = buildActionExecutors(makeExecutorContext());
+  it('builds a composite executor map with archive, review, Green Goods, ERC-8004, and onchain keys', async () => {
+    const handlers = await buildActionExecutors(makeExecutorContext());
 
     expect(handlers['archive-artifact']).toBeTypeOf('function');
     expect(handlers['publish-ready-draft']).toBeTypeOf('function');
