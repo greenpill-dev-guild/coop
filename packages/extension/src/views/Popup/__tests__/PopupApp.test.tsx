@@ -150,11 +150,13 @@ describe('PopupApp', () => {
     const user = userEvent.setup();
     render(<PopupApp />);
 
-    expect(await screen.findByText('Ready to round up your loose chickens?')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Chicken or egg? Neither — you need a coop first.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Popup navigation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open sidepanel' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Create a Coop' }));
+    await user.click(screen.getByRole('button', { name: 'Launch the Coop' }));
 
     expect(await screen.findByRole('heading', { name: 'Start your coop.' })).toBeInTheDocument();
     expect(screen.getByText(passkeyTrustLabel)).toBeInTheDocument();
@@ -305,7 +307,7 @@ describe('PopupApp', () => {
     mockClipboardReadText('Fresh note from clipboard');
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Create a Coop' }));
+    await user.click(await screen.findByRole('button', { name: 'Launch the Coop' }));
 
     const purposeField = screen.getByRole('textbox', { name: /purpose/i });
     fireEvent.change(purposeField, { target: { value: 'Existing purpose' } });
@@ -989,7 +991,7 @@ describe('PopupApp', () => {
 
     render(<PopupApp />);
 
-    await user.click(await screen.findByRole('button', { name: 'Create a Coop' }));
+    await user.click(await screen.findByRole('button', { name: 'Launch the Coop' }));
     fireEvent.change(screen.getByLabelText('Coop name'), { target: { value: 'Fresh Coop' } });
     fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Ava' } });
     fireEvent.change(screen.getByPlaceholderText('What will your coop gather and act on?'), {

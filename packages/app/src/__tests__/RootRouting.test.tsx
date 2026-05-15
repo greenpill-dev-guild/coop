@@ -109,7 +109,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /no more chickens loose/i,
+        name: /chicken or egg\? neither — you need a coop first\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {

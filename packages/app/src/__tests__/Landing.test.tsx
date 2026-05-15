@@ -67,9 +67,11 @@ describe('landing page', () => {
   it('renders the simplified landing structure and footer links', () => {
     const { container } = render(<App />);
 
-    expect(screen.getByRole('heading', { name: /no more chickens loose/i })).toBeInTheDocument();
-    expect(screen.getByText(/^No more$/)).toBeInTheDocument();
-    expect(screen.getByText(/^chickens loose\.$/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /chicken or egg\? neither — you need a coop first\./i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Chicken or egg\? Neither —$/)).toBeInTheDocument();
+    expect(screen.getByText(/^you need a coop first\.$/)).toBeInTheDocument();
     expect(screen.getByText(/turning knowledge into opportunity/i)).toBeInTheDocument();
     expect(container.querySelector('.thought-bubble')).not.toBeNull();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();

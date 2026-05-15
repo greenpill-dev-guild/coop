@@ -110,10 +110,10 @@ export function StoryJourneySection({
           <div className="hero-shell">
             <div className="hero-copy" ref={heroCopyRef}>
               <h1 className="hero-title">
-                <span className="hero-title-line">No more</span>
-                <span className="hero-title-line hero-title-line-bottom">chickens loose.</span>
+                <span className="hero-title-line">{t('hero.title1')}</span>
+                <span className="hero-title-line hero-title-line-bottom">{t('hero.title2')}</span>
               </h1>
-              <p className="hero-subtitle">Turning knowledge into opportunity.</p>
+              <p className="hero-subtitle">{t('hero.subtitle')}</p>
               <p className="sr-only">
                 Eight chickens start apart in the meadow and converge as you scroll.
               </p>
