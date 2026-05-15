@@ -223,6 +223,14 @@ If we had another week:
   (publish-readiness-check, memory-insight-synthesizer, the four ERC-8004
   /Green Goods coordination skills, etc.) keep the JSON-text path today;
   the schemas to flip them to native tool calls are mechanical.
+- **Auto-generate tool schemas from Zod.** The current six tool schemas
+  in `gemma4-bridge.ts` are hand-rolled to avoid a dependency bump, which
+  means the Zod schema and the JSON Schema can drift independently. Zod
+  v4 (already in the lockfile via the v3→v4 bridge) ships
+  `z.toJSONSchema()` natively — wiring it into a `buildSkillToolSchema`
+  helper would make the function-call surface drift-free and let new
+  skills opt in by declaring a Zod schema rather than copying a schema
+  blob.
 - **Vision-based PDF parsing.** Many grant programs publish PDFs that are
   fundamentally screenshots. The image modality already exists; a
   `pdf_to_image` skill that pre-rasterizes pages and feeds them to the
