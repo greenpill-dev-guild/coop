@@ -1,0 +1,28 @@
+{
+  "id": "draft-outline",
+  "description": "Grant action planner should call draft_application_outline with named sections when a high-fit grant is in scope.",
+  "fixtureType": "golden",
+  "confidenceFloor": 0.6,
+  "tags": ["core-pack", "grant", "tool-call"],
+  "output": {
+    "action": "draft_application_outline",
+    "opportunityTitle": "Watershed resilience grant",
+    "deadlineIso": "2026-07-01T17:00:00.000Z",
+    "outlineSections": [
+      "Garden context and members served",
+      "Restoration milestones for the south plot",
+      "Match funding from member contributions",
+      "Reporting cadence and ecological indicators"
+    ],
+    "memberIds": [],
+    "rationale": "The grant fit score is high, the deadline is within the action window, and the coop has prior restoration evidence to lean on."
+  },
+  "assertions": [
+    { "type": "field-present", "path": "action" },
+    { "type": "field-present", "path": "opportunityTitle" },
+    { "type": "field-present", "path": "rationale" },
+    { "type": "array-min-length", "path": "outlineSections", "threshold": 1 },
+    { "type": "string-min-length", "path": "rationale", "threshold": 20 }
+  ],
+  "threshold": 0.6
+}

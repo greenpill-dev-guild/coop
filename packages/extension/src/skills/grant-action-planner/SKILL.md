@@ -1,6 +1,6 @@
 ---
 name: grant-action-planner
-description: Plan the next concrete action on a top-scored grant opportunity by issuing a Gemma 4 function call.
+description: Plan the next action for the top-scored grant opportunity using a Gemma 4 function call.
 ---
 
 # Grant Action Planner

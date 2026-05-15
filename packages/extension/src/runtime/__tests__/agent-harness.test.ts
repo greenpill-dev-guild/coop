@@ -324,6 +324,9 @@ describe('agent harness helpers', () => {
       'grant-fit-scorer',
       'capital-formation-brief',
       'ecosystem-entity-extractor',
+      // grant-action-planner triggers on audio-transcript-ready and high-
+      // confidence-draft for the hackathon demo's on-camera function call.
+      'grant-action-planner',
     ]);
 
     const highConfidenceDraft = createAgentObservation({
@@ -341,6 +344,9 @@ describe('agent harness helpers', () => {
       'publish-readiness-check',
       'ecosystem-entity-extractor',
       'theme-clusterer',
+      // grant-action-planner triggers on high-confidence-draft for the
+      // hackathon demo's on-camera function call.
+      'grant-action-planner',
     ]);
 
     const ritualReview = createAgentObservation({
