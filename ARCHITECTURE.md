@@ -78,13 +78,13 @@ contract for `gemma4` lists `webllm → transformers → heuristic` as fallbacks
 so a hardware mismatch or a load failure degrades cleanly to a smaller
 text-only model without the runner having to know.
 
-### The bridge and the worker
+### The bridge, the sandbox, and CSP
 
 `AgentGemma4Bridge` (in `packages/extension/src/runtime/agent/gemma4-bridge.ts`)
-owns a dedicated MV3 web worker (`agent-gemma4-worker.js`). The worker boots
-once per session, prewarms when a relevant skill is registered, and idles out
-after fifteen minutes. The bridge accepts a request shape that already
-recognizes the three Gemma 4 modalities:
+mounts a hidden iframe pointed at `agent-sandbox.html`, an MV3 sandboxed page
+declared in the manifest under `sandbox.pages`. The bridge prewarms when a
+relevant skill is registered and idles out after fifteen minutes. It accepts
+a request shape that already recognizes the three Gemma 4 modalities:
 
 ```ts
 type Gemma4Request = {
@@ -119,9 +119,43 @@ const outputs = await model.generate({ ...inputs, max_new_tokens });
 ```
 
 `load_image` and `read_audio` are the points where the demo's image and audio
-inputs become tensors the model understands. The worker discards the
+inputs become tensors the model understands. The host discards the
 `input_ids` prefix on decode so only the assistant's response surfaces back
 across the postMessage boundary.
+
+#### Why a sandboxed iframe and not a Web Worker
+
+transformers.js v4 pulls in onnxruntime-web's WebGPU backend, whose Embind
+glue layer JIT-compiles a `methodCaller` via `new Function(...)` on the
+inference hot path. MV3's default `extension_pages` CSP
+(`script-src 'self' 'wasm-unsafe-eval'`) does not permit `new Function()`;
+only `'unsafe-eval'` would, and a Web Worker spawned from a
+`chrome-extension://` URL inherits the spawning page's CSP. The result on a
+fresh unpacked install would be `EvalError: Code generation from strings
+disallowed` the first time the worker ran inference.
+
+The sandbox iframe gives the host its own CSP slot:
+
+```json
+"content_security_policy": {
+  "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  "sandbox": "sandbox allow-scripts allow-same-origin; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; object-src 'self'"
+},
+"sandbox": { "pages": ["agent-sandbox.html"] }
+```
+
+`allow-same-origin` keeps the chrome-extension origin so the Transformers.js
+model cache (IndexedDB + Cache API) survives between sessions. The bridge
+proxies `postMessage` between the offscreen page (which hosts the iframe)
+and the sandboxed host; the inference logic, multimodal pipe, and tool-call
+schema all stay in one transport-agnostic module
+(`runtime/agent/gemma4-worker.ts`) so the same code can be retargeted at a
+DedicatedWorker if a future architectural beat calls for it.
+
+The Qwen2.5 refine fallback in `inference-worker.ts` still spawns a Web
+Worker bound to the default extension_pages CSP. It is not on the demo arc;
+when it is re-enabled for non-WebGPU browsers it will need the same sandbox
+treatment.
 
 ### Function calling
 
@@ -146,6 +180,17 @@ When the model picks a different tool than the one the runner expected, the
 bridge filters the call back out and falls through to the JSON-text repair
 path. That keeps the back-half skills (10 of 16) functional on Gemma 4
 without forcing them through tool calling on a Saturday-noon deadline.
+
+**Documented scope cut.** The back-half skills — `memory-insight`,
+`publish-readiness-check`, `entity-extraction`, `ecosystem-entity-extractor`,
+`capital-formation-brief`, `erc8004-registration`, `erc8004-feedback`,
+`greengoods-assessment`, `greengoods-work-approval`,
+`greengoods-gap-admin-sync` — currently run via the JSON-schema text path.
+Gemma 4 still produces structured output for them; the bridge just doesn't
+emit a `<tool_call>` tag, so the runner repairs and validates the JSON
+directly. The function-calling story is complete for the demo arc and
+deliberately incomplete elsewhere; the schema work to flip the back half is
+mechanical and is logged in §7.
 
 ### Why E2B by default
 
@@ -198,22 +243,49 @@ the Coop feed.
 
 The simple-mode bundle deliberately excludes everything reachable only from
 advanced mode. Heavy domain modules — `erc8004` (agent registry),
-`fvm` (Filecoin VM), `stealth` (ERC-5564 stealth addresses), `privacy`
-(Semaphore ZK proofs), `archive` (Storacha lifecycle), `policy` (action
-parsers), and the Green Goods operator rails — load via dynamic `import()`
-boundaries from the components that gate them. Tests still hit the modules
-directly, so coverage stays honest.
+`fvm` (Filecoin VM), `stealth` (ERC-5564 stealth addresses),
+`archive` (Storacha lifecycle), `policy` (action parsers), and the Green
+Goods operator rails — have dedicated `manualChunks` entries in
+`wxt.config.ts` and load via dynamic `import()` boundaries from the agent
+runtime's output handlers and the background's action-executor map. The
+demo arc never reaches those code paths, so the chunks stay off the SW
+cold-start critical path.
+
+`privacy` (Semaphore ZK proofs) is intentionally NOT in `manualChunks`.
+Splitting it out introduces a static-import edge from the SW graph to
+snarkjs's top-level `URL.createObjectURL` + `new Worker` bootstrap, which
+the SW-safety AST scan correctly flags as illegal in a Chrome MV3 service
+worker. Rollup's default grouping keeps the privacy code in a chunk
+reachable only via dynamic imports, which preserves both safety and
+laziness.
+
+Bundle delta (Friday cold-start measurement):
+
+| Surface             | Before | After  | Δ        |
+|---------------------|--------|--------|----------|
+| `background.js`     | 551 kB | 256 kB | **-53%** |
+| Eager `index` chunk | 496 kB |  62 kB | **-87%** |
+| Total dist          | 56.8 MB| 56.8 MB| ~0%      |
+
+The total-dist number is unchanged because the same code is still on disk
+— it's just been moved to chunks that load on demand. The metric that
+matters for the demo is the SW cold-start payload; that has dropped by
+roughly half. Heavy on-demand chunks like `shared-greengoods` (1.2 MB),
+`shared-archive` (355 kB), and the model bundles (`transformers`,
+`webllm`) only land in memory when an advanced flow actually needs them.
 
 The transformers.js v4 bump moved the onnxruntime wasm asset out of the
 transformers package; a small wxt plugin resolves it through
 onnxruntime-web's own dist directory and emits it into the extension's
-`assets/` so the worker can find it at the canonical path the runtime
+`assets/` so the host can find it at the canonical path the runtime
 expects.
 
-The Gemma 4 worker entrypoint sits in `entrypoints/agent-gemma4-worker.ts`
-as an unlisted script and is built into a separate chunk via the existing
-`applySharedChunking` hook. The simple-mode pages don't import the worker
-directly — they message the bridge, which loads the worker on first use.
+The Gemma 4 inference host lives in
+`entrypoints/agent-sandbox.html` (the sandboxed page) plus
+`src/runtime/agent/gemma4-sandbox-host.ts` and the transport-agnostic
+`gemma4-worker.ts`. The simple-mode pages don't import any of those
+directly — they message the bridge, which mounts the sandbox iframe and
+loads the model on first use.
 
 ## 7. What we'd build next
 

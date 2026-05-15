@@ -43,13 +43,18 @@ the shape Gemma 4 is best at.
 
 **Gemma 4 specifics.** The new `gemma4` agent provider runs `onnx-community/gemma-4-E2B-it-ONNX`
 (with the E4B variant available as a quality fallback) at `q4f16` precision on `webgpu` via
-`@huggingface/transformers@^4.2.0`, all inside a dedicated MV3 worker
-(`packages/extension/src/runtime/agent/gemma4-worker.ts`). The worker uses
-`Gemma4ForConditionalGeneration`, `AutoProcessor`, `load_image`, and `read_audio` to round-trip
-text + image + audio in a single call. Six skills are migrated to native function calling
-(`extract_opportunity`, `score_grant_fit`, `route_tab`, `cluster_themes`, `review_digest`, plus
-the new `draft_application_outline` for the on-camera moment); the remaining ten skills keep the
-existing JSON-output path with `validateSkillOutput` as the type guard at the boundary.
+`@huggingface/transformers@^4.2.0`. Inference runs inside an MV3 **sandboxed iframe**
+(`agent-sandbox.html`) with its own CSP slot — `script-src 'self' 'unsafe-eval'
+'wasm-unsafe-eval' blob:` — because onnxruntime-web's Embind glue calls `new Function()` on the
+hot path, which the default `extension_pages` CSP forbids and a Web Worker spawned from a
+`chrome-extension://` URL inherits. The host uses `Gemma4ForConditionalGeneration`,
+`AutoProcessor`, `load_image`, and `read_audio` to round-trip text + image + audio in a single
+call. Six skills are migrated to native function calling (`extract_opportunity`,
+`score_grant_fit`, `route_tab`, `cluster_themes`, `review_digest`, plus the new
+`draft_application_outline` for the on-camera moment); the remaining ten skills keep the
+existing JSON-output path with `validateSkillOutput` as the type guard at the boundary. See
+[ARCHITECTURE.md §3](./ARCHITECTURE.md) for the full sandbox rationale and the documented
+scope cut on back-half function calling.
 
 **Climate / resilience framing.** Community gardens are a frontline climate-adaptation surface.
 Grant discovery for them is fragmented, deadline-sensitive, and low-bandwidth. Coop runs the
