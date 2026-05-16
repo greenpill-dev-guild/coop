@@ -180,9 +180,9 @@ export function ReceiverShell({
         </button>
 
         {message ? (
-          <div className="receiver-live-message" role="status" aria-live="polite">
+          <output className="receiver-live-message" aria-live="polite">
             {message}
-          </div>
+          </output>
         ) : null}
 
         {showInstallNudge ? (

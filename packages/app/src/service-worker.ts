@@ -1,6 +1,6 @@
 type ServiceWorkerContainerLike = {
   register: (scriptURL: string) => Promise<unknown>;
-  getRegistrations?: () => Promise<Array<{ unregister: () => Promise<boolean> | boolean }>>;
+  getRegistrations?: () => Promise<ReadonlyArray<{ unregister: () => Promise<boolean> | boolean }>>;
 };
 
 type ServiceWorkerRegistrationOptions = {
