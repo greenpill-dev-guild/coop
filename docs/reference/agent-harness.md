@@ -14,7 +14,7 @@ This is the only known production implementation that combines in-browser LLM in
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  Extension Service Worker                               │
 │                                                         │
@@ -43,7 +43,7 @@ The agent runs on a 1.5-second polling interval in the extension's offscreen doc
 5. **Propose**: Generate action proposals with per-skill approval modes
 6. **Log**: Write structured trace spans to Dexie for observability
 
-```
+```text
 Observation (pending)
   │
   ├─ dismissed (conditions no longer valid)

@@ -11,11 +11,15 @@ slug: /reference/product-requirements
 
 ---
 
-> Historical note: this document preserves a broad audit draft of the product, but it predates the
-> current extension action map. References below to a generic `Home` tab or a draft-review `Roost`
-> describe earlier UI assumptions. Treat [Action Domain Map](/reference/action-domain-map),
-> [Builder Extension](/builder/extension), and [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook)
-> as canonical when a detail here conflicts with the live UI.
+:::note
+
+Historical note: this document preserves a broad audit draft of the product, but it predates the
+current extension action map. References below to a generic `Home` tab or a draft-review `Roost`
+describe earlier UI assumptions. Treat [Action Domain Map](/reference/action-domain-map),
+[Builder Extension](/builder/extension), and [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook)
+as canonical when a detail here conflicts with the live UI.
+
+:::
 
 ## 1. Product Vision
 

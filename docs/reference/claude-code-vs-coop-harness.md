@@ -5,7 +5,11 @@ slug: /reference/claude-code-vs-coop-harness
 
 # Claude Code vs Coop Agent Harness — Architecture Comparison
 
-> Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claude-code) and Coop agent harness in `packages/shared/src/modules/agent/` + `packages/extension/src/runtime/`.
+:::info
+
+Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claude-code) and Coop agent harness in `packages/shared/src/modules/agent/` + `packages/extension/src/runtime/`.
+
+:::
 
 ## 1. Agent Loop
 

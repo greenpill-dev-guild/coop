@@ -23,7 +23,7 @@ Member accounts must:
 
 Use ERC-4337 account abstraction with the `permissionless` SDK and Safe-compatible smart accounts, implemented in `packages/shared/src/modules/member-account/member-account.ts` and `packages/shared/src/modules/onchain/onchain.ts`:
 
-- **Smart account types**: Support both `kernel` (ZeroDev Kernel) and `safe` (Safe{Core}) account types via `toKernelSmartAccount()` and `toSafeSmartAccount()` from the `permissionless/accounts` package
+- **Smart account types**: Support both `kernel` (ZeroDev Kernel) and `safe` (Safe&#123;Core&#125;) account types via `toKernelSmartAccount()` and `toSafeSmartAccount()` from the `permissionless/accounts` package
 - **Entry point**: ERC-4337 v0.7 (`entryPoint07Address` from `viem/account-abstraction`)
 - **Passkey signer**: Passkey credentials restored via `restorePasskeyAccount()` serve as the smart account owner/signer
 - **Gas sponsorship**: Transactions routed through `createCoopSmartAccountClient()` with paymaster support, falling back to coop-funded gas via `sendSmartAccountTransactionWithCoopGasFallback()`

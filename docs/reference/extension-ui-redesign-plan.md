@@ -5,10 +5,18 @@ slug: /reference/extension-ui-redesign-plan
 
 # Extension UI Redesign Plan
 
-> Current-state note: this is a redesign plan, not the canonical current surface map. Use
-> [Action Domain Map](/reference/action-domain-map) for the live extension action model.
+:::note
 
-> **Implementation Status (2026-03-22)**: Phase 1 implemented with significant naming changes. Planned tabs (Chickens | Feed | Contrib | Manage) shipped as **Roost | Chickens | Coops | Nest**. The Nest tab absorbs planned Contribute + Manage + Settings functionality.
+Current-state note: this is a redesign plan, not the canonical current surface map. Use
+[Action Domain Map](/reference/action-domain-map) for the live extension action model.
+
+:::
+
+:::info
+
+**Implementation Status (2026-03-22)**: Phase 1 implemented with significant naming changes. Planned tabs (Chickens | Feed | Contrib | Manage) shipped as **Roost | Chickens | Coops | Nest**. The Nest tab absorbs planned Contribute + Manage + Settings functionality.
+
+:::
 
 > Date: 2026-03-21
 > Status: Approved — ready to build
@@ -108,7 +116,11 @@ Redesign the extension's popup and sidepanel to share a consistent layout patter
 
 ### Footer Nav (4 tabs)
 
-> **As-shipped (2026-03-22):** Tabs are **Roost | Chickens | Coops | Nest** (see [Divergences from Plan](#divergences-from-plan)).
+:::info
+
+**As-shipped (2026-03-22):** Tabs are **Roost | Chickens | Coops | Nest** (see [Divergences from Plan](#divergences-from-plan)).
+
+:::
 
 | Tab (planned) | Tab (shipped) | Badge | Who sees it |
 |---------------|---------------|-------|-------------|

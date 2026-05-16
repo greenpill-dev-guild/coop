@@ -56,9 +56,13 @@ Load into Chrome:
 After code changes, rebuild with `bun run build` in `packages/extension/` and click the
 reload icon on the extension card in `chrome://extensions`.
 
-> **No `.env.local` needed for first run.** The defaults (`sepolia`, `mock` onchain/archive,
-> session `off`) work out of the box. Create `.env.local` at the repo root only when you need
-> live rails or custom signaling URLs.
+:::info
+
+**No `.env.local` needed for first run.** The defaults (`sepolia`, `mock` onchain/archive,
+session `off`) work out of the box. Create `.env.local` at the repo root only when you need
+live rails or custom signaling URLs.
+
+:::
 
 ## Local Developer Install (Full)
 

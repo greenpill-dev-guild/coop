@@ -5,11 +5,15 @@ slug: /reference/coop-os-architecture-vnext
 
 # Coop V1 Build Plan
 
-> Current-state note: this long-form build plan predates the current surface ownership model and the
-> current release posture. References here to a general-review `Roost`, the older signaling host, or
-> landing-only app behavior describe an earlier build phase. Use
-> [Action Domain Map](/reference/action-domain-map), [Builder App](/builder/app), and
-> [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook) for current behavior.
+:::note
+
+Current-state note: this long-form build plan predates the current surface ownership model and the
+current release posture. References here to a general-review `Roost`, the older signaling host, or
+landing-only app behavior describe an earlier build phase. Use
+[Action Domain Map](/reference/action-domain-map), [Builder App](/builder/app), and
+[Demo & Deploy Runbook](/reference/demo-and-deploy-runbook) for current behavior.
+
+:::
 
 **Status**: Canonical v1 plan
 **Updated**: 2026-03-15

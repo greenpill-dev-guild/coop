@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: Coop
-description: "Warm, browser-first knowledge workspace for capturing scattered context, refining it into shared opportunities, and reviewing before publish."
+name: Coop Core
+description: "Core warm-earth Coop design language for shared brand, tokens, tone, and component patterns across app, website, extension, and docs surfaces."
 colors:
   primary: "#4f2e1f"
   on-primary: "#ffffff"
@@ -180,13 +180,15 @@ components:
     padding: 0.5rem
 ---
 
-# Coop Design System
+# Coop Core Design System
 
 ## Overview
 
-Coop should feel warm, observant, local-first, and useful: a browser companion that notices scattered context, helps members sort what matters, and turns fragments into shared memory without feeling like surveillance. The visual language is rooted in the chicken mark, garden/nest metaphors, warm paper surfaces, earthy browns, growth greens, and bright orange action moments.
+Coop should feel warm, observant, local-first, and useful: a knowledge companion that notices scattered context, helps members sort what matters, and turns fragments into shared memory without feeling like surveillance. The visual language is rooted in the chicken mark, garden/nest metaphors, warm paper surfaces, earthy browns, growth greens, and bright orange action moments.
 
-This file serializes the current Coop visual system for Stitch-compatible design agents and coding agents. The shipped runtime token source remains `packages/shared/src/styles/tokens.css`; when a token changes, update this file and the runtime CSS together.
+This file is the canonical Coop core DesignMD source. Use it with the surface dialect that matches the work: `packages/app/DESIGN.pwa.md` for the installed receiver PWA, `packages/app/DESIGN.browser.md` for the public website, and `docs/DESIGN.md` for documentation. Extension UI inherits this core file until an extension-specific dialect exists.
+
+The shipped runtime token source remains `packages/shared/src/styles/tokens.css`; when a token changes, update this file and the runtime CSS together. Docs mirror a subset in `docs/src/css/custom.css`.
 
 ## Colors
 
@@ -212,12 +214,13 @@ Use warm translucency rather than cold gray overlays. Green and orange should be
 
 ## Layout
 
-- Use `1120px` as the default max-width for landing and docs content, with `1rem` mobile gutters.
+- Use `1120px` as the default max-width for public website and docs content, with `1rem` mobile gutters.
 - Use the shared spacing scale from `packages/shared/src/styles/tokens.css`: `0.15rem`, `0.2rem`, `0.35rem`, `0.65rem`, `1rem`, `1.5rem`, and `2rem`.
-- Landing pages can be atmospheric: radial green/orange glows, a subtle 52px grid, sticky visual scenes, and large section spacing.
-- Extension popup and sidepanel surfaces should be denser: compact grids, clear tab rows, visible review counts, and cards that scan quickly.
-- Receiver PWA flows should feel more tactile and ceremonial than the sidepanel, especially capture, pairing, and successful handoff states.
+- Public and docs pages can be atmospheric: radial green/orange glows, a subtle 52px grid, sticky visual scenes, and generous section spacing.
+- Runtime surfaces should be denser: compact grids, clear tab rows, visible review counts, and cards that scan quickly.
+- Receiver PWA flows should feel tactile and ceremonial, especially capture, pairing, and successful handoff states.
 - Keep the hierarchy review-first: what needs attention, what changed, what can be published, and what stays private should be visually obvious.
+- Surface dialect files may tighten navigation, route, and copy rules, but they should not redefine the core brand without an explicit token update here.
 
 ## Elevation & Depth
 
@@ -252,11 +255,13 @@ Use warm translucency rather than cold gray overlays. Green and orange should be
 ## Do's and Don'ts
 
 - Do use `packages/shared/src/styles/tokens.css` before introducing new runtime values.
+- Do pair this file with the matching surface dialect before designing or implementing PWA, website, or docs screens.
 - Do keep Coop warm, inhabited, and useful rather than corporate, sterile, or cold.
 - Do make passive observation feel consentful and reviewable: "noticed", "ready for review", and "publish" states must be clear.
 - Do preserve product nouns like Popup, Chickens, Coops, Roost, Nest, Receiver, drafts, artifacts, and publish prep when designing new screens.
 - Do maintain WCAG AA contrast for normal text and never rely on color alone for errors, publish states, or sync/offline status.
-- Do let landing/docs be more atmospheric and let extension/runtime surfaces be more functional.
+- Do let website/docs be more atmospheric and let installed app/runtime surfaces be more functional.
+- Don't prompt surface-specific app or docs work from this core file alone.
 - Don't use generic SaaS blue, purple gradients, cold grayscale dashboards, or glassmorphism that hides the warm paper/nest feel.
 - Don't make the chicken personality too cute in core review or governance flows; keep playfulness in success states, iconography, and copy edges.
 - Don't add package-local design tokens or package-specific style systems. New shared visual rules belong in shared tokens and this file.

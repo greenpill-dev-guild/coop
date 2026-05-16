@@ -55,10 +55,14 @@ remain free for individuals and small groups.
 **Open-source commitment.** The core codebase remains open. Paid features will layer on top of the
 open protocol, not gate access to the fundamental capture-refine-share loop.
 
-> **Provisional framing.** The [Durgadas Coordination Structural Integrity Suite](https://github.com/durgadasji/standards)
-> provides supporting rationale for why coordination infrastructure should have transparent value
-> capture that aligns operator incentives with community outcomes. This framing is provisional and
-> will be revisited as the framework stabilizes externally.
+:::note
+
+**Provisional framing.** The [Durgadas Coordination Structural Integrity Suite](https://github.com/durgadasji/standards)
+provides supporting rationale for why coordination infrastructure should have transparent value
+capture that aligns operator incentives with community outcomes. This framing is provisional and
+will be revisited as the framework stabilizes externally.
+
+:::
 
 ## The Practical Read
 

@@ -1,5 +1,7 @@
 export type DocsAudience = 'community' | 'builder';
 
+const BUILDER_AUDIENCE_PREFIXES = ['/builder/', '/reference/', '/testing/'];
+
 export const DEFAULT_AUDIENCE_PATHS: Record<DocsAudience, string> = {
   community: '/',
   builder: '/builder/getting-started',
@@ -10,8 +12,12 @@ const STORAGE_KEYS: Record<DocsAudience, string> = {
   builder: 'coop-docs:last-builder-path',
 };
 
+function isBuilderAudiencePath(path: string): boolean {
+  return path === '/builder' || BUILDER_AUDIENCE_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 export function getDocsAudience(pathname: string): DocsAudience {
-  return pathname.startsWith('/builder/') ? 'builder' : 'community';
+  return isBuilderAudiencePath(pathname) ? 'builder' : 'community';
 }
 
 function joinLocationParts(pathname: string, search = '', hash = ''): string {
@@ -23,11 +29,11 @@ function normalizeAudiencePath(path: string | null | undefined, audience: DocsAu
     return DEFAULT_AUDIENCE_PATHS[audience];
   }
 
-  if (audience === 'builder' && !path.startsWith('/builder/')) {
+  if (audience === 'builder' && !isBuilderAudiencePath(path)) {
     return DEFAULT_AUDIENCE_PATHS.builder;
   }
 
-  if (audience === 'community' && path.startsWith('/builder/')) {
+  if (audience === 'community' && isBuilderAudiencePath(path)) {
     return DEFAULT_AUDIENCE_PATHS.community;
   }
 

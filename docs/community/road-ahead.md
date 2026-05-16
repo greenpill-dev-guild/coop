@@ -98,12 +98,16 @@ every product decision.
 
 ## Coordination Integrity (Provisional)
 
-> **Note:** The framing in this section draws on the
-> [Durgadas Coordination Structural Integrity Suite](https://github.com/durgadasji/standards).
-> This is provisional -- the framework is maintained externally and has not been formally adopted
-> by the Coop project. We reference it because it articulates why coordination tools need
-> structural integrity guarantees (transparency, auditability, bounded execution) that align
-> closely with how Coop already works.
+:::note
+
+The framing in this section draws on the
+[Durgadas Coordination Structural Integrity Suite](https://github.com/durgadasji/standards).
+This is provisional -- the framework is maintained externally and has not been formally adopted
+by the Coop project. We reference it because it articulates why coordination tools need
+structural integrity guarantees (transparency, auditability, bounded execution) that align
+closely with how Coop already works.
+
+:::
 
 The core argument: coordination infrastructure should make it structurally difficult for any
 single actor to silently capture or redirect group value. Coop's architecture -- local-first

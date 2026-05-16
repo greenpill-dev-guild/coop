@@ -5,10 +5,14 @@ slug: /reference/original-introduction
 
 # Coop
 
-> Historical note: this introduction is preserved for origin-story context. It predates the current
-> release posture and runtime split. For current behavior, use
-> [Action Domain Map](/reference/action-domain-map), [Builder Architecture](/builder/architecture),
-> and [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook).
+:::note
+
+Historical note: this introduction is preserved for origin-story context. It predates the current
+release posture and runtime split. For current behavior, use
+[Action Domain Map](/reference/action-domain-map), [Builder Architecture](/builder/architecture),
+and [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook).
+
+:::
 
 > No more chickens loose.
 

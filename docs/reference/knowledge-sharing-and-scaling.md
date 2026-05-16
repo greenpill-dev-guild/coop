@@ -10,9 +10,13 @@ slug: /reference/knowledge-sharing-and-scaling
 **Scope**: Knowledge flow, agent feedback loop, Yjs scaling, long-term storage
 **Audience**: Core contributors, protocol reviewers, grant evaluators
 
-> Current-state note: this assessment predates the final surface/action map. Historical references
-> to "the Roost" describe the local draft-review step that now lives primarily in the popup and
-> `Chickens`. For the current product map, use [Action Domain Map](/reference/action-domain-map).
+:::note
+
+Current-state note: this assessment predates the final surface/action map. Historical references
+to "the Roost" describe the local draft-review step that now lives primarily in the popup and
+`Chickens`. For the current product map, use [Action Domain Map](/reference/action-domain-map).
+
+:::
 
 ---
 

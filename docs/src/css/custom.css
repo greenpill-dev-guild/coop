@@ -21,12 +21,14 @@
   --coop-shadow-sm: 0 8px 20px rgba(79, 46, 31, 0.08);
   --coop-shadow-md: 0 16px 40px rgba(79, 46, 31, 0.12);
   --coop-shadow-lg: 0 24px 60px rgba(79, 46, 31, 0.12);
+  --coop-shadow-code: 0 6px 16px rgba(79, 46, 31, 0.07);
 
   /* Radii */
   --coop-radius-pill: 999px;
   --coop-radius-card: 24px;
   --coop-radius-input: 16px;
   --coop-radius-chip: 12px;
+  --coop-radius-sm: 8px;
 
   /* Spacing */
   --coop-space-xs: 0.35rem;
@@ -137,11 +139,11 @@
 
   /* Code */
   --ifm-code-font-size: 90%;
-  --ifm-code-border-radius: var(--coop-radius-chip);
+  --ifm-code-border-radius: var(--coop-radius-sm);
 
   /* Radii */
   --ifm-global-radius: var(--coop-radius-input);
-  --ifm-pre-border-radius: var(--coop-radius-input);
+  --ifm-pre-border-radius: var(--coop-radius-sm);
   --ifm-alert-border-radius: var(--coop-radius-input);
   --ifm-card-border-radius: var(--coop-radius-card);
   --ifm-button-border-radius: var(--coop-radius-pill);
@@ -154,6 +156,7 @@ html[data-theme="dark"] {
   --coop-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.3);
   --coop-shadow-md: 0 20px 44px rgba(0, 0, 0, 0.34);
   --coop-shadow-lg: 0 28px 72px rgba(0, 0, 0, 0.38);
+  --coop-shadow-code: 0 6px 18px rgba(0, 0, 0, 0.28);
 
   --coop-page-bg-start: #15100e;
   --coop-page-bg-mid: #1a1411;
@@ -309,18 +312,37 @@ h6 {
 }
 
 /* ── Code Blocks ──
-   Warm background with subtle border and shadow.
+   Compact warm reference blocks without double-framing Docusaurus chrome.
    ========================================================================== */
 
-pre[class*="language-"],
 div[class*="codeBlockContainer"] {
   border: 1px solid var(--coop-border);
-  box-shadow: var(--coop-shadow-sm);
+  border-radius: var(--coop-radius-sm);
+  box-shadow: var(--coop-shadow-code);
+  overflow: hidden;
+}
+
+div[class*="codeBlockContainer"] pre[class*="language-"] {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.markdown pre:not([class*="language-"]) {
+  border: 1px solid var(--coop-border);
+  border-radius: var(--coop-radius-sm);
+  box-shadow: var(--coop-shadow-code);
+  overflow-x: auto;
+}
+
+pre[class*="language-"] {
+  border-radius: var(--coop-radius-sm);
 }
 
 :not(pre) > code {
   background: var(--coop-code-inline-bg);
   border: 1px solid var(--coop-code-inline-border);
+  border-radius: var(--coop-radius-sm);
   color: var(--coop-code-inline-color);
 }
 
@@ -334,7 +356,19 @@ div[class*="codeBlockContainer"] {
   border-left-width: 4px;
   background: var(--coop-admonition-bg);
   backdrop-filter: blur(12px);
-  box-shadow: var(--coop-shadow-sm);
+  box-shadow: var(--coop-shadow-code);
+}
+
+.markdown blockquote {
+  border-left: 3px solid var(--coop-border);
+  border-radius: var(--coop-radius-sm);
+  background: var(--coop-admonition-bg);
+  color: var(--coop-text-secondary);
+  padding: 0.85rem 1rem;
+}
+
+.markdown blockquote > :last-child {
+  margin-bottom: 0;
 }
 
 .alert--success {
@@ -358,21 +392,53 @@ div[class*="codeBlockContainer"] {
 }
 
 /* ── Tables ──
-   Warm header row and coop-line borders.
+   Warm, readable tables that scroll instead of widening the page.
    ========================================================================== */
 
-table {
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
+  border: 1px solid var(--coop-border);
+  border-radius: var(--coop-radius-sm);
+  background: var(--coop-surface);
+  box-shadow: var(--coop-shadow-code);
 }
 
-table th {
+.markdown table th {
   background: var(--coop-table-head-bg);
   color: var(--coop-heading-color);
 }
 
-table td,
-table th {
+.markdown table td,
+.markdown table th {
   border-color: var(--coop-border);
+  min-width: 8rem;
+  max-width: 22rem;
+  padding: 0.65rem 0.8rem;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.markdown table td:first-child,
+.markdown table th:first-child {
+  min-width: 5.5rem;
+}
+
+.markdown table code,
+.markdown table a {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .markdown table td,
+  .markdown table th {
+    min-width: 7rem;
+    max-width: 18rem;
+    padding: 0.55rem 0.65rem;
+  }
 }
 
 /* ── Pagination Nav ──

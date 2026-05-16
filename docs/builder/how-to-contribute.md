@@ -72,14 +72,14 @@ main navigation.
 
 Branches follow `type/description`:
 
-```
+```text
 feature/receiver-pwa
 fix/sync-race
 ```
 
 Commits follow Conventional Commits with scope:
 
-```
+```text
 feat(shared): add archive receipt schema
 fix(extension): resolve sync race in sidepanel
 docs(app): update receiver route table

@@ -285,7 +285,11 @@ Each item is its own Y.Map entry. Concurrent edits to different items merge clea
 
 **Collection fields to migrate:** `members`, `invites`, `artifacts`, `archiveReceipts`, `memberCommitments`, `rituals`, `reviewBoard`
 
-> **Note:** `rituals` is typically written once at setup and rarely modified concurrently, so it is lower-risk. `reviewBoard` is a derived projection that could be updated by multiple members and is higher-risk. Both should be migrated for consistency, but `reviewBoard` should be validated with concurrent edit tests.
+:::note
+
+`rituals` is typically written once at setup and rarely modified concurrently, so it is lower-risk. `reviewBoard` is a derived projection that could be updated by multiple members and is higher-risk. Both should be migrated for consistency, but `reviewBoard` should be validated with concurrent edit tests.
+
+:::
 
 **Files:** `packages/shared/src/modules/coop/sync.ts`, `packages/shared/src/modules/storage/db.ts`, `packages/shared/src/contracts/schema.ts`
 
@@ -574,7 +578,11 @@ interface EventBus {
 
 **Agent integration:** Observation generation listens via `bus.on('draft:created', ...)` instead of polling Dexie for new drafts. The event bus becomes the primary trigger for agent cycles, superseding Phase 1C's message-based trigger with a more general mechanism.
 
-> **Phase 1C → 3C progression:** Phase 1C introduces message-based event-driven scheduling as a quick win (replacing `setInterval` with `chrome.runtime.sendMessage`). Phase 3C generalizes this with the typed event bus. Implementing them together (as shown in the execution order) avoids building Phase 1C only to immediately replace it. If the event bus is delayed, Phase 1C stands alone as a valid improvement.
+:::info
+
+**Phase 1C → 3C progression:** Phase 1C introduces message-based event-driven scheduling as a quick win (replacing `setInterval` with `chrome.runtime.sendMessage`). Phase 3C generalizes this with the typed event bus. Implementing them together (as shown in the execution order) avoids building Phase 1C only to immediately replace it. If the event bus is delayed, Phase 1C stands alone as a valid improvement.
+
+:::
 
 ---
 

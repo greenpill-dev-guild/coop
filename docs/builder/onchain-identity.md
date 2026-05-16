@@ -31,9 +31,13 @@ The passkey credential itself stays on the device. What gets persisted to Dexie 
 RP ID. This record is device-bound by design -- losing the device means losing the credential
 unless recovery is configured.
 
-> **Shipped.** Passkey registration, session creation, and identity persistence are live. The
-> identity warning system (`createDeviceBoundWarning`) is active and surfaces device-binding
-> risks in the UI.
+:::info
+
+**Shipped.** Passkey registration, session creation, and identity persistence are live. The
+identity warning system (`createDeviceBoundWarning`) is active and surfaces device-binding
+risks in the UI.
+
+:::
 
 ## Member Accounts
 
@@ -58,9 +62,13 @@ Member accounts bridge the gap between passkey identity (device-local, no chain 
 onchain actions that require a sender address. The account type defaults to `kernel` but the
 schema supports `safe` and `smart-account` as alternatives.
 
-> **Shipped.** Account provisioning, counterfactual address prediction, and live deployment via
-> Pimlico are implemented. The `LocalMemberSignerBinding` record links a member's passkey to
-> their smart account address on the local device.
+:::info
+
+**Shipped.** Account provisioning, counterfactual address prediction, and live deployment via
+Pimlico are implemented. The `LocalMemberSignerBinding` record links a member's passkey to
+their smart account address on the local device.
+
+:::
 
 ## Safe Integration
 
@@ -95,9 +103,13 @@ This separation matters. Collapsing session-executor actions into safe-owner wou
 multisig approval for routine automation. Collapsing member-account into session-executor would
 lose individual attribution.
 
-> **Shipped.** Safe deployment, owner management, signature validation, and authority
-> classification are live. Mock and live modes are both supported, controlled by
-> `VITE_COOP_ONCHAIN_MODE`.
+:::info
+
+**Shipped.** Safe deployment, owner management, signature validation, and authority
+classification are live. Mock and live modes are both supported, controlled by
+`VITE_COOP_ONCHAIN_MODE`.
+
+:::
 
 ## Session Keys
 
@@ -127,16 +139,20 @@ The `session` module implements Rhinestone's Smart Sessions protocol on top of t
 Currently scoped to four Green Goods action classes: garden creation, profile sync, domain
 configuration, and pool creation.
 
-> **Shipped.** Session capability creation, validation, encryption, status management, and
-> Rhinestone Smart Session integration are implemented. The validation pipeline is thorough --
-> 11 distinct failure reasons with typed rejection codes. Session key rotation and revocation
-> are supported.
+:::info
+
+**Shipped.** Session capability creation, validation, encryption, status management, and
+Rhinestone Smart Session integration are implemented. The validation pipeline is thorough --
+11 distinct failure reasons with typed rejection codes. Session key rotation and revocation
+are supported.
+
+:::
 
 ## How They Fit Together
 
 The full flow from passkey to bounded onchain action:
 
-```
+```text
 Passkey Registration
     |
     v

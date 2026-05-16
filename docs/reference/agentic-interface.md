@@ -5,13 +5,17 @@ slug: /reference/agentic-interface
 
 # Agentic Interface Architecture
 
-> How Coop's agent communicates with the user through the UI.
+:::info
+
+How Coop's agent communicates with the user through the UI.
+
+:::
 
 ## Current Architecture
 
 Coop's agent operates as a 16-skill pipeline in the MV3 background service worker:
 
-```
+```text
 Observe → Plan → Execute → Record
 ```
 

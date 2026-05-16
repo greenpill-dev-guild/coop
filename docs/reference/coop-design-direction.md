@@ -81,12 +81,16 @@ These colors were pulled from the flat logo variants and are close enough to use
 }
 ```
 
-> **Canonical runtime source**: `packages/shared/src/styles/tokens.css` is the source of truth for
-> the app and extension token set. The `scripts/lint-tokens.ts` script enforces that only declared
-> tokens are used in runtime stylesheets. The docs site currently mirrors a subset of those tokens
-> in `docs/src/css/custom.css` until it can import the shared stylesheet directly. The token file
-> also includes full dark mode overrides (via `prefers-color-scheme` media query and explicit
-> `[data-theme="dark"]` attribute).
+:::info
+
+**Canonical runtime source**: `packages/shared/src/styles/tokens.css` is the source of truth for
+the app and extension token set. The `scripts/lint-tokens.ts` script enforces that only declared
+tokens are used in runtime stylesheets. The docs site currently mirrors a subset of those tokens
+in `docs/src/css/custom.css` until it can import the shared stylesheet directly. The token file
+also includes full dark mode overrides (via `prefers-color-scheme` media query and explicit
+`[data-theme="dark"]` attribute).
+
+:::
 
 How to use them:
 
