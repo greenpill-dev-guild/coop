@@ -1,0 +1,21 @@
+{
+  "extensionDir": "/Users/afo/Code/greenpill/coop/packages/extension/dist/chrome-mv3",
+  "executablePath": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+  "evidence": {
+    "popup": "/Users/afo/Code/greenpill/coop/.plans/evidence/2026-05-15-baseline-popup-rendering.png",
+    "sidepanel": "/Users/afo/Code/greenpill/coop/.plans/evidence/2026-05-15-baseline-sidepanel-rendering.png",
+    "errorsPanel": "/Users/afo/Code/greenpill/coop/.plans/evidence/2026-05-15-baseline-extensions-errors-panel.png"
+  },
+  "errorsEmpty": true,
+  "extensionId": "lffaelabglhoibcdlkoagalakpbcoakh",
+  "serviceWorkerUrl": "chrome-extension://lffaelabglhoibcdlkoagalakpbcoakh/background.js",
+  "popupText": "Coop\nWELCOME\nChicken or egg? Neither — you need a coop first.\nLaunch the Coop\nJoin with Code",
+  "sidepanelText": "WELCOME\nChicken or egg? Neither — you need a coop first.\nLaunch the Coop\nJoin with Code",
+  "extensionCard": {
+    "found": true,
+    "text": "\n          ",
+    "hasErrorButton": false,
+    "errorButtonText": ""
+  },
+  "serviceWorkerStillRegistered": true
+}

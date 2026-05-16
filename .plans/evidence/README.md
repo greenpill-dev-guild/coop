@@ -1,65 +1,81 @@
 # Runtime evidence — Gemma 4 sandbox CSP fix
 
-This directory should contain the runtime proof points the goal asked for.
+This directory contains runtime proof points for the hackathon submission.
 
-## Why it's empty right now
+## 2026-05-16 — Sat baseline real-Chrome verification (CLEAN)
 
-I tried to verify the sandbox CSP at runtime via Playwright headless Chromium
-(see `.plans/i-would-like-your-smooth-whistle.md` for the goal brief). Three
-attempts hit the same wall: headless Chromium on this macOS environment does
-not register the MV3 service worker. `context.waitForEvent('serviceworker')`
-times out at 180 s with `workers=0`. The existing `e2e/extension.spec.cjs`
-shows the same symptom on first launch. Headless MV3 SW registration is a
-known Playwright/Chromium intermittent; it's an environment problem, not a
-problem with the sandbox fix.
+Two complementary baseline runs converge on the same conclusion: extension
+loads cleanly with sandbox CSP applied, zero errors anywhere, hook copy
+renders. Extension ID `lffaelabglhoibcdlkoagalakpbcoakh` in both runs.
 
-## What IS verified statically
+### Run A — Playwright + Chrome/Chromium, sandbox eval probe
 
-- `dist/chrome-mv3/manifest.json` writes both
-  `content_security_policy.sandbox` and `sandbox.pages` correctly
-  (`grep -o '"sandbox":' dist/chrome-mv3/manifest.json | wc -l` → 2)
-- `dist/chrome-mv3/agent-sandbox.html` exists and loads the sandbox host
-  module
-- `dist/chrome-mv3/chunks/agent-sandbox-*.js` is 3 kB and dynamic-imports
-  the transformers chunk on first `init` message
-- The old `agent-gemma4-worker.js` is gone (no Worker path remains)
-- `bun run validate smoke` + `bun run validate:store-readiness` both green
-- `bun run test` — 3817 passed, 11 skipped, 0 failed
-- `packages/extension/src/__tests__/sw-safety.test.ts` — no top-level
-  `new Worker()` in the background graph after the refactor
+Captured via `node scripts/verify-real-chrome.cjs` — headed Playwright with
+`channel: 'chrome'` (falls back to `chromium`), real SW registration.
 
-## What the user needs to verify on real Chrome (≤5 min)
+| Artifact | Path |
+|---|---|
+| Popup (hook copy + Launch the Coop CTA) | `2026-05-16-popup-baseline.png` |
+| Sidepanel (welcome screen, hook copy) | `2026-05-16-sidepanel-baseline.png` |
+| Sandbox iframe (host has no UI — blank screenshot is expected) | `2026-05-16-sandbox-baseline.png` |
+| Run summary (eval probe, errors, ext ID) | `2026-05-16-runtime-summary-baseline.json` |
 
-1. `git switch feature/hackathon-simplify`
-2. `cd packages/extension && bun run build`
-3. Open Chrome (Canary or Beta — stable WebGPU). Visit `chrome://extensions`.
-4. Toggle Developer mode → "Load unpacked" → choose
-   `packages/extension/dist/chrome-mv3`.
-5. Confirm the extension ID. Open the service worker DevTools (the "service
-   worker" link on the extension card).
-6. In the SW console, run:
-   ```js
-   chrome.runtime.getURL('agent-sandbox.html')
-   ```
-   Copy the resulting URL.
-7. Open a new tab and navigate to that URL. Open DevTools on the sandbox
-   page. In the Console, run:
-   ```js
-   try { new Function('return 1')(); console.log('eval OK') }
-   catch (e) { console.log('eval BLOCKED:', e.message) }
-   ```
-8. **Expected:** `eval OK`. If you see `Code generation from strings
-   disallowed`, the sandbox CSP isn't being applied and the fix is broken
-   (escalate per the brief).
-9. Save a screenshot of the DevTools console showing `eval OK` to this
-   directory as `sandbox-eval-ok.png`.
-10. Open the sidepanel, launch a coop, capture a tab. Force the agent to
-    run Gemma 4 (paste a grant page URL into the chickens flow). Wait for
-    the brief to render in the Chickens tab. Save a screenshot of the
-    brief as `chickens-gemma4-brief.png`.
+Summary results: `evalProbe: {ok: true, value: 1}` → **sandbox CSP fix works**
+(`new Function()` is allowed inside `agent-sandbox.html`); `errorsCount: 0`
+across SW + popup + sidepanel + sandbox.
 
-If step 10 also produces a brief without an `EvalError` in the offscreen
-DevTools, the runtime fix is confirmed end-to-end.
+### Run B — Real-browser verification with chrome://extensions errors panel
+
+Captured by a parallel verification run using Brave Browser (Chromium-based).
+Walks the full `chrome://extensions` flow and DOM-inspects the extension card
+for any errors button.
+
+| Artifact | Path |
+|---|---|
+| Popup rendering (hook copy) | `2026-05-15-baseline-popup-rendering.png` |
+| Sidepanel rendering (hook copy) | `2026-05-15-baseline-sidepanel-rendering.png` |
+| chrome://extensions Coop card (no errors button) | `2026-05-15-baseline-extensions-errors-panel.png` |
+| Run report (errorsEmpty, extension card state) | `2026-05-15-baseline-chrome-baseline-report.json` |
+
+Report results: `errorsEmpty: true`, `extensionCard.hasErrorButton: false`,
+`serviceWorkerStillRegistered: true`. The chrome://extensions card screenshot
+shows the Coop v1 extension card with no errors panel surfaced — the brief's
+"errors panel is clean" check is satisfied.
+
+## Sat 12:00 PDT escalation check — PASS
+
+Per the brief:
+
+- ✅ Unpacked Chrome load is clean (extension ID stable across runs)
+- ✅ Popup renders with hook copy
+- ✅ SW errors panel is clean (no errors button on the extension card)
+
+## Still pending: multimodal inference round-trip
+
+The Sat baseline confirms the **rendering and CSP path are clean** but does
+not confirm Gemma 4 actually completes a text+image+audio inference. The
+multimodal pipeline is statically verified:
+
+- `runner-skills-completion.ts:86-103` extracts `imageUrl`, `audioUrl`,
+  `audioSamplingRate` from the observation payload and propagates them
+  through `completeSkillOutput`.
+- `gemma4-worker.ts:143-157` calls `load_image(imageUrl)` and
+  `read_audio(audioUrl, samplingRate ?? 16000)` and passes both to
+  `processor()` alongside the text prompt.
+- `gemma4-bridge.ts:14-24` declares the request shape that includes all three
+  modalities.
+- All 16 bridge/worker unit tests pass; `bun run validate smoke` and
+  `bun run validate:store-readiness` are green.
+
+The runtime confirmation requires:
+
+1. A real Chrome (Canary / Beta) with stable WebGPU, OR
+2. A focused Playwright script that drives the demo arc (seed coop, attach
+   image + audio, trigger agent cycle), accepting that the first run
+   triggers a ~3 GB Gemma 4 E2B model download.
+
+Sun May 17 dry run is when this is captured (see `.plans/demo-shooting-script.md`
+for the staging plan).
 
 ## Stash recovery
 
@@ -72,3 +88,14 @@ stash@{0}: agent-infra + extension WIP carried over from main (2026-05-15 pre-ha
 
 Recover with `git stash apply stash@{0}` on a fresh `chore/agent-infra`
 branch off `main` if/when they need to land.
+
+## How to reproduce
+
+```bash
+cd packages/extension && bun run build      # ~107s
+cd ../.. && node scripts/verify-real-chrome.cjs
+```
+
+The script writes evidence to this directory, captures console errors, and
+exits non-zero if anything is broken. Run with `COOP_VERIFY_LABEL=foo` to
+suffix the artifact filenames.
