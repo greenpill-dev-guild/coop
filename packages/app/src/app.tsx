@@ -124,7 +124,7 @@ export function resolveRootDestination(
   surface: Pick<AppSurface, 'isMobile' | 'isStandalone'>,
   hasActivePairing: boolean,
 ): Extract<AppPathname, '/landing' | '/pair' | '/receiver'> {
-  if (!surface.isMobile && !surface.isStandalone) {
+  if (!surface.isStandalone) {
     return '/landing';
   }
 
@@ -184,6 +184,7 @@ export async function resetReceiverDb() {
       await receiverDb.receiverCaptures.clear();
       await receiverDb.receiverBlobs.clear();
       await receiverDb.settings.delete('receiver-device-identity');
+      await receiverDb.settings.delete('receiver-install-nudge-dismissed');
     },
   );
 }
@@ -329,11 +330,13 @@ export function RootApp({
     soundPreferences,
     hapticPreferences,
     installPrompt,
+    installNudgeDismissed,
     receiverNotificationsEnabled,
     isMountedRef,
     ensureDeviceIdentity,
     notifyReceiverEvent,
     setReceiverNotificationPreference,
+    dismissInstallNudge,
     installApp,
   } = settings;
 
@@ -363,6 +366,7 @@ export function RootApp({
     shareCapture,
     copyCaptureLink,
     downloadCapture,
+    removeCapture,
   } = capture;
 
   // --- Hook 3: Receiver sync (Yjs doc, relay, reconciliation) ---
@@ -453,8 +457,11 @@ export function RootApp({
 
   // --- Derived state ---
   const pairingStatus = pairing ? getReceiverPairingStatus(pairing) : null;
-  const pairedNestLabel = pairing
-    ? `${pairing.coopDisplayName} · ${pairing.memberDisplayName}`
+  const pairedNestDisplay = pairing
+    ? {
+        coopDisplayName: pairing.coopDisplayName,
+        memberDisplayName: pairing.memberDisplayName,
+      }
     : null;
   const currentUrl = new URL(window.location.href);
   const isPublicDevOrigin = import.meta.env.DEV && !isLocalHostname(currentUrl.hostname);
@@ -760,13 +767,14 @@ export function RootApp({
       pairingStatusLabel={pairingStatusLabel(pairingStatus?.status)}
       captureCount={captures.length}
       message={message}
-      pairedNestLabel={pairedNestLabel}
+      pairedNestDisplay={pairedNestDisplay}
       installPrompt={installPrompt}
-      showInstallNudge={appSurface.isMobile && !appSurface.isStandalone}
+      showInstallNudge={appSurface.isMobile && !appSurface.isStandalone && !installNudgeDismissed}
       installNudgeMessage={installNudgeMessage}
       canNotify={browserUxCapabilities.canNotify}
       notificationsEnabled={receiverNotificationsEnabled}
       onInstall={installApp}
+      onDismissInstallNudge={() => void dismissInstallNudge()}
       onToggleNotifications={() =>
         void setReceiverNotificationPreference(!receiverNotificationsEnabled)
       }
@@ -803,15 +811,12 @@ export function RootApp({
           isRecording={isRecording}
           newestCapture={newestCapture ?? null}
           hatchedCaptureId={hatchedCaptureId}
-          captures={captures}
           pairingReady={pairingStatus?.status === 'ready'}
-          canShare={browserUxCapabilities.canShare}
           photoInputRef={photoInputRef}
           fileInputRef={fileInputRef}
           onStartRecording={() => void startRecording()}
           onFinishRecording={finishRecording}
           onPickFile={onPickFile}
-          onShareCapture={(card) => void shareCapture(card)}
           onNavigateInbox={() => navigate('/inbox')}
           onNavigatePair={() => navigate('/pair')}
         />
@@ -825,6 +830,7 @@ export function RootApp({
           onShareCapture={(card) => void shareCapture(card)}
           onCopyCaptureLink={(cap) => void copyCaptureLink(cap)}
           onDownloadCapture={(card) => void downloadCapture(card)}
+          onRemoveCapture={(cap) => void removeCapture(cap)}
           onRetrySync={(id) => void retrySync(id)}
         />
       ) : null}

@@ -73,6 +73,14 @@ describe('landing page', () => {
     expect(screen.getByText(/^Chicken or egg\? Neither —$/)).toBeInTheDocument();
     expect(screen.getByText(/^you need a coop first\.$/)).toBeInTheDocument();
     expect(screen.getByText(/turning knowledge into opportunity/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^curate your coop$/i })).toHaveAttribute(
+      'href',
+      '#ritual',
+    );
+    expect(screen.getByRole('link', { name: /^see how it works$/i })).toHaveAttribute(
+      'href',
+      '#how-it-works',
+    );
     expect(container.querySelector('.thought-bubble')).not.toBeNull();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^curate your coop$/i })).toBeInTheDocument();

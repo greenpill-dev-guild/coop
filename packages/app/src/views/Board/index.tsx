@@ -210,12 +210,12 @@ export function BoardView({
             <p className="eyebrow">Read-only board</p>
             <h1>The board needs a coop snapshot</h1>
             <p className="board-lede">
-              Open the board from the extension sidepanel so it can hand off a member-scoped
-              snapshot.
+              This public board opens from a shared coop snapshot link. Ask a member to share a
+              current snapshot, or start from the landing page to set up a coop.
             </p>
             <div className="board-empty-nest" data-testid="board-empty-nest" />
             <a className="button button-secondary" href="/landing">
-              Back to landing
+              Set up a coop
             </a>
           </section>
         </main>
@@ -351,7 +351,7 @@ export function BoardView({
               </div>
             ) : (
               <div className="empty-state">
-                No coop snapshot proof yet. Save one from the extension.
+                No coop snapshot proof yet. Ask a member to share a snapshot with saved proof.
               </div>
             )}
           </section>
@@ -404,7 +404,8 @@ export function BoardView({
               ))}
               {receiptDetails.length === 0 ? (
                 <div className="empty-state">
-                  Saved proof appears here once the extension keeps a find or snapshot.
+                  Saved proof appears here once members share a snapshot with saved finds or
+                  receipts.
                 </div>
               ) : null}
             </div>

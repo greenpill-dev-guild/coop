@@ -306,6 +306,22 @@ pre {
   text-shadow: 0 0 20px rgba(255, 250, 244, 0.92);
 }
 
+.hero-cta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.hero-cta-row .button {
+  box-shadow: 0 12px 28px rgba(79, 46, 31, 0.14);
+}
+
+.hero-cta-row .button-secondary {
+  background: rgba(255, 252, 246, 0.76);
+}
+
 .hero-note {
   max-width: 24rem;
 }
@@ -697,9 +713,10 @@ pre {
 
 .ritual-section {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   isolation: isolate;
-  padding: 0.75rem 1rem 2rem;
+  scroll-margin-top: 1rem;
+  padding: 1.25rem 1rem 2rem;
 }
 
 .ritual-section::before {
@@ -712,7 +729,7 @@ pre {
   transform: translateX(-50%);
   background: radial-gradient(circle at 18% 12%, rgba(255, 160, 60, 0.14), transparent 24rem),
     radial-gradient(circle at 86% 14%, rgba(200, 80, 40, 0.1), transparent 22rem),
-    linear-gradient(180deg, transparent 0%, #fff5eb 5%, #ffecd2 100%);
+    linear-gradient(180deg, #fff5eb 0%, #fff5eb 12%, #ffecd2 100%);
   z-index: -1;
 }
 
@@ -3237,9 +3254,21 @@ pre {
     height: 28rem;
   }
 
+  .story-journey .journey-scene {
+    height: 20rem;
+  }
+
   .journey-panel {
     width: min(100%, calc(100% - 1rem));
     padding-top: 4.5rem;
+  }
+
+  .hero-panel {
+    padding-top: 0.75rem;
+  }
+
+  .hero-shell {
+    padding-top: 0;
   }
 
   .journey-scene-inner {
@@ -3259,10 +3288,19 @@ pre {
   .hero-copy {
     max-width: 100%;
     margin-top: 0;
+    padding: 0 0.25rem;
   }
 
   .hero-title-line-bottom {
     white-space: normal;
+  }
+
+  .hero-cta-row {
+    gap: 0.5rem;
+  }
+
+  .hero-cta-row .button {
+    flex: 1 1 10rem;
   }
 
   .hero-stage {
@@ -3581,7 +3619,7 @@ html.has-receiver {
 
 .receiver-topbar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 0.65rem;
   padding: calc(env(safe-area-inset-top, 0px) + 0.65rem) 1rem 0.55rem;
@@ -3596,8 +3634,13 @@ html.has-receiver {
 
 .receiver-mark-link {
   position: relative;
-  display: inline-flex;
+  display: inline-grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--coop-radius-icon);
 }
 
 .receiver-mark {
@@ -3638,6 +3681,7 @@ html.has-receiver {
   line-height: 1.2;
   color: var(--coop-brown);
   text-align: center;
+  padding-right: 44px;
   text-wrap: balance;
 }
 
@@ -3646,10 +3690,10 @@ html.has-receiver {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
-  border-radius: var(--coop-radius-sm);
+  border-radius: var(--coop-radius-icon);
   background: transparent;
   color: var(--coop-brown-soft);
   cursor: pointer;
@@ -4045,26 +4089,29 @@ html.has-receiver {
   color: white;
 }
 
-/* ── Info card with checklist ── */
+/* ── Pairing trust disclosure ── */
 
-.pair-info-card {
-  position: relative;
+.pair-trust-disclosure {
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--coop-radius-input);
+  border: 1px solid var(--coop-line);
+  background: rgba(255, 255, 255, 0.58);
 }
 
-.pair-info-card::before {
-  content: "";
-  position: absolute;
-  inset: auto -12% -18% auto;
-  width: 10rem;
-  height: 10rem;
-  border-radius: var(--coop-radius-pill);
-  background: radial-gradient(circle, var(--coop-green-14), transparent 68%);
-  pointer-events: none;
+.pair-trust-disclosure summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--coop-brown);
+  font-weight: 700;
+  list-style-position: inside;
 }
 
 .pair-checklist {
   list-style: none;
-  margin: 0;
+  margin: 0.35rem 0 0;
   padding: 0;
   display: grid;
   gap: 0.55rem;
@@ -4085,7 +4132,7 @@ html.has-receiver {
   margin-top: 0.15rem;
 }
 
-.pair-info-card .quiet-note {
+.pair-trust-disclosure .quiet-note {
   margin-top: 0.65rem;
 }
 
@@ -4115,6 +4162,11 @@ html.has-receiver {
   border-radius: var(--coop-radius-pill);
   background: radial-gradient(circle, rgba(253, 138, 1, 0.1), transparent 64%);
   pointer-events: none;
+}
+
+.receiver-capture-card {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .egg-stage {
@@ -4220,6 +4272,15 @@ html.has-receiver {
 .receiver-actions-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 1rem;
+  position: sticky;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  z-index: 2;
+  padding: 0.4rem;
+  margin-inline: -0.4rem;
+  border-radius: var(--coop-radius-input-lg);
+  background: rgba(255, 252, 249, 0.82);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .capture-action-btn {
@@ -4254,6 +4315,57 @@ html.has-receiver {
   height: 1.25rem;
   flex-shrink: 0;
   opacity: 0.72;
+}
+
+.receiver-last-saved-strip {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.2rem;
+  padding: 0.85rem;
+  border-radius: var(--coop-radius-input-lg);
+  border: 1px solid var(--coop-brown-8);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.receiver-last-saved-strip.is-newborn {
+  border-color: color-mix(in srgb, var(--coop-green) 30%, var(--coop-brown-8));
+  box-shadow: 0 0 0 3px var(--coop-green-12);
+}
+
+.receiver-last-saved-strip.is-empty {
+  color: var(--coop-brown-soft);
+}
+
+.receiver-last-saved-strip.is-empty p,
+.receiver-last-saved-copy p {
+  margin: 0;
+}
+
+.receiver-last-saved-copy {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.receiver-last-saved-copy strong,
+.receiver-last-saved-copy p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiver-last-saved-kind {
+  color: var(--coop-green);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.receiver-last-saved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -4838,7 +4950,7 @@ audio {
 
 /* ── Settings trigger button ── */
 
-.receiver-settings-trigger {
+.receiver-status-summary {
   display: flex;
   align-items: center;
   gap: var(--coop-space-sm);
@@ -4859,21 +4971,40 @@ audio {
     var(--coop-ease);
 }
 
-.receiver-settings-trigger:hover {
+.receiver-status-summary:hover {
   background: rgba(255, 252, 249, 0.95);
   box-shadow: var(--coop-shadow-sm);
 }
 
-.receiver-settings-trigger-icon {
+.receiver-status-summary-icon {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 
-.receiver-settings-trigger-chevron {
+.receiver-status-summary-label {
+  color: var(--coop-brown);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receiver-status-summary-chevron {
   margin-left: auto;
   flex-shrink: 0;
   opacity: 0.5;
+}
+
+.receiver-live-message {
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--coop-radius-input);
+  border: 1px solid var(--coop-green-16);
+  background: rgba(255, 252, 249, 0.86);
+  color: var(--coop-brown);
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .receiver-install-banner {
@@ -4996,6 +5127,24 @@ audio {
 
 .receiver-list .nest-item-card {
   scroll-snap-align: start;
+  gap: 0.58rem;
+  padding: 0.95rem 1rem 1rem 1.1rem;
+}
+
+.receiver-item-actions,
+.receiver-action-sheet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.receiver-action-sheet-list {
+  flex-direction: column;
+}
+
+.receiver-action-sheet-list .button {
+  justify-content: center;
+  width: 100%;
 }
 
 /* ── Pull-to-refresh indicator ── */
@@ -5120,6 +5269,16 @@ audio {
   min-height: 100vh;
   min-height: 100dvh;
   padding: 1.5rem 1.5rem 2rem;
+  color: var(--board-text);
+  --board-text: rgba(37, 25, 16, 0.92);
+  --board-text-soft: rgba(37, 25, 16, 0.68);
+  --board-node-text: rgba(37, 25, 16, 0.82);
+  --board-node-text-soft: rgba(37, 25, 16, 0.68);
+  --board-card-bg: rgba(255, 252, 245, 0.96);
+  --board-soft-panel: rgba(255, 255, 255, 0.72);
+  --board-chip-bg: var(--coop-brown-4);
+  --board-border: var(--coop-brown-8);
+  --board-accent: #214f3a;
 }
 
 .board-shell-main {
@@ -5199,7 +5358,7 @@ audio {
 .board-hero-card {
   border-radius: var(--coop-radius-card-lg);
   border: 1px solid var(--coop-brown-12);
-  background: rgba(255, 252, 245, 0.96);
+  background: var(--board-card-bg);
   box-shadow: var(--coop-shadow-lg);
 }
 
@@ -5214,7 +5373,7 @@ audio {
 
 .board-lede {
   max-width: 48rem;
-  color: rgba(37, 25, 16, 0.76);
+  color: var(--board-text-soft);
 }
 
 .board-summary-row {
@@ -5242,8 +5401,8 @@ audio {
   margin-top: 1rem;
   padding: 0.95rem;
   border-radius: var(--coop-radius-input-lg);
-  border: 1px solid var(--coop-brown-8);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--board-border);
+  background: var(--board-soft-panel);
   display: grid;
   gap: 0.75rem;
 }
@@ -5256,7 +5415,7 @@ audio {
 }
 
 .board-relationship-header span {
-  color: rgba(37, 25, 16, 0.68);
+  color: var(--board-text-soft);
   font-size: 0.84rem;
 }
 
@@ -5273,8 +5432,8 @@ audio {
   flex-wrap: wrap;
   padding: 0.75rem 0.8rem;
   border-radius: var(--coop-radius-input);
-  background: var(--coop-brown-4);
-  color: rgba(37, 25, 16, 0.82);
+  background: var(--board-chip-bg);
+  color: var(--board-text);
 }
 
 .board-relationship-label {
@@ -5284,13 +5443,13 @@ audio {
   padding: 0.18rem 0.5rem;
   border-radius: var(--coop-radius-pill);
   background: rgba(33, 79, 58, 0.12);
-  color: #214f3a;
+  color: var(--board-accent);
   font-size: 0.72rem;
   font-weight: 700;
 }
 
 .board-relationship-arrow {
-  color: rgba(37, 25, 16, 0.54);
+  color: var(--board-text-soft);
 }
 
 .board-sidebar {
@@ -5308,7 +5467,7 @@ audio {
 .board-story-stats div {
   padding: 0.85rem;
   border-radius: var(--coop-radius-photo);
-  background: var(--coop-brown-6);
+  background: var(--board-chip-bg);
   display: grid;
   gap: 0.15rem;
 }
@@ -5318,10 +5477,8 @@ audio {
 }
 
 .board-story-stats span,
-.board-receipt-grid dt,
-.coop-board-subtitle,
-.coop-board-footnote {
-  color: rgba(37, 25, 16, 0.68);
+.board-receipt-grid dt {
+  color: var(--board-text-soft);
 }
 
 .board-story-highlight {
@@ -5338,8 +5495,8 @@ audio {
 .board-receipt-card {
   padding: 0.95rem;
   border-radius: var(--coop-radius-photo);
-  border: 1px solid var(--coop-brown-8);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--board-border);
+  background: var(--board-soft-panel);
   display: grid;
   gap: 0.45rem;
 }
@@ -5381,7 +5538,7 @@ audio {
 .coop-board-node p {
   margin: 0;
   font-size: 0.88rem;
-  color: rgba(37, 25, 16, 0.82);
+  color: var(--board-node-text);
 }
 
 .coop-board-node-topline {
@@ -5397,7 +5554,7 @@ audio {
   padding: 0.2rem 0.55rem;
   border-radius: var(--coop-radius-pill);
   background: var(--coop-brown-8);
-  color: rgba(37, 25, 16, 0.82);
+  color: var(--board-node-text);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -5409,10 +5566,12 @@ audio {
 }
 
 .coop-board-subtitle {
+  color: var(--board-node-text-soft);
   font-size: 0.78rem;
 }
 
 .coop-board-footnote {
+  color: var(--board-node-text-soft);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -5579,20 +5738,51 @@ audio {
     background: rgba(0, 0, 0, 0.7);
   }
 
+  .board-shell {
+    --board-text: rgba(255, 246, 235, 0.94);
+    --board-text-soft: rgba(255, 231, 210, 0.74);
+    --board-card-bg: rgba(30, 24, 20, 0.96);
+    --board-soft-panel: rgba(255, 246, 235, 0.08);
+    --board-chip-bg: rgba(255, 246, 235, 0.1);
+    --board-border: rgba(255, 231, 210, 0.16);
+    --board-accent: #c4de8a;
+  }
+
+  .board-shell .eyebrow {
+    color: #c4de8a;
+  }
+
   .board-topbar,
   .board-stage-card,
   .board-sidebar-card,
   .board-hero-card {
-    background: rgba(30, 24, 20, 0.96);
+    background: var(--board-card-bg);
+    border-color: var(--board-border);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  }
+
+  .board-empty-nest {
+    border-color: rgba(255, 231, 210, 0.24);
   }
 
   .board-canvas {
+    border-color: var(--board-border);
     background: radial-gradient(
       circle at top left,
       rgba(30, 26, 20, 0.95),
       rgba(26, 22, 18, 0.92) 38%,
       rgba(22, 18, 14, 0.92) 100%
     );
+  }
+
+  .board-relationship-label {
+    background: rgba(138, 184, 64, 0.16);
+    color: #d5eca1;
+  }
+
+  .coop-board-chip.is-archive {
+    background: rgba(253, 138, 1, 0.16);
+    color: #ffc176;
   }
 
   .error-boundary-button {
@@ -5603,7 +5793,8 @@ audio {
     background: rgba(30, 24, 20, 0.96);
   }
 
-  .receiver-settings-trigger {
+  .receiver-status-summary,
+  .receiver-live-message {
     background: rgba(30, 24, 20, 0.85);
   }
 

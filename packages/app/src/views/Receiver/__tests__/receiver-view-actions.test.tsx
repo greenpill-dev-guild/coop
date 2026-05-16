@@ -24,11 +24,10 @@ describe('receiver view actions', () => {
     vi.restoreAllMocks();
   });
 
-  it('wires capture controls, file pickers, and preview actions', () => {
+  it('wires capture controls, file pickers, and last-saved actions', () => {
     const onStartRecording = vi.fn();
     const onFinishRecording = vi.fn();
     const onPickFile = vi.fn();
-    const onShareCapture = vi.fn();
     const onNavigateInbox = vi.fn();
     const onNavigatePair = vi.fn();
     const inputClick = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
@@ -39,22 +38,18 @@ describe('receiver view actions', () => {
       mimeType: 'image/webp',
       byteSize: 2048,
     });
-    const newestCard = { capture: newestCapture, previewUrl: 'blob:photo' };
 
     const { container, rerender } = render(
       <CaptureView
         isRecording={false}
         newestCapture={newestCapture}
         hatchedCaptureId="capture-photo"
-        captures={[newestCard]}
         pairingReady={false}
-        canShare
         photoInputRef={{ current: null }}
         fileInputRef={{ current: null }}
         onStartRecording={onStartRecording}
         onFinishRecording={onFinishRecording}
         onPickFile={onPickFile}
-        onShareCapture={onShareCapture}
         onNavigateInbox={onNavigateInbox}
         onNavigatePair={onNavigatePair}
       />,
@@ -83,31 +78,27 @@ describe('receiver view actions', () => {
       },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open inbox' }));
+    expect(screen.queryByText('Hatch Preview')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View Roost' }));
     fireEvent.click(screen.getByRole('button', { name: 'Mate to sync' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
 
     expect(onStartRecording).toHaveBeenCalledTimes(1);
     expect(inputClick).toHaveBeenCalledTimes(2);
     expect(onPickFile.mock.calls.map(([, kind]) => kind)).toEqual(['photo', 'file']);
     expect(onNavigateInbox).toHaveBeenCalledTimes(1);
     expect(onNavigatePair).toHaveBeenCalledTimes(1);
-    expect(onShareCapture).toHaveBeenCalledWith(newestCard);
 
     rerender(
       <CaptureView
         isRecording
         newestCapture={newestCapture}
         hatchedCaptureId="capture-photo"
-        captures={[newestCard]}
         pairingReady
-        canShare={false}
         photoInputRef={{ current: null }}
         fileInputRef={{ current: null }}
         onStartRecording={onStartRecording}
         onFinishRecording={onFinishRecording}
         onPickFile={onPickFile}
-        onShareCapture={onShareCapture}
         onNavigateInbox={onNavigateInbox}
         onNavigatePair={onNavigatePair}
       />,
@@ -121,10 +112,11 @@ describe('receiver view actions', () => {
     expect(onFinishRecording).toHaveBeenCalledWith('cancel');
   });
 
-  it('renders inbox media states and routes share, copy, download, and retry actions', () => {
+  it('renders inbox media states and routes primary and secondary actions', () => {
     const onShareCapture = vi.fn();
     const onCopyCaptureLink = vi.fn();
     const onDownloadCapture = vi.fn();
+    const onRemoveCapture = vi.fn();
     const onRetrySync = vi.fn();
     const linkCard = {
       capture: makeCapture({
@@ -173,6 +165,7 @@ describe('receiver view actions', () => {
         onShareCapture={onShareCapture}
         onCopyCaptureLink={onCopyCaptureLink}
         onDownloadCapture={onDownloadCapture}
+        onRemoveCapture={onRemoveCapture}
         onRetrySync={onRetrySync}
       />,
     );
@@ -194,13 +187,20 @@ describe('receiver view actions', () => {
       throw new Error('Expected receiver inbox articles to render');
     }
 
-    fireEvent.click(within(linkArticle).getByRole('button', { name: 'Share' }));
-    fireEvent.click(within(linkArticle).getByRole('button', { name: 'Copy link' }));
-    fireEvent.click(within(failedFileArticle).getByRole('button', { name: 'Download local file' }));
+    fireEvent.click(within(linkArticle).getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('dialog', { name: /actions for shared trail/i })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+    fireEvent.click(within(linkArticle).getByRole('button', { name: 'More actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    fireEvent.click(within(linkArticle).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(failedFileArticle).getByRole('button', { name: 'More actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download local file' }));
     fireEvent.click(within(failedFileArticle).getByRole('button', { name: 'Retry sync' }));
 
     expect(onShareCapture).toHaveBeenCalledWith(linkCard);
     expect(onCopyCaptureLink).toHaveBeenCalledWith(linkCard.capture);
+    expect(onRemoveCapture).toHaveBeenCalledWith(linkCard.capture);
     expect(onDownloadCapture).toHaveBeenCalledWith(failedFileCard);
     expect(onRetrySync).toHaveBeenCalledWith('file-1');
   });

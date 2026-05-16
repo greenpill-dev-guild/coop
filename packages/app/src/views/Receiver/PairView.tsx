@@ -1,5 +1,5 @@
 import type { ReceiverPairingPayload } from '@coop/shared/app';
-import type { RefObject } from 'react';
+import { type RefObject, useEffect, useState } from 'react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 
@@ -125,44 +125,63 @@ export function PairView({
   onConfirmPairing,
   onCancelPairing,
 }: PairViewProps) {
+  const [pasteOpen, setPasteOpen] = useState(() =>
+    Boolean(pairingInput || pairingError || pendingPairing),
+  );
+
+  useEffect(() => {
+    if (pairingInput || pairingError || pendingPairing) {
+      setPasteOpen(true);
+    }
+  }, [pairingError, pairingInput, pendingPairing]);
+
   return (
     <section className="receiver-grid">
       <Card>
         <p className="eyebrow">Mate</p>
-        <h2>Paste a nest code, scan a QR, or open a coop link.</h2>
+        <h2>Mate this phone to a trusted Coop browser.</h2>
         <p className="lede">
-          This stays local to this browser. Once joined, anything already hatched here can queue
-          into the extension&apos;s private intake.
+          Scan the QR from your browser extension. Anything already saved here can sync after you
+          join.
         </p>
-        <form
-          className="receiver-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onReviewPairing(pairingInput);
-          }}
-        >
-          <label className="receiver-label" htmlFor="pairing-payload">
-            {LockIcon}
-            Nest code or coop link
-          </label>
-          <textarea
-            id="pairing-payload"
-            onChange={(event) => onPairingInputChange(event.target.value)}
-            placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../pair#payload=..."
-            value={pairingInput}
-          />
-          <div className="cta-row pair-cta-row">
-            <Button variant="primary" type="submit" className="pair-cta-primary">
+        <div className="cta-row pair-cta-row">
+          <Button
+            variant="primary"
+            onClick={() => void onStartQrScanner()}
+            className="pair-cta-primary"
+          >
+            Scan QR
+          </Button>
+          <Button variant="secondary" onClick={() => setPasteOpen((open) => !open)}>
+            Paste code
+          </Button>
+          <Button variant="secondary" onClick={onNavigateHatch}>
+            Continue without pairing
+          </Button>
+        </div>
+        {pasteOpen ? (
+          <form
+            className="receiver-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onReviewPairing(pairingInput);
+            }}
+          >
+            <label className="receiver-label" htmlFor="pairing-payload">
+              {LockIcon}
+              Nest code or coop link
+            </label>
+            <textarea
+              id="pairing-payload"
+              onChange={(event) => onPairingInputChange(event.target.value)}
+              placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../pair#payload=..."
+              value={pairingInput}
+            />
+            <Button variant="primary" type="submit">
               Check nest code
             </Button>
-            <Button variant="secondary" onClick={() => void onStartQrScanner()}>
-              Scan QR
-            </Button>
-            <Button variant="secondary" onClick={onNavigateHatch}>
-              Hatch offline
-            </Button>
-          </div>
-        </form>
+          </form>
+        ) : null}
         {isQrScannerOpen ? (
           <dialog
             className="qr-scanner-dialog"
@@ -239,34 +258,30 @@ export function PairView({
             </div>
           </div>
         ) : null}
-      </Card>
-
-      <Card>
-        <div className="pair-info-card">
-          <p className="eyebrow">What this nest code adds</p>
+        <details className="pair-trust-disclosure">
+          <summary>What pairing adds</summary>
           <ul className="pair-checklist">
             <li>
               {CheckIcon}
-              <span>Device-local receiver identity</span>
+              <span>This phone&apos;s receiver identity</span>
             </li>
             <li>
               {CheckIcon}
-              <span>Current coop and member context</span>
+              <span>Coop and member context</span>
             </li>
             <li>
               {CheckIcon}
-              <span>Private sync room details for extension intake</span>
+              <span>Private intake sync details</span>
             </li>
             <li>
               {CheckIcon}
-              <span>Nothing publishes to shared coop memory automatically</span>
+              <span>No automatic publishing</span>
             </li>
           </ul>
           <p className="quiet-note">
-            Existing local captures stay local until a valid nest code is accepted, whether the
-            extension is running locally or against the production PWA.
+            Existing captures stay saved on this phone until a valid nest code is accepted.
           </p>
-        </div>
+        </details>
       </Card>
     </section>
   );

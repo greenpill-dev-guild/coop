@@ -95,17 +95,16 @@ self.addEventListener('fetch', (event) => {
     request.destination === 'font'
   ) {
     event.respondWith(
-      caches.match(request).then(async (cached) => {
-        const network = fetch(request)
-          .then((response) => {
-            const responseClone = response.clone();
-            void caches.open(ASSET_CACHE).then((cache) => cache.put(request, responseClone));
-            return response;
-          })
-          .catch(() => cached);
-
-        return cached || network;
-      }),
+      fetch(request)
+        .then((response) => {
+          const responseClone = response.clone();
+          void caches.open(ASSET_CACHE).then((cache) => cache.put(request, responseClone));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || new Response('Offline', { status: 503 });
+        }),
     );
   }
 });

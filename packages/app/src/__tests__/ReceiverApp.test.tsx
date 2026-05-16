@@ -4,7 +4,7 @@ import {
   createReceiverPairingPayload,
   encodeReceiverPairingPayload,
 } from '@coop/shared';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetReceiverDb } from '../app';
@@ -43,6 +43,10 @@ describe('receiver app routes', () => {
     expect(screen.getByRole('link', { name: 'Mate' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Hatch' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: /settings and status: not paired · 0 saved/i }),
+    ).toBeVisible();
+    expect(screen.queryByText(/about coop/i)).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /start recording/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /take photo/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /attach file/i })).toBeVisible();
@@ -65,7 +69,10 @@ describe('receiver app routes', () => {
     await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
+    expect(screen.getByRole('button', { name: /scan qr/i })).toBeVisible();
+    expect(screen.queryByLabelText(/nest code or coop link/i)).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /paste code/i }));
     fireEvent.change(await screen.findByLabelText(/nest code or coop link/i), {
       target: { value: pairingCode },
     });
@@ -85,10 +92,18 @@ describe('receiver app routes', () => {
       () => {
         expect(screen.getByRole('heading', { name: /^Hatch$/i })).toBeVisible();
         expect(screen.getByText(/paired to river coop as mina/i)).toBeVisible();
-        expect(screen.getByText(/river coop · mina/i)).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: /settings and status: paired · 0 saved/i }),
+        ).toBeVisible();
       },
       { timeout: 3000 },
     );
+
+    await user.click(
+      screen.getByRole('button', { name: /settings and status: paired · 0 saved/i }),
+    );
+    expect(await screen.findByText('River Coop')).toBeVisible();
+    expect(screen.getByText('Mina')).toBeVisible();
 
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 50));
@@ -160,7 +175,9 @@ describe('receiver app routes', () => {
     expect(
       await screen.findByText(/nest item saved locally/i, {}, { timeout: 10_000 }),
     ).toBeVisible();
-    expect(await screen.findByText(/local only/i, {}, { timeout: 10_000 })).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: /saved on this phone/i }, { timeout: 10_000 }),
+    ).toBeVisible();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('link', { name: 'Roost' }));
@@ -170,7 +187,49 @@ describe('receiver app routes', () => {
       expect(screen.getByText(/your roost/i)).toBeVisible();
     });
     expect(screen.getAllByText('field-note.txt').length).toBeGreaterThan(0);
+    const item = screen.getByText('field-note.txt').closest('article');
+    expect(item).not.toBeNull();
+    if (!item) {
+      throw new Error('Expected field note item to render');
+    }
+    expect(within(item).getByRole('button', { name: /more actions/i })).toBeVisible();
+    expect(within(item).getByRole('button', { name: /remove/i })).toBeVisible();
+    expect(within(item).queryByRole('button', { name: /retry sync/i })).not.toBeInTheDocument();
+    await user.click(within(item).getByRole('button', { name: /more actions/i }));
+    expect(
+      await screen.findByRole('dialog', { name: /actions for field-note.txt/i }),
+    ).toBeVisible();
     expect(screen.getByRole('button', { name: /download local file/i })).toBeVisible();
+  });
+
+  it('removes a local receiver capture from the inbox', async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    try {
+      await renderRootApp();
+
+      const fileInput = await screen.findByLabelText('Attach file');
+      const file = new File(['receiver capture from test'], 'remove-me.txt', {
+        type: 'text/plain',
+      });
+
+      await user.upload(fileInput, file);
+
+      expect(await screen.findByText('remove-me.txt', {}, { timeout: 10_000 })).toBeVisible();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('link', { name: 'Roost' }));
+      });
+
+      await user.click(await screen.findByRole('button', { name: /remove/i }));
+
+      expect(confirmSpy).toHaveBeenCalledWith('Remove "remove-me.txt" from this phone?');
+      expect(await screen.findByText(/removed from this phone/i)).toBeVisible();
+      expect(screen.queryByText('remove-me.txt')).not.toBeInTheDocument();
+    } finally {
+      confirmSpy.mockRestore();
+    }
   });
 
   it('ingests a shared link handoff into the local inbox', async () => {
@@ -199,7 +258,14 @@ describe('receiver app routes', () => {
     expect(
       await screen.findByText('https://example.com/grant', {}, { timeout: 3_000 }),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: /copy link/i })).toBeVisible();
+    const linkItem = screen.getByText('Shared Grant').closest('article');
+    expect(linkItem).not.toBeNull();
+    if (!linkItem) {
+      throw new Error('Expected shared link item to render');
+    }
+    const sharedLinkUser = userEvent.setup();
+    await sharedLinkUser.click(within(linkItem).getByRole('button', { name: /more actions/i }));
+    expect(await screen.findByRole('button', { name: /copy link/i })).toBeVisible();
   });
 
   it('falls back cleanly when QR scanning is unavailable', async () => {

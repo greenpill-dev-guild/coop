@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useId, useRef } from 'react';
 
 type BottomSheetProps = {
   open: boolean;
@@ -12,6 +12,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragDeltaY = useRef(0);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -53,6 +54,8 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     <dialog
       className="bottom-sheet"
       ref={dialogRef}
+      aria-label={title ? undefined : 'Receiver sheet'}
+      aria-labelledby={title ? titleId : undefined}
       onClose={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
@@ -71,7 +74,11 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         <div className="bottom-sheet-handle" aria-hidden="true">
           <div className="bottom-sheet-handle-bar" />
         </div>
-        {title ? <h2 className="bottom-sheet-title">{title}</h2> : null}
+        {title ? (
+          <h2 className="bottom-sheet-title" id={titleId}>
+            {title}
+          </h2>
+        ) : null}
         <div className="bottom-sheet-body">{children}</div>
       </div>
     </dialog>

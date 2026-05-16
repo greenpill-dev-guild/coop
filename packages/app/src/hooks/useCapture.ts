@@ -7,6 +7,7 @@ import {
   createId,
   createReceiverCapture,
   createReceiverLinkCapture,
+  deleteReceiverCapture,
   getActiveReceiverPairing,
   getReceiverCaptureBlob,
   getReceiverPairingStatus,
@@ -81,6 +82,7 @@ export type CaptureState = {
   shareCapture: (card: CaptureCard) => Promise<void>;
   copyCaptureLink: (capture: ReceiverCapture) => Promise<void>;
   downloadCapture: (card: CaptureCard) => Promise<void>;
+  removeCapture: (capture: ReceiverCapture) => Promise<void>;
   refreshCaptures: () => Promise<CaptureCard[]>;
 };
 
@@ -482,6 +484,22 @@ export function useCapture(
     [setMessage],
   );
 
+  const removeCapture = useCallback(
+    async (capture: ReceiverCapture) => {
+      const confirmed =
+        typeof window.confirm !== 'function' ||
+        window.confirm(`Remove "${capture.title}" from this phone?`);
+      if (!confirmed) {
+        return;
+      }
+
+      await deleteReceiverCapture(db, capture.id);
+      setMessage('Removed from this phone.');
+      await refreshLocalStateRef.current();
+    },
+    [db, refreshLocalStateRef, setMessage],
+  );
+
   // Keep capturesRef in sync
   useEffect(() => {
     capturesRef.current = captures;
@@ -531,6 +549,7 @@ export function useCapture(
     shareCapture,
     copyCaptureLink,
     downloadCapture,
+    removeCapture,
     refreshCaptures,
   };
 }

@@ -11,6 +11,7 @@ describe('BottomSheet', () => {
     );
 
     expect(screen.getByRole('dialog')).toHaveAttribute('open');
+    expect(screen.getByRole('dialog', { name: 'Receiver actions' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Receiver actions' })).toBeInTheDocument();
     expect(screen.getByText('Sheet body')).toBeInTheDocument();
   });

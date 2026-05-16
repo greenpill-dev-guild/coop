@@ -4,6 +4,8 @@
       "title1": "Chicken or egg? Neither —",
       "title2": "you need a coop first.",
       "subtitle": "Turning knowledge into opportunity.",
+      "curateCta": "Curate your coop",
+      "howItWorksCta": "See how it works",
       "scrollHint": "Scroll down",
       "logoLabel": "Coop landing page"
     },
@@ -158,6 +160,8 @@
       "title1": "Sem mais",
       "title2": "galinhas soltas.",
       "subtitle": "Transformando conhecimento em oportunidade.",
+      "curateCta": "Organizar meu coop",
+      "howItWorksCta": "Ver como funciona",
       "scrollHint": "Rolar para baixo",
       "logoLabel": "Página inicial do Coop"
     },

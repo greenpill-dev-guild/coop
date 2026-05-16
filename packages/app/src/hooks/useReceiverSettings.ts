@@ -23,6 +23,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 const receiverNotificationSettingKey = 'receiver-notifications-enabled';
+const receiverInstallNudgeDismissedKey = 'receiver-install-nudge-dismissed';
 
 export type ReceiverSettingsState = {
   online: boolean;
@@ -32,12 +33,14 @@ export type ReceiverSettingsState = {
   soundPreferences: SoundPreferences;
   hapticPreferences: HapticPreferences;
   installPrompt: BeforeInstallPromptEvent | null;
+  installNudgeDismissed: boolean;
   receiverNotificationsEnabled: boolean;
   notificationPermission: string;
   isMountedRef: React.RefObject<boolean>;
   ensureDeviceIdentity: () => Promise<ReceiverDeviceIdentity>;
   notifyReceiverEvent: (title: string, body: string, tag: string) => Promise<void>;
   setReceiverNotificationPreference: (enabled: boolean) => Promise<void>;
+  dismissInstallNudge: () => Promise<void>;
   installApp: () => Promise<void>;
   toggleSound: () => void;
   toggleHaptics: () => void;
@@ -58,6 +61,7 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
   const [hapticPreferences, setHapticPreferencesState] =
     useState<HapticPreferences>(defaultHapticPreferences);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installNudgeDismissed, setInstallNudgeDismissed] = useState(false);
   const [receiverNotificationsEnabled, setReceiverNotificationsEnabledState] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
@@ -141,6 +145,14 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     }
   }, [installPrompt]);
 
+  const dismissInstallNudge = useCallback(async () => {
+    await db.settings.put({ key: receiverInstallNudgeDismissedKey, value: true });
+    if (isMountedRef.current) {
+      setInstallNudgeDismissed(true);
+      setMessage('Install reminder hidden.');
+    }
+  }, [db]);
+
   const toggleSound = useCallback(() => {
     const nextSound = { ...soundPreferences, enabled: !soundPreferences.enabled };
     setSoundPreferencesState(nextSound);
@@ -157,20 +169,30 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
   }, [db, hapticPreferences]);
 
   const refreshSettings = useCallback(async () => {
-    const [nextDevice, nextNotificationsEnabled, nextSoundPrefs, nextHapticPrefs] =
-      await Promise.all([
-        getReceiverDeviceIdentity(db),
-        (async () => {
-          const record = await db.settings.get(receiverNotificationSettingKey);
-          return record?.value === true;
-        })(),
-        getSoundPreferences(db),
-        getHapticPreferences(db),
-      ]);
+    const [
+      nextDevice,
+      nextNotificationsEnabled,
+      nextInstallNudgeDismissed,
+      nextSoundPrefs,
+      nextHapticPrefs,
+    ] = await Promise.all([
+      getReceiverDeviceIdentity(db),
+      (async () => {
+        const record = await db.settings.get(receiverNotificationSettingKey);
+        return record?.value === true;
+      })(),
+      (async () => {
+        const record = await db.settings.get(receiverInstallNudgeDismissedKey);
+        return record?.value === true;
+      })(),
+      getSoundPreferences(db),
+      getHapticPreferences(db),
+    ]);
 
     if (isMountedRef.current) {
       setDeviceIdentity(nextDevice);
       setReceiverNotificationsEnabledState(nextNotificationsEnabled);
+      setInstallNudgeDismissed(nextInstallNudgeDismissed);
       setSoundPreferencesState(nextSoundPrefs ?? defaultSoundPreferences);
       setHapticPreferencesState(nextHapticPrefs ?? defaultHapticPreferences);
       if (typeof Notification !== 'undefined') {
@@ -237,12 +259,14 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     soundPreferences,
     hapticPreferences,
     installPrompt,
+    installNudgeDismissed,
     receiverNotificationsEnabled,
     notificationPermission,
     isMountedRef,
     ensureDeviceIdentity,
     notifyReceiverEvent,
     setReceiverNotificationPreference,
+    dismissInstallNudge,
     installApp,
     toggleSound,
     toggleHaptics,

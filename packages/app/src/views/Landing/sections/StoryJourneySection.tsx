@@ -114,6 +114,14 @@ export function StoryJourneySection({
                 <span className="hero-title-line hero-title-line-bottom">{t('hero.title2')}</span>
               </h1>
               <p className="hero-subtitle">{t('hero.subtitle')}</p>
+              <div className="hero-cta-row">
+                <a className="button button-primary hero-cta-primary" href="#ritual">
+                  {t('hero.curateCta')}
+                </a>
+                <a className="button button-secondary" href="#how-it-works">
+                  {t('hero.howItWorksCta')}
+                </a>
+              </div>
               <p className="sr-only">
                 Eight chickens start apart in the meadow and converge as you scroll.
               </p>

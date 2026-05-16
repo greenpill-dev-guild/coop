@@ -8,26 +8,26 @@ type SyncPillProps = {
 function syncStateLabel(state: ReceiverCapture['syncState']) {
   switch (state) {
     case 'local-only':
-      return 'Local only';
+      return 'Saved on this phone';
     case 'queued':
-      return 'Queued';
+      return 'Ready to sync';
     case 'synced':
-      return 'Synced';
+      return 'Synced to intake';
     case 'failed':
-      return 'Failed';
+      return 'Needs retry';
   }
 }
 
 function syncDetailText(state: ReceiverCapture['syncState']) {
   switch (state) {
     case 'local-only':
-      return 'Saved on this device only';
+      return 'Saved on this phone. Pair when you are ready to sync.';
     case 'queued':
-      return 'Waiting for connection';
+      return 'Ready to sync through the paired browser.';
     case 'synced':
-      return 'Shared with your coop';
+      return 'Sent to private intake. Nothing publishes automatically.';
     case 'failed':
-      return 'Sync failed — tap to retry';
+      return 'Open Roost and tap Retry sync.';
   }
 }
 

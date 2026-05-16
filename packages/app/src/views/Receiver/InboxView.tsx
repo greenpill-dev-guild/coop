@@ -1,4 +1,6 @@
 import type { ReceiverCapture } from '@coop/shared/app';
+import { useState } from 'react';
+import { BottomSheet } from '../../components/BottomSheet';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { SyncPill } from '../../components/SyncPill';
@@ -13,6 +15,7 @@ type InboxViewProps = {
   onShareCapture: (card: CaptureCard) => void;
   onCopyCaptureLink: (capture: ReceiverCapture) => void;
   onDownloadCapture: (card: CaptureCard) => void;
+  onRemoveCapture: (capture: ReceiverCapture) => void;
   onRetrySync: (captureId: string) => void;
 };
 
@@ -36,8 +39,11 @@ export function InboxView({
   onShareCapture,
   onCopyCaptureLink,
   onDownloadCapture,
+  onRemoveCapture,
   onRetrySync,
 }: InboxViewProps) {
+  const [actionCard, setActionCard] = useState<CaptureCard | null>(null);
+
   return (
     <section className="receiver-grid">
       <Card className="receiver-inbox-card">
@@ -81,56 +87,82 @@ export function InboxView({
               {card.capture.kind === 'link' ? (
                 <p>{card.capture.note || 'Shared link saved locally.'}</p>
               ) : null}
-              {card.capture.kind !== 'link' && card.previewUrl ? (
+              <div className="receiver-item-actions">
+                <Button variant="secondary" size="small" onClick={() => setActionCard(card)}>
+                  More actions
+                </Button>
                 <Button
                   variant="secondary"
                   size="small"
-                  onClick={() => void onDownloadCapture(card)}
+                  onClick={() => void onRemoveCapture(card.capture)}
                 >
-                  Download local file
+                  Remove
                 </Button>
-              ) : null}
-              <div className="cta-row">
-                {canShare ? (
+                {card.capture.syncState === 'failed' ? (
                   <Button
                     variant="secondary"
                     size="small"
-                    onClick={() => void onShareCapture(card)}
+                    onClick={() => void onRetrySync(card.capture.id)}
                   >
-                    Share
-                  </Button>
-                ) : null}
-                {card.capture.kind === 'link' && card.capture.sourceUrl ? (
-                  <Button
-                    variant="secondary"
-                    size="small"
-                    onClick={() => void onCopyCaptureLink(card.capture)}
-                  >
-                    Copy link
+                    Retry sync
                   </Button>
                 ) : null}
               </div>
               {card.capture.syncError ? (
                 <p className="receiver-error">{card.capture.syncError}</p>
               ) : null}
-              {card.capture.syncState === 'failed' ? (
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => void onRetrySync(card.capture.id)}
-                >
-                  Retry sync
-                </Button>
-              ) : null}
             </article>
           ))}
         </div>
         {captures.length === 0 ? (
           <div className="empty-nest">
-            Your inbox is empty. Head to Capture to hatch the first note, photo, or link.
+            Your inbox is empty. Head to Hatch to save the first note, photo, or link.
           </div>
         ) : null}
       </Card>
+      <BottomSheet
+        open={Boolean(actionCard)}
+        onClose={() => setActionCard(null)}
+        title={actionCard ? `Actions for ${actionCard.capture.title}` : 'Capture actions'}
+      >
+        {actionCard ? (
+          <div className="receiver-action-sheet-list">
+            {canShare ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void onShareCapture(actionCard);
+                  setActionCard(null);
+                }}
+              >
+                Share
+              </Button>
+            ) : null}
+            {actionCard.capture.kind !== 'link' && actionCard.previewUrl ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void onDownloadCapture(actionCard);
+                  setActionCard(null);
+                }}
+              >
+                Download local file
+              </Button>
+            ) : null}
+            {actionCard.capture.kind === 'link' && actionCard.capture.sourceUrl ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void onCopyCaptureLink(actionCard.capture);
+                  setActionCard(null);
+                }}
+              >
+                Copy link
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </BottomSheet>
     </section>
   );
 }

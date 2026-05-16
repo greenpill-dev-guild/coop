@@ -96,9 +96,10 @@ describe('root routing bootstrap', () => {
     expect(resolveRootDestination({ isMobile: false, isStandalone: false }, false)).toBe(
       '/landing',
     );
-    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, false)).toBe('/pair');
-    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, true)).toBe('/receiver');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, false)).toBe('/landing');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, true)).toBe('/landing');
     expect(resolveRootDestination({ isMobile: false, isStandalone: true }, false)).toBe('/pair');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: true }, true)).toBe('/receiver');
   });
 
   it('redirects desktop root visits to landing', async () => {
@@ -117,7 +118,7 @@ describe('root routing bootstrap', () => {
     });
   });
 
-  it('redirects mobile root visits without a pairing to mate', async () => {
+  it('redirects mobile browser root visits without a pairing to landing', async () => {
     stubSurface({
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
@@ -128,15 +129,19 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/pair');
+      expect(window.location.pathname).toBe('/landing');
     });
-    expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', {
+        name: /chicken or egg\? neither — you need a coop first\./i,
+      }),
+    ).toBeVisible();
     await waitFor(() => {
-      expect(document.title).toBe('Coop Mate');
+      expect(document.title).toBe('Coop | Turn knowledge into opportunity');
     });
   });
 
-  it('redirects mobile root visits with an active pairing to hatch', async () => {
+  it('redirects mobile browser root visits with an active pairing to landing', async () => {
     stubSurface({
       userAgent: 'Mozilla/5.0 (Android 14; Mobile; rv:124.0) Gecko/124.0 Firefox/124.0',
       innerWidth: 412,
@@ -147,11 +152,15 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/receiver');
+      expect(window.location.pathname).toBe('/landing');
     });
-    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', {
+        name: /chicken or egg\? neither — you need a coop first\./i,
+      }),
+    ).toBeVisible();
     await waitFor(() => {
-      expect(document.title).toBe('Coop Hatch');
+      expect(document.title).toBe('Coop | Turn knowledge into opportunity');
     });
   });
 
@@ -169,6 +178,24 @@ describe('root routing bootstrap', () => {
       expect(window.location.pathname).toBe('/pair');
     });
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
+  });
+
+  it('treats standalone launches like app entry and sends paired devices to hatch', async () => {
+    stubSurface({
+      userAgent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+      standalone: true,
+      innerWidth: 390,
+      maxTouchPoints: 5,
+    });
+    await seedActivePairing();
+
+    await renderRootApp();
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/receiver');
+    });
+    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
   });
 
   it('preserves explicit routes instead of rerouting them through root heuristics', async () => {
@@ -199,6 +226,15 @@ describe('root routing bootstrap', () => {
 
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
     expect(screen.getByRole('heading', { name: /keep coop one tap away/i })).toBeVisible();
+    expect(screen.queryByText(/about coop/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /not now/i }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { name: /keep coop one tap away/i }),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/install reminder hidden/i)).toBeVisible();
 
     fireEvent.click(screen.getByRole('link', { name: 'Coop' }));
 

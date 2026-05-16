@@ -3,6 +3,11 @@ import { BottomSheet } from '../../components/BottomSheet';
 import { Button } from '../../components/Button';
 import { type ReceiverNavKind, receiverNavItems } from './icons';
 
+type PairedNestDisplay = {
+  coopDisplayName: string;
+  memberDisplayName: string;
+};
+
 type ReceiverShellProps = {
   screenTitle: string;
   activeRoute: ReceiverNavKind;
@@ -11,13 +16,14 @@ type ReceiverShellProps = {
   pairingStatusLabel: string;
   captureCount: number;
   message: string | null;
-  pairedNestLabel: string | null;
+  pairedNestDisplay: PairedNestDisplay | null;
   installPrompt: unknown;
   showInstallNudge: boolean;
   installNudgeMessage: string;
   canNotify: boolean;
   notificationsEnabled: boolean;
   onInstall: () => void;
+  onDismissInstallNudge: () => void;
   onToggleNotifications: () => void;
   onRefresh: () => void;
   children: ReactNode;
@@ -31,13 +37,14 @@ export function ReceiverShell({
   pairingStatusLabel,
   captureCount,
   message,
-  pairedNestLabel,
+  pairedNestDisplay,
   installPrompt,
   showInstallNudge,
   installNudgeMessage,
   canNotify,
   notificationsEnabled,
   onInstall,
+  onDismissInstallNudge,
   onToggleNotifications,
   onRefresh,
   children,
@@ -69,6 +76,9 @@ export function ReceiverShell({
   }, [isPulling, onRefresh]);
 
   const isPaired = pairingStatusLabel === 'Paired';
+  const statusSummary = !online
+    ? 'Offline · saved here'
+    : `${isPaired ? 'Paired' : 'Not paired'} · ${captureCount} saved`;
 
   return (
     <div className="receiver-shell">
@@ -93,18 +103,6 @@ export function ReceiverShell({
           />
         </a>
         <h1 className="receiver-screen-title">{screenTitle}</h1>
-        <button
-          className="receiver-topbar-action"
-          onClick={() => setSettingsOpen(true)}
-          type="button"
-          aria-label="Settings and status"
-        >
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="4" r="1.5" fill="currentColor" />
-            <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-            <circle cx="10" cy="16" r="1.5" fill="currentColor" />
-          </svg>
-        </button>
       </header>
 
       <main
@@ -124,11 +122,12 @@ export function ReceiverShell({
         </div>
 
         <button
-          className="receiver-settings-trigger"
+          className="receiver-status-summary"
           onClick={() => setSettingsOpen(true)}
           type="button"
+          aria-label={`Settings and status: ${statusSummary}`}
         >
-          <span className="receiver-settings-trigger-icon" aria-hidden="true">
+          <span className="receiver-status-summary-icon" aria-hidden="true">
             {online && isPaired ? (
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
@@ -161,16 +160,9 @@ export function ReceiverShell({
               </svg>
             )}
           </span>
-          <span className="receiver-settings-toggle-label">
-            {isPaired ? 'Paired' : pairingStatusLabel}
-          </span>
-          {message ? (
-            <span className="receiver-settings-message" aria-hidden="true">
-              {message}
-            </span>
-          ) : null}
+          <span className="receiver-status-summary-label">{statusSummary}</span>
           <svg
-            className="receiver-settings-trigger-chevron"
+            className="receiver-status-summary-chevron"
             width="14"
             height="14"
             viewBox="0 0 14 14"
@@ -186,6 +178,12 @@ export function ReceiverShell({
             />
           </svg>
         </button>
+
+        {message ? (
+          <div className="receiver-live-message" role="status" aria-live="polite">
+            {message}
+          </div>
+        ) : null}
 
         {showInstallNudge ? (
           <section className="receiver-install-banner">
@@ -237,9 +235,9 @@ export function ReceiverShell({
                   </span>
                 </Button>
               ) : null}
-              <a className="button button-secondary button-small" href="/landing">
-                About Coop
-              </a>
+              <Button variant="secondary" size="small" onClick={onDismissInstallNudge}>
+                Not now
+              </Button>
             </div>
           </section>
         ) : null}
@@ -355,39 +353,28 @@ export function ReceiverShell({
             </div>
           </div>
 
-          {pairedNestLabel
-            ? (() => {
-                const parts = pairedNestLabel.split(' \u2014 ');
-                const nestName = parts[0] || pairedNestLabel;
-                const memberName = parts.length > 1 ? parts[1] : null;
-                return (
-                  <div className="receiver-paired-nest-card">
-                    <div className="receiver-paired-nest-header">
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 18 18"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M9 2C5 2 2 5 2 8c0 2.5 1.5 5 7 8 5.5-3 7-5.5 7-8 0-3-3-6-7-6Z"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                          fill="none"
-                        />
-                      </svg>
-                      <div className="receiver-paired-nest-info">
-                        <span className="receiver-paired-nest-name">{nestName}</span>
-                        {memberName ? (
-                          <span className="receiver-paired-nest-member">{memberName}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()
-            : null}
+          {pairedNestDisplay ? (
+            <div className="receiver-paired-nest-card">
+              <div className="receiver-paired-nest-header">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path
+                    d="M9 2C5 2 2 5 2 8c0 2.5 1.5 5 7 8 5.5-3 7-5.5 7-8 0-3-3-6-7-6Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    fill="none"
+                  />
+                </svg>
+                <div className="receiver-paired-nest-info">
+                  <span className="receiver-paired-nest-name">
+                    {pairedNestDisplay.coopDisplayName}
+                  </span>
+                  <span className="receiver-paired-nest-member">
+                    {pairedNestDisplay.memberDisplayName}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="receiver-settings-actions">
             {canNotify ? (
@@ -427,9 +414,6 @@ export function ReceiverShell({
                 </span>
               </Button>
             ) : null}
-            <a className="button button-secondary button-small" href="/landing">
-              About Coop
-            </a>
           </div>
         </BottomSheet>
 

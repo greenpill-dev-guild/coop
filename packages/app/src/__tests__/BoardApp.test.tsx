@@ -189,13 +189,10 @@ describe('board app routes', () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        'Open the board from the extension sidepanel so it can hand off a member-scoped snapshot.',
+        'This public board opens from a shared coop snapshot link. Ask a member to share a current snapshot, or start from the landing page to set up a coop.',
       ),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Back to landing' })).toHaveAttribute(
-      'href',
-      '/landing',
-    );
+    expect(screen.getByRole('link', { name: 'Set up a coop' })).toHaveAttribute('href', '/landing');
     expect(screen.getByTestId('board-empty-nest')).toBeVisible();
   });
 
