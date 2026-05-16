@@ -40,6 +40,16 @@ let model: any = null;
 let activeModelId = '';
 let started = false;
 
+export function canUseBrowserCache(globalScope: object = globalThis) {
+  try {
+    return (
+      'caches' in globalScope && typeof (globalScope as { caches?: unknown }).caches !== 'undefined'
+    );
+  } catch {
+    return false;
+  }
+}
+
 // MV3's default `extension_pages` CSP forbids `new Function()`, which
 // onnxruntime-web's Embind glue uses on the inference hot path. The host
 // therefore runs inside a sandboxed iframe page declared in the manifest,
@@ -85,7 +95,7 @@ async function handleInit(transport: Gemma4HostTransport, modelId: string) {
     )) as any;
     if (env) {
       env.allowLocalModels = false;
-      env.useBrowserCache = true;
+      env.useBrowserCache = canUseBrowserCache();
     }
 
     processor = await AutoProcessor.from_pretrained(modelId);

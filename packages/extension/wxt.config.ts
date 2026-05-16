@@ -58,7 +58,10 @@ function swSafePreloadPlugin() {
     name: 'sw-safe-preload',
     renderChunk(code: string, chunk: { fileName: string }) {
       if (chunk.fileName.includes('preload-helper')) {
-        return 'export const _ = (fn) => fn();';
+        return {
+          code: 'const preload = (fn) => fn(); const initModulePreload = () => {}; export { preload as _, initModulePreload as i };',
+          map: null,
+        };
       }
     },
     generateBundle(_options: unknown, bundle: Record<string, { type: string; code?: string }>) {
