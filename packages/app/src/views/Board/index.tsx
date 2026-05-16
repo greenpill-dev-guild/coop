@@ -228,7 +228,7 @@ export function BoardView({
       <div className="backdrop" />
       <header className="board-topbar">
         <div>
-          <p className="eyebrow">Desktop board</p>
+          <p className="eyebrow">Shared coop board</p>
           <h1>{board.graph.metadata.coopName}</h1>
           <p className="board-lede">{board.graph.metadata.story}</p>
         </div>
@@ -278,6 +278,9 @@ export function BoardView({
               <strong>{board.graph.metadata.counts.archiveWorthy}</strong>
             </div>
           </div>
+          <p className="board-canvas-caption">
+            This map shows how members, captures, drafts, and saved finds connect in this snapshot.
+          </p>
           <div className="board-canvas">
             <ReactFlow
               edges={board.edges}

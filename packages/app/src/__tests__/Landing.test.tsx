@@ -72,7 +72,9 @@ describe('landing page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/^Chicken or egg\? Neither —$/)).toBeInTheDocument();
     expect(screen.getByText(/^you need a coop first\.$/)).toBeInTheDocument();
-    expect(screen.getByText(/turning knowledge into opportunity/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/turn scattered knowledge into shared opportunity/i),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^curate your coop$/i })).toHaveAttribute(
       'href',
       '#ritual',
@@ -82,6 +84,8 @@ describe('landing page', () => {
       '#how-it-works',
     );
     expect(container.querySelector('.thought-bubble')).not.toBeNull();
+    expect(screen.getByText(/quick capture from the walk home/i)).toBeInTheDocument();
+    expect(screen.queryByText(/chickenThoughts\.voice-memos/i)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^curate your coop$/i })).toBeInTheDocument();
     expect(container.querySelector('.why-build-heading-card h2')).not.toBeNull();

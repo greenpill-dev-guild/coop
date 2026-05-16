@@ -379,20 +379,18 @@ function LandingPageContent({
             .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0.12, y: -18 }, 0.42)
             .fromTo(
               howItWorksRef.current,
-              { autoAlpha: 0.12, y: 28, scale: 0.975 },
-              { autoAlpha: 1, y: 0, scale: 1 },
+              { y: 28, scale: 0.975 },
+              { y: 0, scale: 1 },
               0.24,
             )
-            .fromTo(howItWorksHeading, { autoAlpha: 0.42, y: 20 }, { autoAlpha: 1, y: 0 }, 0.29)
+            .fromTo(howItWorksHeading, { y: 20 }, { y: 0 }, 0.29)
             .fromTo(
               howItWorksCardElements,
               {
-                autoAlpha: 0.18,
                 y: 22,
                 scale: 0.98,
               },
               {
-                autoAlpha: 1,
                 y: 0,
                 scale: 1,
                 stagger: 0.08,

@@ -3,7 +3,7 @@
     "hero": {
       "title1": "Chicken or egg? Neither —",
       "title2": "you need a coop first.",
-      "subtitle": "Turning knowledge into opportunity.",
+      "subtitle": "Turn scattered knowledge into shared opportunity.",
       "curateCta": "Curate your coop",
       "howItWorksCta": "See how it works",
       "scrollHint": "Scroll down",
@@ -159,7 +159,7 @@
     "hero": {
       "title1": "Sem mais",
       "title2": "galinhas soltas.",
-      "subtitle": "Transformando conhecimento em oportunidade.",
+      "subtitle": "Transforme conhecimento disperso em oportunidade compartilhada.",
       "curateCta": "Organizar meu coop",
       "howItWorksCta": "Ver como funciona",
       "scrollHint": "Rolar para baixo",
@@ -315,7 +315,7 @@
     "hero": {
       "title1": "Sin más",
       "title2": "gallinas sueltas.",
-      "subtitle": "Transformando conocimiento en oportunidad.",
+      "subtitle": "Convierte conocimiento disperso en oportunidad compartida.",
       "scrollHint": "Desplazarse hacia abajo"
     },
     "how_works": {
@@ -468,7 +468,7 @@
     "hero": {
       "title1": "不再有",
       "title2": "松散的鸡。",
-      "subtitle": "将知识转化为机会。",
+      "subtitle": "把分散的知识转化为共享机会。",
       "scrollHint": "向下滚动",
       "logoLabel": "Coop 着陆页"
     },
@@ -622,7 +622,7 @@
     "hero": {
       "title1": "Plus de",
       "title2": "poules en fuite.",
-      "subtitle": "Transformer le savoir en opportunité.",
+      "subtitle": "Transformez les savoirs dispersés en opportunité partagée.",
       "scrollHint": "Faire défiler vers le bas",
       "logoLabel": "Page d'accueil de Coop"
     },

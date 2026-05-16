@@ -55,6 +55,7 @@ export const journeyChickens: JourneyChicken[] = [
     id: 'voice-memos',
     label: 'voice-memos',
     labelKey: 'chickens.voiceMemos',
+    thoughtKey: 'voiceMemos',
     variant: 'chick',
     facing: 'right',
     color: 'plum',

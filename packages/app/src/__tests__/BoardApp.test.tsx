@@ -203,6 +203,7 @@ describe('board app routes', () => {
     await renderRootApp({ initialBoardSnapshot: snapshot });
 
     expect(await screen.findByRole('heading', { name: 'Board Coop' })).toBeVisible();
+    expect(screen.getByText(/shared coop board/i)).toBeVisible();
     const shareButton = screen.getByRole('button', { name: 'Share snapshot' });
     expect(shareButton).toBeVisible();
     const exportButton = screen.getByRole('button', { name: 'Export as image' });
@@ -238,6 +239,11 @@ describe('board app routes', () => {
     await renderRootApp({ initialBoardSnapshot: snapshot });
 
     expect(await screen.findByRole('heading', { name: 'Board Coop' })).toBeVisible();
+    expect(
+      screen.getByText(
+        'This map shows how members, captures, drafts, and saved finds connect in this snapshot.',
+      ),
+    ).toBeVisible();
     expect(screen.getByText(/saved proof trail/i)).toBeVisible();
     expect(screen.getByTestId('mock-react-flow')).toBeVisible();
     expect(screen.getAllByText('forest-notes.txt').length).toBeGreaterThan(0);

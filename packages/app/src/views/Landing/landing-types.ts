@@ -53,6 +53,7 @@ export type JourneyChicken = {
   id: string;
   label: string;
   labelKey?: string;
+  thoughtKey?: string;
   variant?: ChickenVariant;
   facing?: ChickenFacing;
   color?: ChickenColor;

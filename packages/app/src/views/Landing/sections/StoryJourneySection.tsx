@@ -82,26 +82,32 @@ export function StoryJourneySection({
           <div className="scene-feed-spot scene-feed-spot-b" />
         </div>
         <div className="journey-scene-inner">
-          {journeyChickens.map((chicken) => (
-            <div
-              className={`scene-chicken scene-chicken-${chicken.id}`}
-              data-facing={chicken.facing ?? 'right'}
-              key={chicken.id}
-              ref={setStoryChickenRef(chicken.id)}
-            >
-              <div className="thought-bubble" aria-hidden="true">
-                <span className="thought-kicker">{t(`chickenThoughts.${chicken.id}.kicker`)}</span>
-                <span className="thought-text">{t(`chickenThoughts.${chicken.id}.text`)}</span>
+          {journeyChickens.map((chicken) => {
+            const thoughtKey = chicken.thoughtKey ?? chicken.id;
+
+            return (
+              <div
+                className={`scene-chicken scene-chicken-${chicken.id}`}
+                data-facing={chicken.facing ?? 'right'}
+                key={chicken.id}
+                ref={setStoryChickenRef(chicken.id)}
+              >
+                <div className="thought-bubble" aria-hidden="true">
+                  <span className="thought-kicker">
+                    {t(`chickenThoughts.${thoughtKey}.kicker`)}
+                  </span>
+                  <span className="thought-text">{t(`chickenThoughts.${thoughtKey}.text`)}</span>
+                </div>
+                <ChickenSprite
+                  color={chicken.color}
+                  facing={chicken.facing}
+                  label={chicken.labelKey ? t(chicken.labelKey) : chicken.label}
+                  showLabel={true}
+                  variant={chicken.variant}
+                />
               </div>
-              <ChickenSprite
-                color={chicken.color}
-                facing={chicken.facing}
-                label={chicken.labelKey ? t(chicken.labelKey) : chicken.label}
-                showLabel={true}
-                variant={chicken.variant}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -3303,6 +3303,11 @@ pre {
     flex: 1 1 10rem;
   }
 
+  .journey-scene-story .scene-chicken-signals:not(:hover):not(:focus-within) .thought-bubble {
+    opacity: 0;
+    transform: translateX(calc(-50% + var(--thought-bubble-offset-x))) scale(0.85);
+  }
+
   .hero-stage {
     min-height: 9rem;
     justify-content: flex-start;
@@ -5397,6 +5402,14 @@ audio {
   );
 }
 
+.board-canvas-caption {
+  margin: -0.2rem 0 0.8rem;
+  max-width: 42rem;
+  color: var(--board-text-soft);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
 .board-relationship-card {
   margin-top: 1rem;
   padding: 0.95rem;
@@ -5635,8 +5648,8 @@ audio {
   }
 
   .board-canvas {
-    min-height: 28rem;
-    height: 56vh;
+    min-height: 22rem;
+    height: 42vh;
   }
 }
 
