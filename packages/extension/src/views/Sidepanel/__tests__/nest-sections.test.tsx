@@ -776,16 +776,16 @@ describe('NestSettingsSection', () => {
     };
   }
 
-  it('renders Coop Preferences section when activeCoop is present', () => {
+  it('renders Coop Settings section when activeCoop is present', () => {
     render(<NestSettingsSection {...baseProps()} />);
 
-    expect(screen.getByText('Coop Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Coop Settings')).toBeInTheDocument();
   });
 
-  it('does not render Coop Preferences when activeCoop is undefined', () => {
+  it('does not render Coop Settings when activeCoop is undefined', () => {
     render(<NestSettingsSection {...baseProps({ activeCoop: undefined })} />);
 
-    expect(screen.queryByText('Coop Preferences')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coop Settings')).not.toBeInTheDocument();
   });
 
   it('renders My Preferences section with passkey info', () => {
@@ -794,6 +794,27 @@ describe('NestSettingsSection', () => {
     expect(screen.getByText('My Preferences')).toBeInTheDocument();
     expect(screen.getByText(/ari/i)).toBeInTheDocument();
     expect(screen.getByText(/0xAri/i)).toBeInTheDocument();
+  });
+
+  it('abstracts passkey details in simple mode', () => {
+    const props = baseProps();
+
+    render(
+      <NestSettingsSection
+        {...baseProps({
+          dashboard: {
+            ...props.dashboard,
+            uiPreferences: {
+              ...props.dashboard?.uiPreferences,
+              uiMode: 'simple',
+            },
+          } as NestSettingsSectionProps['dashboard'],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/ari's passkey is ready on this browser\./i)).toBeInTheDocument();
+    expect(screen.queryByText(/0xAri/i)).not.toBeInTheDocument();
   });
 
   it('shows fallback message when no authSession exists', () => {
@@ -1164,7 +1185,7 @@ describe('NestTab', () => {
     expect(screen.getByTestId('archive-setup-wizard')).toBeInTheDocument();
   });
 
-  it('hides proof export and Filecoin setup in simple settings mode', async () => {
+  it('hides proof export, archive setup, and implementation details in simple settings mode', async () => {
     const user = userEvent.setup();
     const { orchestration } = baseOrchestration();
     const dashboard = orchestration.dashboard;
@@ -1192,11 +1213,43 @@ describe('NestTab', () => {
     await user.click(screen.getByRole('button', { name: /settings/i }));
 
     expect(screen.getByText('My Preferences')).toBeInTheDocument();
-    expect(screen.getByText('Save and Export')).toBeInTheDocument();
+    expect(screen.queryByText('Save and Export')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /export saved proof json/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId('archive-setup-wizard')).not.toBeInTheDocument();
+  });
+
+  it('keeps simple Members free of Safe, account, and edit rails', () => {
+    const { orchestration } = baseOrchestration();
+    const dashboard = orchestration.dashboard;
+    if (!dashboard) {
+      throw new Error('Expected dashboard fixture to be initialized');
+    }
+
+    render(
+      <NestTab
+        orchestration={
+          {
+            ...orchestration,
+            dashboard: {
+              ...dashboard,
+              uiPreferences: {
+                ...dashboard.uiPreferences,
+                uiMode: 'simple',
+              },
+            },
+          } as SidepanelOrchestration
+        }
+      />,
+    );
+
+    expect(screen.getByText('Creator')).toBeInTheDocument();
+    expect(screen.getByText('Regular')).toBeInTheDocument();
+    expect(screen.queryByText('Shared nest')).not.toBeInTheDocument();
+    expect(screen.queryByText(/0x1111/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Edit Profile')).not.toBeInTheDocument();
+    expect(screen.queryByText(/leave this coop/i)).not.toBeInTheDocument();
   });
 
   it('does not show sub-tab navigation when no activeCoop', () => {

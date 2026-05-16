@@ -29,6 +29,7 @@ export function useCoopForm(deps: {
   soundPreferences: SoundPreferences;
   configuredSignalingUrls: string[];
   authSession?: AuthSession | null;
+  uiMode?: 'simple' | 'advanced';
 }) {
   const {
     setMessage,
@@ -37,6 +38,7 @@ export function useCoopForm(deps: {
     soundPreferences,
     configuredSignalingUrls,
     authSession,
+    uiMode = 'simple',
   } = deps;
 
   const [createForm, setCreateForm] = useState<CreateFormState>(initialCreateForm);
@@ -164,7 +166,7 @@ export function useCoopForm(deps: {
           );
           setCreateForm(initialCreateForm);
           await loadDashboard();
-          setPanelTab('nest');
+          setPanelTab(uiMode === 'simple' ? 'chickens' : 'nest');
           return;
         }
       }
@@ -178,7 +180,7 @@ export function useCoopForm(deps: {
       );
       setCreateForm(initialCreateForm);
       await loadDashboard();
-      setPanelTab('nest');
+      setPanelTab(uiMode === 'simple' ? 'chickens' : 'nest');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to create coop.');
     }

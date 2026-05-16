@@ -12,6 +12,8 @@ const {
   setMessageMock,
   setPairingResultMock,
   updateUiPreferencesMock,
+  dashboardUiModeMock,
+  hasTrustedNodeAccessMock,
 } = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
   loadDashboardMock: vi.fn(async () => undefined),
@@ -20,6 +22,8 @@ const {
   setAgentDashboardMock: vi.fn(),
   setPairingResultMock: vi.fn(),
   updateUiPreferencesMock: vi.fn(async () => null),
+  dashboardUiModeMock: { current: 'simple' as 'simple' | 'advanced' },
+  hasTrustedNodeAccessMock: { current: false },
 }));
 
 vi.mock('../../../runtime/messages', () => ({
@@ -27,7 +31,7 @@ vi.mock('../../../runtime/messages', () => ({
 }));
 
 vi.mock('../../../runtime/audio', () => ({
-  playCoopSound: vi.fn(async () => undefined),
+  playRandomChickenSound: vi.fn(async () => undefined),
 }));
 
 vi.mock('../../../runtime/inference-bridge', () => ({
@@ -49,19 +53,42 @@ vi.mock('../ErrorBoundary', () => ({
 vi.mock('../TabStrip', () => ({
   SidepanelFooterNav: ({
     showNestTab,
+    activeTab,
+    onNavigate,
   }: {
     showNestTab: boolean;
     activeTab: string;
     onNavigate: (tab: string) => void;
     badges?: Record<string, number>;
-  }) => <div data-testid="sidepanel-footer-nav" data-show-nest={showNestTab ? 'true' : 'false'} />,
+  }) => {
+    const tabs = showNestTab
+      ? ['roost', 'chickens', 'coops', 'nest']
+      : ['roost', 'chickens', 'coops'];
+    return (
+      <div
+        data-testid="sidepanel-footer-nav"
+        data-active-tab={activeTab}
+        data-show-nest={showNestTab ? 'true' : 'false'}
+      >
+        {tabs.map((tab) => (
+          <button key={tab} onClick={() => onNavigate(tab)} type="button">
+            {tab}
+          </button>
+        ))}
+      </div>
+    );
+  },
 }));
 
 vi.mock('../tabs/index', () => ({
   RoostTab: () => <div>Roost</div>,
-  ChickensTab: () => <div>Chickens</div>,
+  ChickensTab: ({ synthesisSegment }: { synthesisSegment: string }) => (
+    <div>Chickens:{synthesisSegment}</div>
+  ),
   CoopsTab: () => <div>Coops</div>,
-  NestTab: () => <div>Nest</div>,
+  NestTab: ({ subTabRequest }: { subTabRequest?: { subTab: string } }) => (
+    <div>Nest:{subTabRequest?.subTab ?? 'members'}</div>
+  ),
 }));
 
 vi.mock('../hooks/useCoopForm', () => ({
@@ -116,6 +143,7 @@ vi.mock('../hooks/useDashboard', () => ({
       },
       uiPreferences: {
         localInferenceOptIn: false,
+        uiMode: dashboardUiModeMock.current,
       },
       operator: {
         policyActionQueue: [],
@@ -147,7 +175,7 @@ vi.mock('../hooks/useDashboard', () => ({
     },
     authSession: null,
     activeMember: null,
-    hasTrustedNodeAccess: false,
+    hasTrustedNodeAccess: hasTrustedNodeAccessMock.current,
     visibleReceiverPairings: [],
     activeReceiverPairing: null,
     activeReceiverPairingStatus: null,
@@ -176,6 +204,8 @@ vi.mock('../hooks/useDashboard', () => ({
 describe('SidepanelApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dashboardUiModeMock.current = 'simple';
+    hasTrustedNodeAccessMock.current = false;
     sendRuntimeMessageMock.mockResolvedValue({ ok: true });
     loadDashboardMock.mockResolvedValue(undefined);
     loadAgentDashboardMock.mockResolvedValue(undefined);
@@ -217,11 +247,11 @@ describe('SidepanelApp', () => {
     });
   });
 
-  it('does not show nest tab when hasTrustedNodeAccess is false', () => {
+  it('uses Chickens as the simple-mode workspace and hides footer navigation', async () => {
     render(<SidepanelApp />);
 
-    const footerNav = screen.getByTestId('sidepanel-footer-nav');
-    expect(footerNav).toHaveAttribute('data-show-nest', 'false');
+    await waitFor(() => expect(screen.getByText('Chickens:review')).toBeInTheDocument());
+    expect(screen.queryByTestId('sidepanel-footer-nav')).not.toBeInTheDocument();
   });
 
   it('renders the header with brand, pair, profile, theme, and close buttons', () => {
@@ -259,9 +289,34 @@ describe('SidepanelApp', () => {
     closeSpy.mockRestore();
   });
 
-  it('defaults to the roost tab', () => {
+  it('keeps advanced mode on the existing roost-first workspace with footer nav', () => {
+    dashboardUiModeMock.current = 'advanced';
+
     render(<SidepanelApp />);
 
     expect(screen.getByText('Roost')).toBeInTheDocument();
+    const footerNav = screen.getByTestId('sidepanel-footer-nav');
+    expect(footerNav).toHaveAttribute('data-show-nest', 'false');
+    expect(footerNav).toHaveAttribute('data-active-tab', 'roost');
+  });
+
+  it('lets simple-mode users open review, shared, settings, and advanced view from More', async () => {
+    const user = userEvent.setup();
+
+    render(<SidepanelApp />);
+
+    await waitFor(() => expect(screen.getByText('Chickens:review')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(screen.getByRole('menuitem', { name: /shared with coop/i }));
+    expect(screen.getByText('Chickens:shared')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(screen.getByRole('menuitem', { name: /settings/i }));
+    expect(screen.getByText('Nest:settings')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(screen.getByRole('menuitem', { name: /advanced view/i }));
+    expect(updateUiPreferencesMock).toHaveBeenCalledWith({ uiMode: 'advanced' });
   });
 });

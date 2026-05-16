@@ -24,7 +24,7 @@ export function SidepanelWelcomeView() {
       />
       <div className="sidepanel-welcome__copy">
         <span className="sidepanel-welcome__eyebrow">Welcome</span>
-        <h1 id="sidepanel-welcome-heading">Chicken or egg? Neither — you need a coop first.</h1>
+        <h1 id="sidepanel-welcome-heading">Ready to round up your loose chickens?</h1>
       </div>
       <div className="sidepanel-welcome__actions">
         <button
@@ -32,7 +32,7 @@ export function SidepanelWelcomeView() {
           onClick={() => void openPopupToScreen('create')}
           type="button"
         >
-          Launch the Coop
+          Create a Coop
         </button>
         <button
           className="secondary-button"

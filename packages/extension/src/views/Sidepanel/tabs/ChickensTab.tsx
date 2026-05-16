@@ -151,6 +151,7 @@ export interface ChickensTabProps {
   focusedDraftId?: string;
   focusedSignalId?: string;
   focusedObservationId?: string;
+  uiMode?: 'simple' | 'advanced';
 }
 
 export function ChickensTab({
@@ -168,8 +169,10 @@ export function ChickensTab({
   focusedDraftId,
   focusedSignalId,
   focusedObservationId,
+  uiMode = 'simple',
 }: ChickensTabProps) {
   const [filters, setFilters] = useState<ChickensFilterState>({ category: 'all' });
+  const isAdvancedMode = uiMode === 'advanced';
 
   const coops = dashboard?.coops ?? [];
   const coopNameById = useMemo(
@@ -280,7 +283,7 @@ export function ChickensTab({
       <SidepanelSubheader>
         <div className="sidepanel-action-row">
           <PopupSubheader ariaLabel="Chickens view" equalWidth tags={segmentTags} />
-          {categoryOptions.length > 1 && synthesisSegment === 'review' ? (
+          {isAdvancedMode && categoryOptions.length > 1 && synthesisSegment === 'review' ? (
             <FilterPopover
               label="Category"
               options={categoryOptions}
@@ -289,7 +292,7 @@ export function ChickensTab({
               onChange={(v) => setFilters({ category: v })}
             />
           ) : null}
-          {hasActiveFilter ? (
+          {isAdvancedMode && hasActiveFilter ? (
             <button
               className="chickens-filter-clear"
               onClick={() => setFilters({ category: 'all' })}
@@ -354,6 +357,7 @@ export function ChickensTab({
                       item.draft?.id === focusedDraftId ||
                       item.staleObservation?.id === focusedObservationId
                     }
+                    uiMode={uiMode}
                   />
                 )}
               />
@@ -381,6 +385,7 @@ export function ChickensTab({
                   key={artifact.id}
                   artifact={artifact}
                   coopName={coopNameById.get(artifact.targetCoopId)}
+                  uiMode={uiMode}
                 />
               )}
             />

@@ -2,7 +2,7 @@ import type { SidepanelIntent, SidepanelIntentSegment } from '../../runtime/mess
 import { ErrorBoundary } from '../ErrorBoundary';
 import type { SidepanelOrchestration } from './hooks/useSidepanelOrchestration';
 import type { SidepanelTab } from './sidepanel-tabs';
-import { ChickensTab, CoopsTab, NestTab, RoostTab } from './tabs/index';
+import { ChickensTab, CoopsTab, type NestSubTabRequest, NestTab, RoostTab } from './tabs/index';
 
 type ChickensSynthesisSegment = Extract<SidepanelIntentSegment, 'review' | 'shared'>;
 
@@ -16,6 +16,7 @@ export interface SidepanelTabRouterProps {
   focusedDraftId?: string;
   focusedSignalId?: string;
   focusedObservationId?: string;
+  nestSubTabRequest?: NestSubTabRequest;
   onApplySidepanelIntent: (intent: SidepanelIntent) => Promise<void>;
 }
 
@@ -29,6 +30,7 @@ export function SidepanelTabRouter({
   focusedDraftId,
   focusedSignalId,
   focusedObservationId,
+  nestSubTabRequest,
   onApplySidepanelIntent,
 }: SidepanelTabRouterProps) {
   const {
@@ -150,6 +152,7 @@ export function SidepanelTabRouter({
             tabCapture={tabCapture}
             synthesisSegment={synthesisSegment}
             onSelectSynthesisSegment={onSelectSynthesisSegment}
+            uiMode={dashboard?.uiPreferences?.uiMode ?? 'simple'}
             roundupAccessPromptMode={roundupAccessPromptMode}
             onDismissRoundupAccessPrompt={onDismissRoundupAccessPrompt}
             focusedDraftId={focusedDraftId}
@@ -187,7 +190,7 @@ export function SidepanelTabRouter({
     case 'nest':
       return (
         <ErrorBoundary>
-          <NestTab orchestration={orchestration} />
+          <NestTab orchestration={orchestration} subTabRequest={nestSubTabRequest} />
         </ErrorBoundary>
       );
   }

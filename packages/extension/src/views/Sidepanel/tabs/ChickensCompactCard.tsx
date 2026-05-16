@@ -20,16 +20,18 @@ export interface CompactCardProps {
   coops: CoopSharedState[];
   draftEditor?: ReturnType<typeof useDraftEditor>;
   focused?: boolean;
+  uiMode?: 'simple' | 'advanced';
 }
 
 export function CompactCard(props: CompactCardProps) {
-  const { item, coops, draftEditor, focused } = props;
+  const { item, coops, draftEditor, focused, uiMode = 'simple' } = props;
   const surfaceTags = item.tags.slice(0, 2);
   const allTags = item.tags.slice(0, 3);
   const previewImage = resolvePreviewImage(item);
   const sourceDomain = resolveSourceDomain(item);
   const sourceUrl = resolveSourceUrl(item);
   const favicon = faviconUrl(item);
+  const isAdvancedMode = uiMode === 'advanced';
 
   // Unified detail fields — prefer draft data when present, fall back to signal
   const summary = item.draft?.summary ?? item.signal?.targetCoops[0]?.rationale;
@@ -46,6 +48,25 @@ export function CompactCard(props: CompactCardProps) {
     });
   }
 
+  const feedbackControls = canRecordFeedback ? (
+    <div className="compact-card__actions compact-card__actions--feedback">
+      <button
+        className="compact-card__push-btn compact-card__push-btn--quiet"
+        onClick={() => recordFeedback('remind-later')}
+        type="button"
+      >
+        Remind later
+      </button>
+      <button
+        className="compact-card__push-btn compact-card__push-btn--quiet"
+        onClick={() => recordFeedback('not-useful')}
+        type="button"
+      >
+        Not useful
+      </button>
+    </div>
+  ) : null;
+
   return (
     <article className="compact-card" data-focused={focused || undefined}>
       <div className="compact-card__body">
@@ -57,19 +78,21 @@ export function CompactCard(props: CompactCardProps) {
         ) : null}
 
         <div className="compact-card__content">
-          <div className="compact-card__header">
-            <span className="badge badge--neutral compact-card__category">
-              {formatCategoryLabel(item.category)}
-            </span>
-            <span className="meta-text">{formatRelativeTime(item.timestamp)}</span>
-          </div>
+          {isAdvancedMode ? (
+            <div className="compact-card__header">
+              <span className="badge badge--neutral compact-card__category">
+                {formatCategoryLabel(item.category)}
+              </span>
+              <span className="meta-text">{formatRelativeTime(item.timestamp)}</span>
+            </div>
+          ) : null}
 
           <strong className="compact-card__title">{item.title}</strong>
 
           {item.insight ? <p className="compact-card__insight">{item.insight}</p> : null}
 
           {/* Surface tags — subtle, max 2 */}
-          {surfaceTags.length > 0 ? (
+          {isAdvancedMode && surfaceTags.length > 0 ? (
             <div className="compact-card__surface-tags">
               {surfaceTags.map((tag) => (
                 <span className="compact-card__surface-tag" key={`${item.id}:s:${tag}`}>
@@ -112,24 +135,7 @@ export function CompactCard(props: CompactCardProps) {
       {/* Push controls — unified across all actionable items */}
       <PushControls item={item} coops={coops} draftEditor={draftEditor} />
 
-      {canRecordFeedback ? (
-        <div className="compact-card__actions compact-card__actions--feedback">
-          <button
-            className="compact-card__push-btn compact-card__push-btn--quiet"
-            onClick={() => recordFeedback('remind-later')}
-            type="button"
-          >
-            Remind later
-          </button>
-          <button
-            className="compact-card__push-btn compact-card__push-btn--quiet"
-            onClick={() => recordFeedback('not-useful')}
-            type="button"
-          >
-            Not useful
-          </button>
-        </div>
-      ) : null}
+      {isAdvancedMode ? feedbackControls : null}
 
       <details className="compact-card__more">
         <summary>Details</summary>
@@ -175,6 +181,7 @@ export function CompactCard(props: CompactCardProps) {
               <p>This has been waiting for over 24 hours and needs a fresh look.</p>
             </div>
           ) : null}
+          {!isAdvancedMode ? feedbackControls : null}
         </div>
       </details>
     </article>

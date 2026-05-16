@@ -247,6 +247,7 @@ export function useSidepanelOrchestration(
     soundPreferences,
     configuredSignalingUrls,
     authSession,
+    uiMode: dashboard?.uiPreferences.uiMode ?? 'simple',
   });
 
   // --- Sync bindings ---

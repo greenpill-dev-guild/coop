@@ -9,15 +9,17 @@ import { formatCategoryLabel, formatRelativeTime } from './chickens-helpers';
 export interface CompactSharedCardProps {
   artifact: Artifact;
   coopName?: string;
+  uiMode?: 'simple' | 'advanced';
 }
 
 export function CompactSharedCard(props: CompactSharedCardProps) {
-  const { artifact, coopName } = props;
+  const { artifact, coopName, uiMode = 'simple' } = props;
   const visibleTags = artifact.tags.slice(0, 3);
   const previewImage = resolvePreviewCardImageUrl(artifact);
   const sourceDomain = artifact.sources[0]?.domain;
   const sourceUrl = artifact.sources[0]?.url;
   const favicon = artifact.sources[0]?.faviconUrl;
+  const isAdvancedMode = uiMode === 'advanced';
 
   return (
     <article className="compact-card" data-kind="shared">
@@ -30,16 +32,18 @@ export function CompactSharedCard(props: CompactSharedCardProps) {
         ) : null}
 
         <div className="compact-card__content">
-          <div className="compact-card__header">
-            {coopName ? (
-              <span className="badge compact-card__category">{coopName}</span>
-            ) : (
-              <span className="badge badge--neutral compact-card__category">
-                {formatCategoryLabel(artifact.category)}
-              </span>
-            )}
-            <span className="meta-text">{formatRelativeTime(artifact.createdAt)}</span>
-          </div>
+          {isAdvancedMode ? (
+            <div className="compact-card__header">
+              {coopName ? (
+                <span className="badge compact-card__category">{coopName}</span>
+              ) : (
+                <span className="badge badge--neutral compact-card__category">
+                  {formatCategoryLabel(artifact.category)}
+                </span>
+              )}
+              <span className="meta-text">{formatRelativeTime(artifact.createdAt)}</span>
+            </div>
+          ) : null}
 
           <strong className="compact-card__title">{artifact.title}</strong>
 

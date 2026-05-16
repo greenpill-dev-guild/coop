@@ -15,6 +15,7 @@ import { SidepanelWelcomeView } from './SidepanelWelcomeView';
 import { SidepanelFooterNav } from './TabStrip';
 import { useSidepanelOrchestration } from './hooks/useSidepanelOrchestration';
 import type { SidepanelTab } from './sidepanel-tabs';
+import type { NestSubTabRequest } from './tabs';
 
 type ChickensSynthesisSegment = Extract<SidepanelIntentSegment, 'review' | 'shared'>;
 
@@ -61,6 +62,49 @@ function WorkspaceIcon() {
   );
 }
 
+function MoreIcon() {
+  return (
+    <svg aria-hidden="true" className="popup-theme-option__icon" fill="none" viewBox="0 0 20 20">
+      <circle cx="5" cy="10" r="1.4" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.4" fill="currentColor" />
+      <circle cx="15" cy="10" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SimpleModeMenu(props: {
+  reviewCount: number;
+  sharedCount: number;
+  onOpenReview: () => void;
+  onOpenShared: () => void;
+  onOpenSettings: () => void;
+  onEnableAdvanced: () => void;
+}) {
+  const { reviewCount, sharedCount, onOpenReview, onOpenShared, onOpenSettings, onEnableAdvanced } =
+    props;
+
+  return (
+    <div className="sidepanel-simple-menu" role="menu" aria-label="More Coop options">
+      <button onClick={onOpenReview} role="menuitem" type="button">
+        <span className="sidepanel-simple-menu__label">Review chickens</span>
+        <span className="sidepanel-simple-menu__meta">{reviewCount} waiting</span>
+      </button>
+      <button onClick={onOpenShared} role="menuitem" type="button">
+        <span className="sidepanel-simple-menu__label">Shared with coop</span>
+        <span className="sidepanel-simple-menu__meta">{sharedCount} kept</span>
+      </button>
+      <button onClick={onOpenSettings} role="menuitem" type="button">
+        <span className="sidepanel-simple-menu__label">Settings</span>
+        <span className="sidepanel-simple-menu__meta">Members and preferences</span>
+      </button>
+      <button onClick={onEnableAdvanced} role="menuitem" type="button">
+        <span className="sidepanel-simple-menu__label">Advanced view</span>
+        <span className="sidepanel-simple-menu__meta">Show full workspace</span>
+      </button>
+    </div>
+  );
+}
+
 export function SidepanelApp() {
   const { preference, setTheme } = useCoopTheme();
   const [panelTab, setPanelTab] = useState<SidepanelTab>('roost');
@@ -68,6 +112,8 @@ export function SidepanelApp() {
   const [focusedDraftId, setFocusedDraftId] = useState<string | undefined>();
   const [focusedSignalId, setFocusedSignalId] = useState<string | undefined>();
   const [focusedObservationId, setFocusedObservationId] = useState<string | undefined>();
+  const [simpleMenuOpen, setSimpleMenuOpen] = useState(false);
+  const [nestSubTabRequest, setNestSubTabRequest] = useState<NestSubTabRequest | undefined>();
   const [roundupAccessIntentMode, setRoundupAccessIntentMode] = useState<
     'prompt' | 'grant-and-roundup' | null
   >(null);
@@ -92,6 +138,14 @@ export function SidepanelApp() {
     agentDelta,
     clearAgentDelta,
   } = orchestration;
+
+  const uiMode = dashboard?.uiPreferences?.uiMode ?? 'simple';
+  const isSimpleMode = uiMode === 'simple';
+  const simpleShellActive = Boolean(dashboard && activeCoop && isSimpleMode);
+  const reviewCount =
+    dashboard?.summary.pendingAttentionCount ?? dashboard?.summary.pendingDrafts ?? 0;
+  const sharedCount =
+    dashboard?.coops.reduce((sum, coop) => sum + (coop.artifacts?.length ?? 0), 0) ?? 0;
 
   const brandRef = useRef<HTMLButtonElement>(null);
 
@@ -164,10 +218,25 @@ export function SidepanelApp() {
   }
 
   useEffect(() => {
-    if (activeCoop && panelTab === 'nest' && !hasTrustedNodeAccess) {
+    if (activeCoop && panelTab === 'nest' && !hasTrustedNodeAccess && !isSimpleMode) {
       setPanelTab('coops');
     }
-  }, [activeCoop, hasTrustedNodeAccess, panelTab]);
+  }, [activeCoop, hasTrustedNodeAccess, isSimpleMode, panelTab]);
+
+  useEffect(() => {
+    if (!dashboard || !activeCoop || !isSimpleMode) {
+      return;
+    }
+    if (panelTab !== 'chickens' && panelTab !== 'nest') {
+      setPanelTab('chickens');
+    }
+  }, [activeCoop, dashboard, isSimpleMode, panelTab]);
+
+  useEffect(() => {
+    if (!simpleShellActive) {
+      setSimpleMenuOpen(false);
+    }
+  }, [simpleShellActive]);
 
   useEffect(() => {
     if (!message) {
@@ -196,6 +265,35 @@ export function SidepanelApp() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, [applySidepanelIntent]);
 
+  function openSimpleReview() {
+    setPanelTab('chickens');
+    setSynthesisSegment('review');
+    setNestSubTabRequest(undefined);
+    setSimpleMenuOpen(false);
+  }
+
+  function openSimpleShared() {
+    setPanelTab('chickens');
+    setSynthesisSegment('shared');
+    setNestSubTabRequest(undefined);
+    setSimpleMenuOpen(false);
+  }
+
+  function openSimpleSettings() {
+    setPanelTab('nest');
+    setNestSubTabRequest((current) => ({
+      requestId: (current?.requestId ?? 0) + 1,
+      subTab: 'settings',
+    }));
+    setSimpleMenuOpen(false);
+  }
+
+  function enableAdvancedView() {
+    setSimpleMenuOpen(false);
+    setNestSubTabRequest(undefined);
+    void orchestration.updateUiPreferences({ uiMode: 'advanced' });
+  }
+
   return (
     <div className="coop-shell sidepanel-shell">
       <header className="sidepanel-header">
@@ -215,6 +313,42 @@ export function SidepanelApp() {
           )}
         </Tooltip>
         <div className="sidepanel-header__actions">
+          {simpleShellActive ? (
+            <div
+              className="sidepanel-simple-menu-wrap"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setSimpleMenuOpen(false);
+                }
+              }}
+            >
+              <Tooltip content="More options" placement="below">
+                {({ targetProps }) => (
+                  <button
+                    {...targetProps}
+                    aria-expanded={simpleMenuOpen}
+                    aria-haspopup="menu"
+                    className="popup-icon-button"
+                    onClick={() => setSimpleMenuOpen((open) => !open)}
+                    type="button"
+                    aria-label="More options"
+                  >
+                    <MoreIcon />
+                  </button>
+                )}
+              </Tooltip>
+              {simpleMenuOpen ? (
+                <SimpleModeMenu
+                  reviewCount={reviewCount}
+                  sharedCount={sharedCount}
+                  onOpenReview={openSimpleReview}
+                  onOpenShared={openSimpleShared}
+                  onOpenSettings={openSimpleSettings}
+                  onEnableAdvanced={enableAdvancedView}
+                />
+              ) : null}
+            </div>
+          ) : null}
           {activeCoop ? (
             <Tooltip content="Pair a Device" placement="below">
               {({ targetProps }) => (
@@ -305,6 +439,7 @@ export function SidepanelApp() {
               orchestration={orchestration}
               synthesisSegment={synthesisSegment}
               onSelectSynthesisSegment={setSynthesisSegment}
+              nestSubTabRequest={nestSubTabRequest}
               roundupAccessPromptMode={roundupAccessPromptMode}
               onDismissRoundupAccessPrompt={handleDismissRoundupAccessPrompt}
               focusedDraftId={focusedDraftId}
@@ -316,7 +451,7 @@ export function SidepanelApp() {
         )}
       </main>
 
-      {dashboard && !activeCoop ? null : (
+      {dashboard && !activeCoop ? null : simpleShellActive ? null : (
         <SidepanelFooterNav
           activeTab={panelTab}
           onNavigate={setPanelTab}

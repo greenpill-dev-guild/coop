@@ -969,6 +969,56 @@ button.sidepanel-header__brand {
   height: 15px;
 }
 
+.sidepanel-simple-menu-wrap {
+  position: relative;
+  display: flex;
+}
+
+.sidepanel-simple-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: calc(var(--coop-z-sticky) + 2);
+  width: min(220px, calc(100vw - 1.5rem));
+  padding: 0.35rem;
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--coop-line);
+  border-radius: var(--coop-radius-sm);
+  background: var(--coop-surface);
+  box-shadow: var(--coop-shadow-md);
+}
+
+.sidepanel-simple-menu button {
+  appearance: none;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: var(--coop-radius-sm);
+  background: transparent;
+  color: var(--coop-ink);
+  cursor: pointer;
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.sidepanel-simple-menu button:hover,
+.sidepanel-simple-menu button:focus-visible {
+  background: var(--coop-surface-alt);
+  outline: none;
+}
+
+.sidepanel-simple-menu__label {
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.sidepanel-simple-menu__meta {
+  color: var(--coop-muted);
+  font-size: 0.72rem;
+}
+
 /* ---- Sidepanel subheader — unified sticky wrapper ---- */
 
 .sidepanel-subheader {

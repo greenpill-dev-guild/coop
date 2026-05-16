@@ -67,7 +67,7 @@ export function NestSettingsSection({
       {activeCoop ? (
         <details className="panel-card collapsible-card" open>
           <summary>
-            <h2>Coop Preferences</h2>
+            <h2>Coop Settings</h2>
           </summary>
           <div className="collapsible-card__content stack">
             <p className="helper-text">
@@ -122,14 +122,18 @@ export function NestSettingsSection({
         <div className="collapsible-card__content stack">
           <p className="helper-text">These settings are only for this browser.</p>
           <div className="field-grid">
-            <strong>Your passkey</strong>
+            <strong>Your browser</strong>
             <div className="helper-text">
               {authSession ? (
-                <>
-                  {authSession.displayName} · {authSession.primaryAddress}
-                  <br />
-                  {authSession.identityWarning}
-                </>
+                isAdvancedMode ? (
+                  <>
+                    {authSession.displayName} · {authSession.primaryAddress}
+                    <br />
+                    {authSession.identityWarning}
+                  </>
+                ) : (
+                  `${authSession.displayName}'s passkey is ready on this browser.`
+                )
               ) : (
                 'No passkey stored yet. Coop will ask for one when you start or join a coop.'
               )}
@@ -174,23 +178,25 @@ export function NestSettingsSection({
               <option value="off">Off</option>
             </select>
           </div>
-          <div className="field-grid">
-            <label htmlFor="settings-export-method">Export method</label>
-            <select
-              id="settings-export-method"
-              onChange={(event) =>
-                void updateUiPreferences({
-                  preferredExportMethod: event.target.value as PreferredExportMethod,
-                })
-              }
-              value={dashboard?.uiPreferences.preferredExportMethod ?? 'download'}
-            >
-              <option value="download">Browser download</option>
-              <option disabled={!browserUxCapabilities.canSaveFile} value="file-picker">
-                File picker
-              </option>
-            </select>
-          </div>
+          {isAdvancedMode ? (
+            <div className="field-grid">
+              <label htmlFor="settings-export-method">Export method</label>
+              <select
+                id="settings-export-method"
+                onChange={(event) =>
+                  void updateUiPreferences({
+                    preferredExportMethod: event.target.value as PreferredExportMethod,
+                  })
+                }
+                value={dashboard?.uiPreferences.preferredExportMethod ?? 'download'}
+              >
+                <option value="download">Browser download</option>
+                <option disabled={!browserUxCapabilities.canSaveFile} value="file-picker">
+                  File picker
+                </option>
+              </select>
+            </div>
+          ) : null}
           <div className="field-grid">
             <label htmlFor="settings-advanced-controls">Show advanced controls</label>
             <select

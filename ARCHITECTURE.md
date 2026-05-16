@@ -5,7 +5,7 @@ groups working on climate adaptation, mutual aid, and other low-bandwidth,
 high-stakes coordination problems. The interesting architectural choices live
 at the intersection of three constraints: keep everything on-device by default,
 let groups review before sharing, and use the strongest small multimodal model
-that will run in a Chrome MV3 extension on a modest laptop.
+that will run in a Chromium-family MV3 extension on a modest laptop.
 
 This document covers the choices that matter for **The Gemma 4 Good Hackathon**
 submission. It is written to be read in order; each section grounds the next.
@@ -48,12 +48,12 @@ metaphor that runs through the brand:
    feed via Yjs sync; production deployments anchor the coop to a Safe
    multisig on Arbitrum and (optionally) archive to Filecoin via Storacha.
 
-The hackathon demo arc is this loop end-to-end with a multimodal twist: a
-fresh user launches a coop, captures grant tabs (text), attaches a screenshot
-of a PDF-heavy grant site (image), records a 15-second voice memo from a
-meeting (audio), and watches Gemma 4 produce a structured opportunity brief on
-the device — including one function-call moment that drafts the application
-outline.
+The current demo arc is this loop end-to-end with a multimodal twist: a fresh
+user launches a coop, captures grant tabs (text), attaches a screenshot of a
+PDF-heavy grant site (image), records a 15-second voice memo from a meeting
+(audio capture with local transcript fallback), and watches Gemma 4 produce a
+structured opportunity brief on the device — including one function-call
+moment that drafts the application outline.
 
 ## 3. Gemma 4 integration
 
@@ -133,14 +133,14 @@ passes that as `imageUrl`. Data URLs are inline, so they cross the
 postMessage boundary intact and `load_image` resolves them without a
 cross-origin fetch.
 
-**Audio modality — roadmap.** The Gemma 4 request shape, bridge, and worker
-all accept `audioUrl` + `audioSamplingRate` for `read_audio`. The capture
-pipeline, however, currently transcribes voice memos on-device via the
-local Whisper path and surfaces only the transcript text on observation
-payloads (see `emitAudioTranscriptObservation`). Stamping raw audio for
-native Gemma 4 audio inference is documented as roadmap per the
-scope-cut ladder. The transcribed-text path is what reaches Gemma 4 in
-the hackathon submission.
+**Audio modality — proof boundary.** The Gemma 4 request shape, bridge, and
+worker accept `audioUrl` + `audioSamplingRate` for `read_audio`. The runner
+now resolves receiver audio captures from IndexedDB and forwards them as
+`data:audio/...` URLs, matching the image transport workaround above. The
+stable demo fallback remains local Whisper transcription: voice memos are
+transcribed on-device and the transcript text reaches Gemma 4 even if native
+audio decoding fails during the final hardware dry run. The submission should
+only claim native Gemma audio after that dry run captures runtime evidence.
 
 #### Why a sandboxed iframe and not a Web Worker
 
@@ -167,9 +167,9 @@ MV3 explicitly disallows the combination of `allow-same-origin` and
 `'unsafe-eval'` (it would defeat the sandbox), so we drop
 `allow-same-origin`. The cost: the Transformers.js model cache
 (IndexedDB) does not persist across sessions, and `blob:` URLs from the
-parent context aren't fetchable inside the sandbox. The image-modality
-demo path works around the second by encoding photos as `data:` URLs
-(see above). The bridge proxies `postMessage` between the offscreen page
+parent context aren't fetchable inside the sandbox. The image and audio
+demo paths work around the second by encoding receiver blobs as `data:`
+URLs (see above). The bridge proxies `postMessage` between the offscreen page
 (which hosts the iframe) and the sandboxed host; the inference logic,
 multimodal pipe, and tool-call schema all stay in one transport-agnostic
 module (`runtime/agent/gemma4-worker.ts`) so the same code can be
@@ -239,15 +239,17 @@ Coop persists captured material in two layers:
 The extension never crosses the wire until a member explicitly publishes.
 The receiver PWA pairs to the extension over WebRTC, with HMAC-validated
 sync envelopes to guarantee that only the user's own devices participate.
-Archive and onchain rails (Safe + ERC-4337 + Storacha + ERC-8004) sit
-behind opt-in modes (`VITE_COOP_ONCHAIN_MODE=mock|live`).
+Archive and onchain rails (Safe + ERC-4337 + Storacha + ERC-8004) sit behind
+operator-gated integration modes. Simple Coop users interact with reviewed
+captures, members, invites, and shared memory; the Safe/account details remain
+available in advanced and operator surfaces without becoming first-run setup.
 
-The Gemma 4 path inherits this posture for free: the model itself caches in
-the browser after the first download, the worker holds it in memory until
-idle, and at no point does any captured text, image, or audio leave the
-device during inference. The hackathon demo's "offline second run" shows
-the model loading from local cache, which is the cleanest demonstration of
-the local-first claim.
+The Gemma 4 path inherits this posture for free: the model is loaded in the
+browser session, the worker holds it in memory until idle, and at no point
+does captured text, image, audio, or transcript content need to leave the
+device during inference. Because the MV3 sandbox must run as an opaque origin,
+the demo should not claim persistent offline model-cache behavior unless that
+claim is re-proven in the final browser dry run.
 
 ## 5. Simple mode and advanced mode
 
@@ -255,13 +257,13 @@ A single user-facing toggle, `uiMode: 'simple' | 'advanced'`, gates which
 parts of Coop's surface render. The toggle lives in coop preferences and
 defaults to `simple`. Simple mode hides the Roost agent diagnostics, the
 Coops onchain configuration panel, and the Nest operator/archive sections;
-it is what a first-time user sees and what the hackathon demo records.
+it is what a first-time user sees and what current demo flows record.
 
 Render gates are checked at component boundaries — render gates, not feature
 flags — so the gated code paths still type-check and still pass tests. The
 "never cut" set in the demo arc lives entirely in simple mode: the
-chicken-or-egg hook, the Launch the Coop CTA, the Chickens review surface,
-the Coop feed.
+loose-chickens hook, the Create a Coop CTA, the Chickens review surface,
+and the Coop feed.
 
 ## 6. Lazy-loaded modules and bundle strategy
 

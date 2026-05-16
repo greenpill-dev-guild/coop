@@ -33,8 +33,14 @@ vi.mock('../tabs/index', () => ({
   CoopsTab: ({ boardUrl }: { boardUrl: string | null }) => <div>Coops:{boardUrl}</div>,
   NestTab: ({
     orchestration,
-  }: { orchestration: { dashboard?: { activeCoopId?: string } | null } }) => (
-    <div>Nest:{orchestration.dashboard?.activeCoopId ?? 'none'}</div>
+    subTabRequest,
+  }: {
+    orchestration: { dashboard?: { activeCoopId?: string } | null };
+    subTabRequest?: { subTab: string };
+  }) => (
+    <div>
+      Nest:{orchestration.dashboard?.activeCoopId ?? 'none'}:{subTabRequest?.subTab ?? 'members'}
+    </div>
   ),
 }));
 
@@ -188,10 +194,11 @@ describe('SidepanelTabRouter', () => {
         orchestration={makeOrchestration()}
         synthesisSegment="review"
         onSelectSynthesisSegment={vi.fn()}
+        nestSubTabRequest={{ requestId: 1, subTab: 'settings' }}
         onApplySidepanelIntent={vi.fn(async () => undefined)}
       />,
     );
 
-    expect(screen.getByText('Nest:coop-1')).toBeInTheDocument();
+    expect(screen.getByText('Nest:coop-1:settings')).toBeInTheDocument();
   });
 });

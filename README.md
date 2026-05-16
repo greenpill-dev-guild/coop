@@ -13,11 +13,11 @@ layer for peer discovery and optional Yjs document sync.
 A coop is Coop's shared group workspace and memory layer: the place where reviewed drafts, published
 artifacts, board views, and proof material become visible to members.
 
-Today, Coop is strongest as a mock-first staged-launch product: browser capture and review are
+Today, Coop is strongest as a browser-first staged-launch product: browser capture and review are
 implemented, receiver pairing and private intake sync are implemented, local AI refinement is
-implemented, and shared coop publishing is implemented. Live Safe, live archive delegation, and
-live session-capability rails exist as separate second-gate or operator flows rather than the
-default public posture.
+implemented, and shared coop publishing is implemented. Safe, archive delegation, and
+session-capability rails stay in the architecture, but first-run users meet them through plain Coop
+actions instead of wallet or operator setup.
 
 ## The Gemma 4 Good Hackathon — Submission
 
@@ -28,16 +28,18 @@ the shape Gemma 4 is best at.
 
 **Demo arc** (60-90s):
 
-1. Open the popup on a fresh install. Hook copy: *"Chicken or egg? Neither — you need a coop
-   first."* Single CTA: **Launch the Coop**.
+1. Open the popup on a fresh install. Hook copy: *"Ready to round up your loose chickens?"*
+   Single CTA: **Create a Coop**.
 2. Launch a coop named *Community Garden Grants*.
 3. Capture three browser tabs of grant pages (text modality).
 4. Attach a screenshot of one grant site with an awkward PDF layout (image modality — Gemma 4
    reads the visual directly via `load_image`).
-5. Watch Gemma 4 surface an opportunity brief in the **Chickens** tab — title, deadline,
+5. Add a short voice memo from the garden meeting. The demo-safe path transcribes it locally and
+   feeds the transcript into the Gemma 4 prompt; raw audio forwarding is wired for hardware proof.
+6. Watch Gemma 4 surface an opportunity brief in the **Chickens** tab — title, deadline,
    eligibility, fit score, why it matters. One function call (`draft_application_outline`) fires
    on camera and produces a structured application outline.
-6. Push the brief to the coop. Members see it appear in the Coop feed.
+7. Push the brief to the coop. Members see it appear in the Coop feed.
 
 **Gemma 4 specifics.** The new `gemma4` agent provider runs `onnx-community/gemma-4-E2B-it-ONNX`
 (with the E4B variant available as a quality fallback) at `q4f16` precision on `webgpu` via
@@ -46,22 +48,21 @@ the shape Gemma 4 is best at.
 'wasm-unsafe-eval'` — because onnxruntime-web's Embind glue calls `new Function()` on the hot
 path, which the default `extension_pages` CSP forbids and a Web Worker spawned from a
 `chrome-extension://` URL inherits. The host uses `Gemma4ForConditionalGeneration`,
-`AutoProcessor`, and `load_image` to round-trip text + image in a single call; the image
-modality is wired by lazily encoding each photo capture as a `data:` URL in the runner, because
-the sandbox iframe runs as an opaque origin (we dropped `allow-same-origin` to satisfy MV3's
-`unsafe-eval` ban) and can't fetch `blob:` URLs minted by the popup. Six skills are migrated to
+`AutoProcessor`, `load_image`, and `read_audio` to round-trip text, image, and audio-capable
+inputs; the image and audio capture paths lazily encode receiver blobs as `data:` URLs in the
+runner, because the sandbox iframe runs as an opaque origin (we dropped `allow-same-origin` to
+satisfy MV3's `unsafe-eval` ban) and can't fetch `blob:` URLs minted by the popup. Six skills are migrated to
 native function calling (`extract_opportunity`, `score_grant_fit`, `route_tab`,
 `cluster_themes`, `review_digest`, plus the new `draft_application_outline` for the on-camera
 moment); the remaining ten skills keep the existing JSON-output path with
 `validateSkillOutput` as the type guard at the boundary.
 
-**Documented scope cut (audio modality).** Voice memos are transcribed on-device via the local
-Whisper path; that transcript is the input that reaches Gemma 4 in the demo. Passing raw audio
-to Gemma 4 as a `read_audio` tensor is wired through to the bridge/worker but not yet stamped
-on observation payloads by the capture pipeline (`packages/extension/src/background/handlers/capture.ts`).
-Per the scope-cut ladder, audio modality is logged as roadmap; the transcribed-text path is
-what ships for the hackathon submission. See [ARCHITECTURE.md §3](./ARCHITECTURE.md) for the
-full sandbox rationale, the data-URL transport for image, and the audio roadmap note.
+**Audio proof boundary.** Voice memos are transcribed on-device via the local Whisper path; that
+transcript is the stable input that reaches Gemma 4 in the demo. Raw receiver audio captures are
+also converted to `data:audio/...` URLs for the Gemma 4 bridge, but the final submission should
+only claim native Gemma audio once the hardware dry run captures that proof. See
+[ARCHITECTURE.md §3](./ARCHITECTURE.md) for the full sandbox rationale and the data-URL
+transport.
 
 **Climate / resilience framing.** Community gardens are a frontline climate-adaptation surface.
 Grant discovery for them is fragmented, deadline-sensitive, and low-bandwidth. Coop runs the
@@ -70,15 +71,15 @@ members are co-present, and only crosses the wire when a member explicitly publi
 about the captured signal — text, image, or audio transcript — leaves the device during
 inference.
 
-**Demo video and architecture.** The 60-90s submission video is referenced from the Kaggle
-submission entry. The technical write-up lives in [ARCHITECTURE.md](./ARCHITECTURE.md) (≈1700
+**Demo video and architecture.** The 60-90s submission video URL will be added here after the
+recording uploads. The technical write-up lives in [ARCHITECTURE.md](./ARCHITECTURE.md) (≈1700
 words covering the agent provider abstraction, the multimodal worker, function-calling, the
 local-first persistence layer, and the simple/advanced UI mode split).
 
 **Run the demo locally.** `git switch feature/hackathon-simplify`, `bun install`, then
 `cd packages/extension && bun run build`. Load `packages/extension/dist/chrome-mv3` as an
-unpacked extension in Chrome (Canary / Beta recommended for stable WebGPU). The first model load
-caches Gemma 4 to the browser; subsequent runs work fully offline.
+unpacked extension in Brave or another Chromium-family browser with stable WebGPU. Pre-warm Gemma
+4 in the same browser session before recording so the model is ready when the timed take starts.
 
 ## Current Status
 
@@ -108,8 +109,8 @@ Current release references:
    becomes shared coop state.
 4. **Share** -- Publish reviewed drafts into a coop -- the group's shared workspace and memory
    layer -- sync them through Coop's local-first Yjs layer, open board and proof views, and export
-   archive or proof material. Onchain, live archive, and operator execution flows remain mode-gated
-   rather than default public behavior.
+   archive or proof material. Onchain, live archive, and operator execution flows remain abstracted
+   behind those product actions until an advanced operator intentionally opens the rails.
 
 ## Main Surfaces
 
@@ -278,9 +279,9 @@ For Playwright E2E runs, the repo starts its own local signaling server automati
 
 ## Release Posture
 
-Coop's current release posture is mock-first.
+Coop's current release posture is integration-safe by default.
 
-- Automated mock-first release bar: `bun run test`, `bun run test:coverage`, `bun run build`,
+- Automated default release bar: `bun run test`, `bun run test:coverage`, `bun run build`,
   `bun run validate:store-readiness`, and `bun run validate:production-readiness`
 - Remaining public-release blocker: manual Chrome popup QA for real-click `Capture Tab` and
   `Screenshot`
@@ -288,8 +289,9 @@ Coop's current release posture is mock-first.
   `bun run validate:production-live-readiness`
 
 For public Chrome Web Store candidates, keep `VITE_COOP_ONCHAIN_MODE`,
-`VITE_COOP_ARCHIVE_MODE`, and `VITE_COOP_SESSION_MODE` on the mock-first path unless the
-live-rails gate is intentionally being exercised.
+`VITE_COOP_ARCHIVE_MODE`, and `VITE_COOP_SESSION_MODE` on the deterministic default path unless the
+live-rails gate is intentionally being exercised. Those integration modes are build/runtime safety
+rails, not separate product experiences.
 
 Canonical references:
 

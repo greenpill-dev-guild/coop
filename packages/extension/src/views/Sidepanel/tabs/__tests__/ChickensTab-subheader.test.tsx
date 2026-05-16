@@ -131,6 +131,7 @@ function buildProps(overrides: Partial<ChickensTabProps> = {}): ChickensTabProps
     tabCapture: buildTabCapture(),
     synthesisSegment: 'review',
     onSelectSynthesisSegment: vi.fn(),
+    uiMode: 'advanced',
     ...overrides,
   };
 }
@@ -203,6 +204,42 @@ describe('ChickensTab subheader (review/shared segments)', () => {
     );
 
     expect(screen.getByRole('button', { name: /category/i })).toBeInTheDocument();
+  });
+
+  it('hides the category filter in simple mode', () => {
+    render(
+      <ChickensTab
+        {...buildProps({
+          uiMode: 'simple',
+          visibleDrafts: [
+            {
+              id: 'draft-1',
+              category: 'insight',
+              title: 'Insight item',
+              tags: [],
+              whyItMatters: '',
+              suggestedNextStep: '',
+              sources: [],
+              createdAt: new Date().toISOString(),
+              suggestedTargetCoopIds: [],
+            } as unknown as ReviewDraft,
+            {
+              id: 'draft-2',
+              category: 'opportunity',
+              title: 'Opportunity item',
+              tags: [],
+              whyItMatters: '',
+              suggestedNextStep: '',
+              sources: [],
+              createdAt: new Date().toISOString(),
+              suggestedTargetCoopIds: [],
+            } as unknown as ReviewDraft,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /category/i })).not.toBeInTheDocument();
   });
 
   it('hides the category filter on the shared segment', () => {

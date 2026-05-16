@@ -1,5 +1,5 @@
 import type { KnowledgeSource } from '@coop/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { sendRuntimeMessage } from '../../../runtime/messages';
 import { PopupSubheader, type PopupSubheaderTag } from '../../Popup/PopupSubheader';
 import { Tooltip } from '../../shared/Tooltip';
@@ -19,12 +19,18 @@ import { NestSourcesSection } from './NestSourcesSection';
 
 export type NestSubTab = 'members' | 'agent' | 'settings' | 'sources';
 
+export interface NestSubTabRequest {
+  requestId: number;
+  subTab: NestSubTab;
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 export interface NestTabOrchestrationProps {
   orchestration: SidepanelOrchestration;
+  subTabRequest?: NestSubTabRequest;
 }
 
 export type NestTabProps = NestTabOrchestrationProps;
@@ -33,7 +39,7 @@ export type NestTabProps = NestTabOrchestrationProps;
 // Component
 // ---------------------------------------------------------------------------
 
-export function NestTab({ orchestration }: NestTabOrchestrationProps) {
+export function NestTab({ orchestration, subTabRequest }: NestTabOrchestrationProps) {
   const {
     dashboard,
     activeCoop,
@@ -47,6 +53,7 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
 
   const allCoops = dashboard?.coops ?? [];
   const [nestSubTab, setNestSubTab] = useState<NestSubTab>('members');
+  const lastSubTabRequestRef = useRef<number | null>(null);
   const [inviteControlsOpen, setInviteControlsOpen] = useState(false);
   const [inviteFocusRequest, setInviteFocusRequest] = useState(0);
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
@@ -72,6 +79,21 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
       setNestSubTab('members');
     }
   }, [isAdvancedMode, nestSubTab]);
+
+  useEffect(() => {
+    if (!subTabRequest || lastSubTabRequestRef.current === subTabRequest.requestId) {
+      return;
+    }
+    lastSubTabRequestRef.current = subTabRequest.requestId;
+    if (
+      !isAdvancedMode &&
+      (subTabRequest.subTab === 'agent' || subTabRequest.subTab === 'sources')
+    ) {
+      setNestSubTab('members');
+      return;
+    }
+    setNestSubTab(subTabRequest.subTab);
+  }, [isAdvancedMode, subTabRequest]);
 
   const handleAddSource = useCallback(
     async (sourceType: string, identifier: string, label: string) => {
@@ -341,12 +363,14 @@ export function NestTab({ orchestration }: NestTabOrchestrationProps) {
           />
 
           {/* --- Save & Export --- */}
-          <NestArchiveSection
-            archiveSnapshot={orchestration.archiveSnapshot}
-            exportSnapshot={orchestration.exportSnapshot}
-            exportLatestReceipt={orchestration.exportLatestReceipt}
-            advancedControls={isAdvancedMode}
-          />
+          {isAdvancedMode ? (
+            <NestArchiveSection
+              archiveSnapshot={orchestration.archiveSnapshot}
+              exportSnapshot={orchestration.exportSnapshot}
+              exportLatestReceipt={orchestration.exportLatestReceipt}
+              advancedControls={isAdvancedMode}
+            />
+          ) : null}
 
           {/* --- Archive setup wizard --- */}
           {isAdvancedMode ? (

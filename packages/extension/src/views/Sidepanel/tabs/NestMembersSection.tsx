@@ -56,25 +56,27 @@ export function NestMembersSection({
               <strong>Purpose</strong>
               <p className="helper-text">{activeCoop.profile.purpose}</p>
             </div>
-            <div>
-              <strong>Shared nest</strong>
-              <p className="helper-text">
-                <a
-                  href={getAddressExplorerUrl(
-                    activeCoop.onchainState.safeAddress,
-                    activeCoop.onchainState.chainKey,
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="source-link"
-                >
-                  {truncateAddress(activeCoop.onchainState.safeAddress)}
-                </a>
-                <br />
-                {getCoopChainLabel(activeCoop.onchainState.chainKey)} ·{' '}
-                {activeCoop.onchainState.statusNote}
-              </p>
-            </div>
+            {advancedControls ? (
+              <div>
+                <strong>Shared nest</strong>
+                <p className="helper-text">
+                  <a
+                    href={getAddressExplorerUrl(
+                      activeCoop.onchainState.safeAddress,
+                      activeCoop.onchainState.chainKey,
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="source-link"
+                  >
+                    {truncateAddress(activeCoop.onchainState.safeAddress)}
+                  </a>
+                  <br />
+                  {getCoopChainLabel(activeCoop.onchainState.chainKey)} ·{' '}
+                  {activeCoop.onchainState.statusNote}
+                </p>
+              </div>
+            ) : null}
           </div>
           <ul className="list-reset stack">
             {activeCoop.members.map((member) => {
@@ -86,7 +88,7 @@ export function NestMembersSection({
                   <strong>{member.displayName}</strong>
                   <div className="helper-text">
                     {member.role} seat
-                    {memberAccount?.accountAddress ? (
+                    {advancedControls && memberAccount?.accountAddress ? (
                       <>
                         {' · '}
                         <a
@@ -151,22 +153,26 @@ export function NestMembersSection({
         </div>
       </details>
 
-      <NestProfileSection
-        activeCoop={activeCoop}
-        updateCoopDetails={orchestration.updateCoopDetails}
-      />
-      <NestSoulSection
-        activeCoop={activeCoop}
-        updateCoopDetails={orchestration.updateCoopDetails}
-      />
-      <NestRitualSection
-        activeCoop={activeCoop}
-        updateMeetingSettings={orchestration.updateMeetingSettings}
-      />
-      <NestSetupSection
-        activeCoop={activeCoop}
-        updateCoopDetails={orchestration.updateCoopDetails}
-      />
+      {advancedControls ? (
+        <>
+          <NestProfileSection
+            activeCoop={activeCoop}
+            updateCoopDetails={orchestration.updateCoopDetails}
+          />
+          <NestSoulSection
+            activeCoop={activeCoop}
+            updateCoopDetails={orchestration.updateCoopDetails}
+          />
+          <NestRitualSection
+            activeCoop={activeCoop}
+            updateMeetingSettings={orchestration.updateMeetingSettings}
+          />
+          <NestSetupSection
+            activeCoop={activeCoop}
+            updateCoopDetails={orchestration.updateCoopDetails}
+          />
+        </>
+      ) : null}
 
       <NestInviteSection
         inviteResult={orchestration.inviteResult}
@@ -192,29 +198,31 @@ export function NestMembersSection({
         draftEditor={orchestration.draftEditor}
       />
 
-      <details className="panel-card collapsible-card">
-        <summary>
-          <h2>Leave this coop</h2>
-        </summary>
-        <div className="collapsible-card__content stack">
-          <p className="helper-text">
-            Leaving removes your member seat from {activeCoop.profile.name}. Your local data stays,
-            but you will stop receiving shared updates.
-          </p>
-          <button
-            className="secondary-button"
-            style={{ color: 'var(--coop-error, #c53030)' }}
-            onClick={() => {
-              if (window.confirm(`Are you sure you want to leave ${activeCoop.profile.name}?`)) {
-                void orchestration.handleLeaveCoop();
-              }
-            }}
-            type="button"
-          >
-            Leave {activeCoop.profile.name}
-          </button>
-        </div>
-      </details>
+      {advancedControls ? (
+        <details className="panel-card collapsible-card">
+          <summary>
+            <h2>Leave this coop</h2>
+          </summary>
+          <div className="collapsible-card__content stack">
+            <p className="helper-text">
+              Leaving removes your member seat from {activeCoop.profile.name}. Your local data
+              stays, but you will stop receiving shared updates.
+            </p>
+            <button
+              className="secondary-button"
+              style={{ color: 'var(--coop-error, #c53030)' }}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to leave ${activeCoop.profile.name}?`)) {
+                  void orchestration.handleLeaveCoop();
+                }
+              }}
+              type="button"
+            >
+              Leave {activeCoop.profile.name}
+            </button>
+          </div>
+        </details>
+      ) : null}
     </>
   );
 }

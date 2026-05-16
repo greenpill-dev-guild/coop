@@ -244,6 +244,7 @@ function buildProps(overrides: Partial<ChickensTabProps> = {}): ChickensTabProps
     tabCapture: buildTabCapture(),
     synthesisSegment: 'review',
     onSelectSynthesisSegment: vi.fn(),
+    uiMode: 'advanced',
     ...overrides,
   };
 }
@@ -549,6 +550,24 @@ describe('ChickensTab interactions', () => {
 
     const visibleTag = document.querySelector('details[open] .compact-card__tag');
     expect(visibleTag).not.toBeNull();
+  });
+
+  it('keeps simple cards focused and tucks feedback controls into details', async () => {
+    const user = userEvent.setup();
+
+    render(<ChickensTab {...buildProps({ uiMode: 'simple' })} />);
+
+    expect(screen.getByText('Restore wetland corridor')).toBeInTheDocument();
+    expect(screen.getAllByText('Shared habitat restoration opportunity').length).toBeGreaterThan(0);
+    expect(document.querySelector('.compact-card__category')).toBeNull();
+    expect(document.querySelector('.compact-card__surface-tag')).toBeNull();
+    for (const button of screen.getAllByRole('button', { name: /not useful/i })) {
+      expect(button.closest('details')).not.toBeNull();
+    }
+
+    await user.click(screen.getAllByText('Details')[0]);
+
+    expect(screen.getAllByRole('button', { name: /not useful/i }).length).toBeGreaterThan(0);
   });
 
   it('renders push controls on orphan signals via promoteSignalAndPublish', async () => {
