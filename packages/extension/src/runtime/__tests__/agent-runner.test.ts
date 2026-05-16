@@ -129,6 +129,7 @@ const mockSaveTabRouting = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthSession = vi.fn().mockResolvedValue(null);
 const mockGetReviewDraft = vi.fn().mockResolvedValue(null);
 const mockGetReceiverCapture = vi.fn().mockResolvedValue(null);
+const mockGetReceiverCaptureBlob = vi.fn().mockResolvedValue(null);
 const mockGetPageExtract = vi.fn().mockResolvedValue(null);
 const mockGetTabRoutingByExtractAndCoop = vi.fn().mockResolvedValue(null);
 const mockGetSkillRun = vi.fn().mockResolvedValue(null);
@@ -248,6 +249,7 @@ vi.mock('@coop/shared', () => ({
   getAuthSession: mockGetAuthSession,
   getReviewDraft: mockGetReviewDraft,
   getReceiverCapture: mockGetReceiverCapture,
+  getReceiverCaptureBlob: mockGetReceiverCaptureBlob,
   getPageExtract: mockGetPageExtract,
   getSkillRun: mockGetSkillRun,
   getTabRoutingByExtractAndCoop: mockGetTabRoutingByExtractAndCoop,
@@ -566,6 +568,7 @@ describe('agent-runner', () => {
     mockSaveTabRouting.mockResolvedValue(undefined);
     mockGetReviewDraft.mockResolvedValue(null);
     mockGetReceiverCapture.mockResolvedValue(null);
+    mockGetReceiverCaptureBlob.mockResolvedValue(null);
     mockGetPageExtract.mockResolvedValue(null);
     mockGetSkillRun.mockResolvedValue(null);
     mockGetTabRoutingByExtractAndCoop.mockResolvedValue(null);

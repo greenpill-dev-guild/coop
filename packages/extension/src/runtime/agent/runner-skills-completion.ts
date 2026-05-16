@@ -56,7 +56,10 @@ import {
 } from './runner-skills-prompt';
 import { db, findAuthenticatedCoopMember, getCoops } from './runner-state';
 
-async function loadPhotoCaptureAsDataUrl(capture: ReceiverCapture): Promise<string | undefined> {
+async function loadReceiverCaptureAsDataUrl(
+  capture: ReceiverCapture,
+  fallbackMimeType: string,
+): Promise<string | undefined> {
   try {
     const blob = await getReceiverCaptureBlob(db, capture.id);
     if (!blob) return undefined;
@@ -67,10 +70,10 @@ async function loadPhotoCaptureAsDataUrl(capture: ReceiverCapture): Promise<stri
       binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
     }
     const base64 = btoa(binary);
-    const mimeType = capture.mimeType || blob.type || 'image/png';
+    const mimeType = capture.mimeType || blob.type || fallbackMimeType;
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
-    console.warn('[completeSkill] Failed to load photo capture as data URL', error);
+    console.warn('[completeSkill] Failed to load receiver capture as data URL', error);
     return undefined;
   }
 }
@@ -106,21 +109,25 @@ export async function completeSkill<T>(input: {
   //     blob: URLs minted in the parent can't be fetched from the sandbox.
   //     data: URLs work because they're inline. Encoded JIT to avoid
   //     persisting large base64 blobs on the observation payload.
-  //   - audioUrl: not wired yet — the audio path currently surfaces only
-  //     transcriptText in the payload (see emitAudioTranscriptObservation).
-  //     Audio modality is documented as roadmap per scope-cut ladder.
+  //   - audioUrl: lazily resolved from receiver audio captures the same way,
+  //     using data: URLs so the sandbox can call transformers.js read_audio()
+  //     without fetching a parent-minted blob: URL.
   const observationPayload = (input.observation.payload ?? {}) as Record<string, unknown>;
   let imageUrl =
     typeof observationPayload.imageUrl === 'string' ? observationPayload.imageUrl : undefined;
   if (!imageUrl && input.capture?.kind === 'photo') {
-    imageUrl = await loadPhotoCaptureAsDataUrl(input.capture);
+    imageUrl = await loadReceiverCaptureAsDataUrl(input.capture, 'image/png');
   }
-  const audioUrl =
+  let audioUrl =
     typeof observationPayload.audioUrl === 'string' ? observationPayload.audioUrl : undefined;
-  const audioSamplingRate =
+  let audioSamplingRate =
     typeof observationPayload.audioSamplingRate === 'number'
       ? observationPayload.audioSamplingRate
       : undefined;
+  if (!audioUrl && input.capture?.kind === 'audio') {
+    audioUrl = await loadReceiverCaptureAsDataUrl(input.capture, 'audio/webm');
+    audioSamplingRate ??= 16000;
+  }
   const result = await completeSkillOutput<T>({
     preferredProvider,
     schemaRef: manifest.outputSchemaRef,
