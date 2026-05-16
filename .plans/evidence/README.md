@@ -8,14 +8,15 @@ Two complementary baseline runs converge on the same conclusion: extension
 loads cleanly with sandbox CSP applied, zero errors anywhere, hook copy
 renders. Extension ID `lffaelabglhoibcdlkoagalakpbcoakh` in both runs.
 
-### Run A — Playwright + Chrome/Chromium, sandbox eval probe
+### Run A — Playwright + Chromium-family browser, sandbox eval probe
 
-Captured via `node scripts/verify-real-chrome.cjs` — headed Playwright with
-`channel: 'chrome'` (falls back to `chromium`), real SW registration.
+Captured via `node scripts/verify-real-chrome.cjs` — headed Playwright,
+Brave-first on this machine with Chrome/Chromium fallback, real SW
+registration.
 
 | Artifact | Path |
 |---|---|
-| Popup (hook copy + Launch the Coop CTA) | `2026-05-16-popup-baseline.png` |
+| Popup (hook copy + Create a Coop CTA) | `2026-05-16-popup-baseline.png` |
 | Sidepanel (welcome screen, hook copy) | `2026-05-16-sidepanel-baseline.png` |
 | Sandbox iframe (host has no UI — blank screenshot is expected) | `2026-05-16-sandbox-baseline.png` |
 | Run summary (eval probe, errors, ext ID) | `2026-05-16-runtime-summary-baseline.json` |
@@ -46,33 +47,38 @@ shows the Coop v1 extension card with no errors panel surfaced — the brief's
 
 Per the brief:
 
-- ✅ Unpacked Chrome load is clean (extension ID stable across runs)
+- ✅ Unpacked Chromium-family browser load is clean (extension ID stable across runs)
 - ✅ Popup renders with hook copy
 - ✅ SW errors panel is clean (no errors button on the extension card)
 
-## Still pending: multimodal inference round-trip
+## Still pending: final multimodal inference round-trip
 
 The Sat baseline confirms the **rendering and CSP path are clean** but does
 not confirm Gemma 4 actually completes a text+image+audio inference. The
 multimodal pipeline is statically verified:
 
-- `runner-skills-completion.ts:86-103` extracts `imageUrl`, `audioUrl`,
+- `runner-skills-completion.ts` extracts `imageUrl`, `audioUrl`,
   `audioSamplingRate` from the observation payload and propagates them
   through `completeSkillOutput`.
+- Receiver photo and audio captures are lazily loaded from IndexedDB and
+  converted to sandbox-safe `data:` URLs before Gemma 4 completion.
 - `gemma4-worker.ts:143-157` calls `load_image(imageUrl)` and
   `read_audio(audioUrl, samplingRate ?? 16000)` and passes both to
   `processor()` alongside the text prompt.
 - `gemma4-bridge.ts:14-24` declares the request shape that includes all three
   modalities.
+- `packages/extension/src/runtime/agent/__tests__/runner-skills-completion.test.ts`
+  proves audio captures forward as `data:audio/...` with a 16 kHz sampling
+  rate default.
 - All 16 bridge/worker unit tests pass; `bun run validate smoke` and
   `bun run validate:store-readiness` are green.
 
-The runtime confirmation requires:
+The final runtime confirmation still requires:
 
-1. A real Chrome (Canary / Beta) with stable WebGPU, OR
+1. Brave or another Chromium-family browser with stable WebGPU, OR
 2. A focused Playwright script that drives the demo arc (seed coop, attach
    image + audio, trigger agent cycle), accepting that the first run
-   triggers a ~3 GB Gemma 4 E2B model download.
+   triggers a large Gemma 4 E2B model download.
 
 Sun May 17 dry run is when this is captured (see `.plans/demo-shooting-script.md`
 for the staging plan).
@@ -93,7 +99,7 @@ branch off `main` if/when they need to land.
 
 ```bash
 cd packages/extension && bun run build      # ~107s
-cd ../.. && node scripts/verify-real-chrome.cjs
+cd ../.. && COOP_VERIFY_BROWSER=brave node scripts/verify-real-chrome.cjs
 ```
 
 The script writes evidence to this directory, captures console errors, and

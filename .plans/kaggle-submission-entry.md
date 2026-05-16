@@ -17,8 +17,8 @@ https://github.com/greenpill-dev-guild/coop/tree/feature/hackathon-simplify
 ```
 
 After Sun's recording uploads to YouTube/Loom, also drop the same URL into
-`README.md` (replace the phrase "is referenced from the Kaggle submission
-entry" with the real `[link](URL)`).
+`README.md` (replace the "video URL will be added here" sentence with the
+real `[link](URL)`).
 
 ## Entry description (~200 words)
 
@@ -37,11 +37,11 @@ the group needs to write. The brief publishes to the coop's shared Yjs feed.
 
 Everything runs on-device. No cloud round-trips during inference. Voice
 memos transcribe locally via Whisper and feed text into the same Gemma 4
-brief; native audio modality is wired through the bridge and worker but
-documented as roadmap pending capture-side stamping. Six demo-path skills
-use Gemma 4 native function calling; ten back-half skills keep the existing
-JSON-schema fallback documented in `ARCHITECTURE.md`. Climate /
-global-resilience track.
+brief. Raw audio forwarding is wired through the bridge and worker as
+`data:audio/...` input, but the submission only claims native audio if the
+final hardware dry run captures that proof. Six demo-path skills use Gemma 4
+native function calling; ten back-half skills keep the existing JSON-schema
+fallback documented in `ARCHITECTURE.md`. Climate / global-resilience track.
 
 (Word count: ~195)
 
@@ -50,6 +50,7 @@ global-resilience track.
 - [ ] Sun: video recorded, trimmed to 60–90 s, uploaded
 - [ ] Sun/Mon: video URL pasted above
 - [ ] Mon: video URL also pasted into `README.md` §"Submission"
+- [ ] Mon: `.plans/hackathon-closeout-runbook.md` evidence checklist complete
 - [ ] Mon: README change committed and pushed
 - [ ] Mon: Kaggle form opened, all three blocks pasted
 - [ ] Mon: form submitted, confirmation captured
