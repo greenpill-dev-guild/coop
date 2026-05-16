@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /*
- * Headed-Chrome baseline verification for the hackathon submission.
+ * Headed Chromium-family baseline verification for the hackathon submission.
  *
- * Loads the unpacked dist/chrome-mv3 extension into a real installed Chrome
- * (channel: 'chrome', NOT headless), runs:
+ * Loads the unpacked dist/chrome-mv3 extension into a real installed browser
+ * (Brave by default on this machine, then Chrome/Chromium fallback), runs:
  *   1. Sandbox CSP probe — `new Function('return 1')()` inside agent-sandbox.html
  *   2. Popup screenshot
  *   3. Sidepanel screenshot
@@ -28,11 +28,43 @@ const extensionDir = path.join(rootDir, 'packages/extension/dist/chrome-mv3');
 const evidenceDir = path.join(rootDir, '.plans/evidence');
 const today = new Date().toISOString().slice(0, 10);
 const label = process.env.COOP_VERIFY_LABEL || 'baseline';
+const requestedBrowser = (process.env.COOP_VERIFY_BROWSER || 'brave').toLowerCase();
 
 const popupPng = path.join(evidenceDir, `${today}-popup-${label}.png`);
 const sidepanelPng = path.join(evidenceDir, `${today}-sidepanel-${label}.png`);
 const sandboxPng = path.join(evidenceDir, `${today}-sandbox-${label}.png`);
 const summaryJson = path.join(evidenceDir, `${today}-runtime-summary-${label}.json`);
+
+function existingPath(filePath) {
+  return fs.existsSync(filePath) ? filePath : null;
+}
+
+function browserCandidates() {
+  const braveCandidates = [
+    existingPath('/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),
+    existingPath('/Applications/Brave Browser Beta.app/Contents/MacOS/Brave Browser Beta'),
+  ]
+    .filter(Boolean)
+    .map((executablePath) => ({
+      label: path.basename(executablePath),
+      options: { executablePath },
+    }));
+  const chromeCandidates = [{ label: 'Google Chrome', options: { channel: 'chrome' } }];
+  const chromiumCandidates = [{ label: 'Playwright Chromium', options: { channel: 'chromium' } }];
+
+  if (requestedBrowser === 'brave') {
+    return [...braveCandidates, ...chromeCandidates, ...chromiumCandidates];
+  }
+  if (requestedBrowser === 'chrome') {
+    return [...chromeCandidates, ...braveCandidates, ...chromiumCandidates];
+  }
+  if (requestedBrowser === 'chromium') {
+    return [...chromiumCandidates, ...braveCandidates, ...chromeCandidates];
+  }
+  throw new Error(
+    `Unsupported COOP_VERIFY_BROWSER="${requestedBrowser}". Use brave, chrome, or chromium.`,
+  );
+}
 
 async function main() {
   if (!fs.existsSync(path.join(extensionDir, 'manifest.json'))) {
@@ -48,30 +80,32 @@ async function main() {
   let extensionId = null;
   let evalProbe = null;
   let sandboxLoaded = false;
+  let browserLabel = null;
 
-  console.log('[verify] Launching real Chrome (channel: chrome, headless: false)');
+  console.log(`[verify] Launching headed browser (preferred: ${requestedBrowser})`);
   console.log(`[verify] Extension dir: ${extensionDir}`);
   console.log(`[verify] User data dir: ${userDataDir}`);
 
   let context;
-  try {
-    context = await chromium.launchPersistentContext(userDataDir, {
-      channel: 'chrome',
-      headless: false,
-      args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
-      viewport: { width: 1280, height: 720 },
-    });
-  } catch (launchError) {
-    console.error(`[verify] launch failed: ${launchError.message}`);
-    console.error(
-      `[verify] If 'channel: chrome' is unavailable, retrying with channel: 'chromium'`,
-    );
-    context = await chromium.launchPersistentContext(userDataDir, {
-      channel: 'chromium',
-      headless: false,
-      args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
-      viewport: { width: 1280, height: 720 },
-    });
+  const launchErrors = [];
+  for (const candidate of browserCandidates()) {
+    try {
+      console.log(`[verify] Trying ${candidate.label}`);
+      context = await chromium.launchPersistentContext(userDataDir, {
+        ...candidate.options,
+        headless: false,
+        args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
+        viewport: { width: 1280, height: 720 },
+      });
+      browserLabel = candidate.label;
+      break;
+    } catch (launchError) {
+      launchErrors.push(`${candidate.label}: ${launchError.message}`);
+      console.error(`[verify] ${candidate.label} launch failed: ${launchError.message}`);
+    }
+  }
+  if (!context) {
+    throw new Error(`No headed Chromium-family browser could launch.\n${launchErrors.join('\n')}`);
   }
 
   const collectError = (label, error) => {
@@ -204,6 +238,7 @@ async function main() {
     const summary = {
       timestamp: new Date().toISOString(),
       label,
+      browser: browserLabel,
       extensionId,
       sandboxLoaded,
       evalProbe,

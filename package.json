@@ -34,6 +34,7 @@
     "test:e2e": "COOP_PLAYWRIGHT_APP_PORT=${COOP_PLAYWRIGHT_APP_PORT:-3311} COOP_PLAYWRIGHT_API_PORT=${COOP_PLAYWRIGHT_API_PORT:-4445} playwright test",
     "test:visual": "COOP_PLAYWRIGHT_APP_PORT=${COOP_PLAYWRIGHT_APP_PORT:-3311} COOP_PLAYWRIGHT_API_PORT=${COOP_PLAYWRIGHT_API_PORT:-4445} playwright test e2e/visual-popup.spec.cjs e2e/visual-sidepanel.spec.cjs",
     "test:visual:update": "COOP_PLAYWRIGHT_APP_PORT=${COOP_PLAYWRIGHT_APP_PORT:-3311} COOP_PLAYWRIGHT_API_PORT=${COOP_PLAYWRIGHT_API_PORT:-4445} playwright test e2e/visual-popup.spec.cjs e2e/visual-sidepanel.spec.cjs --update-snapshots",
+    "check:design-md": "design.md lint --format json DESIGN.md && design.md lint --format json packages/app/DESIGN.pwa.md && design.md lint --format json packages/app/DESIGN.browser.md && design.md lint --format json docs/DESIGN.md",
     "test:e2e:dev": "COOP_PLAYWRIGHT_DEV=1 COOP_E2E_USE_EXISTING_EXTENSION=1 playwright test",
     "test:e2e:app": "COOP_PLAYWRIGHT_APP_PORT=${COOP_PLAYWRIGHT_APP_PORT:-3311} COOP_PLAYWRIGHT_API_PORT=${COOP_PLAYWRIGHT_API_PORT:-4445} playwright test e2e/app.spec.cjs --project=desktop",
     "test:e2e:app:mobile": "COOP_PLAYWRIGHT_APP_PORT=${COOP_PLAYWRIGHT_APP_PORT:-3311} COOP_PLAYWRIGHT_API_PORT=${COOP_PLAYWRIGHT_API_PORT:-4445} playwright test e2e/app.spec.cjs --project=mobile",
@@ -125,6 +126,7 @@
     "postinstall": "sh -lc 'cd packages/extension && bun run prepare'"
   },
   "devDependencies": {
+    "@google/design.md": "0.1.1",
     "@biomejs/biome": "^1.9.4",
     "@playwright/test": "^1.52.0",
     "@rhinestone/module-sdk": "^0.4.0",
