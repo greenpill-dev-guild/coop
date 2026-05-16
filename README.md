@@ -33,34 +33,42 @@ the shape Gemma 4 is best at.
 2. Launch a coop named *Community Garden Grants*.
 3. Capture three browser tabs of grant pages (text modality).
 4. Attach a screenshot of one grant site with an awkward PDF layout (image modality — Gemma 4
-   reads the visual).
-5. Attach a 15-second voice memo from a community garden meeting voicing what the garden needs
-   (audio modality — Gemma 4 transcribes and uses it as fit-scoring context).
-6. Watch Gemma 4 surface an opportunity brief in the **Chickens** tab — title, deadline,
+   reads the visual directly via `load_image`).
+5. Watch Gemma 4 surface an opportunity brief in the **Chickens** tab — title, deadline,
    eligibility, fit score, why it matters. One function call (`draft_application_outline`) fires
    on camera and produces a structured application outline.
-7. Push the brief to the coop. Members see it appear in the Coop feed.
+6. Push the brief to the coop. Members see it appear in the Coop feed.
 
 **Gemma 4 specifics.** The new `gemma4` agent provider runs `onnx-community/gemma-4-E2B-it-ONNX`
 (with the E4B variant available as a quality fallback) at `q4f16` precision on `webgpu` via
 `@huggingface/transformers@^4.2.0`. Inference runs inside an MV3 **sandboxed iframe**
 (`agent-sandbox.html`) with its own CSP slot — `script-src 'self' 'unsafe-eval'
-'wasm-unsafe-eval' blob:` — because onnxruntime-web's Embind glue calls `new Function()` on the
-hot path, which the default `extension_pages` CSP forbids and a Web Worker spawned from a
+'wasm-unsafe-eval'` — because onnxruntime-web's Embind glue calls `new Function()` on the hot
+path, which the default `extension_pages` CSP forbids and a Web Worker spawned from a
 `chrome-extension://` URL inherits. The host uses `Gemma4ForConditionalGeneration`,
-`AutoProcessor`, `load_image`, and `read_audio` to round-trip text + image + audio in a single
-call. Six skills are migrated to native function calling (`extract_opportunity`,
-`score_grant_fit`, `route_tab`, `cluster_themes`, `review_digest`, plus the new
-`draft_application_outline` for the on-camera moment); the remaining ten skills keep the
-existing JSON-output path with `validateSkillOutput` as the type guard at the boundary. See
-[ARCHITECTURE.md §3](./ARCHITECTURE.md) for the full sandbox rationale and the documented
-scope cut on back-half function calling.
+`AutoProcessor`, and `load_image` to round-trip text + image in a single call; the image
+modality is wired by lazily encoding each photo capture as a `data:` URL in the runner, because
+the sandbox iframe runs as an opaque origin (we dropped `allow-same-origin` to satisfy MV3's
+`unsafe-eval` ban) and can't fetch `blob:` URLs minted by the popup. Six skills are migrated to
+native function calling (`extract_opportunity`, `score_grant_fit`, `route_tab`,
+`cluster_themes`, `review_digest`, plus the new `draft_application_outline` for the on-camera
+moment); the remaining ten skills keep the existing JSON-output path with
+`validateSkillOutput` as the type guard at the boundary.
+
+**Documented scope cut (audio modality).** Voice memos are transcribed on-device via the local
+Whisper path; that transcript is the input that reaches Gemma 4 in the demo. Passing raw audio
+to Gemma 4 as a `read_audio` tensor is wired through to the bridge/worker but not yet stamped
+on observation payloads by the capture pipeline (`packages/extension/src/background/handlers/capture.ts`).
+Per the scope-cut ladder, audio modality is logged as roadmap; the transcribed-text path is
+what ships for the hackathon submission. See [ARCHITECTURE.md §3](./ARCHITECTURE.md) for the
+full sandbox rationale, the data-URL transport for image, and the audio roadmap note.
 
 **Climate / resilience framing.** Community gardens are a frontline climate-adaptation surface.
 Grant discovery for them is fragmented, deadline-sensitive, and low-bandwidth. Coop runs the
 entire capture-refine-review-share loop on-device, syncs peer-to-peer (Yjs over WebRTC) when
 members are co-present, and only crosses the wire when a member explicitly publishes. Nothing
-about the captured signal — text, image, or audio — leaves the device during inference.
+about the captured signal — text, image, or audio transcript — leaves the device during
+inference.
 
 **Demo video and architecture.** The 60-90s submission video is referenced from the Kaggle
 submission entry. The technical write-up lives in [ARCHITECTURE.md](./ARCHITECTURE.md) (≈1700

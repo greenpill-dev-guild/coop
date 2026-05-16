@@ -28,6 +28,7 @@ import {
   createGreenGoodsWorkApprovalOutput,
   encodeAgentManifestURI,
   getAuthSession,
+  getReceiverCaptureBlob,
   greenGoodsAssessmentRequestSchema,
   greenGoodsWorkApprovalRequestSchema,
   saveReviewDraft,
@@ -55,6 +56,25 @@ import {
 } from './runner-skills-prompt';
 import { db, findAuthenticatedCoopMember, getCoops } from './runner-state';
 
+async function loadPhotoCaptureAsDataUrl(capture: ReceiverCapture): Promise<string | undefined> {
+  try {
+    const blob = await getReceiverCaptureBlob(db, capture.id);
+    if (!blob) return undefined;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    const base64 = btoa(binary);
+    const mimeType = capture.mimeType || blob.type || 'image/png';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.warn('[completeSkill] Failed to load photo capture as data URL', error);
+    return undefined;
+  }
+}
+
 export async function completeSkill<T>(input: {
   skill: RegisteredSkill;
   observation: AgentObservation;
@@ -79,12 +99,22 @@ export async function completeSkill<T>(input: {
   const prepared = input.preparedPrompt ?? (await buildSkillPrompt(input));
   const preferredProvider = input.preferredProvider ?? (await resolvePreferredProvider(manifest));
   // Surface multimodal attachments from the observation payload to the
-  // gemma4 path. The runner already validates payload as a record; the
-  // agent observation pipeline puts captured screenshot URLs and recorded
-  // audio Blob URLs here for the demo arc.
+  // gemma4 path. Image and audio inputs use different transports:
+  //   - imageUrl: lazily resolved from the receiver photo capture blob as a
+  //     data: URL. The sandbox iframe runs as an opaque origin (we dropped
+  //     allow-same-origin in cb34004 to satisfy MV3's unsafe-eval ban), so
+  //     blob: URLs minted in the parent can't be fetched from the sandbox.
+  //     data: URLs work because they're inline. Encoded JIT to avoid
+  //     persisting large base64 blobs on the observation payload.
+  //   - audioUrl: not wired yet — the audio path currently surfaces only
+  //     transcriptText in the payload (see emitAudioTranscriptObservation).
+  //     Audio modality is documented as roadmap per scope-cut ladder.
   const observationPayload = (input.observation.payload ?? {}) as Record<string, unknown>;
-  const imageUrl =
+  let imageUrl =
     typeof observationPayload.imageUrl === 'string' ? observationPayload.imageUrl : undefined;
+  if (!imageUrl && input.capture?.kind === 'photo') {
+    imageUrl = await loadPhotoCaptureAsDataUrl(input.capture);
+  }
   const audioUrl =
     typeof observationPayload.audioUrl === 'string' ? observationPayload.audioUrl : undefined;
   const audioSamplingRate =

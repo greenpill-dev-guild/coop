@@ -36,7 +36,9 @@ const summaryJson = path.join(evidenceDir, `${today}-runtime-summary-${label}.js
 
 async function main() {
   if (!fs.existsSync(path.join(extensionDir, 'manifest.json'))) {
-    throw new Error(`Missing manifest at ${extensionDir}. Run \`cd packages/extension && bun run build\` first.`);
+    throw new Error(
+      `Missing manifest at ${extensionDir}. Run \`cd packages/extension && bun run build\` first.`,
+    );
   }
   fs.mkdirSync(evidenceDir, { recursive: true });
 
@@ -47,7 +49,7 @@ async function main() {
   let evalProbe = null;
   let sandboxLoaded = false;
 
-  console.log(`[verify] Launching real Chrome (channel: chrome, headless: false)`);
+  console.log('[verify] Launching real Chrome (channel: chrome, headless: false)');
   console.log(`[verify] Extension dir: ${extensionDir}`);
   console.log(`[verify] User data dir: ${userDataDir}`);
 
@@ -56,28 +58,24 @@ async function main() {
     context = await chromium.launchPersistentContext(userDataDir, {
       channel: 'chrome',
       headless: false,
-      args: [
-        `--disable-extensions-except=${extensionDir}`,
-        `--load-extension=${extensionDir}`,
-      ],
+      args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
       viewport: { width: 1280, height: 720 },
     });
   } catch (launchError) {
     console.error(`[verify] launch failed: ${launchError.message}`);
-    console.error(`[verify] If 'channel: chrome' is unavailable, retrying with channel: 'chromium'`);
+    console.error(
+      `[verify] If 'channel: chrome' is unavailable, retrying with channel: 'chromium'`,
+    );
     context = await chromium.launchPersistentContext(userDataDir, {
       channel: 'chromium',
       headless: false,
-      args: [
-        `--disable-extensions-except=${extensionDir}`,
-        `--load-extension=${extensionDir}`,
-      ],
+      args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
       viewport: { width: 1280, height: 720 },
     });
   }
 
   const collectError = (label, error) => {
-    const message = error && error.message ? error.message : String(error);
+    const message = error?.message ? error.message : String(error);
     errors.push({ surface: label, message });
     console.error(`[verify] ERROR (${label}): ${message}`);
   };
@@ -86,7 +84,7 @@ async function main() {
 
   try {
     // Wait for the service worker — first launch can be slow.
-    console.log(`[verify] Waiting for service worker...`);
+    console.log('[verify] Waiting for service worker...');
     let worker = context.serviceWorkers()[0];
     if (!worker) {
       try {
@@ -100,23 +98,25 @@ async function main() {
       console.log(`[verify] Service worker registered. extensionId=${extensionId}`);
       worker.on('console', (msg) => {
         const entry = `[sw:${msg.type()}] ${msg.text()}`;
-        (consoleByPage.serviceWorker ||= []).push(entry);
+        consoleByPage.serviceWorker = consoleByPage.serviceWorker || [];
+        consoleByPage.serviceWorker.push(entry);
         if (msg.type() === 'error') {
           errors.push({ surface: 'serviceWorker', message: msg.text() });
         }
       });
       worker.on('pageerror', (err) => collectError('serviceWorker:pageerror', err));
     } else {
-      console.error(`[verify] No service worker. Cannot derive extensionId; skipping page probes.`);
+      console.error('[verify] No service worker. Cannot derive extensionId; skipping page probes.');
     }
 
     if (extensionId) {
       // STEP 1 — Sandbox CSP probe (advisor: do this FIRST, before screenshots)
-      console.log(`[verify] STEP 1: Sandbox CSP probe (new Function probe)`);
+      console.log('[verify] STEP 1: Sandbox CSP probe (new Function probe)');
       const sandboxPage = await context.newPage();
       sandboxPage.on('console', (msg) => {
         const entry = `[sandbox:${msg.type()}] ${msg.text()}`;
-        (consoleByPage.sandbox ||= []).push(entry);
+        consoleByPage.sandbox = consoleByPage.sandbox || [];
+        consoleByPage.sandbox.push(entry);
         if (msg.type() === 'error') {
           errors.push({ surface: 'sandbox', message: msg.text() });
         }
@@ -134,7 +134,7 @@ async function main() {
             const fn = new Function('return 1');
             return { ok: true, value: fn() };
           } catch (e) {
-            return { ok: false, error: e && e.message ? e.message : String(e) };
+            return { ok: false, error: e?.message ? e.message : String(e) };
           }
         });
         console.log(`[verify] eval probe: ${JSON.stringify(evalProbe)}`);
@@ -147,11 +147,12 @@ async function main() {
       }
 
       // STEP 2 — Popup screenshot
-      console.log(`[verify] STEP 2: Popup screenshot`);
+      console.log('[verify] STEP 2: Popup screenshot');
       const popupPage = await context.newPage();
       popupPage.on('console', (msg) => {
         const entry = `[popup:${msg.type()}] ${msg.text()}`;
-        (consoleByPage.popup ||= []).push(entry);
+        consoleByPage.popup = consoleByPage.popup || [];
+        consoleByPage.popup.push(entry);
         if (msg.type() === 'error') {
           errors.push({ surface: 'popup', message: msg.text() });
         }
@@ -173,11 +174,12 @@ async function main() {
       }
 
       // STEP 3 — Sidepanel screenshot
-      console.log(`[verify] STEP 3: Sidepanel screenshot`);
+      console.log('[verify] STEP 3: Sidepanel screenshot');
       const sidepanelPage = await context.newPage();
       sidepanelPage.on('console', (msg) => {
         const entry = `[sidepanel:${msg.type()}] ${msg.text()}`;
-        (consoleByPage.sidepanel ||= []).push(entry);
+        consoleByPage.sidepanel = consoleByPage.sidepanel || [];
+        consoleByPage.sidepanel.push(entry);
         if (msg.type() === 'error') {
           errors.push({ surface: 'sidepanel', message: msg.text() });
         }
@@ -222,16 +224,18 @@ async function main() {
   }
 
   // CRITICAL: report clearly whether the run is clean
-  const sandboxOk = evalProbe && evalProbe.ok && evalProbe.value === 1;
+  const sandboxOk = evalProbe?.ok && evalProbe.value === 1;
   const errorsClean = errors.length === 0;
   console.log('\n========== VERIFICATION SUMMARY ==========');
   console.log(`Extension ID:    ${extensionId || 'NOT REGISTERED'}`);
-  console.log(`Sandbox eval:    ${sandboxOk ? 'OK (new Function works)' : `BLOCKED (${JSON.stringify(evalProbe)})`}`);
+  console.log(
+    `Sandbox eval:    ${sandboxOk ? 'OK (new Function works)' : `BLOCKED (${JSON.stringify(evalProbe)})`}`,
+  );
   console.log(`Errors clean:    ${errorsClean ? 'YES' : `NO (${errors.length} errors)`}`);
   if (!errorsClean) {
     for (const e of errors) console.log(`  - [${e.surface}] ${e.message}`);
   }
-  console.log(`Artifacts:`);
+  console.log('Artifacts:');
   console.log(`  popup     → ${popupPng}`);
   console.log(`  sidepanel → ${sidepanelPng}`);
   console.log(`  sandbox   → ${sandboxPng}`);

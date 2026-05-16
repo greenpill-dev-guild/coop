@@ -27,21 +27,21 @@ knowledge into shared community memory — built around on-device Gemma 4 for
 groups working on climate adaptation with low bandwidth.**
 
 Our submission for The Gemma 4 Good Hackathon is the **Community Garden
-Grants** flow: a group launches a coop, captures three grant-page tabs,
-attaches a screenshot of an awkward PDF-heavy grant site, and drops in a
-15-second voice memo from a garden meeting. Gemma 4-E2B running on WebGPU
-inside a sandboxed MV3 iframe reads all three modalities — text, image,
-and audio — and produces a structured opportunity brief in the Chickens
-review tab: title, deadline, eligibility, fit score, and why-it-matters.
-One native function call (`draft_application_outline`) fires on camera and
-proposes the sections the group needs to write. The brief publishes to the
-coop's shared Yjs feed.
+Grants** flow: a group launches a coop, captures three grant-page tabs (text),
+and attaches a screenshot of an awkward PDF-heavy grant site (image). Gemma 4
+E2B running on WebGPU inside a sandboxed MV3 iframe reads both modalities and
+produces a structured opportunity brief in the Chickens review tab: title,
+deadline, eligibility, fit score, and why-it-matters. One native function
+call (`draft_application_outline`) fires on camera and proposes the sections
+the group needs to write. The brief publishes to the coop's shared Yjs feed.
 
-Everything runs on-device. No cloud round-trips during inference. The
-~3 GB model caches after the first run so the same demo works fully
-offline on second play. Six demo-path skills use Gemma 4 native function
-calling; ten back-half skills keep the existing JSON-schema fallback
-documented in `ARCHITECTURE.md`. Climate / global-resilience track.
+Everything runs on-device. No cloud round-trips during inference. Voice
+memos transcribe locally via Whisper and feed text into the same Gemma 4
+brief; native audio modality is wired through the bridge and worker but
+documented as roadmap pending capture-side stamping. Six demo-path skills
+use Gemma 4 native function calling; ten back-half skills keep the existing
+JSON-schema fallback documented in `ARCHITECTURE.md`. Climate /
+global-resilience track.
 
 (Word count: ~195)
 

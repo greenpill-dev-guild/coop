@@ -118,10 +118,29 @@ const inputs = await processor(promptText, image, audio);
 const outputs = await model.generate({ ...inputs, max_new_tokens });
 ```
 
-`load_image` and `read_audio` are the points where the demo's image and audio
-inputs become tensors the model understands. The host discards the
-`input_ids` prefix on decode so only the assistant's response surfaces back
-across the postMessage boundary.
+`load_image` and `read_audio` are where the demo's modalities become tensors
+the model understands. The host discards the `input_ids` prefix on decode so
+only the assistant's response surfaces back across the postMessage boundary.
+
+**Image transport — data URL, not blob URL.** We dropped `allow-same-origin`
+from the sandbox CSP (commit `cb34004`) because MV3 disallows combining it
+with `'unsafe-eval'`. The sandbox iframe then runs as an opaque origin, and
+`blob:` URLs minted in the popup or background can't be fetched from inside
+the sandbox (verified by `scripts/verify-sandbox-transport.cjs`). The
+runner (`runner-skills-completion.ts:loadPhotoCaptureAsDataUrl`) lazily
+encodes each photo capture's blob as a `data:image/...;base64,...` URL and
+passes that as `imageUrl`. Data URLs are inline, so they cross the
+postMessage boundary intact and `load_image` resolves them without a
+cross-origin fetch.
+
+**Audio modality — roadmap.** The Gemma 4 request shape, bridge, and worker
+all accept `audioUrl` + `audioSamplingRate` for `read_audio`. The capture
+pipeline, however, currently transcribes voice memos on-device via the
+local Whisper path and surfaces only the transcript text on observation
+payloads (see `emitAudioTranscriptObservation`). Stamping raw audio for
+native Gemma 4 audio inference is documented as roadmap per the
+scope-cut ladder. The transcribed-text path is what reaches Gemma 4 in
+the hackathon submission.
 
 #### Why a sandboxed iframe and not a Web Worker
 
@@ -139,18 +158,23 @@ The sandbox iframe gives the host its own CSP slot:
 ```json
 "content_security_policy": {
   "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
-  "sandbox": "sandbox allow-scripts allow-same-origin; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; object-src 'self'"
+  "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'"
 },
 "sandbox": { "pages": ["agent-sandbox.html"] }
 ```
 
-`allow-same-origin` keeps the chrome-extension origin so the Transformers.js
-model cache (IndexedDB + Cache API) survives between sessions. The bridge
-proxies `postMessage` between the offscreen page (which hosts the iframe)
-and the sandboxed host; the inference logic, multimodal pipe, and tool-call
-schema all stay in one transport-agnostic module
-(`runtime/agent/gemma4-worker.ts`) so the same code can be retargeted at a
-DedicatedWorker if a future architectural beat calls for it.
+MV3 explicitly disallows the combination of `allow-same-origin` and
+`'unsafe-eval'` (it would defeat the sandbox), so we drop
+`allow-same-origin`. The cost: the Transformers.js model cache
+(IndexedDB) does not persist across sessions, and `blob:` URLs from the
+parent context aren't fetchable inside the sandbox. The image-modality
+demo path works around the second by encoding photos as `data:` URLs
+(see above). The bridge proxies `postMessage` between the offscreen page
+(which hosts the iframe) and the sandboxed host; the inference logic,
+multimodal pipe, and tool-call schema all stay in one transport-agnostic
+module (`runtime/agent/gemma4-worker.ts`) so the same code can be
+retargeted at a DedicatedWorker if a future architectural beat calls for
+it.
 
 The Qwen2.5 refine fallback in `inference-worker.ts` still spawns a Web
 Worker bound to the default extension_pages CSP. It is not on the demo arc;
