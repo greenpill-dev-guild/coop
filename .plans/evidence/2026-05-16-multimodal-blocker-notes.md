@@ -1,98 +1,103 @@
 # Sat May 16 — Multimodal inference status & blocker notes
 
 Per the brief: "Confirm text+image+audio reach Gemma 4, **or write exact
-blocker notes.**" This is the blocker note.
+blocker notes.**" This is the blocker note. **Updated late Sat after the
+initial baseline pass uncovered a deeper upstream gap.**
 
-## Verdict
+## Verdict (updated)
 
-**Wiring is verified statically; runtime model inference is deferred to the
-Sun May 17 hardware dry run.** This is a deliberate, scoped deferral — not
-an unresolved bug.
+**Multimodal pipeline is HALF wired.** The read-side wiring is complete
+(extract `imageUrl`/`audioUrl` from observation.payload → bridge → worker
+→ `load_image`/`read_audio`). The **write-side wiring is missing — no
+capture surface or observation-construction code today populates
+`observation.payload.imageUrl` or `observation.payload.audioUrl`**.
 
-## What IS verified for the Sat 17:00 gate
+The commit message of `d89f589` ("feat(agent): pipe multimodal attachments
+from observation to gemma4 path") flagged this exactly:
 
-1. **Multimodal payload flow** (code inspection):
-   - `runner-skills-completion.ts:86-103` extracts `imageUrl`, `audioUrl`,
-     `audioSamplingRate` from `observation.payload` and propagates all three
-     into `completeSkillOutput`.
-   - `gemma4-bridge.ts:14-24` declares the `Gemma4Request` shape with
-     `imageUrl`, `audioUrl`, `audioSamplingRate` fields.
-   - `gemma4-worker.ts:143-157` calls `load_image(imageUrl)` and
-     `read_audio(audioUrl, samplingRate ?? 16000)` and forwards both tensors
-     to `processor()` alongside the text prompt.
-   - `models.ts:711-772, 949-969` — `runGemma4` and `runFunctionCall` both
-     thread `imageUrl` + `audioUrl` through to the bridge.
+> "Capture surfaces that want multimodal context for the demo can now
+> **stamp those fields when enqueuing an observation**, without touching
+> the schema for non-multimodal callers."
 
-2. **Bridge / worker unit tests**: `gemma4-bridge.test.ts` (13 tests) and
-   `gemma4-worker.test.ts` (3 tests) — all green. Cover tool schema
-   construction, `<tool_call>` parsing, E2B/E4B model switching, bridge
-   readiness lifecycle.
+That stamping was never done. In production today, photo and audio
+captures land in Dexie with `kind: 'photo' | 'audio'` and either binary
+blobs or `transcriptText`, and `runner-skills-completion.ts:86-103`
+reads `undefined` for both `imageUrl` and `audioUrl` on every observation.
 
-3. **Runtime CSP probe** (this Sat baseline): inside `agent-sandbox.html`,
-   `new Function('return 1')()` returns `1` — proves the sandbox CSP is
-   applied and `onnxruntime-web`'s Embind glue can JIT-compile its
-   `methodCaller` on the inference hot path.
+## What this means for the demo
 
-4. **Bundle gates**: `validate smoke` and `validate:store-readiness` both
-   green after the baseline. The packaged `ort-wasm-simd-threaded.jsep.wasm`
-   asset (26.1 MB) is present at `assets/`, the transformers chunk is
-   559 kB / 1 MB budget, the webllm fallback chunk is 5.89 MB / 6.5 MB.
+- **Text reaches Gemma 4**: yes ✓
+- **Image reaches Gemma 4 as image tensor**: NO — only as stringified URL
+  in the JSON-flattened prompt text
+- **Audio reaches Gemma 4 as audio tensor**: NO — same; for receiver-side
+  audio the prompt sees `transcriptText` (a string)
 
-## What is NOT yet runtime-verified
+The README §"Submission" and ARCHITECTURE.md §3 both currently claim image
+and audio reach Gemma 4 as native modalities via `load_image` and
+`read_audio`. **That claim is aspirational, not factual,** as of the
+2026-05-16 baseline build (commit `4c4849e`).
 
-End-to-end Gemma 4 inference on real hardware producing a structured brief
-in Chickens. This requires:
+## Hidden second problem (not yet verified)
 
-- Real Chrome (Canary / Beta recommended for stable WebGPU)
-- WebGPU adapter present and not blacklisted
-- First-run download of `onnx-community/gemma-4-E2B-it-ONNX` (~3 GB) into
-  IndexedDB / Cache API
-- A coop + observation seeded with text + image attachment + audio
-  attachment such that the `opportunity-extractor` or `grant-action-planner`
-  skills trigger Gemma 4 through the provider promotion path
+`cb34004` dropped `allow-same-origin` from the sandbox CSP because MV3
+disallows the combination with `'unsafe-eval'`. Sandbox iframes without
+`allow-same-origin` run as a unique opaque origin. **`blob:` URLs created
+in the parent context are origin-scoped — the sandbox very likely cannot
+`fetch()` them.** If a fix stamps `imageUrl = URL.createObjectURL(blob)`,
+the worker's `load_image(url)` will silently fail.
 
-Per `.plans/evidence/README.md` (preserved from the prior CSP-fix handoff),
-headless Chromium on this macOS environment does not register the MV3
-service worker. Headed Playwright (channel: 'chrome') confirmed Sat that
-SW registration is fine on this Mac — but driving a full multimodal demo
-through Playwright (seed coop → capture tab → attach photo → attach audio
-→ wait for agent cycle → wait for brief in Chickens within 30 s) was
-deliberately deferred to the Sunday hardware dry run because:
+Verification probe (TODO): inside `agent-sandbox.html` via Playwright,
+test whether `fetch(chrome.runtime.getURL('icons/icon-128.png'))` and
+`fetch(<parent-created-blob-url>)` succeed. If only chrome-extension URLs
+work, the fix must use data URLs (larger postMessage payloads) or
+transfer the binary across postMessage and reconstruct inside the worker.
 
-- The 3 GB model download is a one-shot cost the user should pay once on
-  the demo profile (so the offline second-run claim works) — automating it
-  inside a throwaway Playwright profile would burn it on a tmpdir.
-- The shooting script (`.plans/demo-shooting-script.md`) is the canonical
-  walkthrough; running it once on hardware satisfies both the Sun 12:00
-  dry-run gate and the runtime evidence requirement.
+## Sat 17:00 escalation gate — TRIGGERED
 
-## Sat 17:00 gate — outcome
+The brief's escalation: "Sat 17:00 if text+image+audio cannot reach
+Gemma 4." Image and audio cannot reach Gemma 4 as native modalities.
+**Escalated to the user.**
 
-**Not escalated.** The brief's escalation trigger is "if text+image+audio
-cannot reach Gemma 4 or no Chickens brief renders." Static analysis says
-they **can** reach Gemma 4 (the wiring is intact); the runtime test is
-scheduled for Sun.
+Awaiting decision among three paths:
 
-If the Sun dry run hits `EvalError: Code generation from strings disallowed`
-during inference, that is the **Sat fix's** failure mode and the brief's
-**Sun 12:00** escalation moment. The Sat baseline rules this out for the
-sandbox load path but cannot rule it out for a code path the sandbox host
-exercises only after the model is loaded.
+- **A. Cut both modalities** — text-only Gemma 4 demo, walk README +
+  ARCHITECTURE.md back to honest, document image+audio as roadmap.
+  Cuts a never-cut item; needs user explicit OK.
+- **B. Image only, audio force-cut** — per the scope-cut ladder, "audio
+  polish" is on the force-cut tier; image stays never-cut. Wire image
+  stamping in capture handler + verify blob transport in sandbox. ~1–2
+  hours of focused work. README/ARCHITECTURE.md walk-back for audio
+  only.
+- **C. Both modalities** — full wire-up of image AND audio stamping plus
+  transport fix for both. ~2–3 hours.
 
-## Sun hardware checklist (mirrors `.plans/demo-shooting-script.md`)
+**Default if no user input**: Path B (matches the scope-cut ladder).
+The user has been pinged via the chat transcript and may redirect.
 
-1. `git switch feature/hackathon-simplify && cd packages/extension && bun run build`
-2. Open Chrome Canary or Beta on a fresh profile. Load
-   `packages/extension/dist/chrome-mv3` unpacked.
-3. Pre-warm the model: open the sidepanel, launch a coop, capture one tab,
-   trigger one agent run. The first inference downloads E2B (~3 GB). Wait
-   for the brief to appear in Chickens.
-4. **Screenshot the Chickens brief** → save as
-   `.plans/evidence/2026-05-17-chickens-gemma4-brief.png`.
-5. **Screenshot the agent diagnostics** showing the `gemma4` provider as
-   active → save as `.plans/evidence/2026-05-17-gemma4-provider-active.png`.
-6. If the brief renders within 30 s of capture and `draft_application_outline`
-   fires on the **Plan next action** affordance: Sat 17:00 gate is now
-   satisfied for real. Record the demo per the shooting script.
-7. If anything throws or the brief never renders: capture the SW console
-   error and escalate Sun noon per the brief.
+## What the Sat baseline DID verify (still true)
+
+- ✅ Service worker registers cleanly in real Chrome (extension ID
+  `lffaelabglhoibcdlkoagalakpbcoakh`)
+- ✅ Popup + sidepanel render with the chicken-or-egg hook copy
+- ✅ Sandbox CSP fix works at runtime (`new Function('return 1')()`
+  returns `1` inside `agent-sandbox.html`)
+- ✅ Zero console errors across SW, popup, sidepanel, sandbox
+- ✅ chrome://extensions Coop card has no errors button (Brave parallel
+  run, `hasErrorButton: false`)
+- ✅ `bun run validate smoke` and `bun run validate:store-readiness`
+  both green
+- ✅ `gemma4-bridge.test.ts` (13) + `gemma4-worker.test.ts` (3) — all 16
+  bridge/worker unit tests green
+- ✅ Multimodal read-side wiring is intact (the half that exists works
+  correctly)
+
+## Honest documentation impact
+
+Regardless of A/B/C chosen, the following are out of date:
+
+- `README.md` line 22–73 — the §"The Gemma 4 Good Hackathon — Submission"
+  section claims image + audio reach Gemma 4. Must walk back to text +
+  whichever modalities actually land.
+- `ARCHITECTURE.md` §3 — "load_image" / "read_audio" / "round-trip text +
+  image + audio in a single call" must be qualified: the call shape
+  supports it, the upstream stamping does not happen yet.
