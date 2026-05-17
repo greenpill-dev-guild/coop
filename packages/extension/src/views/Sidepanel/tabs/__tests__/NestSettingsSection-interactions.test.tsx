@@ -238,6 +238,13 @@ describe('NestSettingsSection interactions', () => {
           },
           updateSound,
           updateUiPreferences,
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as NestSettingsSectionProps['dashboard'],
         })}
       />,
     );
@@ -254,7 +261,19 @@ describe('NestSettingsSection interactions', () => {
   });
 
   it('disables the file-picker export option when the browser cannot save files', () => {
-    render(<NestSettingsSection {...buildProps()} />);
+    render(
+      <NestSettingsSection
+        {...buildProps({
+          dashboard: {
+            ...buildProps().dashboard,
+            uiPreferences: {
+              ...buildProps().dashboard?.uiPreferences,
+              uiMode: 'advanced',
+            },
+          } as NestSettingsSectionProps['dashboard'],
+        })}
+      />,
+    );
 
     expect(screen.getByRole('option', { name: /file picker/i })).toBeDisabled();
   });
