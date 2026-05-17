@@ -10,7 +10,8 @@ exists; do not convert these rows into passes from docs, unit tests, or memory.
 
 | Eval | Tool | Required evidence | Why it is first |
 |------|------|-------------------|-----------------|
-| `gemma-sandbox-health` | Computer Use or real headed Chromium | Popup, sidepanel, extension card, service-worker console, multimodal proof notes | Proves the local model sandbox and extension runtime are usable together. |
+| `gemma-sandbox-health` | Computer Use or real headed Chromium | Popup, sidepanel, extension card, service-worker console, summary JSON | Proves the local model sandbox and extension runtime are usable together. |
+| `gemma-multimodal-proof` | Computer Use or real headed Chromium | Text, image, and audio proof status plus runtime/output evidence | Prevents overclaiming Gemma modality support from sandbox health alone. |
 | `fresh-install-create-coop` | Computer Use or real headed Chromium | First-run popup, sidepanel create flow, extension card, console/service-worker state | Proves the first real user extension path after install. |
 | `simple-advanced-gates` | Computer Use or real headed Chromium | Simple-mode surface, advanced toggle, gated controls, extension card | Proves the UI mode contract agents are expected to preserve. |
 | `receiver-pwa-browser-eval` | Browser plus `test:e2e:receiver-pwa-eval` | Browser screenshot or Playwright trace plus command output | Proves the receiver PWA local preview and mobile fit without overusing Computer Use. |
