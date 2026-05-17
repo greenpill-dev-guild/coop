@@ -66,3 +66,47 @@ export function buildIceServers(turn?: {
     { urls: turnUrls, username: turn.username ?? '', credential: turn.credential ?? '' },
   ];
 }
+
+export interface IceConfigResponse {
+  iceServers: RTCIceServer[];
+  expiresAt: string | null;
+  degraded: boolean;
+  reason?: string;
+}
+
+export function resolveSyncApiBaseUrl(websocketSyncUrl = defaultWebsocketSyncUrl) {
+  const url = new URL(websocketSyncUrl);
+  url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+  url.pathname = '';
+  url.search = '';
+  url.hash = '';
+  return url.toString().replace(/\/$/, '');
+}
+
+export async function fetchServerMintedIceConfig(input?: {
+  apiBaseUrl?: string;
+  websocketSyncUrl?: string;
+  fetchImpl?: typeof fetch;
+}): Promise<IceConfigResponse | null> {
+  const fetcher = input?.fetchImpl ?? globalThis.fetch;
+  if (!fetcher) {
+    return null;
+  }
+
+  const baseUrl = input?.apiBaseUrl ?? resolveSyncApiBaseUrl(input?.websocketSyncUrl);
+  try {
+    const response = await fetcher(`${baseUrl}/sync/ice`, {
+      headers: { accept: 'application/json' },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as IceConfigResponse;
+    return {
+      iceServers: Array.isArray(payload.iceServers) ? payload.iceServers : [],
+      expiresAt: payload.expiresAt ?? null,
+      degraded: Boolean(payload.degraded),
+      reason: payload.reason,
+    };
+  } catch {
+    return null;
+  }
+}

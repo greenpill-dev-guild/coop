@@ -119,6 +119,10 @@ export function deriveSyncRoomId(coopId: string, roomSecret: string) {
   return `coop-room-${hashText(`${coopId}:${roomSecret}`).slice(2, 18)}`;
 }
 
+export function deriveInviteHandoffRoomId(inviteId: string, roomSecret: string) {
+  return `invite-room-${hashText(`${inviteId}:${roomSecret}`).slice(2, 18)}`;
+}
+
 export function buildCoopSyncAuthParams(
   room: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'roomSecret'>,
 ) {
@@ -127,6 +131,19 @@ export function buildCoopSyncAuthParams(
     coopId: room.coopId,
     roomId: room.roomId,
     roomSecret: room.roomSecret,
+  } as const;
+}
+
+export function buildInviteHandoffAuthParams(input: {
+  inviteId: string;
+  roomId: string;
+  roomSecret: string;
+}) {
+  return {
+    syncScope: 'invite',
+    inviteId: input.inviteId,
+    roomId: input.roomId,
+    roomSecret: input.roomSecret,
   } as const;
 }
 
@@ -173,15 +190,14 @@ export function createSyncRoomConfig(
 }
 
 /**
- * Strips the invite signing secret from a sync room config for safe inclusion in invite codes.
+ * Strips sync secrets from a room config for safe inclusion in invite codes.
  * @param room - The full sync room configuration
- * @returns A bootstrap-safe subset of the room config (no invite signing secret)
+ * @returns A bootstrap-safe subset of the room config (no steady room secrets)
  */
 export function toSyncRoomBootstrap(room: SyncRoomConfig): SyncRoomBootstrap {
   return {
     coopId: room.coopId,
     roomId: room.roomId,
-    roomSecret: room.roomSecret,
     signalingUrls: room.signalingUrls,
   };
 }

@@ -79,9 +79,13 @@ export type {
 } from './context-ui';
 
 export {
+  ensureCoopSyncOffscreenDocument,
   hasReceiverSyncOffscreenDocument,
   ensureReceiverSyncOffscreenDocument,
+  getCoopSyncConfig,
+  getCoopSyncRuntime,
   getReceiverSyncRuntime,
+  reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
 } from './context-receiver';
 

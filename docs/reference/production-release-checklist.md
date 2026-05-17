@@ -166,7 +166,14 @@ Do this before calling anything a production candidate.
 ### Signaling And Peer Flow
 
 - [ ] Confirm the production signaling URL list is final.
+- [ ] Confirm `/sync/health` reports `relay-cache-only` unless an encrypted Yjs backup product is
+      intentionally enabled.
+- [ ] Confirm `/sync/ice` returns non-degraded, short-lived TURN credentials from server-only
+      `COOP_TURN_*` env.
 - [ ] Confirm pair/join flows work against the intended signaling environment.
+- [ ] Confirm coop sync continues after the sidepanel is closed by creating a coop, closing the
+      sidepanel, joining from a second profile, and reopening the sidepanel.
+- [ ] Confirm invite codes do not expose the steady coop room secret in the bootstrap snapshot.
 - [ ] Confirm local fallback behavior still leaves the receiver usable if signaling is unavailable.
 
 ## Stage 3: Public Staged-Launch Candidate

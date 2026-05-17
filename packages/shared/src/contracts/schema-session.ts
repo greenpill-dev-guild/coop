@@ -126,6 +126,7 @@ export const encryptedLocalPayloadKindSchema = z.enum([
   'fvm-signer',
   'coop-blob',
   'archive-secrets',
+  'sync-room-secret',
   'knowledge-source-content',
 ]);
 

@@ -15,6 +15,7 @@
     "paths": {
       "@coop/shared/app": ["packages/shared/src/app-entry.ts"],
       "@coop/shared": ["packages/shared/src/index.ts"],
+      "@coop/shared/blob-channel": ["packages/shared/src/modules/blob/channel.ts"],
       "@coop/shared/*": ["packages/shared/src/*"],
       "@coop/shared/sync-config": ["packages/shared/src/sync-config.ts"],
       "@coop/api": ["packages/api/config.ts"]

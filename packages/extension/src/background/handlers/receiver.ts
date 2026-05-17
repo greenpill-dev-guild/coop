@@ -1,11 +1,10 @@
 import {
+  type CoopSharedState,
   type InviteCode,
   type InviteType,
   type ReceiverCapture,
   type ReviewDraft,
   addInviteToState,
-  applyAddInviteToDoc,
-  applyRevokeInviteToDoc,
   assertReceiverSyncEnvelope,
   buildReceiverPairingDeepLink,
   createReceiverDraftSeed,
@@ -13,6 +12,7 @@ import {
   deleteReviewDraft,
   encodeCoopDoc,
   encodeReceiverPairingPayload,
+  ensureSyncRoomSecretRecord,
   ensureInviteCodes,
   generateInviteCode,
   getAuthSession,
@@ -20,9 +20,11 @@ import {
   getReceiverCapture,
   getReviewDraft,
   hydrateCoopDoc,
+  hydrateSyncRoomWithSecret,
   listReceiverPairings,
   nowIso,
   receiverSyncAssetToBlob,
+  redactSyncRoomSecrets,
   regenerateInviteCode,
   resolveDraftTargetCoopIdsForUi,
   revokeInviteCode,
@@ -61,33 +63,6 @@ import {
 import { queueFollowUp } from './follow-up';
 import { routeReceiverCaptureToCoops } from './receiver-routing';
 
-/**
- * Persist an invite mutation into the Yjs doc record stored in Dexie.
- *
- * This ensures the CRDT history includes the invite change so that when the
- * sidepanel (or any peer) hydrates the doc it merges cleanly. Without this,
- * the Dexie state is updated but the Yjs doc only gets overwritten on the
- * next full saveCoopState() call, losing CRDT-level granularity.
- */
-async function persistInviteToYjsDoc(
-  coopId: string,
-  mutation: (doc: ReturnType<typeof hydrateCoopDoc>) => void,
-) {
-  await db.transaction('rw', db.coopDocs, async () => {
-    const record = await db.coopDocs.get(coopId);
-    if (!record) return; // No persisted doc yet — saveState() will create one
-
-    const doc = hydrateCoopDoc(record.encodedState);
-    mutation(doc);
-    await db.coopDocs.put({
-      ...record,
-      encodedState: encodeCoopDoc(doc),
-      updatedAt: nowIso(),
-    });
-    doc.destroy();
-  });
-}
-
 async function persistInviteStateToYjsDoc(
   coopId: string,
   nextState: Awaited<ReturnType<typeof getCoops>>[number],
@@ -105,6 +80,27 @@ async function persistInviteStateToYjsDoc(
     });
     doc.destroy();
   });
+}
+
+async function hydrateCoopForInviteManagement(coop: CoopSharedState) {
+  const secretRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
+  const syncRoom = hydrateSyncRoomWithSecret(coop.syncRoom, secretRecord);
+  if (!syncRoom) {
+    throw new Error(
+      'Sync secrets are unavailable on this browser. Rejoin with a fresh invite handoff.',
+    );
+  }
+  return {
+    ...coop,
+    syncRoom,
+  };
+}
+
+function redactCoopForSharedState(coop: CoopSharedState) {
+  return {
+    ...coop,
+    syncRoom: redactSyncRoomSecrets(coop.syncRoom),
+  };
 }
 
 function isIdempotentReceiverReplay(
@@ -207,19 +203,27 @@ export async function handleCreateInvite(
   if (!coop) {
     return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
   }
-  const newInvite = generateInviteCode({
-    state: coop,
-    createdBy: message.payload.createdBy,
-    type: message.payload.inviteType as InviteType,
-  });
-  const nextState = addInviteToState(coop, newInvite);
-  await saveState(nextState);
-  await persistInviteToYjsDoc(coop.profile.id, (doc) => applyAddInviteToDoc(doc, newInvite));
-  await refreshBadge();
-  return {
-    ok: true,
-    data: nextState.invites[nextState.invites.length - 1],
-  } satisfies RuntimeActionResponse;
+  try {
+    const hydratedCoop = await hydrateCoopForInviteManagement(coop);
+    const newInvite = generateInviteCode({
+      state: hydratedCoop,
+      createdBy: message.payload.createdBy,
+      type: message.payload.inviteType as InviteType,
+    });
+    const nextState = redactCoopForSharedState(addInviteToState(hydratedCoop, newInvite));
+    await saveState(nextState);
+    await persistInviteStateToYjsDoc(coop.profile.id, nextState);
+    await refreshBadge();
+    return {
+      ok: true,
+      data: nextState.invites[nextState.invites.length - 1],
+    } satisfies RuntimeActionResponse;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Could not create invite.',
+    } satisfies RuntimeActionResponse;
+  }
 }
 
 export async function handleEnsureInviteCodes(
@@ -232,12 +236,18 @@ export async function handleEnsureInviteCodes(
   }
 
   try {
+    const hydratedCoop = await hydrateCoopForInviteManagement(coop);
     const nextState = ensureInviteCodes({
-      state: coop,
+      state: hydratedCoop,
       createdBy: message.payload.createdBy,
       inviteTypes: message.payload.inviteTypes,
     });
-    if (nextState === coop) {
+    const sharedState = redactCoopForSharedState(nextState);
+    const needsSecretRedaction =
+      sharedState.syncRoom.roomSecret !== coop.syncRoom.roomSecret ||
+      sharedState.syncRoom.inviteSigningSecret !== coop.syncRoom.inviteSigningSecret;
+
+    if (nextState === hydratedCoop && !needsSecretRedaction) {
       return {
         ok: true,
         data: {
@@ -246,14 +256,14 @@ export async function handleEnsureInviteCodes(
         },
       } satisfies RuntimeActionResponse;
     }
-    await saveState(nextState);
-    await persistInviteStateToYjsDoc(coop.profile.id, nextState);
+    await saveState(sharedState);
+    await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
     await refreshBadge();
     return {
       ok: true,
       data: {
-        member: getCurrentInviteForType(nextState, 'member') ?? null,
-        trusted: getCurrentInviteForType(nextState, 'trusted') ?? null,
+        member: getCurrentInviteForType(sharedState, 'member') ?? null,
+        trusted: getCurrentInviteForType(sharedState, 'trusted') ?? null,
       },
     } satisfies RuntimeActionResponse;
   } catch (err) {
@@ -274,13 +284,15 @@ export async function handleRegenerateInviteCode(
   }
 
   try {
+    const hydratedCoop = await hydrateCoopForInviteManagement(coop);
     const regenerated = regenerateInviteCode({
-      state: coop,
+      state: hydratedCoop,
       createdBy: message.payload.createdBy,
       inviteType: message.payload.inviteType,
     });
-    await saveState(regenerated.state);
-    await persistInviteStateToYjsDoc(coop.profile.id, regenerated.state);
+    const sharedState = redactCoopForSharedState(regenerated.state);
+    await saveState(sharedState);
+    await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
     await refreshBadge();
     return {
       ok: true,
@@ -308,10 +320,9 @@ export async function handleRevokeInvite(
       inviteId: message.payload.inviteId,
       revokedBy: message.payload.revokedBy,
     });
-    await saveState(nextState);
-    await persistInviteToYjsDoc(coop.profile.id, (doc) =>
-      applyRevokeInviteToDoc(doc, message.payload.inviteId, message.payload.revokedBy),
-    );
+    const sharedState = redactCoopForSharedState(nextState);
+    await saveState(sharedState);
+    await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
     await refreshBadge();
     return { ok: true, data: null } satisfies RuntimeActionResponse;
   } catch (err) {
@@ -337,8 +348,9 @@ export async function handleRevokeInviteType(
       inviteType: message.payload.inviteType,
       revokedBy: message.payload.revokedBy,
     });
-    await saveState(nextState);
-    await persistInviteStateToYjsDoc(coop.profile.id, nextState);
+    const sharedState = redactCoopForSharedState(nextState);
+    await saveState(sharedState);
+    await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
     await refreshBadge();
     return { ok: true, data: null } satisfies RuntimeActionResponse;
   } catch (err) {

@@ -27,7 +27,11 @@ import {
   memberOnchainAccountSchema,
   onchainStateSchema,
 } from './schema-onchain';
-import { syncRoomBootstrapSchema, syncRoomConfigSchema } from './schema-sync';
+import {
+  inviteHandoffRoomSchema,
+  syncRoomBootstrapSchema,
+  syncRoomConfigSchema,
+} from './schema-sync';
 
 // ---------------------------------------------------------------------------
 // Invite schemas — kept here alongside inviteCoopBootstrapSnapshotSchema
@@ -81,6 +85,7 @@ export const inviteBootstrapSchema = z.object({
   roomId: z.string().min(1),
   signalingUrls: z.array(z.string().url()).default([]),
   inviteProof: z.string().min(1),
+  handoff: inviteHandoffRoomSchema.optional(),
   bootstrapState: z.lazy(() => inviteCoopBootstrapSnapshotSchema).optional(),
 });
 

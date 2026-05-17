@@ -309,7 +309,7 @@ describe('background context helpers', () => {
     expect(chrome.offscreen.createDocument).toHaveBeenCalledWith({
       url: 'offscreen.html',
       reasons: ['WEB_RTC'],
-      justification: 'Keep receiver sync alive while the sidepanel is closed.',
+      justification: 'Keep receiver and coop sync alive while the sidepanel is closed.',
     });
   });
 

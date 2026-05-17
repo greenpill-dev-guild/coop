@@ -23,6 +23,7 @@ import type {
   GreenGoodsAssessmentRequest,
   GreenGoodsWorkApprovalRequest,
   GreenGoodsWorkSubmissionOutput,
+  IceConfigResponse,
   IntegrationMode,
   InviteType,
   KnowledgeSkill,
@@ -238,6 +239,40 @@ export interface ReceiverSyncRuntimeStatus {
   activeBindingKeys: string[];
 }
 
+export interface CoopSyncConfigEntry {
+  coop: CoopSharedState;
+  roomSecretAvailable: boolean;
+  legacySecretMigrated: boolean;
+}
+
+export interface CoopSyncConfigResponse {
+  coops: CoopSyncConfigEntry[];
+  websocketSyncUrl?: string;
+  iceConfig: IceConfigResponse | null;
+}
+
+export interface CoopSyncRuntimeStatus {
+  loadedAt?: string;
+  lastRefreshedAt?: string;
+  lastBindingCreatedAt?: string;
+  lastBindingDisconnectedAt?: string;
+  lastDocUpdateAt?: string;
+  lastPersistAt?: string;
+  lastCompactionAt?: string;
+  lastError?: string;
+  mode?: 'none' | 'indexeddb-only' | 'webrtc' | 'websocket' | 'degraded';
+  configuredSignalingCount?: number;
+  signalingConnectionCount?: number;
+  peerCount?: number;
+  broadcastPeerCount?: number;
+  websocketConnected?: boolean;
+  directPeerAvailable?: boolean;
+  docBytes?: number;
+  pendingUpdateCount?: number;
+  activeCoopIds: string[];
+  activeBindingKeys: string[];
+}
+
 export interface PopupPreparedCapture {
   kind: 'audio' | 'photo' | 'file';
   dataBase64: string;
@@ -314,6 +349,8 @@ export type RuntimeRequest =
   | { type: 'consume-sidepanel-intent' }
   | { type: 'get-receiver-sync-config' }
   | { type: 'get-receiver-sync-runtime' }
+  | { type: 'get-coop-sync-config' }
+  | { type: 'get-coop-sync-runtime' }
   | { type: 'manual-capture' }
   | {
       type: 'capture-active-tab';
@@ -568,6 +605,11 @@ export type RuntimeRequest =
   | { type: 'set-active-coop'; payload: { coopId: string } }
   | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: Uint8Array } }
   | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
+  | {
+      type: 'report-coop-sync-runtime';
+      payload: Partial<CoopSyncRuntimeStatus>;
+    }
+  | { type: 'refresh-coop-sync-bindings'; payload?: { reason?: string; force?: boolean } }
   | {
       type: 'resolve-onchain-state';
       payload: { coopSeed: string };

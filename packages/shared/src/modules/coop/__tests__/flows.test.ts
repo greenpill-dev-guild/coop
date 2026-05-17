@@ -300,6 +300,8 @@ describe('create, join, and publish flows', () => {
     expect(joined.state.artifacts.at(-1)?.category).toBe('seed-contribution');
     expect(verifyInviteCodeProof(invite, created.state.syncRoom.inviteSigningSecret)).toBe(true);
     expect('roomSecret' in invite.bootstrap).toBe(false);
+    expect(invite.bootstrap.bootstrapState?.syncRoom.roomSecret).toBeUndefined();
+    expect(invite.bootstrap.handoff?.roomSecret).toMatch(/^invite-room-secret-/);
   });
 
   it('rejects a tampered invite bootstrap payload', () => {
@@ -328,6 +330,48 @@ describe('create, join, and publish flows', () => {
     expect(verifyInviteCodeProof(tampered, created.state.syncRoom.inviteSigningSecret)).toBe(false);
   });
 
+  it('rejects tampered invite handoff metadata', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+    const invite = generateInviteCode({
+      state: created.state,
+      createdBy: created.creator.id,
+      type: 'member',
+    });
+
+    const tampered = {
+      ...invite,
+      bootstrap: {
+        ...invite.bootstrap,
+        handoff: invite.bootstrap.handoff
+          ? {
+              ...invite.bootstrap.handoff,
+              roomId: 'invite-room-attacker',
+            }
+          : undefined,
+      },
+    };
+
+    expect(verifyInviteCodeProof(tampered, created.state.syncRoom.inviteSigningSecret)).toBe(false);
+    expect(() =>
+      joinCoop({
+        state: {
+          ...created.state,
+          invites: [invite],
+        },
+        invite: tampered,
+        displayName: 'Attacker',
+        seedContribution: 'Trying to redirect the handoff room.',
+      }),
+    ).toThrow(/integrity check failed/i);
+  });
+
   it('bootstraps a coop from the invite payload so a second profile can join', () => {
     const created = createCoop({
       coopName: 'Forest Coop',
@@ -354,7 +398,7 @@ describe('create, join, and publish flows', () => {
     expect(bootstrapped.profile.id).toBe(created.state.profile.id);
     expect(invite.bootstrap.bootstrapState?.syncRoom.roomId).toBe(created.state.syncRoom.roomId);
     expect(bootstrapped.syncRoom.roomId).toBe(created.state.syncRoom.roomId);
-    expect(bootstrapped.syncRoom.roomSecret).toBe(created.state.syncRoom.roomSecret);
+    expect(bootstrapped.syncRoom.roomSecret).toBe(`bootstrap:${created.state.syncRoom.roomId}`);
     expect(bootstrapped.syncRoom.inviteSigningSecret.startsWith('bootstrap:')).toBe(true);
     expect(joined.state.members).toHaveLength(2);
     expect(joined.state.members[1]?.displayName).toBe('Mina');

@@ -547,14 +547,14 @@ describe('sync merge resilience', () => {
 });
 
 describe('toSyncRoomBootstrap', () => {
-  it('extracts the peer sync room credentials needed by invited members', () => {
+  it('extracts the public peer sync room metadata needed by invited members', () => {
     const room = createSyncRoomConfig('coop-bootstrap-test');
 
     const bootstrap = toSyncRoomBootstrap(room);
 
     expect(bootstrap.coopId).toBe(room.coopId);
     expect(bootstrap.roomId).toBe(room.roomId);
-    expect(bootstrap.roomSecret).toBe(room.roomSecret);
+    expect(bootstrap.roomSecret).toBeUndefined();
     expect(bootstrap.signalingUrls).toEqual(room.signalingUrls);
     expect(bootstrap).not.toHaveProperty('inviteSigningSecret');
   });
@@ -563,11 +563,6 @@ describe('toSyncRoomBootstrap', () => {
     const room = createSyncRoomConfig('coop-shape-test');
     const bootstrap = toSyncRoomBootstrap(room);
 
-    expect(Object.keys(bootstrap).sort()).toEqual([
-      'coopId',
-      'roomId',
-      'roomSecret',
-      'signalingUrls',
-    ]);
+    expect(Object.keys(bootstrap).sort()).toEqual(['coopId', 'roomId', 'signalingUrls']);
   });
 });

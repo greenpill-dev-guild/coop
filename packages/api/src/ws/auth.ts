@@ -1,4 +1,4 @@
-import { deriveReceiverRoomId, deriveSyncRoomId } from '@coop/shared';
+import { deriveInviteHandoffRoomId, deriveReceiverRoomId, deriveSyncRoomId } from '@coop/shared';
 
 export type AuthorizedSyncScope =
   | {
@@ -7,6 +7,10 @@ export type AuthorizedSyncScope =
     }
   | {
       scope: 'receiver';
+      roomId: string;
+    }
+  | {
+      scope: 'invite';
       roomId: string;
     };
 
@@ -22,6 +26,9 @@ function inferScope(params: URLSearchParams) {
   }
   if (readNonEmpty(params, 'memberId') && readNonEmpty(params, 'pairSecret')) {
     return 'receiver' as const;
+  }
+  if (readNonEmpty(params, 'inviteId') && readNonEmpty(params, 'roomSecret')) {
+    return 'invite' as const;
   }
   if (readNonEmpty(params, 'roomSecret')) {
     return 'coop' as const;
@@ -60,6 +67,22 @@ export function authorizeSyncRequest(
       return null;
     }
     if (deriveReceiverRoomId(coopId, memberId, pairSecret) !== roomId) {
+      return null;
+    }
+    if (expectedRoomId && expectedRoomId !== roomId) {
+      return null;
+    }
+    return { scope, roomId };
+  }
+
+  if (scope === 'invite') {
+    const inviteId = readNonEmpty(url.searchParams, 'inviteId');
+    const roomId = readNonEmpty(url.searchParams, 'roomId');
+    const roomSecret = readNonEmpty(url.searchParams, 'roomSecret');
+    if (!inviteId || !roomId || !roomSecret) {
+      return null;
+    }
+    if (deriveInviteHandoffRoomId(inviteId, roomSecret) !== roomId) {
       return null;
     }
     if (expectedRoomId && expectedRoomId !== roomId) {

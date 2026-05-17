@@ -9,4 +9,5 @@ export * from './db-crud-session';
 export * from './db-crud-agent';
 export * from './db-crud-autoresearch';
 export * from './db-crud-privacy';
+export * from './db-crud-sync';
 export * from './db-maintenance';

@@ -26,9 +26,13 @@ prefixed variables are baked into bundles at build time by Vite -- rebuild after
 | --- | --- | --- | --- |
 | `VITE_COOP_SIGNALING_URLS` | Comma-separated ws/wss/http/https URLs | `wss://api.coop.town` | Signaling URLs passed into y-webrtc room setup |
 | `VITE_COOP_RECEIVER_APP_URL` | URL | `http://127.0.0.1:3001` | Receiver PWA base URL and receiver-bridge host-permission source |
-| `VITE_COOP_TURN_URLS` | Comma-separated TURN URIs | -- | TURN relay servers for NAT traversal; required for production direct-peer connectivity |
-| `VITE_COOP_TURN_USERNAME` | String | -- | TURN authentication username |
-| `VITE_COOP_TURN_CREDENTIAL` | String | -- | TURN authentication credential |
+| `VITE_COOP_TURN_URLS` | Comma-separated TURN URIs | -- | Local-dev fallback TURN relay servers for NAT traversal |
+| `VITE_COOP_TURN_USERNAME` | String | -- | Local-dev fallback TURN authentication username |
+| `VITE_COOP_TURN_CREDENTIAL` | String | -- | Local-dev fallback TURN authentication credential |
+| `COOP_TURN_URLS` | Comma-separated TURN URIs | -- | API-only production TURN relay URLs returned by `/sync/ice` |
+| `COOP_TURN_SHARED_SECRET` | String | -- | API-only coturn REST shared secret for short-lived credential minting |
+| `COOP_TURN_USERNAME_PREFIX` | String | `coop` | API-only username prefix for minted TURN credentials |
+| `COOP_TURN_TTL_SECONDS` | Number | `3600` | API-only TURN credential lifetime, clamped between 5 minutes and 24 hours |
 
 Notes:
 
@@ -38,6 +42,9 @@ Notes:
   the extension manifest.
 - For Chrome Web Store validation, `VITE_COOP_RECEIVER_APP_URL` must be the exact production HTTPS
   receiver origin. `http://127.0.0.1:3001` and `http://localhost` are valid only for local builds.
+- Production direct-peer sync should use API-minted TURN credentials from `/sync/ice`; the
+  `VITE_COOP_TURN_*` variables are retained only as local-development fallback because Vite embeds
+  them into the extension bundle.
 
 ## Live Onchain Requirements
 
@@ -124,7 +131,9 @@ VITE_COOP_SIGNALING_URLS=ws://127.0.0.1:4444
 - The shared sync layer also uses the API package's base WebSocket document-sync URL
   (`wss://api.coop.town/yws`) under the hood. That base URL is code-configured today rather than
   exposed as a user-set frontend env var.
-- TURN credentials are optional for local development on open networks, but production direct-peer sync should treat them as required.
+- TURN credentials are optional for local development on open networks. Production direct-peer sync
+  should treat `/sync/ice` server-minted TURN as required and should not rely on bundled
+  `VITE_COOP_TURN_*` secrets.
 - Trusted-node archive variables are only needed by operators running with live archive enabled.
 - FVM variables are only needed when interacting with the ERC-8004 agent registry on Filecoin. The
   extension now provisions a member-local Filecoin signer on first use, so no FVM private-key env

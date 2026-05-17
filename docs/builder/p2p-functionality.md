@@ -19,6 +19,8 @@ The current sync layer combines:
 - a lightweight signaling relay for peer discovery, configured from `VITE_COOP_SIGNALING_URLS`
 - y-websocket document sync using the `wss://api.coop.town/yws` base URL (the runtime appends the
   room ID)
+- an MV3 offscreen sync runtime that keeps coop providers alive when the sidepanel is closed
+- API-minted TURN credentials from `/sync/ice` for production direct-peer connectivity
 - blob relay for binary asset transport (photos, audio, files) via WebRTC data channels, running alongside but separate from CRDT sync
 - an outbox pattern for offline-first publish reliability with automatic retry
 
@@ -57,11 +59,16 @@ Sync rooms are derived from coop identity and room secrets.
 
 - y-webrtc uses the room ID plus signaling URLs for peer discovery
 - y-websocket uses the same room ID at the `/yws/:room` endpoint
-- the checked-in API deployment supports optional persisted room state only when `YJS_PERSIST_DIR`
-  is set
+- production treats y-websocket as a relay/cache availability path, not a durable backup
 
-`packages/api/fly.toml` does not currently set `YJS_PERSIST_DIR`, so durable server-side Yjs room
-persistence should be treated as an available capability, not a guaranteed production property.
+`packages/api/fly.toml` does not currently set `YJS_PERSIST_DIR`. The `/sync/health` endpoint
+reports whether server-side Yjs file persistence is enabled; production should stay in
+`relay-cache-only` mode unless an encrypted backup product is added.
+
+Invite codes no longer need to expose the steady coop room secret in the bootstrap snapshot. The
+runtime stores room credentials in encrypted local payload storage and uses invite handoff metadata
+for future secret delivery flows. Legacy coops remain compatible while their local secret record is
+migrated.
 
 ## Current Constraints
 
@@ -79,6 +86,10 @@ using a chunked protocol. A peer advertises available blobs via a `BlobRelayMani
 request specific blobs by ID. The relay responds with sequenced `BlobRelayChunk` messages, each
 carrying a slice of the binary data along with chunk index and total count so the receiver can
 reassemble. All relay messages cross a trust boundary and are validated with Zod schemas on arrival.
+
+Archive preparation resolves attachment bytes through local encrypted blob storage first, then peer
+blob sync, then archived gateway references when available. The offscreen sync runtime owns peer
+blob manifest broadcasting so peers can resolve binary data without putting bytes into Yjs.
 
 ## Outbox
 

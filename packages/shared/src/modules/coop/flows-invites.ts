@@ -12,6 +12,7 @@ import {
 import { createId, decodeBase64Url, encodeBase64Url, hashText, nowIso } from '../../utils';
 import {
   createBootstrapSyncRoomConfig,
+  deriveInviteHandoffRoomId,
   isBootstrapSyncRoomConfig,
   toSyncRoomBootstrap,
   updateCoopState,
@@ -69,6 +70,7 @@ function serializeInviteBootstrapForProof(input: {
   expiresAt: string;
   roomId: string;
   signalingUrls: string[];
+  handoff?: InviteCode['bootstrap']['handoff'];
   bootstrapState?: InviteCoopBootstrapSnapshot;
 }) {
   return JSON.stringify({
@@ -79,6 +81,14 @@ function serializeInviteBootstrapForProof(input: {
     expiresAt: input.expiresAt,
     roomId: input.roomId,
     signalingUrls: input.signalingUrls,
+    handoff: input.handoff
+      ? {
+          inviteId: input.handoff.inviteId,
+          roomId: input.handoff.roomId,
+          roomSecret: input.handoff.roomSecret,
+          signalingUrls: input.handoff.signalingUrls,
+        }
+      : undefined,
     bootstrapState: input.bootstrapState,
   });
 }
@@ -114,6 +124,7 @@ export function verifyInviteCodeProof(invite: InviteCode, inviteSigningSecret: s
         expiresAt: invite.bootstrap.expiresAt,
         roomId: invite.bootstrap.roomId,
         signalingUrls: invite.bootstrap.signalingUrls,
+        handoff: invite.bootstrap.handoff,
         bootstrapState: invite.bootstrap.bootstrapState,
       },
       inviteSigningSecret,
@@ -223,8 +234,15 @@ export function generateInviteCode(input: {
   }
 
   const inviteId = createId('invite');
+  const handoffSecret = createId('invite-room-secret');
   const expiresInHours = input.expiresInHours ?? (input.type === 'trusted' ? 48 : 24 * 7);
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
+  const handoff = {
+    inviteId,
+    roomSecret: handoffSecret,
+    roomId: deriveInviteHandoffRoomId(inviteId, handoffSecret),
+    signalingUrls: input.state.syncRoom.signalingUrls,
+  };
   const bootstrapBase = {
     coopId: input.state.profile.id,
     coopDisplayName: input.state.profile.name,
@@ -233,6 +251,7 @@ export function generateInviteCode(input: {
     expiresAt,
     roomId: input.state.syncRoom.roomId,
     signalingUrls: input.state.syncRoom.signalingUrls,
+    handoff,
     bootstrapState: createInviteBootstrapSnapshot(input.state),
   };
   const bootstrap = {

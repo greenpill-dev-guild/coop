@@ -17,6 +17,7 @@ export const stateKeys = {
   captureMode: 'capture-mode',
   notificationIntentRegistry: 'notification-intent-registry',
   notificationRegistry: 'notification-registry',
+  coopSyncRuntime: 'coop-sync-runtime',
   receiverSyncRuntime: 'receiver-sync-runtime',
   runtimeHealth: 'runtime-health',
   sidepanelIntent: 'sidepanel-intent',
@@ -107,6 +108,14 @@ export async function getCoops() {
 
 export async function saveState(state: CoopSharedState) {
   await saveCoopState(db, state);
+  try {
+    chrome.runtime.sendMessage({
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'save-state' },
+    });
+  } catch {
+    // Offscreen sync may not be awake yet; its heartbeat will catch up.
+  }
 }
 
 export async function updateCoopGreenGoodsState(input: {

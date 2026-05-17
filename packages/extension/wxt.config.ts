@@ -193,6 +193,10 @@ export default defineConfig({
   outDir: 'dist',
   outDirTemplate: '{{browser}}-mv{{manifestVersion}}',
   alias: {
+    '@coop/shared/blob-channel': path.resolve(
+      extensionRoot,
+      '../shared/src/modules/blob/channel.ts',
+    ),
     '@coop/shared': path.resolve(extensionRoot, '../shared/src/index.ts'),
     '@coop/api': path.resolve(extensionRoot, '../api/config.ts'),
   },

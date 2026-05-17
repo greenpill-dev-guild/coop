@@ -1,20 +1,55 @@
 import {
   type ArchiveRecoveryRecord,
+  type BlobSyncChannel,
   type CoopSharedState,
   applyArchiveRecoveryRecord,
   createArchiveBundle,
   createArchiveRecoveryRecord,
   createLocalFvmSignerMaterial,
-  getCoopBlob,
   getLocalFvmSigner,
   getLocalFvmSignerBinding,
   listArchiveRecoveryRecords,
   type recordArchiveReceipt,
   removeArchiveRecoveryRecord,
+  resolveBlob,
   saveLocalFvmSigner,
   setArchiveRecoveryRecord,
 } from '@coop/shared';
-import { configuredFvmChain, db, getCoops, saveState } from '../context';
+import {
+  configuredFvmChain,
+  db,
+  ensureCoopSyncOffscreenDocument,
+  getCoops,
+  resolveArchiveConfigForCoop,
+  saveState,
+} from '../context';
+
+function createArchivePeerBlobSync(coopId: string): BlobSyncChannel {
+  return {
+    async requestBlob(blobId: string) {
+      try {
+        await ensureCoopSyncOffscreenDocument();
+        const response = (await chrome.runtime.sendMessage({
+          type: 'resolve-coop-blob-from-peers',
+          payload: { coopId, blobId },
+        })) as { ok?: boolean; data?: { bytes?: number[] | Uint8Array } };
+
+        const bytes = response.ok ? response.data?.bytes : undefined;
+        if (!bytes) {
+          return null;
+        }
+        return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      } catch {
+        return null;
+      }
+    },
+    getAvailablePeers() {
+      return [];
+    },
+    broadcastManifest() {},
+    destroy() {},
+  };
+}
 
 export async function resolveArchiveBundleBlobBytes(input: {
   coop: CoopSharedState;
@@ -38,13 +73,21 @@ export async function resolveArchiveBundleBlobBytes(input: {
         continue;
       }
 
-      const blob = await getCoopBlob(db, attachment.blobId);
-      if (!blob) {
+      const archiveConfig = await resolveArchiveConfigForCoop(input.coop.profile.id, input.coop);
+      const resolved = await resolveBlob({
+        db,
+        blobId: attachment.blobId,
+        attachment,
+        coopId: input.coop.profile.id,
+        blobSync: createArchivePeerBlobSync(input.coop.profile.id),
+        archiveConfig: archiveConfig ?? undefined,
+      });
+      if (!resolved) {
         missingBlobIds.add(attachment.blobId);
         continue;
       }
 
-      blobBytes.set(attachment.blobId, blob.bytes);
+      blobBytes.set(attachment.blobId, resolved.bytes);
     }
   }
 

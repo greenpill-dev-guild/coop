@@ -18,6 +18,7 @@ import {
 } from '@coop/shared';
 import { listRegisteredSkills } from '../runtime/agent/registry';
 import type {
+  CoopSyncRuntimeStatus,
   DashboardResponse,
   ReceiverSyncRuntimeStatus,
   RuntimeActionResponse,
@@ -30,11 +31,15 @@ import {
   configuredChain,
   configuredOnchainMode,
   db,
+  ensureCoopSyncOffscreenDocument,
   ensureReceiverSyncOffscreenDocument,
+  getCoopSyncConfig,
+  getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getReceiverSyncRuntime,
   hydrateUiPreferences,
+  reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
   setLocalSetting,
@@ -300,6 +305,25 @@ export const handlerRegistry: HandlerRecord = {
       data: await getReceiverSyncRuntime(),
     }) satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>,
 
+  // ---- Coop sync ----
+  'get-coop-sync-config': async () => {
+    await ensureCoopSyncOffscreenDocument();
+    return {
+      ok: true,
+      data: await getCoopSyncConfig(),
+    } satisfies RuntimeActionResponse<Awaited<ReturnType<typeof getCoopSyncConfig>>>;
+  },
+
+  'get-coop-sync-runtime': async () =>
+    ({
+      ok: true,
+      data: await getCoopSyncRuntime(),
+    }) satisfies RuntimeActionResponse<CoopSyncRuntimeStatus>,
+
+  'refresh-coop-sync-bindings': async () => ({
+    ok: true,
+  }),
+
   // ---- Data management ----
   'clear-sensitive-local-data': async () => {
     await clearSensitiveLocalData(db);
@@ -429,6 +453,14 @@ export const handlerRegistry: HandlerRecord = {
 
   'set-active-coop': async (message) => {
     await setLocalSetting(stateKeys.activeCoopId, message.payload.coopId);
+    try {
+      chrome.runtime.sendMessage({
+        type: 'refresh-coop-sync-bindings',
+        payload: { reason: 'active-coop' },
+      });
+    } catch {
+      // Offscreen sync will refresh on heartbeat.
+    }
     await refreshBadge();
     return { ok: true };
   },
@@ -463,6 +495,12 @@ export const handlerRegistry: HandlerRecord = {
     await refreshBadge();
     return { ok: true };
   },
+
+  'report-coop-sync-runtime': async (message) =>
+    ({
+      ok: true,
+      data: await reportCoopSyncRuntime(message.payload),
+    }) satisfies RuntimeActionResponse<CoopSyncRuntimeStatus>,
 
   'report-receiver-sync-runtime': async (message) =>
     ({

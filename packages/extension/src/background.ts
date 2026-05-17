@@ -25,6 +25,7 @@ import {
 } from '@coop/shared';
 import { listRegisteredSkills } from './runtime/agent/registry';
 import type {
+  CoopSyncRuntimeStatus,
   DashboardResponse,
   ReceiverSyncRuntimeStatus,
   RuntimeActionResponse,
@@ -43,13 +44,17 @@ import {
   consumePendingSidepanelIntent,
   contextMenuIds,
   db,
+  ensureCoopSyncOffscreenDocument,
   ensureDbReady,
   ensureDefaults,
   ensureReceiverSyncOffscreenDocument,
+  getCoopSyncConfig,
+  getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getReceiverSyncRuntime,
   hydrateUiPreferences,
+  reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
   saveState,
@@ -445,6 +450,19 @@ export function startBackground() {
             data: await getReceiverSyncRuntime(),
           } satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>);
           return;
+        case 'get-coop-sync-config':
+          await ensureCoopSyncOffscreenDocument();
+          sendResponse({
+            ok: true,
+            data: await getCoopSyncConfig(),
+          } satisfies RuntimeActionResponse<Awaited<ReturnType<typeof getCoopSyncConfig>>>);
+          return;
+        case 'get-coop-sync-runtime':
+          sendResponse({
+            ok: true,
+            data: await getCoopSyncRuntime(),
+          } satisfies RuntimeActionResponse<CoopSyncRuntimeStatus>);
+          return;
         case 'clear-sensitive-local-data':
           await clearSensitiveLocalData(db);
           await refreshBadge();
@@ -586,6 +604,14 @@ export function startBackground() {
           return;
         case 'set-active-coop':
           await setLocalSetting(stateKeys.activeCoopId, message.payload.coopId);
+          try {
+            chrome.runtime.sendMessage({
+              type: 'refresh-coop-sync-bindings',
+              payload: { reason: 'active-coop' },
+            });
+          } catch {
+            // Offscreen sync will refresh on heartbeat.
+          }
           await refreshBadge();
           sendResponse({ ok: true } satisfies RuntimeActionResponse);
           return;
@@ -620,6 +646,12 @@ export function startBackground() {
           });
           await refreshBadge();
           sendResponse({ ok: true } satisfies RuntimeActionResponse);
+          return;
+        case 'report-coop-sync-runtime':
+          sendResponse({
+            ok: true,
+            data: await reportCoopSyncRuntime(message.payload),
+          } satisfies RuntimeActionResponse<CoopSyncRuntimeStatus>);
           return;
         case 'report-receiver-sync-runtime':
           sendResponse({

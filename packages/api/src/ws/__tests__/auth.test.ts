@@ -1,6 +1,7 @@
 import {
   createReceiverPairingPayload,
   createSyncRoomConfig,
+  deriveInviteHandoffRoomId,
   deriveReceiverRoomId,
 } from '@coop/shared';
 import { describe, expect, it } from 'vitest';
@@ -50,6 +51,22 @@ describe('authorizeSyncRequest', () => {
 
     expect(authorizeSyncRequest(url)).toEqual({
       scope: 'receiver',
+      roomId,
+    });
+  });
+
+  it('authorizes invite handoff sync requests with matching derived room ids', () => {
+    const inviteId = 'invite-1';
+    const roomSecret = 'invite-room-secret-1';
+    const roomId = deriveInviteHandoffRoomId(inviteId, roomSecret);
+    const url = new URL(`wss://api.coop.town/yws/${roomId}`);
+    url.searchParams.set('syncScope', 'invite');
+    url.searchParams.set('inviteId', inviteId);
+    url.searchParams.set('roomId', roomId);
+    url.searchParams.set('roomSecret', roomSecret);
+
+    expect(authorizeSyncRequest(url, roomId)).toEqual({
+      scope: 'invite',
       roomId,
     });
   });

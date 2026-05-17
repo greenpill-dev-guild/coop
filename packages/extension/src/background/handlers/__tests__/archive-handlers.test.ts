@@ -13,6 +13,7 @@ const configState = vi.hoisted(() => ({
 const mocks = vi.hoisted(() => ({
   createOwnerSafeExecutionContext: vi.fn(),
   createStorachaArchiveClient: vi.fn(),
+  ensureCoopSyncOffscreenDocument: vi.fn(),
   emitAgentObservationIfMissing: vi.fn(),
   getAnchorCapability: vi.fn(),
   getAuthSession: vi.fn(),
@@ -32,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   requestArchiveReceiptFilecoinInfo: vi.fn(),
   retrieveArchiveBundle: vi.fn(),
   resolveArchiveConfigForCoop: vi.fn(),
+  resolveBlob: vi.fn(),
   resolveReceiverPairingMember: vi.fn(),
   saveState: vi.fn(),
   setArchiveRecoveryRecord: vi.fn(),
@@ -79,6 +81,7 @@ vi.mock('../../context', () => ({
     return configState.configuredPimlicoApiKey;
   },
   db: {},
+  ensureCoopSyncOffscreenDocument: mocks.ensureCoopSyncOffscreenDocument,
   getCoops: mocks.getCoops,
   notifyExtensionEvent: mocks.notifyExtensionEvent,
   resolveArchiveConfigForCoop: mocks.resolveArchiveConfigForCoop,
@@ -149,6 +152,7 @@ vi.mock('@coop/shared', async (importOriginal) => {
     requestArchiveOnChainSealWitness: mocks.requestArchiveOnChainSealWitness,
     requestArchiveReceiptFilecoinInfo: mocks.requestArchiveReceiptFilecoinInfo,
     retrieveArchiveBundle: mocks.retrieveArchiveBundle,
+    resolveBlob: mocks.resolveBlob,
     saveLocalFvmSigner: fvmSignerMocks.saveLocalFvmSigner,
     setArchiveRecoveryRecord: mocks.setArchiveRecoveryRecord,
     setCoopArchiveSecrets: mocks.setCoopArchiveSecrets,
@@ -282,6 +286,7 @@ beforeEach(() => {
   mocks.createStorachaArchiveClient.mockResolvedValue({
     did: () => 'did:key:audience',
   });
+  mocks.ensureCoopSyncOffscreenDocument.mockResolvedValue(undefined);
   mocks.getAnchorCapability.mockResolvedValue(null);
   mocks.issueArchiveDelegation.mockResolvedValue({
     spaceDid: 'did:key:space',
@@ -348,6 +353,7 @@ beforeEach(() => {
     rootCid: 'bafyroot',
     bytes: new Uint8Array([1, 2, 3]),
   });
+  mocks.resolveBlob.mockResolvedValue(null);
   mocks.saveState.mockResolvedValue(undefined);
   mocks.setArchiveRecoveryRecord.mockResolvedValue(undefined);
   mocks.setCoopArchiveSecrets.mockResolvedValue(undefined);
@@ -388,6 +394,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  Reflect.deleteProperty(globalThis, 'chrome');
 });
 
 describe('archive handlers', () => {
@@ -441,10 +448,8 @@ describe('archive handlers', () => {
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
     });
-    mocks.getCoopBlob.mockResolvedValue({
-      record: {
-        blobId: 'blob-1',
-      },
+    mocks.resolveBlob.mockResolvedValue({
+      source: 'local',
       bytes: new Uint8Array([1, 2, 3]),
     });
 
@@ -472,16 +477,62 @@ describe('archive handlers', () => {
     expect(savedState?.archiveReceipts).toHaveLength(1);
   });
 
+  it('resolves archive attachment bytes from offscreen peer blob sync before upload', async () => {
+    const { coop, artifactId } = buildCoopWithAttachment();
+    const sendMessage = vi.fn(async () => ({
+      ok: true,
+      data: { bytes: [4, 5, 6] },
+    }));
+    Object.assign(globalThis, {
+      chrome: {
+        runtime: {
+          sendMessage,
+        },
+      },
+    });
+    mocks.getCoops.mockResolvedValue([coop]);
+    mocks.getAuthSession.mockResolvedValue({
+      primaryAddress: coop.members[0]?.address,
+    });
+    mocks.resolveBlob.mockImplementationOnce(
+      async (input: { blobSync?: { requestBlob: (id: string) => Promise<Uint8Array | null> } }) => {
+        const bytes = await input.blobSync?.requestBlob('blob-1');
+        return bytes ? { source: 'peer' as const, bytes } : null;
+      },
+    );
+
+    const result = await handleArchiveArtifact({
+      type: 'archive-artifact',
+      payload: {
+        coopId: coop.profile.id,
+        artifactId,
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mocks.ensureCoopSyncOffscreenDocument).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: 'resolve-coop-blob-from-peers',
+      payload: {
+        coopId: coop.profile.id,
+        blobId: 'blob-1',
+      },
+    });
+
+    const uploadInput = mocks.uploadArchiveBundleToStoracha.mock.calls[0]?.[0] as {
+      blobBytes?: Map<string, Uint8Array>;
+    };
+    expect(Array.from(uploadInput.blobBytes?.get('blob-1') ?? [])).toEqual([4, 5, 6]);
+  });
+
   it('keeps a recovery record when remote upload succeeds but local receipt persistence fails', async () => {
     const { coop, artifactId } = buildCoopWithAttachment();
     mocks.getCoops.mockResolvedValue([coop]);
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
     });
-    mocks.getCoopBlob.mockResolvedValue({
-      record: {
-        blobId: 'blob-1',
-      },
+    mocks.resolveBlob.mockResolvedValue({
+      source: 'local',
       bytes: new Uint8Array([1, 2, 3]),
     });
     mocks.saveState.mockRejectedValueOnce(new Error('Dexie write failed'));
@@ -596,7 +647,7 @@ describe('archive handlers', () => {
     mocks.getAuthSession.mockResolvedValue({
       primaryAddress: coop.members[0]?.address,
     });
-    mocks.getCoopBlob.mockResolvedValue(null);
+    mocks.resolveBlob.mockResolvedValue(null);
 
     const result = await handleArchiveArtifact({
       type: 'archive-artifact',

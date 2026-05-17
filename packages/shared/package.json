@@ -31,6 +31,10 @@
       "types": "./dist/packages/shared/src/modules/archive/index.d.ts",
       "default": "./dist/packages/shared/src/modules/archive/index.js"
     },
+    "./blob-channel": {
+      "types": "./dist/packages/shared/src/modules/blob/channel.d.ts",
+      "default": "./dist/packages/shared/src/modules/blob/channel.js"
+    },
     "./testing": {
       "types": "./dist/packages/shared/src/__tests__/fixtures/index.d.ts",
       "default": "./dist/packages/shared/src/__tests__/fixtures/index.js"

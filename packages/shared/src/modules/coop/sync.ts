@@ -13,6 +13,7 @@ import {
 import {
   buildAuthenticatedSignalingUrls,
   buildCoopSyncAuthParams,
+  buildInviteHandoffAuthParams,
   decodeRelayFrame,
   defaultIceServers,
   defaultWebsocketSyncUrl,
@@ -26,6 +27,7 @@ export {
   buildIceServers,
   buildAuthenticatedSignalingUrls,
   buildCoopSyncAuthParams,
+  buildInviteHandoffAuthParams,
   compactCoopArtifacts,
   createBootstrapSyncRoomConfig,
   createCoopDoc,
@@ -35,6 +37,7 @@ export {
   defaultSignalingUrls,
   defaultWebsocketSyncUrl,
   deriveSyncRoomId,
+  deriveInviteHandoffRoomId,
   encodeCoopDoc,
   encodeRelayFrame,
   hydrateCoopDoc,

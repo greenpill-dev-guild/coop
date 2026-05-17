@@ -1,4 +1,10 @@
-import { createCoop, createCoopDoc, encodeCoopDoc, generateInviteCode } from '@coop/shared';
+import {
+  createCoop,
+  createCoopDoc,
+  encodeCoopDoc,
+  generateInviteCode,
+  isRedactedSyncRoomSecret,
+} from '@coop/shared';
 import type { CoopSharedState, InviteCode } from '@coop/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -21,6 +27,8 @@ afterEach(() => {
 
 const mockCoopDocsGet = vi.fn();
 const mockCoopDocsPut = vi.fn();
+const encryptedPayloads = new Map<string, unknown>();
+const localSettings = new Map<string, unknown>();
 
 const mockCoopDocsTable = {
   toArray: vi.fn().mockResolvedValue([]),
@@ -30,8 +38,25 @@ const mockCoopDocsTable = {
 
 vi.mock('../../context', () => ({
   db: {
+    name: 'receiver-invite-handler-test',
     coopDocs: mockCoopDocsTable,
-    settings: { get: vi.fn(), put: vi.fn() },
+    settings: {
+      get: vi.fn(async (key: string) =>
+        localSettings.has(key) ? { key, value: localSettings.get(key) } : undefined,
+      ),
+      put: vi.fn(async (record: { key: string; value: unknown }) => {
+        localSettings.set(record.key, record.value);
+      }),
+    },
+    encryptedLocalPayloads: {
+      get: vi.fn(async (id: string) => encryptedPayloads.get(id)),
+      put: vi.fn(async (record: { id: string }) => {
+        encryptedPayloads.set(record.id, record);
+      }),
+      delete: vi.fn(async (id: string) => {
+        encryptedPayloads.delete(id);
+      }),
+    },
     receiverPairings: { get: vi.fn() },
     receiverCaptures: { get: vi.fn() },
     transaction: vi.fn((_mode: string, _table: unknown, callback: () => Promise<void>) =>
@@ -121,6 +146,15 @@ function mockPersistedDocRecord(coop: CoopSharedState) {
   });
 }
 
+beforeEach(() => {
+  encryptedPayloads.clear();
+  localSettings.clear();
+  mockCoopDocsGet.mockReset();
+  mockCoopDocsPut.mockReset();
+  vi.mocked(getCoops).mockReset();
+  vi.mocked(saveState).mockReset();
+});
+
 describe('handleCreateInvite – Yjs propagation', () => {
   it('persists state and writes to the Yjs doc record after creating an invite', async () => {
     const coop = buildTestCoop();
@@ -166,6 +200,27 @@ describe('handleCreateInvite – Yjs propagation', () => {
     const invite = result.data as InviteCode;
     expect(invite.type).toBe('trusted');
     expect(invite.createdBy).toBe(creatorId);
+  });
+
+  it('redacts sync room secrets when persisting invite state', async () => {
+    const coop = buildTestCoop();
+    const creatorId = coop.members[0].id;
+    vi.mocked(getCoops).mockResolvedValue([coop]);
+    mockPersistedDocRecord(coop);
+
+    const result = await handleCreateInvite({
+      type: 'create-invite',
+      payload: {
+        coopId: coop.profile.id,
+        createdBy: creatorId,
+        inviteType: 'member',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const savedState = vi.mocked(saveState).mock.calls.at(-1)?.[0] as CoopSharedState;
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.inviteSigningSecret)).toBe(true);
   });
 });
 

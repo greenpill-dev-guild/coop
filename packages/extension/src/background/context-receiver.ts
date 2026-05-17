@@ -1,6 +1,13 @@
-import type { ReceiverSyncRuntimeStatus } from '../runtime/messages';
-import { configuredReceiverAppUrl } from './context-config';
-import { getLocalSetting, setLocalSetting, stateKeys } from './context-db';
+import {
+  ensureSyncRoomSecretRecord,
+  fetchServerMintedIceConfig,
+  hydrateSyncRoomWithSecret,
+  isRedactedSyncRoomSecret,
+  redactSyncRoomSecrets,
+} from '@coop/shared';
+import type { CoopSyncRuntimeStatus, ReceiverSyncRuntimeStatus } from '../runtime/messages';
+import { configuredReceiverAppUrl, configuredWebsocketSyncUrl } from './context-config';
+import { db, getCoops, getLocalSetting, saveState, setLocalSetting, stateKeys } from './context-db';
 
 // ---- Receiver Permission Origins ----
 
@@ -80,7 +87,7 @@ export async function ensureReceiverSyncOffscreenDocument() {
       .createDocument({
         url: 'offscreen.html',
         reasons: ['WEB_RTC'],
-        justification: 'Keep receiver sync alive while the sidepanel is closed.',
+        justification: 'Keep receiver and coop sync alive while the sidepanel is closed.',
       })
       .catch(async (error) => {
         receiverSyncDocumentPromise = null;
@@ -93,6 +100,8 @@ export async function ensureReceiverSyncOffscreenDocument() {
 
   await receiverSyncDocumentPromise;
 }
+
+export const ensureCoopSyncOffscreenDocument = ensureReceiverSyncOffscreenDocument;
 
 // ---- Receiver Sync Runtime ----
 
@@ -114,4 +123,60 @@ export async function reportReceiverSyncRuntime(patch: Partial<ReceiverSyncRunti
   } satisfies ReceiverSyncRuntimeStatus;
   await setLocalSetting(stateKeys.receiverSyncRuntime, next);
   return next;
+}
+
+// ---- Coop Sync Runtime ----
+
+export async function getCoopSyncRuntime() {
+  return getLocalSetting<CoopSyncRuntimeStatus>(stateKeys.coopSyncRuntime, {
+    activeCoopIds: [],
+    activeBindingKeys: [],
+    mode: 'none',
+  });
+}
+
+export async function reportCoopSyncRuntime(patch: Partial<CoopSyncRuntimeStatus>) {
+  const current = await getCoopSyncRuntime();
+  const next = {
+    ...current,
+    ...patch,
+    activeCoopIds: patch.activeCoopIds ?? current.activeCoopIds,
+    activeBindingKeys: patch.activeBindingKeys ?? current.activeBindingKeys,
+  } satisfies CoopSyncRuntimeStatus;
+  await setLocalSetting(stateKeys.coopSyncRuntime, next);
+  return next;
+}
+
+export async function getCoopSyncConfig() {
+  const [coops, iceConfig] = await Promise.all([
+    getCoops(),
+    fetchServerMintedIceConfig({ websocketSyncUrl: configuredWebsocketSyncUrl }),
+  ]);
+
+  const entries = [];
+  for (const coop of coops) {
+    const secretRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
+    const hydratedRoom = hydrateSyncRoomWithSecret(coop.syncRoom, secretRecord);
+    if (
+      secretRecord &&
+      (!isRedactedSyncRoomSecret(coop.syncRoom.roomSecret) ||
+        !isRedactedSyncRoomSecret(coop.syncRoom.inviteSigningSecret))
+    ) {
+      await saveState({
+        ...coop,
+        syncRoom: redactSyncRoomSecrets(coop.syncRoom),
+      });
+    }
+    entries.push({
+      coop: hydratedRoom ? { ...coop, syncRoom: hydratedRoom } : coop,
+      roomSecretAvailable: Boolean(hydratedRoom),
+      legacySecretMigrated: Boolean(secretRecord),
+    });
+  }
+
+  return {
+    coops: entries,
+    websocketSyncUrl: configuredWebsocketSyncUrl,
+    iceConfig,
+  };
 }

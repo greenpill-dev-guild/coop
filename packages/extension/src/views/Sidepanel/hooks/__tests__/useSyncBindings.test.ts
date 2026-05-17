@@ -1,49 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeCoopState } from '../../../../__tests__/fixtures';
 
-const {
-  buildIceServersMock,
-  connectSyncProvidersMock,
-  createBlobRelayTransportMock,
-  createCoopDocMock,
-  hashJsonMock,
-  mergeCoopDocUpdatesMock,
-  readCoopStateMock,
-  sendRuntimeMessageMock,
-  summarizeSyncTransportHealthMock,
-  writeCoopStateMock,
-} = vi.hoisted(() => ({
-  buildIceServersMock: vi.fn(() => ['ice-server']),
-  connectSyncProvidersMock: vi.fn(),
-  createBlobRelayTransportMock: vi.fn(() => ({ kind: 'relay' })),
-  createCoopDocMock: vi.fn(),
-  hashJsonMock: vi.fn(),
-  mergeCoopDocUpdatesMock: vi.fn(() => new Uint8Array([9, 9])),
-  readCoopStateMock: vi.fn(),
+const { sendRuntimeMessageMock } = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
-  summarizeSyncTransportHealthMock: vi.fn((_webrtc?: unknown, _websocket?: unknown) => ({
-    syncError: false,
-    note: 'Healthy sync',
-  })),
-  writeCoopStateMock: vi.fn(),
 }));
-
-vi.mock('@coop/shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@coop/shared')>();
-  return {
-    ...actual,
-    buildIceServers: buildIceServersMock,
-    connectSyncProviders: connectSyncProvidersMock,
-    createBlobRelayTransport: createBlobRelayTransportMock,
-    createCoopDoc: createCoopDocMock,
-    hashJson: hashJsonMock,
-    mergeCoopDocUpdates: mergeCoopDocUpdatesMock,
-    readCoopState: readCoopStateMock,
-    summarizeSyncTransportHealth: summarizeSyncTransportHealthMock,
-    writeCoopState: writeCoopStateMock,
-  };
-});
 
 vi.mock('../../../../runtime/messages', () => ({
   sendRuntimeMessage: sendRuntimeMessageMock,
@@ -51,280 +12,43 @@ vi.mock('../../../../runtime/messages', () => ({
 
 const { useSyncBindings } = await import('../useSyncBindings');
 
-type DocUpdateHandler = (update: Uint8Array) => void;
-
-function makeSyncCoop(overrides: Parameters<typeof makeCoopState>[0] = {}) {
-  return makeCoopState({
-    profile: { id: 'coop-1' },
-    syncRoom: { roomId: 'room-1' },
-    ...overrides,
-  });
-}
-
 describe('useSyncBindings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('wires sync providers, reports health, persists remote updates, and cleans up', async () => {
-    let updateHandler: DocUpdateHandler | null = null;
-    const doc = {
-      on: vi.fn((event: string, handler: DocUpdateHandler) => {
-        if (event === 'update') {
-          updateHandler = handler;
-        }
-      }),
-      off: vi.fn(),
-    };
-    const rtcConnection = {
-      on: vi.fn(),
-      off: vi.fn(),
-    };
-    const providers = {
-      webrtc: {
-        on: vi.fn(),
-        off: vi.fn(),
-        signalingConns: [rtcConnection],
-      },
-      websocket: {
-        on: vi.fn(),
-        off: vi.fn(),
-        wsconnected: true,
-      },
-      disconnect: vi.fn(),
-    };
-
-    createCoopDocMock.mockReturnValue(doc);
-    connectSyncProvidersMock.mockReturnValue(providers);
-    hashJsonMock.mockReturnValueOnce('hash-local').mockReturnValueOnce('hash-remote');
-    readCoopStateMock.mockReturnValue({ id: 'remote-state' });
     sendRuntimeMessageMock.mockResolvedValue({ ok: true });
+  });
 
-    const loadDashboard = vi.fn(async () => undefined);
-    const coop = makeSyncCoop();
+  it('asks the offscreen runtime to refresh sync bindings when mounted', () => {
+    renderHook(() =>
+      useSyncBindings({
+        coops: [],
+        loadDashboard: vi.fn(async () => undefined),
+      }),
+    );
 
-    const { rerender, unmount } = renderHook(
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'sidepanel-mounted' },
+    });
+  });
+
+  it('asks the offscreen runtime to refresh when the coop list changes', () => {
+    const { rerender } = renderHook(
       ({ coops }) =>
         useSyncBindings({
           coops,
-          loadDashboard,
+          loadDashboard: vi.fn(async () => undefined),
         }),
       {
-        initialProps: { coops: [coop] },
+        initialProps: { coops: [makeCoopState({ profile: { id: 'coop-1' } })] },
       },
     );
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500);
-    });
+    rerender({ coops: [makeCoopState({ profile: { id: 'coop-2' } })] });
 
-    expect(buildIceServersMock).toHaveBeenCalledTimes(1);
-    expect(createCoopDocMock).toHaveBeenCalledWith(coop);
-    expect(connectSyncProvidersMock).toHaveBeenCalledWith(
-      doc,
-      coop.syncRoom,
-      ['ice-server'],
-      undefined,
-    );
-    expect(createBlobRelayTransportMock).toHaveBeenCalledWith(providers.websocket);
-    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-      type: 'report-sync-health',
-      payload: {
-        syncError: false,
-        note: 'Healthy sync',
-      },
-    });
-
-    await act(async () => {
-      updateHandler?.(new Uint8Array([1, 2, 3]));
-      await vi.advanceTimersByTimeAsync(280);
-    });
-
-    expect(mergeCoopDocUpdatesMock).toHaveBeenCalledWith([new Uint8Array([1, 2, 3])]);
-    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-      type: 'persist-coop-state',
-      payload: {
-        coopId: 'coop-1',
-        docUpdate: new Uint8Array([9, 9]),
-      },
-    });
-    expect(loadDashboard).toHaveBeenCalledTimes(1);
-
-    hashJsonMock.mockReturnValueOnce('hash-next');
-    rerender({
-      coops: [
-        {
-          ...coop,
-          profile: { ...coop.profile, name: 'Updated River Coop' },
-        },
-      ],
-    });
-
-    expect(writeCoopStateMock).toHaveBeenCalledWith(
-      doc,
-      expect.objectContaining({
-        profile: expect.objectContaining({ name: 'Updated River Coop' }),
-      }),
-    );
-
-    unmount();
-    expect(doc.off).toHaveBeenCalledWith('update', expect.any(Function));
-    expect(providers.disconnect).toHaveBeenCalledTimes(1);
-  });
-
-  it('reports sync persistence failures without refreshing the dashboard', async () => {
-    let updateHandler: DocUpdateHandler | null = null;
-    const doc = {
-      on: vi.fn((event: string, handler: DocUpdateHandler) => {
-        if (event === 'update') {
-          updateHandler = handler;
-        }
-      }),
-      off: vi.fn(),
-    };
-    const providers = {
-      webrtc: null,
-      websocket: null,
-      disconnect: vi.fn(),
-    };
-
-    createCoopDocMock.mockReturnValue(doc);
-    connectSyncProvidersMock.mockReturnValue(providers);
-    hashJsonMock.mockReturnValueOnce('hash-local').mockReturnValueOnce('hash-remote');
-    readCoopStateMock.mockReturnValue({ id: 'remote-state' });
-    sendRuntimeMessageMock.mockImplementation(async (message: { type: string }) =>
-      message.type === 'persist-coop-state' ? { ok: false, error: 'persist failed' } : { ok: true },
-    );
-
-    const loadDashboard = vi.fn(async () => undefined);
-    renderHook(() =>
-      useSyncBindings({
-        coops: [makeSyncCoop()],
-        loadDashboard,
-      }),
-    );
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500);
-      updateHandler?.(new Uint8Array([7]));
-      await vi.advanceTimersByTimeAsync(280);
-    });
-
-    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-      type: 'report-sync-health',
-      payload: {
-        syncError: true,
-        note: 'persist failed',
-      },
-    });
-    expect(loadDashboard).not.toHaveBeenCalled();
-  });
-
-  it('passes an explicit websocket sync url through to the sync providers', async () => {
-    const doc = {
-      on: vi.fn(),
-      off: vi.fn(),
-    };
-    const providers = {
-      webrtc: null,
-      websocket: null,
-      disconnect: vi.fn(),
-    };
-
-    createCoopDocMock.mockReturnValue(doc);
-    connectSyncProvidersMock.mockReturnValue(providers);
-    hashJsonMock.mockReturnValue('hash-local');
-    sendRuntimeMessageMock.mockResolvedValue({ ok: true });
-
-    renderHook(() =>
-      useSyncBindings({
-        coops: [makeSyncCoop()],
-        loadDashboard: vi.fn(async () => undefined),
-        websocketSyncUrl: 'wss://sync.coop.test/yjs',
-      }),
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(connectSyncProvidersMock).toHaveBeenCalledWith(
-      doc,
-      expect.objectContaining({ roomId: 'room-1' }),
-      ['ice-server'],
-      'wss://sync.coop.test/yjs',
-    );
-  });
-
-  it('reports degraded sync health when any bound coop is unhealthy', async () => {
-    const firstDoc = {
-      on: vi.fn(),
-      off: vi.fn(),
-    };
-    const secondDoc = {
-      on: vi.fn(),
-      off: vi.fn(),
-    };
-    const healthyProviders = {
-      webrtc: { id: 'healthy-webrtc', on: vi.fn(), off: vi.fn(), signalingConns: [] },
-      websocket: null,
-      disconnect: vi.fn(),
-    };
-    const degradedProviders = {
-      webrtc: { id: 'degraded-webrtc', on: vi.fn(), off: vi.fn(), signalingConns: [] },
-      websocket: null,
-      disconnect: vi.fn(),
-    };
-
-    createCoopDocMock.mockReturnValueOnce(firstDoc).mockReturnValueOnce(secondDoc);
-    connectSyncProvidersMock
-      .mockReturnValueOnce(healthyProviders)
-      .mockReturnValueOnce(degradedProviders);
-    hashJsonMock.mockReturnValue('hash-local');
-    sendRuntimeMessageMock.mockResolvedValue({ ok: true });
-    summarizeSyncTransportHealthMock.mockImplementation((webrtc: unknown) =>
-      (webrtc as { id?: string } | null)?.id === 'degraded-webrtc'
-        ? {
-            syncError: true,
-            note: 'Second coop degraded',
-          }
-        : {
-            syncError: false,
-            note: 'Healthy sync',
-          },
-    );
-
-    renderHook(() =>
-      useSyncBindings({
-        coops: [
-          makeSyncCoop(),
-          makeSyncCoop({
-            profile: { id: 'coop-2', name: 'Coop 2' },
-            syncRoom: { roomId: 'room-2' },
-          }),
-        ],
-        loadDashboard: vi.fn(async () => undefined),
-      }),
-    );
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2500);
-    });
-
-    const healthReports = sendRuntimeMessageMock.mock.calls.filter(
-      ([message]) => message.type === 'report-sync-health',
-    );
-    expect(healthReports.at(-1)?.[0]).toEqual({
-      type: 'report-sync-health',
-      payload: {
-        syncError: true,
-        note: 'Second coop degraded',
-      },
+    expect(sendRuntimeMessageMock).toHaveBeenLastCalledWith({
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'sidepanel-coops-changed' },
     });
   });
 });
