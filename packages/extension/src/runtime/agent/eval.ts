@@ -42,7 +42,7 @@ const EVAL_FIXTURE_TYPES = ['golden', 'noisy', 'low-signal', 'malicious'] as con
 
 export type SkillEvalFixtureType = (typeof EVAL_FIXTURE_TYPES)[number];
 
-type EvalAssertion =
+export type EvalAssertion =
   | {
       type: 'field-present';
       path: string;
@@ -89,7 +89,7 @@ type EvalAssertion =
       threshold: number;
     };
 
-type SkillEvalFixture = {
+export type SkillEvalFixture = {
   id: string;
   description: string;
   output: unknown;

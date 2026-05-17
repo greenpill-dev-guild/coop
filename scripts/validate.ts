@@ -366,6 +366,13 @@ const suites: Record<string, Suite> = {
       'Skill eval fixture coverage and structural/semantic assertion pass across all registered skills.',
     steps: [{ label: 'unit:agent-eval', command: ['bun', 'run', 'test:unit:agent-eval'] }],
   },
+  'unit:agent-scenarios': {
+    description:
+      'Deterministic input/output scenario coverage for core agent skills and memory-adjacent synthesis surfaces.',
+    steps: [
+      { label: 'unit:agent-scenarios', command: ['bun', 'run', 'test:unit:agent-scenarios'] },
+    ],
+  },
   'local-inference': {
     description: 'Local inference validation: lint, targeted inference unit tests, build.',
     includes: ['lint', 'unit:local-inference', 'build'],
@@ -423,6 +430,7 @@ const suites: Record<string, Suite> = {
       'lint',
       'unit:agent-loop',
       'unit:agent-eval',
+      'unit:agent-scenarios',
       'unit:local-inference',
       'unit:agent-policy',
       'unit:delegated-execution',
