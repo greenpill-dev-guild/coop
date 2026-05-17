@@ -10,7 +10,8 @@ Structured test cases for verifying agent quality. Run evals after modifying age
 ├── results.md          # Historical results table
 ├── triage/             # Triage agent evals
 ├── code-reviewer/      # Code reviewer evals
-└── oracle/             # Oracle agent evals
+├── oracle/             # Oracle agent evals
+└── extension-flows/    # Computer-use evals for real extension user flows
 ```
 
 ## Running Evals
@@ -35,10 +36,12 @@ Evals are run manually by spawning the agent with a test scenario and comparing 
 | triage | 3 | ready |
 | code-reviewer | 2 | ready |
 | oracle | 2 | ready |
+| extension-flows | 4 | ready |
 
 ## When to Run
 
 - After modifying `.claude/agents/*.md`
 - After modifying `.claude/skills/*/SKILL.md` for skills referenced by agents
+- After changing extension popup, sidepanel, capture, review, Gemma sandbox, or simple/advanced gates
 - Before upgrading model versions (compare scores across models)
 - Quarterly regression check
