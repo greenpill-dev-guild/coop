@@ -39,6 +39,29 @@
   `status.json` lane status.
 - `bun run validate:quick` - passed.
 
+## Validation Run - 2026-05-17 Local Memory Loop Suite
+
+- `bun run test:unit:memory-loop` - passed, 20 files / 195 tests. The expected injected refresh
+  failure stderr appears in `knowledge-source-handlers.test.ts` while asserting refresh continues
+  after one source fails.
+- `bun run validate memory-loop` - passed; the wrapper expands only to `unit:memory-loop`.
+- `bun run test -- packages/extension/src/background/handlers/__tests__/capture-handlers.test.ts` -
+  passed after aligning the test mock with async `notifyExtensionEvent` behavior.
+- `bun run test` - passed, 339 files / 3,875 tests; 2 files / 11 tests skipped.
+- `bun run plans validate` - passed.
+- `cd packages/extension && bun run build` - passed with existing Rollup/chunk-size warnings.
+- Latest `bun run validate quick` attempt is blocked outside this memory-loop pass by untracked
+  receiver-routing work:
+  `packages/extension/src/background/handlers/__tests__/receiver-routing.test.ts` has nullable
+  `result.draft` type errors at lines 96-98 and 115.
+- The new focused suite covers memory charter bootstrap/edit/sync, source registry metadata
+  add/remove/toggle round-trips, persisted source content including empty bodies, source-content
+  observations, graph provenance, precedent adjustment bounds, draft provenance, approval/rejection
+  trace outcomes, validated insight creation, and shared/local privacy boundaries.
+- Manual Browser/Computer Use coverage now lives in `eval/local-functional-qa.md`; it remains
+  required for real WXT Chromium extension loading, visual provenance inspection, and browser
+  storage inspection.
+
 ## Confirmed Behavior
 
 - Source registry CRUD, exact duplicate rejection, metadata updates, removal, stale graph cascade,

@@ -194,6 +194,11 @@ const suites: Record<string, Suite> = {
       { label: 'unit:sidepanel-settings', command: ['bun', 'run', 'test:unit:sidepanel-settings'] },
     ],
   },
+  'unit:memory-loop': {
+    description:
+      'Focused unit/integration coverage for the local context-graph memory loop, source provenance, review gates, and shared/local privacy boundaries.',
+    steps: [{ label: 'unit:memory-loop', command: ['bun', 'run', 'test:unit:memory-loop'] }],
+  },
   'probe:onchain-live': {
     description:
       'Optional live Safe probe on Ethereum Sepolia by default. Skips cleanly when probe env vars are absent.',
@@ -290,13 +295,7 @@ const suites: Record<string, Suite> = {
   'receiver-slice': {
     description:
       'Receiver vertical slice validation: unit tests, build, app shell, pair+sync E2E, and Browser-first PWA eval.',
-    includes: [
-      'unit',
-      'build',
-      'e2e:app:desktop',
-      'e2e:receiver-sync',
-      'e2e:receiver-pwa-eval',
-    ],
+    includes: ['unit', 'build', 'e2e:app:desktop', 'e2e:receiver-sync', 'e2e:receiver-pwa-eval'],
   },
   'receiver-hardening': {
     description:
@@ -317,6 +316,11 @@ const suites: Record<string, Suite> = {
     description:
       'Board and archive-story validation: targeted unit coverage, build, then focused Playwright flow.',
     includes: ['unit:flow-board', 'build', 'e2e:flow-board'],
+  },
+  'memory-loop': {
+    description:
+      'Local memory-loop validation: targeted source registry, persisted source content, graph provenance, prompt context, review outcomes, and UI label coverage.',
+    includes: ['unit:memory-loop'],
   },
   'arbitrum-safe-live': {
     description:

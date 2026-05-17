@@ -90,6 +90,42 @@ describe('precedent-based confidence adjustment', () => {
     expect(outcomes.has('rejected')).toBe(true);
   });
 
+  it('keeps precedent confidence adjustments inside the bounded range', () => {
+    const approvedDelta = computePrecedentAdjustment(
+      Array.from({ length: 20 }, (_, i) => ({
+        traceId: `approved-${i}`,
+        skillRunId: `run-approved-${i}`,
+        observationId: `obs-approved-${i}`,
+        observationText: 'high quality watershed grant brief',
+        contextEntityIds: ['ent-1'],
+        precedentTraceIds: [],
+        confidence: 0.9,
+        outputSummary: 'Approved source-backed brief',
+        outcome: 'approved' as const,
+        createdAt: '2026-03-01T00:00:00.000Z',
+      })),
+    );
+    const rejectedDelta = computePrecedentAdjustment(
+      Array.from({ length: 20 }, (_, i) => ({
+        traceId: `rejected-${i}`,
+        skillRunId: `run-rejected-${i}`,
+        observationId: `obs-rejected-${i}`,
+        observationText: 'low quality unsourced brief',
+        contextEntityIds: ['ent-1'],
+        precedentTraceIds: [],
+        confidence: 0.2,
+        outputSummary: 'Rejected unsourced brief',
+        outcome: 'rejected' as const,
+        createdAt: '2026-03-01T00:00:00.000Z',
+      })),
+    );
+
+    expect(approvedDelta).toBeLessThanOrEqual(0.15);
+    expect(approvedDelta).toBeGreaterThanOrEqual(0.05);
+    expect(rejectedDelta).toBeGreaterThanOrEqual(-0.15);
+    expect(rejectedDelta).toBeLessThanOrEqual(-0.05);
+  });
+
   it('trace quota: max 500, oldest-first pruning works', () => {
     // Record 510 traces
     for (let i = 0; i < 510; i++) {

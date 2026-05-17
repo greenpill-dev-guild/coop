@@ -70,6 +70,17 @@ describe('weakenSourceEdges', () => {
 
     expect(afterConf).toBeLessThan(beforeConf ?? 1);
   });
+
+  it('keeps rejection as local trace feedback without creating validated insights', () => {
+    weakenSourceEdges(store, 'trace-1', 'rejected');
+    const trace = store.traces.find((item) => item.traceId === 'trace-1');
+    if (trace) {
+      trace.outcome = 'rejected';
+    }
+
+    expect(store.traces.find((item) => item.traceId === 'trace-1')?.outcome).toBe('rejected');
+    expect(store.insights).toHaveLength(0);
+  });
 });
 
 describe('edge confidence clamping', () => {

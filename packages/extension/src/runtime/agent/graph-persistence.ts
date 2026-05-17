@@ -14,13 +14,13 @@ export type PersistedEntityExtractionResult = {
 };
 
 function resolveObservationSourceRef(observation: AgentObservation): string {
-  const sourceRef = observation.payload?.sourceRef;
-  if (typeof sourceRef === 'string' && sourceRef.trim().length > 0) {
-    return sourceRef;
-  }
   const contentId = observation.payload?.contentId;
   if (typeof contentId === 'string' && contentId.trim().length > 0) {
     return `source-content:${contentId}`;
+  }
+  const sourceRef = observation.payload?.sourceRef;
+  if (typeof sourceRef === 'string' && sourceRef.trim().length > 0) {
+    return sourceRef;
   }
   const sourceId = observation.payload?.sourceId;
   if (typeof sourceId === 'string' && sourceId.trim().length > 0) {

@@ -24,7 +24,9 @@ vi.mock('@coop/shared', async (importOriginal) => {
   };
 });
 
-const { emitRoundupBatchObservation } = await import('../agent-observation-emitters');
+const { emitRoundupBatchObservation, emitSourceContentObservation } = await import(
+  '../agent-observation-emitters'
+);
 
 describe('emitRoundupBatchObservation', () => {
   beforeEach(() => {
@@ -134,5 +136,40 @@ describe('emitRoundupBatchObservation', () => {
 
     // Different extract ids produce different fingerprints → both saved
     expect(mockSaveAgentObservation).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('emitSourceContentObservation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindAgentObservationByFingerprint.mockResolvedValue(undefined);
+    mockSaveAgentObservation.mockResolvedValue(undefined);
+    mockRequestAgentCycle.mockResolvedValue(undefined);
+  });
+
+  it('references persisted source content ids with observed/unconfirmed context', async () => {
+    await emitSourceContentObservation({
+      sourceId: 'ks-1',
+      sourceLabel: 'Example feed',
+      contentId: 'ks-content-1',
+      contentTitle: 'Watershed grant update',
+      sourceRef: 'rss:https://example.test/feed#1',
+      coopId: 'coop-1',
+    });
+
+    expect(mockSaveAgentObservation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        trigger: 'source-content-ready',
+        coopId: 'coop-1',
+        payload: expect.objectContaining({
+          sourceId: 'ks-1',
+          contentId: 'ks-content-1',
+          contentTitle: 'Watershed grant update',
+          sourceRef: 'rss:https://example.test/feed#1',
+          contextLabel: 'observed/unconfirmed',
+        }),
+      }),
+    );
   });
 });

@@ -7,6 +7,7 @@ import {
   createCoopDoc,
   observeArtifacts,
   readCoopState,
+  readCoopStateRaw,
   writeCoopState,
 } from '../sync';
 
@@ -91,6 +92,38 @@ describe('Yjs per-artifact map migration', () => {
 
     expect(result.artifacts).toHaveLength(2);
     expect(result.artifacts.map((a) => a.id).sort()).toEqual(['a1', 'a2']);
+  });
+
+  it('round-trips memory charter while keeping raw memory-loop internals out of shared state', () => {
+    const state = buildTestState([{ id: 'a1', title: 'Reviewed artifact' }]);
+    state.soul.memoryCharter = {
+      version: 1,
+      goals: ['Keep source-backed findings reviewable'],
+      opportunityThesis: 'Shared memory should only contain reviewed cooperative knowledge.',
+      desiredSignals: ['confirmed provenance'],
+      antiSignals: ['unreviewed private source material', 'unconfirmed inference as truth'],
+      evidenceStandards: ['Member approval before shared truth'],
+      vocabulary: ['observed', 'confirmed', 'stale'],
+      prohibitedTopics: ['raw prompts'],
+      confidenceThreshold: 0.72,
+      updatedAt: '2026-05-16T12:00:00.000Z',
+      updatedByMemberId: state.members[0].id,
+    };
+
+    const doc = new Y.Doc();
+    writeCoopState(doc, state);
+
+    const result = readCoopState(doc);
+    expect(result.soul.memoryCharter?.goals).toEqual(['Keep source-backed findings reviewable']);
+
+    const rawSharedState = JSON.stringify(readCoopStateRaw(doc));
+    expect(rawSharedState).toContain('confirmed provenance');
+    expect(rawSharedState).not.toContain('A regional foundation opened a watershed grant round.');
+    expect(rawSharedState).not.toContain('IGNORE PREVIOUS INSTRUCTIONS');
+    expect(rawSharedState).not.toContain('unconfirmed graph fact');
+    expect(rawSharedState).not.toContain('source-content:ks-content-1');
+
+    doc.destroy();
   });
 
   it('prefers per-artifact map over old format when both present', () => {

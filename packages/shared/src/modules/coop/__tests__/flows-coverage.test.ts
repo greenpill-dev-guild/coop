@@ -35,7 +35,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function quickCoop(overrides?: Parameters<typeof createCoop>[0]) {
+function quickCoop(overrides?: Partial<Parameters<typeof createCoop>[0]>) {
   return createCoop({
     coopName: 'Test Coop',
     purpose: 'Unit-test coop for coverage.',
@@ -102,6 +102,37 @@ describe('createMember', () => {
     const b = createMember('B', 'member');
     expect(a.id).not.toBe(b.id);
     expect(a.address).not.toBe(b.address);
+  });
+});
+
+describe('createCoop memory charter bootstrap', () => {
+  it('derives a memory charter from purpose and setup insights', () => {
+    const { state, creator } = quickCoop({
+      coopName: 'Memory Loop Coop',
+      purpose: 'Track local source-backed knowledge and reviewable memory.',
+      setupInsights: makeSetupInsights({
+        crossCuttingPainPoints: ['Knowledge is fragmented across tools'],
+        crossCuttingOpportunities: ['Members can publish cleaner shared artifacts'],
+      }),
+    });
+
+    expect(state.soul.memoryCharter).toMatchObject({
+      version: 1,
+      updatedByMemberId: creator.id,
+      confidenceThreshold: state.soul.confidenceThreshold,
+    });
+    expect(state.soul.memoryCharter?.goals).toEqual(
+      expect.arrayContaining([
+        'Track local source-backed knowledge and reviewable memory',
+        'Members can publish cleaner shared artifacts',
+      ]),
+    );
+    expect(state.soul.memoryCharter?.evidenceStandards).toEqual(
+      expect.arrayContaining([
+        'Prefer member-approved artifacts before treating a memory as shared truth',
+        'Keep source provenance visible on recommendations',
+      ]),
+    );
   });
 });
 
@@ -276,6 +307,45 @@ describe('updateCoopDetails', () => {
     expect(updated.soul.artifactFocus).toEqual(['coverage', 'testing']);
     // Profile unchanged
     expect(updated.profile.name).toBe(state.profile.name);
+  });
+
+  it('persists member-authored memory charter edits through coop detail updates', () => {
+    const { state } = quickCoop();
+    const originalCharter = state.soul.memoryCharter;
+    expect(originalCharter).toBeDefined();
+
+    const updated = updateCoopDetails({
+      state,
+      soul: {
+        memoryCharter: {
+          ...originalCharter,
+          version: 1,
+          goals: ['Track local memory loop behavior', 'Keep provenance visible'],
+          opportunityThesis: 'Coop memory should stay source-backed and member-reviewable.',
+          desiredSignals: ['reviewed source provenance', 'member-approved insight summaries'],
+          antiSignals: ['raw captures in shared state', 'unconfirmed graph facts as truth'],
+          evidenceStandards: [
+            'Prefer member-approved artifacts before treating a memory as shared truth',
+            'Keep source provenance visible on recommendations',
+          ],
+          vocabulary: ['context graph', 'memory charter'],
+          prohibitedTopics: ['raw prompts'],
+          confidenceThreshold: 0.81,
+          updatedAt: '2026-05-16T12:00:00.000Z',
+          updatedByMemberId: state.members[0].id,
+        },
+      },
+    });
+
+    expect(updated.soul.memoryCharter).toMatchObject({
+      goals: ['Track local memory loop behavior', 'Keep provenance visible'],
+      opportunityThesis: 'Coop memory should stay source-backed and member-reviewable.',
+      desiredSignals: ['reviewed source provenance', 'member-approved insight summaries'],
+      antiSignals: ['raw captures in shared state', 'unconfirmed graph facts as truth'],
+      confidenceThreshold: 0.81,
+      updatedByMemberId: state.members[0].id,
+    });
+    expect(updated.profile.purpose).toBe(state.profile.purpose);
   });
 
   it('updates capture mode on the profile', () => {

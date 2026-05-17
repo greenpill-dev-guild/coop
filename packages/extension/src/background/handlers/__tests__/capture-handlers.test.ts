@@ -55,7 +55,7 @@ vi.mock('../../context', () => ({
   getCoops: vi.fn().mockResolvedValue([]),
   prefersLocalEnhancement: false,
   setRuntimeHealth: vi.fn(),
-  notifyExtensionEvent: vi.fn(),
+  notifyExtensionEvent: vi.fn().mockResolvedValue(undefined),
   getLocalSetting: vi.fn().mockResolvedValue('manual'),
   stateKeys: { captureMode: 'capture-mode' },
   getCapturePeriodMinutes: vi.fn().mockReturnValue(null),

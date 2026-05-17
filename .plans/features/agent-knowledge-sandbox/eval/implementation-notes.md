@@ -1,5 +1,13 @@
 # Implementation Notes
 
+## 2026-05-17 Local Memory Loop Test Suite
+
+- Added `bun run test:unit:memory-loop` and `bun run validate memory-loop` as focused local QA gates for the current browser-native memory path.
+- Expanded targeted coverage for memory charter bootstrap/edit/sync, Yjs-safe source registry metadata, persisted source content including metadata-only results, source-content observations, source-content graph provenance, bounded precedent confidence, draft provenance, approval/rejection trace outcomes, and shared/local privacy boundaries.
+- Review follow-up corrected source-content graph provenance so persisted `contentId` wins over adapter `sourceRef` when both are present on a `source-content-ready` observation.
+- Added `.plans/features/agent-knowledge-sandbox/eval/local-functional-qa.md` with Browser/Computer Use setup, happy path, rejection path, privacy/trust checks, failure-mode checks, and a behavior-to-coverage matrix.
+- Kuzu-WASM remains deferred; this suite validates the shipped Dexie/snapshot-backed graph path and keeps raw source bodies, raw captures, raw prompts, and unconfirmed graph facts out of shared coop state.
+
 ## 2026-05-16 Context Graph Memory Upgrade
 
 - Kept v1 on the existing browser-native Dexie/snapshot graph backend. Kuzu-WASM and Neo4j remain future-compatible experiments, not dependencies for this wave.

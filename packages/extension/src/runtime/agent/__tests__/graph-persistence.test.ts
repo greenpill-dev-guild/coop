@@ -83,6 +83,59 @@ describe('persistEntityExtractionOutputToGraph', () => {
     });
   });
 
+  it('uses persisted source content ids as provenance for source-content observations', async () => {
+    mockDb.graphSnapshots.get.mockResolvedValue(undefined);
+
+    await persistEntityExtractionOutputToGraph({
+      db: mockDb as never,
+      coopId: 'coop-1',
+      observation: makeObservation({
+        payload: {
+          contentId: 'ks-content-1',
+          sourceRef: 'rss:https://example.test/feed#1',
+          contextLabel: 'observed/unconfirmed',
+        },
+      }),
+      output: {
+        entities: [
+          {
+            id: 'ent-river-foundation',
+            name: 'River Foundation',
+            type: 'organization',
+            description: 'Watershed grant maker',
+            sourceRef: 'heuristic:entity-extraction',
+          },
+          {
+            id: 'ent-watershed-grant',
+            name: 'Watershed Grant',
+            type: 'object',
+            description: 'Regional restoration funding round',
+            sourceRef: 'heuristic:entity-extraction',
+          },
+        ],
+        relationships: [
+          {
+            from: 'ent-river-foundation',
+            to: 'ent-watershed-grant',
+            type: 'funds',
+            confidence: 0.76,
+            t_valid: '2026-05-16T00:00:00.000Z',
+            t_invalid: null,
+            provenance: 'heuristic:entity-extraction',
+          },
+        ],
+      },
+    });
+
+    const store = getGraphStore();
+    expect(store.entities.get('ent-river-foundation')?.sourceRef).toBe(
+      'source-content:ks-content-1',
+    );
+    expect(store.relationships[0]).toMatchObject({
+      provenance: 'source-content:ks-content-1',
+    });
+  });
+
   it('deduplicates active relationships and keeps the strongest confidence', async () => {
     mockDb.graphSnapshots.get.mockResolvedValue(undefined);
     const observation = makeObservation();

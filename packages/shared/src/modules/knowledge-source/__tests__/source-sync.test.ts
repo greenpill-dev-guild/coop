@@ -161,6 +161,47 @@ describe('source Yjs sync', () => {
     }
   });
 
+  it('round-trips source active state and fetch metadata through Dexie and Yjs helpers', async () => {
+    const db = createCoopDb(`test-source-sync-metadata-${crypto.randomUUID()}`);
+    const doc = createTestDoc();
+    docs.push(doc);
+    try {
+      await db.knowledgeSources.put(
+        makeKnowledgeSource({
+          id: 'metadata-source',
+          coopId: 'coop-1',
+          type: 'rss',
+          identifier: 'https://example.test/feed.xml',
+          label: 'Example feed',
+          active: false,
+          lastFetchedAt: '2026-05-16T12:00:00.000Z',
+          entityCount: 7,
+        }),
+      );
+
+      await writeSourcesFromDexieToYDoc(db, doc, { coopId: 'coop-1' });
+      const [fromDoc] = readSourcesFromYDoc(doc);
+      expect(fromDoc).toMatchObject({
+        id: 'metadata-source',
+        active: false,
+        lastFetchedAt: '2026-05-16T12:00:00.000Z',
+        entityCount: 7,
+      });
+
+      await db.knowledgeSources.clear();
+      await mirrorSourcesFromYDocToDexie(db, doc, { coopId: 'coop-1' });
+
+      const mirrored = await db.knowledgeSources.get('metadata-source');
+      expect(mirrored).toMatchObject({
+        active: false,
+        lastFetchedAt: '2026-05-16T12:00:00.000Z',
+        entityCount: 7,
+      });
+    } finally {
+      await db.delete();
+    }
+  });
+
   it('prunes local sources missing from an incoming shared registry when requested', async () => {
     const db = createCoopDb(`test-source-sync-prune-${crypto.randomUUID()}`);
     const doc = createTestDoc();

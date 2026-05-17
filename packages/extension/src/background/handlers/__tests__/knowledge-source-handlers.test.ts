@@ -26,6 +26,10 @@ const mockDb = {
     get: vi.fn(),
     update: vi.fn(),
   },
+  coopDocs: {
+    get: vi.fn(),
+    put: vi.fn(),
+  },
 };
 
 vi.mock('@coop/shared', async (importOriginal) => {
@@ -66,6 +70,9 @@ vi.mock('../agent-observation-emitters', () => ({
   emitSourceContentObservation: mocks.emitSourceContentObservation,
 }));
 
+const { encodeCoopDoc, getRecentLog, hydrateCoopDoc, readSourcesFromYDoc, writeSourceToYDoc } =
+  await import('@coop/shared');
+
 const {
   handleAddKnowledgeSource,
   handleRemoveKnowledgeSource,
@@ -101,6 +108,28 @@ const fakeSource = {
   entityCount: 0,
   active: true,
 };
+
+function encodeSourceDoc(sources: Array<typeof fakeSource> = []) {
+  const doc = hydrateCoopDoc();
+  try {
+    for (const source of sources) {
+      writeSourceToYDoc(doc, source as Parameters<typeof writeSourceToYDoc>[1]);
+    }
+    return encodeCoopDoc(doc);
+  } finally {
+    doc.destroy();
+  }
+}
+
+function readLastWrittenSourceDoc() {
+  const record = mockDb.coopDocs.put.mock.calls.at(-1)?.[0] as
+    | { encodedState: Uint8Array }
+    | undefined;
+  if (!record) {
+    throw new Error('Expected coop doc to be written.');
+  }
+  return hydrateCoopDoc(record.encodedState);
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -175,6 +204,40 @@ describe('knowledge-source handlers', () => {
         expect.objectContaining({ addedBy: 'unknown' }),
       );
     });
+
+    it('writes shared-safe source metadata to the coop Yjs registry on add', async () => {
+      mocks.createKnowledgeSource.mockResolvedValue(fakeSource);
+      mockDb.coopDocs.get.mockResolvedValue({
+        id: COOP_ID,
+        encodedState: encodeSourceDoc(),
+        updatedAt: '2026-04-06T00:00:00.000Z',
+      });
+
+      const result = await handleAddKnowledgeSource({
+        type: 'add-knowledge-source',
+        payload: {
+          coopId: COOP_ID,
+          sourceType: 'youtube',
+          identifier: '@channel',
+          label: 'My Channel',
+        },
+      });
+
+      expect(result.ok).toBe(true);
+      const doc = readLastWrittenSourceDoc();
+      try {
+        expect(readSourcesFromYDoc(doc)).toEqual([fakeSource]);
+        expect(getRecentLog(doc, 1)[0]).toMatchObject({
+          type: 'ingest',
+          sourceId: SOURCE_ID,
+        });
+        const sharedRegistry = JSON.stringify(readSourcesFromYDoc(doc));
+        expect(sharedRegistry).not.toContain('Source Dispatch Result');
+        expect(sharedRegistry).not.toContain('raw prompt');
+      } finally {
+        doc.destroy();
+      }
+    });
   });
 
   // ---- Remove ----
@@ -209,6 +272,43 @@ describe('knowledge-source handlers', () => {
       expect(mocks.saveGraphSnapshot).toHaveBeenCalledWith(mockDb, COOP_ID);
     });
 
+    it('removes source metadata from the coop Yjs registry on remove', async () => {
+      mockDb.knowledgeSources.get.mockResolvedValue(fakeSource);
+      mockDb.coopDocs.get.mockResolvedValue({
+        id: COOP_ID,
+        encodedState: encodeSourceDoc([fakeSource]),
+        updatedAt: '2026-04-06T00:00:00.000Z',
+      });
+      mocks.loadGraphSnapshot.mockResolvedValue({
+        entities: new Map(),
+        relationships: [],
+        traces: [],
+        insights: [],
+        entityHistory: new Map(),
+      });
+      mocks.removeKnowledgeSource.mockResolvedValue({
+        staleEntityCount: 0,
+        invalidatedRelationshipCount: 0,
+      });
+
+      const result = await handleRemoveKnowledgeSource({
+        type: 'remove-knowledge-source',
+        payload: { sourceId: SOURCE_ID },
+      });
+
+      expect(result.ok).toBe(true);
+      const doc = readLastWrittenSourceDoc();
+      try {
+        expect(readSourcesFromYDoc(doc)).toEqual([]);
+        expect(getRecentLog(doc, 1)[0]).toMatchObject({
+          type: 'rejection',
+          sourceId: SOURCE_ID,
+        });
+      } finally {
+        doc.destroy();
+      }
+    });
+
     it('returns error when removal fails', async () => {
       mocks.removeKnowledgeSource.mockRejectedValue(new Error('Not found'));
 
@@ -234,6 +334,36 @@ describe('knowledge-source handlers', () => {
 
       expect(result.ok).toBe(true);
       expect(mockDb.knowledgeSources.update).toHaveBeenCalledWith(SOURCE_ID, { active: false });
+    });
+
+    it('round-trips active state through the coop Yjs source registry on toggle', async () => {
+      mockDb.knowledgeSources.get.mockResolvedValue(fakeSource);
+      mockDb.knowledgeSources.update.mockResolvedValue(1);
+      mockDb.coopDocs.get.mockResolvedValue({
+        id: COOP_ID,
+        encodedState: encodeSourceDoc([fakeSource]),
+        updatedAt: '2026-04-06T00:00:00.000Z',
+      });
+
+      const result = await handleToggleKnowledgeSource({
+        type: 'toggle-knowledge-source',
+        payload: { sourceId: SOURCE_ID, active: false },
+      });
+
+      expect(result.ok).toBe(true);
+      const doc = readLastWrittenSourceDoc();
+      try {
+        expect(readSourcesFromYDoc(doc)[0]).toMatchObject({
+          id: SOURCE_ID,
+          active: false,
+        });
+        expect(getRecentLog(doc, 1)[0]).toMatchObject({
+          type: 'rejection',
+          sourceId: SOURCE_ID,
+        });
+      } finally {
+        doc.destroy();
+      }
     });
 
     it('returns error on Dexie failure', async () => {
@@ -510,6 +640,55 @@ describe('handleRefreshKnowledgeSource', () => {
 
     expect(result.ok).toBe(true);
     expect((result.data as { refreshedCount: number }).refreshedCount).toBe(1);
+  });
+
+  it('persists metadata-only structured content and emits its persisted content id', async () => {
+    mocks.listKnowledgeSources.mockResolvedValue([fakeSource]);
+    mocks.fetchStructuredContentForSource.mockResolvedValue([
+      {
+        title: 'Metadata-only source',
+        body: '',
+        metadata: { reason: 'not-modified' },
+        sourceRef: 'github:greenpill/coop',
+        fetchedAt: '2026-04-06T00:00:00.000Z',
+      },
+    ]);
+    mocks.updateKnowledgeSourceMeta.mockResolvedValue(undefined);
+    mocks.saveKnowledgeSourceContent.mockResolvedValue({
+      id: 'ks-content-empty',
+      sourceId: SOURCE_ID,
+      coopId: COOP_ID,
+      sourceRef: 'github:greenpill/coop',
+      title: 'Metadata-only source',
+      body: '',
+      bodyHash: '0xhash',
+      metadata: { reason: 'not-modified' },
+      fetchedAt: '2026-04-06T00:00:00.000Z',
+      createdAt: '2026-04-06T00:00:00.000Z',
+    });
+    mocks.emitSourceContentObservation.mockResolvedValue(undefined);
+
+    const result = await handleRefreshKnowledgeSource({
+      type: 'refresh-knowledge-source',
+      payload: { coopId: COOP_ID },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mocks.saveKnowledgeSourceContent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        sourceId: SOURCE_ID,
+        body: '',
+        metadata: { reason: 'not-modified' },
+      }),
+    );
+    expect(mocks.emitSourceContentObservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentId: 'ks-content-empty',
+        contentTitle: 'Metadata-only source',
+        sourceRef: 'github:greenpill/coop',
+      }),
+    );
   });
 
   it('returns ok with zero count when no active sources', async () => {

@@ -95,8 +95,13 @@ describe('knowledge source content persistence', () => {
       fetchedAt: '2026-04-08T00:00:00.000Z',
     });
 
+    const redacted = await db.knowledgeSourceContents.get(content.id);
+    expect(redacted?.body).toBe('Encrypted source content.');
+    expect(redacted?.metadata).toEqual({});
+
     const hydrated = await getKnowledgeSourceContent(db, content.id);
     expect(hydrated?.body).toBe('');
     expect(hydrated?.bodyHash).toMatch(/^0x[a-f0-9]{64}$/);
+    expect(hydrated?.metadata).toEqual({ error: true });
   });
 });

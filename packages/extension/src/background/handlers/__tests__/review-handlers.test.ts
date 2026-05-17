@@ -480,11 +480,154 @@ describe('review handlers', () => {
         }),
       );
     });
+
+    it('marks the latest local graph trace rejected on agent draft demotion without creating a validated insight', async () => {
+      const persistedDraft = makeAgentDraft(coopState.profile.id, { workflowStage: 'ready' });
+      const incomingDraft = { ...persistedDraft, workflowStage: 'candidate' as const };
+      const shared = await import('@coop/shared');
+      const graph = await import('../../../runtime/agent/graph-store-singleton');
+      const graphStore = shared.initGraphStore();
+      shared.upsertEntity(graphStore, {
+        id: 'ent-river-foundation',
+        name: 'River Foundation',
+        type: 'organization',
+        description: 'Watershed grant maker',
+        sourceRef: 'source-content:ks-content-1',
+      });
+      shared.upsertEntity(graphStore, {
+        id: 'ent-watershed-grant',
+        name: 'Watershed Grant',
+        type: 'object',
+        description: 'Regional restoration grant',
+        sourceRef: 'source-content:ks-content-1',
+      });
+      shared.createRelationship(graphStore, {
+        from: 'ent-river-foundation',
+        to: 'ent-watershed-grant',
+        type: 'funds',
+        confidence: 0.7,
+        t_valid: '2026-05-16T00:00:00.000Z',
+        t_invalid: null,
+        provenance: 'source-content:ks-content-1',
+      });
+      shared.recordReasoningTrace(graphStore, {
+        traceId: 'trace-local-reject',
+        skillRunId: 'run-1',
+        observationId: 'obs-1',
+        observationText: 'Capital formation brief',
+        contextEntityIds: ['ent-river-foundation', 'ent-watershed-grant'],
+        precedentTraceIds: [],
+        confidence: 0.82,
+        outputSummary: 'Agent proposed a funding brief',
+        outcome: 'pending',
+        createdAt: '2026-05-16T00:00:00.000Z',
+      });
+      const beforeConfidence = graphStore.relationships[0]?.confidence ?? 0;
+      vi.spyOn(graph, 'loadGraphSnapshot').mockResolvedValue(graphStore);
+      const scheduleSave = vi.spyOn(graph, 'scheduleSave').mockImplementation(() => undefined);
+
+      vi.spyOn(shared, 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+      vi.spyOn(shared, 'getReviewDraft').mockResolvedValue(persistedDraft);
+      vi.spyOn(shared, 'saveReviewDraft').mockResolvedValue(undefined);
+      mockCreateAgentMemory.mockClear();
+
+      const result = await handleUpdateReviewDraft({
+        type: 'update-review-draft',
+        payload: { draft: incomingDraft },
+      });
+
+      expect(result.ok).toBe(true);
+      expect(
+        graphStore.traces.find((trace) => trace.traceId === 'trace-local-reject')?.outcome,
+      ).toBe('rejected');
+      expect(graphStore.relationships[0]?.confidence).toBeLessThan(beforeConfidence);
+      expect(graphStore.insights).toHaveLength(0);
+      expect(scheduleSave).toHaveBeenCalledWith(expect.anything(), coopState.profile.id);
+    });
   });
 
   // --- Outbox integration tests ---
 
   describe('outbox tracking on publish', () => {
+    it('strengthens local traces and creates a validated insight when an agent draft is published', async () => {
+      const shared = await import('@coop/shared');
+      const graph = await import('../../../runtime/agent/graph-store-singleton');
+      const draft = makeAgentDraft(coopState.profile.id, {
+        workflowStage: 'ready',
+        sourceRefs: ['rss:https://example.test/feed#1'],
+        contextLabels: ['observed/unconfirmed', 'graph-context'],
+        precedentTraceIds: ['trace-approved-old'],
+        confidenceAdjustment: 0.05,
+      });
+      const graphStore = shared.initGraphStore();
+      shared.upsertEntity(graphStore, {
+        id: 'ent-river-foundation',
+        name: 'River Foundation',
+        type: 'organization',
+        description: 'Watershed grant maker',
+        sourceRef: 'source-content:ks-content-1',
+      });
+      shared.upsertEntity(graphStore, {
+        id: 'ent-watershed-grant',
+        name: 'Watershed Grant',
+        type: 'object',
+        description: 'Regional restoration grant',
+        sourceRef: 'source-content:ks-content-1',
+      });
+      shared.createRelationship(graphStore, {
+        from: 'ent-river-foundation',
+        to: 'ent-watershed-grant',
+        type: 'funds',
+        confidence: 0.7,
+        t_valid: '2026-05-16T00:00:00.000Z',
+        t_invalid: null,
+        provenance: 'source-content:ks-content-1',
+      });
+      shared.recordReasoningTrace(graphStore, {
+        traceId: 'trace-local-approve',
+        skillRunId: 'run-1',
+        observationId: 'obs-1',
+        observationText: 'Capital formation brief',
+        contextEntityIds: ['ent-river-foundation', 'ent-watershed-grant'],
+        precedentTraceIds: ['trace-approved-old'],
+        confidence: 0.82,
+        confidenceAdjustment: 0.05,
+        sourceRefs: ['rss:https://example.test/feed#1'],
+        contextLabels: ['observed/unconfirmed', 'graph-context'],
+        outputSummary: 'Agent proposed a funding brief',
+        outcome: 'pending',
+        createdAt: '2026-05-16T00:00:00.000Z',
+      });
+      const beforeConfidence = graphStore.relationships[0]?.confidence ?? 0;
+      vi.spyOn(graph, 'loadGraphSnapshot').mockResolvedValue(graphStore);
+      const scheduleSave = vi.spyOn(graph, 'scheduleSave').mockImplementation(() => undefined);
+
+      vi.spyOn(shared, 'getAuthSession').mockResolvedValue(AUTH_SESSION);
+      vi.spyOn(shared, 'getReviewDraft').mockResolvedValue(draft);
+      vi.spyOn(shared, 'deleteReviewDraft').mockResolvedValue(undefined);
+      mockAddOutboxEntry.mockClear();
+
+      const result = await publishDraftWithContext({
+        draft,
+        targetCoopIds: [coopState.profile.id],
+        authSession: AUTH_SESSION,
+        activeCoopId: coopState.profile.id,
+        activeMemberId: coopState.members[0]?.id,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(
+        graphStore.traces.find((trace) => trace.traceId === 'trace-local-approve')?.outcome,
+      ).toBe('approved');
+      expect(graphStore.relationships[0]?.confidence).toBeGreaterThan(beforeConfidence);
+      expect(graphStore.insights[0]).toMatchObject({
+        draftSummary: draft.title,
+        sourceEntityIds: ['ent-river-foundation', 'ent-watershed-grant'],
+        traceId: 'trace-local-approve',
+      });
+      expect(scheduleSave).toHaveBeenCalledWith(expect.anything(), coopState.profile.id);
+    });
+
     it('adds outbox entries for each published artifact', async () => {
       const draft = makeTabDraft(coopState.profile.id, {
         workflowStage: 'ready',

@@ -66,6 +66,6 @@
     "Context-graph memory v1 stays browser-native: member-private source bodies and reasoning traces remain local, while shared coop projection is limited to approved artifacts, source registry metadata, charter fields, and validated insights.",
     "Coop memory charter is member-editable shared state derived at bootstrap from purpose and setup insights; the agent reads it but must not rewrite it automatically."
   ],
-  "updated_at": "2026-05-16",
-  "notes": "Context-graph memory upgrade is active on top of the closed sandbox baseline. This pass keeps snapshot-backed Dexie graph storage, adds a bootstrap memory charter, persists fetched source bodies locally as encrypted source content, wires source-content observations to content IDs, carries graph context and precedent traces into prompts/traces, syncs shared-safe source registry metadata through Yjs, and keeps raw source bodies, raw captures, prompts, and unconfirmed graph facts out of shared coop state."
+  "updated_at": "2026-05-17",
+  "notes": "Context-graph memory upgrade is active on top of the closed sandbox baseline. This pass keeps snapshot-backed Dexie graph storage, adds a bootstrap memory charter, persists fetched source bodies locally as encrypted source content, wires source-content observations to content IDs, carries graph context and precedent traces into prompts/traces, syncs shared-safe source registry metadata through Yjs, and keeps raw source bodies, raw captures, prompts, and unconfirmed graph facts out of shared coop state. The focused local QA gate is now `bun run test:unit:memory-loop` / `bun run validate memory-loop`, with the manual Browser/Computer Use guide in `eval/local-functional-qa.md`."
 }
