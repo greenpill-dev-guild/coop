@@ -1,4 +1,5 @@
 import type React from 'react';
+import { RECEIVER_APP_ROUTES, type ReceiverAppRoute } from '../../receiver-routes';
 
 type ReceiverAppBarIconProps = {
   active: boolean;
@@ -80,25 +81,25 @@ export type ReceiverNavKind = 'pair' | 'receiver' | 'inbox';
 
 export const receiverNavItems: Array<{
   kind: ReceiverNavKind;
-  href: '/pair' | '/receiver' | '/inbox';
+  href: ReceiverAppRoute;
   label: string;
   Icon: ({ active }: ReceiverAppBarIconProps) => React.ReactElement;
 }> = [
   {
     kind: 'pair',
-    href: '/pair',
+    href: RECEIVER_APP_ROUTES.pair,
     label: 'Mate',
     Icon: ReceiverPairIcon,
   },
   {
     kind: 'receiver',
-    href: '/receiver',
+    href: RECEIVER_APP_ROUTES.receiver,
     label: 'Hatch',
     Icon: ReceiverCaptureIcon,
   },
   {
     kind: 'inbox',
-    href: '/inbox',
+    href: RECEIVER_APP_ROUTES.inbox,
     label: 'Roost',
     Icon: ReceiverInboxIcon,
   },

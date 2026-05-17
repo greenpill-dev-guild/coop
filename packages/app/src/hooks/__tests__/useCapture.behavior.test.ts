@@ -58,7 +58,7 @@ function makePairing() {
     active: true,
     pairSecret: 'pair-secret',
     pairingCode: 'NEST:PAIR',
-    deepLink: 'https://coop.town/pair',
+    deepLink: 'https://coop.town/app/pair',
     version: 1,
   } as never;
 }

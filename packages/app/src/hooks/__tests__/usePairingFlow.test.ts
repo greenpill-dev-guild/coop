@@ -162,7 +162,7 @@ describe('usePairingFlow', () => {
       'River Coop is ready for private intake sync.',
       'receiver-pairing-pairing-1',
     );
-    expect(deps.navigate).toHaveBeenCalledWith('/receiver');
+    expect(deps.navigate).toHaveBeenCalledWith('/app/receiver');
     expect(result.current.pendingPairing).toBeNull();
   });
 

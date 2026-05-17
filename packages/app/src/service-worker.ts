@@ -1,5 +1,5 @@
 type ServiceWorkerContainerLike = {
-  register: (scriptURL: string) => Promise<unknown>;
+  register: (scriptURL: string, options?: RegistrationOptions) => Promise<unknown>;
   getRegistrations?: () => Promise<ReadonlyArray<{ unregister: () => Promise<boolean> | boolean }>>;
 };
 
@@ -31,7 +31,7 @@ export function registerReceiverServiceWorker({
   }
 
   win.addEventListener('load', () => {
-    void serviceWorker.register('/sw.js').catch((error) => {
+    void serviceWorker.register('/sw.js', { scope: '/app' }).catch((error) => {
       console.warn('[coop] Service worker registration failed:', error);
     });
   });

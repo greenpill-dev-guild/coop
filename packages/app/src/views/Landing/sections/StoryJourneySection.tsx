@@ -1,4 +1,4 @@
-import type { MutableRefObject, RefObject } from 'react';
+import type { MutableRefObject, ReactNode, RefObject } from 'react';
 import { DevTunnelBadge } from '../../../components/DevTunnelBadge';
 import type { DevEnvironmentState } from '../../../dev-environment';
 import { useI18n } from '../../../hooks/useI18n';
@@ -25,6 +25,7 @@ export type StoryJourneySectionProps = {
   howItWorksRef: RefObject<HTMLDivElement | null>;
   heroScrollHintOpacity: number;
   devEnvironmentState: DevEnvironmentState | null;
+  installAction?: ReactNode;
 };
 
 export function StoryJourneySection({
@@ -46,6 +47,7 @@ export function StoryJourneySection({
   howItWorksRef,
   heroScrollHintOpacity,
   devEnvironmentState,
+  installAction = null,
 }: StoryJourneySectionProps) {
   const { t } = useI18n();
 
@@ -121,6 +123,7 @@ export function StoryJourneySection({
               </h1>
               <p className="hero-subtitle">{t('hero.subtitle')}</p>
               <div className="hero-cta-row">
+                {installAction}
                 <a className="button button-primary hero-cta-primary" href="#ritual">
                   {t('hero.curateCta')}
                 </a>

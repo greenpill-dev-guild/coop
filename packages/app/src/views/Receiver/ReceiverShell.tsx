@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { BottomSheet } from '../../components/BottomSheet';
-import { Button } from '../../components/Button';
+import { RECEIVER_APP_ROUTES, type ReceiverAppRoute } from '../../receiver-routes';
 import { type ReceiverNavKind, receiverNavItems } from './icons';
 
 type PairedNestDisplay = {
@@ -11,19 +11,14 @@ type PairedNestDisplay = {
 type ReceiverShellProps = {
   screenTitle: string;
   activeRoute: ReceiverNavKind;
-  navigate: (path: '/pair' | '/receiver' | '/inbox' | '/landing' | '/') => void;
+  navigate: (path: ReceiverAppRoute | '/landing' | '/') => void;
   online: boolean;
   pairingStatusLabel: string;
   captureCount: number;
   message: string | null;
   pairedNestDisplay: PairedNestDisplay | null;
-  installPrompt: unknown;
-  showInstallNudge: boolean;
-  installNudgeMessage: string;
   canNotify: boolean;
   notificationsEnabled: boolean;
-  onInstall: () => void;
-  onDismissInstallNudge: () => void;
   onToggleNotifications: () => void;
   onRefresh: () => void;
   children: ReactNode;
@@ -38,13 +33,8 @@ export function ReceiverShell({
   captureCount,
   message,
   pairedNestDisplay,
-  installPrompt,
-  showInstallNudge,
-  installNudgeMessage,
   canNotify,
   notificationsEnabled,
-  onInstall,
-  onDismissInstallNudge,
   onToggleNotifications,
   onRefresh,
   children,
@@ -76,19 +66,22 @@ export function ReceiverShell({
   }, [isPulling, onRefresh]);
 
   const isPaired = pairingStatusLabel === 'Paired';
+  const isHatch = activeRoute === 'receiver';
   const statusSummary = !online
     ? 'Offline · saved here'
     : `${isPaired ? 'Paired' : 'Not paired'} · ${captureCount} saved`;
+  const shellClassName = ['receiver-shell', isHatch ? 'is-hatch' : ''].filter(Boolean).join(' ');
+  const mainClassName = ['receiver-main', isHatch ? 'is-hatch' : ''].filter(Boolean).join(' ');
 
   return (
-    <div className="receiver-shell">
+    <div className={shellClassName} data-route={activeRoute}>
       <header className="receiver-topbar">
         <a
           className="receiver-mark-link"
-          href="/receiver"
+          href={RECEIVER_APP_ROUTES.receiver}
           onClick={(event) => {
             event.preventDefault();
-            navigate('/receiver');
+            navigate(RECEIVER_APP_ROUTES.receiver);
           }}
         >
           <img className="receiver-mark" src="/branding/coop-mark-flat.png" alt="Coop" />
@@ -106,7 +99,7 @@ export function ReceiverShell({
       </header>
 
       <main
-        className="receiver-main"
+        className={mainClassName}
         ref={mainRef}
         onTouchStart={onPullStart}
         onTouchMove={onPullMove}
@@ -183,63 +176,6 @@ export function ReceiverShell({
           <output className="receiver-live-message" aria-live="polite">
             {message}
           </output>
-        ) : null}
-
-        {showInstallNudge ? (
-          <section className="receiver-install-banner">
-            <div className="receiver-install-banner-icon" aria-hidden="true">
-              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <rect
-                  x="4"
-                  y="6"
-                  width="20"
-                  height="16"
-                  rx="3"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M14 12v6M11 15l3 3 3-3"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div className="receiver-install-copy">
-              <h2>Keep Coop one tap away</h2>
-              <p className="quiet-note">{installNudgeMessage}</p>
-            </div>
-            <div className="receiver-install-actions">
-              {installPrompt ? (
-                <Button variant="primary" size="small" onClick={onInstall}>
-                  <span className="receiver-install-btn-content">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <path
-                        d="M8 2v8M5 7l3 3 3-3"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M3 12v1.5h10V12"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Install Coop
-                  </span>
-                </Button>
-              ) : null}
-              <Button variant="secondary" size="small" onClick={onDismissInstallNudge}>
-                Not now
-              </Button>
-            </div>
-          </section>
         ) : null}
 
         <BottomSheet
@@ -390,29 +326,6 @@ export function ReceiverShell({
                   <span className="receiver-toggle-switch-thumb" />
                 </span>
               </button>
-            ) : null}
-            {installPrompt ? (
-              <Button variant="primary" size="small" onClick={onInstall}>
-                <span className="receiver-install-btn-content">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path
-                      d="M8 2v8M5 7l3 3 3-3"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M3 12v1.5h10V12"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Install app
-                </span>
-              </Button>
             ) : null}
           </div>
         </BottomSheet>

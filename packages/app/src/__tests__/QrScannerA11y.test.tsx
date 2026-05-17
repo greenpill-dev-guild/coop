@@ -21,7 +21,24 @@ describe('QR scanner overlay a11y', () => {
 
   beforeEach(async () => {
     await resetReceiverDb();
-    window.history.pushState({}, '', '/pair');
+    window.history.pushState({}, '', '/app/pair');
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn((query: string) => ({
+        matches: query === '(display-mode: standalone)',
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
     createObjectUrl.mockClear();
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,

@@ -1,4 +1,5 @@
 import {
+  buildReceiverPairingDeepLink,
   createReceiverPairingPayload,
   setActiveReceiverPairing,
   toReceiverPairingRecord,
@@ -7,6 +8,8 @@ import {
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { receiverDb, resetReceiverDb, resolveRootDestination, resolveRoute } from '../app';
+import { bootstrapReceiverPairingHandoff } from '../pairing-handoff';
+import { bootstrapReceiverShareHandoff } from '../share-handoff';
 import { renderRootApp } from './root-app-test-utils';
 
 function stubSurface({
@@ -83,30 +86,36 @@ describe('root routing bootstrap', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('resolves known routes, including the new root and landing split', () => {
+  it('resolves known routes, including app-prefixed and legacy receiver routes', () => {
     expect(resolveRoute('/')).toEqual({ kind: 'root' });
     expect(resolveRoute('/landing')).toEqual({ kind: 'landing' });
-    expect(resolveRoute('/pair')).toEqual({ kind: 'pair' });
-    expect(resolveRoute('/receiver')).toEqual({ kind: 'receiver' });
-    expect(resolveRoute('/inbox')).toEqual({ kind: 'inbox' });
+    expect(resolveRoute('/app')).toEqual({ kind: 'appRoot' });
+    expect(resolveRoute('/app/pair')).toEqual({ kind: 'pair', presentation: 'app' });
+    expect(resolveRoute('/app/receiver')).toEqual({ kind: 'receiver', presentation: 'app' });
+    expect(resolveRoute('/app/inbox')).toEqual({ kind: 'inbox', presentation: 'app' });
+    expect(resolveRoute('/pair')).toEqual({ kind: 'pair', presentation: 'legacy' });
+    expect(resolveRoute('/receiver')).toEqual({ kind: 'receiver', presentation: 'legacy' });
+    expect(resolveRoute('/inbox')).toEqual({ kind: 'inbox', presentation: 'legacy' });
     expect(resolveRoute('/board/coop-1')).toEqual({ kind: 'board', coopId: 'coop-1' });
   });
 
   it('resolves root destinations from platform surface and pairing state', () => {
-    expect(resolveRootDestination({ isMobile: false, isStandalone: false }, false)).toBe(
-      '/landing',
+    expect(resolveRootDestination({ isMobile: false, isStandalone: false }, false)).toBe('/');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, false)).toBe('/');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, true)).toBe('/');
+    expect(resolveRootDestination({ isMobile: false, isStandalone: true }, false)).toBe(
+      '/app/pair',
     );
-    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, false)).toBe('/landing');
-    expect(resolveRootDestination({ isMobile: true, isStandalone: false }, true)).toBe('/landing');
-    expect(resolveRootDestination({ isMobile: false, isStandalone: true }, false)).toBe('/pair');
-    expect(resolveRootDestination({ isMobile: true, isStandalone: true }, true)).toBe('/receiver');
+    expect(resolveRootDestination({ isMobile: true, isStandalone: true }, true)).toBe(
+      '/app/receiver',
+    );
   });
 
-  it('redirects desktop root visits to landing', async () => {
+  it('renders the public landing at browser root', async () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/landing');
+      expect(window.location.pathname).toBe('/');
     });
     expect(
       await screen.findByRole('heading', {
@@ -129,7 +138,7 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/landing');
+      expect(window.location.pathname).toBe('/');
     });
     expect(
       await screen.findByRole('heading', {
@@ -152,7 +161,7 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/landing');
+      expect(window.location.pathname).toBe('/');
     });
     expect(
       await screen.findByRole('heading', {
@@ -164,7 +173,7 @@ describe('root routing bootstrap', () => {
     });
   });
 
-  it('treats standalone launches like app entry and sends unpaired devices to mate', async () => {
+  it('treats standalone root launches like app entry and sends unpaired devices to mate', async () => {
     stubSurface({
       userAgent:
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15',
@@ -175,12 +184,12 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/pair');
+      expect(window.location.pathname).toBe('/app/pair');
     });
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
   });
 
-  it('treats standalone launches like app entry and sends paired devices to hatch', async () => {
+  it('treats standalone root launches like app entry and sends paired devices to hatch', async () => {
     stubSurface({
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
@@ -193,30 +202,102 @@ describe('root routing bootstrap', () => {
     await renderRootApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe('/receiver');
+      expect(window.location.pathname).toBe('/app/receiver');
     });
     expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
   });
 
-  it('preserves explicit routes instead of rerouting them through root heuristics', async () => {
+  it('redirects direct app routes back to the public website in normal browser mode', async () => {
+    stubSurface({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15',
+    });
+    window.history.pushState({}, '', '/app/receiver');
+
+    await renderRootApp();
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(screen.queryByRole('heading', { name: /^Hatch$/i })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: /chicken or egg\? neither — you need a coop first\./i,
+      }),
+    ).toBeVisible();
+  });
+
+  it('does not review pairing handoffs from normal browser visits', async () => {
+    const payload = createReceiverPairingPayload({
+      coopId: 'browser-coop',
+      coopDisplayName: 'Browser Coop',
+      memberId: 'browser-member',
+      memberDisplayName: 'Bea',
+    });
+    const deepLink = buildReceiverPairingDeepLink('http://localhost', payload);
+    const parsedDeepLink = new URL(deepLink);
+    window.history.pushState({}, '', `${parsedDeepLink.pathname}${parsedDeepLink.hash}`);
+
+    const handoff = bootstrapReceiverPairingHandoff(window);
+
+    expect(window.location.pathname).toBe('/app/pair');
+    expect(handoff).toBeTruthy();
+
+    await renderRootApp({ initialPairingInput: handoff });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(screen.queryByRole('button', { name: /join this coop/i })).not.toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await receiverDb.receiverPairings.toArray()).toHaveLength(0);
+    });
+  });
+
+  it('does not ingest share handoffs from normal browser visits', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/receiver?title=Shared%20Grant&text=Follow%20up&url=https%3A%2F%2Fexample.com%2Fgrant',
+    );
+
+    const handoff = bootstrapReceiverShareHandoff(window);
+
+    expect(window.location.pathname).toBe('/app/receiver');
+    expect(handoff?.title).toBe('Shared Grant');
+
+    await renderRootApp({ initialShareInput: handoff });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(screen.queryByText('Shared Grant')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await receiverDb.receiverCaptures.toArray()).toHaveLength(0);
+    });
+  });
+
+  it('renders explicit app routes in standalone mode', async () => {
     stubSurface({
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+      standalone: true,
       innerWidth: 390,
       maxTouchPoints: 5,
     });
-    window.history.pushState({}, '', '/inbox');
+    window.history.pushState({}, '', '/app/inbox');
 
     await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Roost$/i })).toBeVisible();
-    expect(window.location.pathname).toBe('/inbox');
+    expect(window.location.pathname).toBe('/app/inbox');
   });
 
-  it('keeps the receiver brand mark inside the app shell and shows mobile install guidance', async () => {
+  it('forwards legacy receiver routes only in standalone mode', async () => {
     stubSurface({
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+      standalone: true,
       innerWidth: 390,
       maxTouchPoints: 5,
     });
@@ -224,20 +305,43 @@ describe('root routing bootstrap', () => {
 
     await renderRootApp();
 
-    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
-    expect(screen.getByRole('heading', { name: /keep coop one tap away/i })).toBeVisible();
-    expect(screen.queryByText(/about coop/i)).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /not now/i }));
     await waitFor(() => {
-      expect(
-        screen.queryByRole('heading', { name: /keep coop one tap away/i }),
-      ).not.toBeInTheDocument();
+      expect(window.location.pathname).toBe('/app/receiver');
     });
-    expect(screen.getByText(/install reminder hidden/i)).toBeVisible();
+    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
+  });
+
+  it('redirects legacy receiver routes to public root in normal browser mode', async () => {
+    window.history.pushState({}, '', '/receiver');
+
+    await renderRootApp();
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(screen.queryByRole('heading', { name: /^Hatch$/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps the receiver brand mark inside the Hatch shell without install overflow', async () => {
+    stubSurface({
+      userAgent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+      standalone: true,
+      innerWidth: 390,
+      maxTouchPoints: 5,
+    });
+    window.history.pushState({}, '', '/app/receiver');
+
+    await renderRootApp();
+
+    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: /keep coop one tap away/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/about coop/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('link', { name: 'Coop' }));
 
-    expect(window.location.pathname).toBe('/receiver');
+    expect(window.location.pathname).toBe('/app/receiver');
   });
 });

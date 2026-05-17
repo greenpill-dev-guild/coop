@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import type { DevEnvironmentState } from '../../dev-environment';
 import { I18nProvider, useI18n } from '../../hooks/useI18n';
+import { PublicInstallAction } from './PublicInstallAction';
 import { useSpeechCapture } from './hooks/useSpeechCapture';
 import {
   LANDING_DRAFT_STORAGE_KEY,
@@ -235,7 +236,8 @@ function LandingPageContent({
   // ── GSAP scroll-driven animations ──────────────────────────────────
   useEffect(() => {
     const isTestEnvironment =
-      typeof navigator !== 'undefined' && /jsdom|happy-dom/i.test(navigator.userAgent);
+      import.meta.env.MODE === 'test' ||
+      (typeof navigator !== 'undefined' && /jsdom|happy-dom/i.test(navigator.userAgent));
 
     if (
       typeof window === 'undefined' ||
@@ -377,12 +379,7 @@ function LandingPageContent({
               0.06,
             )
             .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0.12, y: -18 }, 0.42)
-            .fromTo(
-              howItWorksRef.current,
-              { y: 28, scale: 0.975 },
-              { y: 0, scale: 1 },
-              0.24,
-            )
+            .fromTo(howItWorksRef.current, { y: 28, scale: 0.975 }, { y: 0, scale: 1 }, 0.24)
             .fromTo(howItWorksHeading, { y: 20 }, { y: 0 }, 0.29)
             .fromTo(
               howItWorksCardElements,
@@ -724,6 +721,18 @@ function LandingPageContent({
           <a aria-label={t('hero.logoLabel')} className="hero-logo" href="#meadow">
             <img className="wordmark" src="/branding/coop-wordmark-flat.png" alt="Coop" />
           </a>
+          <PublicInstallAction>
+            {({ label, href, onClick, action }) => (
+              <a
+                className="button button-primary landing-install-action"
+                data-install-action={action}
+                href={href}
+                onClick={onClick}
+              >
+                {label}
+              </a>
+            )}
+          </PublicInstallAction>
         </div>
       </header>
 
@@ -747,6 +756,20 @@ function LandingPageContent({
           howItWorksRef={howItWorksRef}
           heroScrollHintOpacity={heroScrollHintOpacity}
           devEnvironmentState={devEnvironmentState}
+          installAction={
+            <PublicInstallAction mobileOnly>
+              {({ label, href, onClick, action }) => (
+                <a
+                  className="button button-primary hero-cta-primary hero-install-cta"
+                  data-install-action={action}
+                  href={href}
+                  onClick={onClick}
+                >
+                  {label}
+                </a>
+              )}
+            </PublicInstallAction>
+          }
         />
 
         <RitualSection

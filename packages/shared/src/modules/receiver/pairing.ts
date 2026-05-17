@@ -231,7 +231,7 @@ export function buildReceiverPairingDeepLink(
   input: ReceiverPairingPayload | string,
 ) {
   const payload = typeof input === 'string' ? input : encodeReceiverPairingPayload(input);
-  const url = new URL('/pair', baseUrl);
+  const url = new URL('/app/pair', baseUrl);
   url.hash = new URLSearchParams({ payload }).toString();
   return url.toString();
 }

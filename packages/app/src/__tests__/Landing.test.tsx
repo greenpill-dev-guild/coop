@@ -1,5 +1,5 @@
 import { emptySetupInsightsInput } from '@coop/shared';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, buildLandingSetupPacket, emptyLandingTranscripts } from '../views/Landing';
 
@@ -24,6 +24,38 @@ function installMatchMediaMock(matches = false) {
   return matchMedia;
 }
 
+function stubMobileBrowser(userAgent: string, platform = 'iPhone') {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: 390,
+  });
+  Object.defineProperty(navigator, 'userAgent', {
+    configurable: true,
+    value: userAgent,
+  });
+  Object.defineProperty(navigator, 'maxTouchPoints', {
+    configurable: true,
+    value: 5,
+  });
+  Object.defineProperty(navigator, 'platform', {
+    configurable: true,
+    value: platform,
+  });
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: query === '(pointer: coarse)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 function openCard(title: string) {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(title, 'i') }));
 }
@@ -38,6 +70,53 @@ function completeCard(title: string, notes?: string) {
   }
 
   fireEvent.click(screen.getByRole('button', { name: /mark complete/i }));
+}
+
+function mockDialogMethods() {
+  const showModalDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    'showModal',
+  );
+  const closeDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
+  const showModal = vi.fn(function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  });
+  const close = vi.fn(function close(this: HTMLDialogElement) {
+    this.removeAttribute('open');
+  });
+
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+    configurable: true,
+    value: showModal,
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+    configurable: true,
+    value: close,
+  });
+
+  return {
+    close,
+    restore() {
+      if (showModalDescriptor) {
+        Object.defineProperty(HTMLDialogElement.prototype, 'showModal', showModalDescriptor);
+      } else {
+        Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+          configurable: true,
+          value: undefined,
+        });
+      }
+
+      if (closeDescriptor) {
+        Object.defineProperty(HTMLDialogElement.prototype, 'close', closeDescriptor);
+      } else {
+        Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+          configurable: true,
+          value: undefined,
+        });
+      }
+    },
+    showModal,
+  };
 }
 
 describe('landing page', () => {
@@ -104,6 +183,89 @@ describe('landing page', () => {
       'href',
       'https://bsky.app/profile/coop.town',
     );
+  });
+
+  it('opens a desktop install QR dialog that targets the app route', async () => {
+    const dialogMethods = mockDialogMethods();
+
+    try {
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('link', { name: /install app/i }));
+
+      expect(
+        await screen.findByRole('dialog', { name: /install coop on your phone/i }),
+      ).toBeVisible();
+      expect(dialogMethods.showModal).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: /close install instructions/i })).toHaveFocus();
+      expect(screen.getByText(/scan with your phone camera/i)).toBeVisible();
+      expect(screen.getByRole('link', { name: /open coop receiver/i })).toHaveAttribute(
+        'href',
+        expect.stringContaining('/app'),
+      );
+      expect(await screen.findByAltText(/qr code for the coop receiver app/i)).toBeVisible();
+    } finally {
+      dialogMethods.restore();
+    }
+  });
+
+  it('shows iOS Safari Add to Home Screen guidance on mobile browser', async () => {
+    stubMobileBrowser(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+    );
+
+    render(<App />);
+
+    fireEvent.click(screen.getAllByRole('link', { name: /install app/i })[0]);
+
+    expect(
+      await screen.findByRole('dialog', { name: /install coop on this iphone/i }),
+    ).toBeVisible();
+    expect(screen.getByText(/tap share in safari/i)).toBeVisible();
+    expect(screen.getByText(/add to home screen/i)).toBeVisible();
+  });
+
+  it('uses the native Android install prompt when available', async () => {
+    stubMobileBrowser(
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      'Linux armv8l',
+    );
+    const prompt = vi.fn(async () => undefined);
+    const installEvent = new Event('beforeinstallprompt') as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: 'accepted'; platform: string }>;
+      preventDefault: () => void;
+    };
+    installEvent.prompt = prompt;
+    installEvent.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' });
+    installEvent.preventDefault = vi.fn();
+
+    render(<App />);
+
+    act(() => {
+      window.dispatchEvent(installEvent);
+    });
+    fireEvent.click(screen.getAllByRole('link', { name: /install app/i })[0]);
+
+    await waitFor(() => {
+      expect(prompt).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('points Android non-Chrome browsers toward Chrome for install', async () => {
+    stubMobileBrowser(
+      'Mozilla/5.0 (Android 14; Mobile; rv:124.0) Gecko/124.0 Firefox/124.0',
+      'Linux armv8l',
+    );
+
+    render(<App />);
+
+    fireEvent.click(screen.getAllByRole('link', { name: /install app/i })[0]);
+
+    expect(
+      await screen.findByRole('dialog', { name: /install coop on this phone/i }),
+    ).toBeVisible();
+    expect(screen.getByText(/open this page in chrome on android/i)).toBeVisible();
   });
 
   it('updates the ritual shell audience state when a different audience is selected', () => {

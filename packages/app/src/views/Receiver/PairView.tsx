@@ -174,7 +174,7 @@ export function PairView({
             <textarea
               id="pairing-payload"
               onChange={(event) => onPairingInputChange(event.target.value)}
-              placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../pair#payload=..."
+              placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../app/pair#payload=..."
               value={pairingInput}
             />
             <Button variant="primary" type="submit">

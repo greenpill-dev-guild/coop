@@ -1,3 +1,5 @@
+import { RECEIVER_APP_ROUTES, RECEIVER_LEGACY_ROUTES } from './receiver-routes';
+
 function extractPairingPayloadFromLocation(location: Location) {
   const hashPayload = new URLSearchParams(location.hash.replace(/^#/, '')).get('payload');
   if (hashPayload?.trim()) {
@@ -9,7 +11,10 @@ function extractPairingPayloadFromLocation(location: Location) {
 }
 
 export function bootstrapReceiverPairingHandoff(targetWindow: Window) {
-  if (targetWindow.location.pathname !== '/pair') {
+  if (
+    targetWindow.location.pathname !== RECEIVER_APP_ROUTES.pair &&
+    targetWindow.location.pathname !== RECEIVER_LEGACY_ROUTES.pair
+  ) {
     return null;
   }
 
@@ -21,6 +26,10 @@ export function bootstrapReceiverPairingHandoff(targetWindow: Window) {
   const params = new URLSearchParams(targetWindow.location.search);
   params.delete('payload');
   const nextSearch = params.toString();
-  targetWindow.history.replaceState({}, '', `/pair${nextSearch ? `?${nextSearch}` : ''}`);
+  targetWindow.history.replaceState(
+    {},
+    '',
+    `${RECEIVER_APP_ROUTES.pair}${nextSearch ? `?${nextSearch}` : ''}`,
+  );
   return payload;
 }

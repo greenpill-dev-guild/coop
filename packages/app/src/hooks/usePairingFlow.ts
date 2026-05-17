@@ -16,6 +16,7 @@ import {
 } from '@coop/shared/app';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { receiverDb as ReceiverDbType } from '../app';
+import { RECEIVER_APP_ROUTES, type ReceiverAppRoute } from '../receiver-routes';
 
 type BarcodeDetectorLike = {
   detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
@@ -47,7 +48,7 @@ export function usePairingFlow(
     soundPreferences: SoundPreferences;
     hapticPreferences: HapticPreferences;
     setMessage: (message: string) => void;
-    navigate: (route: '/pair' | '/receiver' | '/inbox' | '/') => void;
+    navigate: (route: ReceiverAppRoute | '/') => void;
     refreshLocalState: () => Promise<void>;
     notifyReceiverEvent: (title: string, body: string, tag: string) => Promise<void>;
   },
@@ -195,7 +196,7 @@ export function usePairingFlow(
         `${pendingPairing.coopDisplayName} is ready for private intake sync.`,
         `receiver-pairing-${nextPairing.pairingId}`,
       );
-      navigate('/receiver');
+      navigate(RECEIVER_APP_ROUTES.receiver);
     } catch (error) {
       if (isMountedRef.current) {
         setPairingError(error instanceof Error ? error.message : 'Could not join this coop.');

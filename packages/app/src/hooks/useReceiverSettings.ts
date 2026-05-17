@@ -17,13 +17,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { receiverDb as ReceiverDbType } from '../app';
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-};
-
 const receiverNotificationSettingKey = 'receiver-notifications-enabled';
-const receiverInstallNudgeDismissedKey = 'receiver-install-nudge-dismissed';
 
 export type ReceiverSettingsState = {
   online: boolean;
@@ -32,16 +26,12 @@ export type ReceiverSettingsState = {
   deviceIdentity: ReceiverDeviceIdentity | null;
   soundPreferences: SoundPreferences;
   hapticPreferences: HapticPreferences;
-  installPrompt: BeforeInstallPromptEvent | null;
-  installNudgeDismissed: boolean;
   receiverNotificationsEnabled: boolean;
   notificationPermission: string;
   isMountedRef: React.RefObject<boolean>;
   ensureDeviceIdentity: () => Promise<ReceiverDeviceIdentity>;
   notifyReceiverEvent: (title: string, body: string, tag: string) => Promise<void>;
   setReceiverNotificationPreference: (enabled: boolean) => Promise<void>;
-  dismissInstallNudge: () => Promise<void>;
-  installApp: () => Promise<void>;
   toggleSound: () => void;
   toggleHaptics: () => void;
   refreshSettings: () => Promise<{
@@ -60,8 +50,6 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     useState<SoundPreferences>(defaultSoundPreferences);
   const [hapticPreferences, setHapticPreferencesState] =
     useState<HapticPreferences>(defaultHapticPreferences);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installNudgeDismissed, setInstallNudgeDismissed] = useState(false);
   const [receiverNotificationsEnabled, setReceiverNotificationsEnabledState] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
@@ -134,25 +122,6 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     [db],
   );
 
-  const installApp = useCallback(async () => {
-    if (!installPrompt) {
-      return;
-    }
-    await installPrompt.prompt();
-    await installPrompt.userChoice.catch(() => undefined);
-    if (isMountedRef.current) {
-      setInstallPrompt(null);
-    }
-  }, [installPrompt]);
-
-  const dismissInstallNudge = useCallback(async () => {
-    await db.settings.put({ key: receiverInstallNudgeDismissedKey, value: true });
-    if (isMountedRef.current) {
-      setInstallNudgeDismissed(true);
-      setMessage('Install reminder hidden.');
-    }
-  }, [db]);
-
   const toggleSound = useCallback(() => {
     const nextSound = { ...soundPreferences, enabled: !soundPreferences.enabled };
     setSoundPreferencesState(nextSound);
@@ -169,30 +138,20 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
   }, [db, hapticPreferences]);
 
   const refreshSettings = useCallback(async () => {
-    const [
-      nextDevice,
-      nextNotificationsEnabled,
-      nextInstallNudgeDismissed,
-      nextSoundPrefs,
-      nextHapticPrefs,
-    ] = await Promise.all([
-      getReceiverDeviceIdentity(db),
-      (async () => {
-        const record = await db.settings.get(receiverNotificationSettingKey);
-        return record?.value === true;
-      })(),
-      (async () => {
-        const record = await db.settings.get(receiverInstallNudgeDismissedKey);
-        return record?.value === true;
-      })(),
-      getSoundPreferences(db),
-      getHapticPreferences(db),
-    ]);
+    const [nextDevice, nextNotificationsEnabled, nextSoundPrefs, nextHapticPrefs] =
+      await Promise.all([
+        getReceiverDeviceIdentity(db),
+        (async () => {
+          const record = await db.settings.get(receiverNotificationSettingKey);
+          return record?.value === true;
+        })(),
+        getSoundPreferences(db),
+        getHapticPreferences(db),
+      ]);
 
     if (isMountedRef.current) {
       setDeviceIdentity(nextDevice);
       setReceiverNotificationsEnabledState(nextNotificationsEnabled);
-      setInstallNudgeDismissed(nextInstallNudgeDismissed);
       setSoundPreferencesState(nextSoundPrefs ?? defaultSoundPreferences);
       setHapticPreferencesState(nextHapticPrefs ?? defaultHapticPreferences);
       if (typeof Notification !== 'undefined') {
@@ -208,24 +167,18 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     };
   }, [db]);
 
-  // Online/offline + install prompt + mount tracking
+  // Online/offline + mount tracking
   useEffect(() => {
     isMountedRef.current = true;
 
-    const onInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
 
-    window.addEventListener('beforeinstallprompt', onInstallPrompt);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
 
     return () => {
       isMountedRef.current = false;
-      window.removeEventListener('beforeinstallprompt', onInstallPrompt);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
@@ -258,16 +211,12 @@ export function useReceiverSettings(db: typeof ReceiverDbType): ReceiverSettings
     deviceIdentity,
     soundPreferences,
     hapticPreferences,
-    installPrompt,
-    installNudgeDismissed,
     receiverNotificationsEnabled,
     notificationPermission,
     isMountedRef,
     ensureDeviceIdentity,
     notifyReceiverEvent,
     setReceiverNotificationPreference,
-    dismissInstallNudge,
-    installApp,
     toggleSound,
     toggleHaptics,
     refreshSettings,

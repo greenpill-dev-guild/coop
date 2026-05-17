@@ -1,3 +1,4 @@
+import { RECEIVER_APP_ROUTES, RECEIVER_LEGACY_ROUTES } from './receiver-routes';
 import { isSafeExternalUrl } from './url-safety';
 
 export type ReceiverShareHandoff = {
@@ -7,7 +8,10 @@ export type ReceiverShareHandoff = {
 };
 
 export function bootstrapReceiverShareHandoff(targetWindow: Window): ReceiverShareHandoff | null {
-  if (targetWindow.location.pathname !== '/receiver') {
+  if (
+    targetWindow.location.pathname !== RECEIVER_APP_ROUTES.receiver &&
+    targetWindow.location.pathname !== RECEIVER_LEGACY_ROUTES.receiver
+  ) {
     return null;
   }
 
@@ -25,7 +29,11 @@ export function bootstrapReceiverShareHandoff(targetWindow: Window): ReceiverSha
   params.delete('text');
   params.delete('url');
   const nextSearch = params.toString();
-  targetWindow.history.replaceState({}, '', `/receiver${nextSearch ? `?${nextSearch}` : ''}`);
+  targetWindow.history.replaceState(
+    {},
+    '',
+    `${RECEIVER_APP_ROUTES.receiver}${nextSearch ? `?${nextSearch}` : ''}`,
+  );
 
   return {
     title,

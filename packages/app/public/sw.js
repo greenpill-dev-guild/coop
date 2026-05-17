@@ -1,6 +1,6 @@
-const SHELL_CACHE = 'coop-receiver-shell-v3';
-const ASSET_CACHE = 'coop-receiver-assets-v3';
-const ROUTE_SHELLS = ['/', '/landing', '/pair', '/receiver', '/inbox'];
+const SHELL_CACHE = 'coop-receiver-shell-v4';
+const ASSET_CACHE = 'coop-receiver-assets-v4';
+const ROUTE_SHELLS = ['/app', '/app/pair', '/app/receiver', '/app/inbox'];
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/branding/coop-mark-flat-192.png',
@@ -42,9 +42,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   const includesSensitivePairingMaterial =
-    url.pathname === '/pair' && (url.searchParams.has('payload') || url.search.length > 0);
+    url.pathname === '/app/pair' && (url.searchParams.has('payload') || url.search.length > 0);
   const includesReceiverSharePayload =
-    url.pathname === '/receiver' &&
+    url.pathname === '/app/receiver' &&
     (url.searchParams.has('title') || url.searchParams.has('text') || url.searchParams.has('url'));
 
   // Sensitive routes (pairing payload, share params) are network-first.
@@ -53,17 +53,16 @@ self.addEventListener('fetch', (event) => {
   if (includesSensitivePairingMaterial || includesReceiverSharePayload) {
     event.respondWith(
       fetch(request).catch(async () => {
-        const shell = await caches.match(url.pathname === '/pair' ? '/pair' : '/receiver');
-        return shell || (await caches.match('/')) || new Response('Offline', { status: 503 });
+        const shell = await caches.match(
+          url.pathname === '/app/pair' ? '/app/pair' : '/app/receiver',
+        );
+        return shell || (await caches.match('/app')) || new Response('Offline', { status: 503 });
       }),
     );
     return;
   }
 
-  if (
-    request.mode === 'navigate' &&
-    (ROUTE_SHELLS.includes(url.pathname) || url.pathname.startsWith('/board/'))
-  ) {
+  if (request.mode === 'navigate' && ROUTE_SHELLS.includes(url.pathname)) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -78,7 +77,7 @@ self.addEventListener('fetch', (event) => {
           if (direct) {
             return direct;
           }
-          return (await caches.match('/receiver')) || (await caches.match('/'));
+          return (await caches.match('/app/receiver')) || (await caches.match('/app'));
         }),
     );
     return;

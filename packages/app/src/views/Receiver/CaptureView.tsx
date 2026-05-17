@@ -81,10 +81,12 @@ export function CaptureView({
   onNavigatePair,
 }: CaptureViewProps) {
   return (
-    <section className="receiver-grid">
-      <Card className="receiver-capture-card">
-        <p className="eyebrow">Primary Capture</p>
-        <h2>Audio first, in one thumb-sized action.</h2>
+    <section className="receiver-grid receiver-hatch-grid">
+      <Card className="receiver-capture-card receiver-hatch-card">
+        <div className="receiver-hatch-heading">
+          <p className="eyebrow">Primary Capture</p>
+          <h2>Audio first, in one thumb-sized action.</h2>
+        </div>
         <div className="egg-stage">
           <button
             aria-label={isRecording ? 'Stop recording' : 'Start recording'}
@@ -107,7 +109,7 @@ export function CaptureView({
           <output aria-live="polite" className="sr-only">
             {isRecording ? 'Recording started' : ''}
           </output>
-          <p className="quiet-note">
+          <p className="quiet-note receiver-hatch-audio-note">
             {isRecording
               ? 'The egg is pulsing. Tap again to save, or cancel if you are not ready.'
               : 'Tap to save a voice note on this phone. Pair when you are ready to send it to private intake.'}
@@ -142,7 +144,7 @@ export function CaptureView({
             <span>Attach file</span>
           </button>
         </div>
-        <p className="quiet-note">
+        <p className="quiet-note receiver-hatch-link-note">
           Links shared from other apps arrive here and stay saved on this phone first.
         </p>
         <div

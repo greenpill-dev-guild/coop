@@ -42,6 +42,6 @@ describe('receiver service worker registration', () => {
     await Promise.resolve();
 
     expect(addEventListener).toHaveBeenCalledWith('load', expect.any(Function));
-    expect(serviceWorker.register).toHaveBeenCalledWith('/sw.js');
+    expect(serviceWorker.register).toHaveBeenCalledWith('/sw.js', { scope: '/app' });
   });
 });

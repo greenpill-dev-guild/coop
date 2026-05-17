@@ -26,6 +26,14 @@ import { useCapture } from './hooks/useCapture';
 import { usePairingFlow } from './hooks/usePairingFlow';
 import { useReceiverSettings } from './hooks/useReceiverSettings';
 import { useReceiverSync } from './hooks/useReceiverSync';
+import {
+  RECEIVER_APP_ROUTES,
+  type ReceiverAppRoute,
+  type ReceiverRouteKind,
+  receiverAppRouteFor,
+  receiverKindFromAppPath,
+  receiverKindFromLegacyPath,
+} from './receiver-routes';
 import type { ReceiverShareHandoff } from './share-handoff';
 import { BoardView } from './views/Board';
 import { App as LandingPage } from './views/Landing';
@@ -73,14 +81,13 @@ export class ErrorBoundary extends React.Component<
 
 export const receiverDb = createCoopDb('coop-receiver');
 
-type AppPathname = '/' | '/landing' | '/pair' | '/receiver' | '/inbox';
+type AppPathname = '/' | '/landing' | typeof RECEIVER_APP_ROUTES.app | ReceiverAppRoute;
 
 type RoutePath =
   | { kind: 'root' }
   | { kind: 'landing' }
-  | { kind: 'pair' }
-  | { kind: 'receiver' }
-  | { kind: 'inbox' }
+  | { kind: 'appRoot' }
+  | { kind: ReceiverRouteKind; presentation: 'app' | 'legacy' }
   | { kind: 'board'; coopId: string };
 
 type NavigatorWithUx = Navigator & {
@@ -104,15 +111,20 @@ export function resolveRoute(pathname: string): RoutePath {
   if (normalizedPath === '/landing') {
     return { kind: 'landing' };
   }
-  if (normalizedPath === '/pair') {
-    return { kind: 'pair' };
+  if (normalizedPath === RECEIVER_APP_ROUTES.app) {
+    return { kind: 'appRoot' };
   }
-  if (normalizedPath === '/receiver') {
-    return { kind: 'receiver' };
+
+  const appReceiverKind = receiverKindFromAppPath(normalizedPath);
+  if (appReceiverKind) {
+    return { kind: appReceiverKind, presentation: 'app' };
   }
-  if (normalizedPath === '/inbox') {
-    return { kind: 'inbox' };
+
+  const legacyReceiverKind = receiverKindFromLegacyPath(normalizedPath);
+  if (legacyReceiverKind) {
+    return { kind: legacyReceiverKind, presentation: 'legacy' };
   }
+
   const boardMatch = normalizedPath.match(/^\/board\/([^/]+)$/);
   if (boardMatch?.[1]) {
     return { kind: 'board', coopId: decodeURIComponent(boardMatch[1]) };
@@ -123,12 +135,15 @@ export function resolveRoute(pathname: string): RoutePath {
 export function resolveRootDestination(
   surface: Pick<AppSurface, 'isMobile' | 'isStandalone'>,
   hasActivePairing: boolean,
-): Extract<AppPathname, '/landing' | '/pair' | '/receiver'> {
+): Extract<
+  AppPathname,
+  '/' | typeof RECEIVER_APP_ROUTES.pair | typeof RECEIVER_APP_ROUTES.receiver
+> {
   if (!surface.isStandalone) {
-    return '/landing';
+    return '/';
   }
 
-  return hasActivePairing ? '/receiver' : '/pair';
+  return hasActivePairing ? RECEIVER_APP_ROUTES.receiver : RECEIVER_APP_ROUTES.pair;
 }
 
 function resolveDocumentTitle(route: RoutePath) {
@@ -152,7 +167,29 @@ function resolveDocumentTitle(route: RoutePath) {
 }
 
 function supportsBridgeFlag(pathname: AppPathname) {
-  return pathname === '/pair' || pathname === '/receiver' || pathname === '/inbox';
+  return (
+    pathname === RECEIVER_APP_ROUTES.pair ||
+    pathname === RECEIVER_APP_ROUTES.receiver ||
+    pathname === RECEIVER_APP_ROUTES.inbox
+  );
+}
+
+function isReceiverRoute(
+  route: RoutePath,
+): route is Extract<RoutePath, { kind: ReceiverRouteKind }> {
+  return route.kind === 'pair' || route.kind === 'receiver' || route.kind === 'inbox';
+}
+
+function isLocalPwaPreview(url: URL) {
+  return (
+    import.meta.env.DEV &&
+    isLocalHostname(url.hostname) &&
+    url.searchParams.get('presentation') === 'pwa'
+  );
+}
+
+function isReceiverPwaPresentation(surface: AppSurface, url: URL) {
+  return surface.isStandalone || isLocalPwaPreview(url);
 }
 
 function pairingStatusLabel(status?: ReturnType<typeof getReceiverPairingStatus>['status'] | null) {
@@ -184,7 +221,6 @@ export async function resetReceiverDb() {
       await receiverDb.receiverCaptures.clear();
       await receiverDb.receiverBlobs.clear();
       await receiverDb.settings.delete('receiver-device-identity');
-      await receiverDb.settings.delete('receiver-install-nudge-dismissed');
     },
   );
 }
@@ -329,15 +365,11 @@ export function RootApp({
     deviceIdentity,
     soundPreferences,
     hapticPreferences,
-    installPrompt,
-    installNudgeDismissed,
     receiverNotificationsEnabled,
     isMountedRef,
     ensureDeviceIdentity,
     notifyReceiverEvent,
     setReceiverNotificationPreference,
-    dismissInstallNudge,
-    installApp,
   } = settings;
 
   // --- Hook 2: Capture (camera, mic, photos, file picks, stash, share, download) ---
@@ -383,10 +415,18 @@ export function RootApp({
 
   // --- Navigation (with View Transitions API when available) ---
   const toRouteUrl = useCallback(
-    (nextRoute: AppPathname) =>
-      bridgeOptimizationDisabled && supportsBridgeFlag(nextRoute)
-        ? `${nextRoute}?bridge=off`
-        : nextRoute,
+    (nextRoute: AppPathname) => {
+      const params = new URLSearchParams();
+      const activeUrl = new URL(window.location.href);
+      if (bridgeOptimizationDisabled && supportsBridgeFlag(nextRoute)) {
+        params.set('bridge', 'off');
+      }
+      if (isLocalPwaPreview(activeUrl) && nextRoute.startsWith(RECEIVER_APP_ROUTES.app)) {
+        params.set('presentation', 'pwa');
+      }
+      const nextSearch = params.toString();
+      return `${nextRoute}${nextSearch ? `?${nextSearch}` : ''}`;
+    },
     [bridgeOptimizationDisabled],
   );
 
@@ -464,6 +504,7 @@ export function RootApp({
       }
     : null;
   const currentUrl = new URL(window.location.href);
+  const isPwaPresentation = isReceiverPwaPresentation(appSurface, currentUrl);
   const isPublicDevOrigin = import.meta.env.DEV && !isLocalHostname(currentUrl.hostname);
   const requiresDevAccess = isDevAccessRequired(devEnvironment, currentUrl);
   const hasDevAccess = hasValidDevAccess(devEnvironment, currentUrl, devAccessToken);
@@ -585,19 +626,42 @@ export function RootApp({
 
   // Toggle html class for receiver scroll containment
   useEffect(() => {
-    const isReceiver = route.kind === 'pair' || route.kind === 'receiver' || route.kind === 'inbox';
+    const isReceiver = isReceiverRoute(route) && route.presentation === 'app' && isPwaPresentation;
     document.documentElement.classList.toggle('has-receiver', isReceiver);
     return () => document.documentElement.classList.remove('has-receiver');
-  }, [route.kind]);
+  }, [isPwaPresentation, route]);
 
-  // Root bootstrap route
+  // Keep public/browser mode out of receiver app routes, and move legacy receiver paths forward
+  // only when the runtime is already in PWA presentation.
   useEffect(() => {
-    if (route.kind !== 'root') {
+    if (route.kind === 'appRoot') {
+      if (!isPwaPresentation) {
+        replaceRoute('/');
+      }
       return;
     }
 
-    if (!appSurface.isMobile && !appSurface.isStandalone) {
-      replaceRoute('/landing');
+    if (!isReceiverRoute(route)) {
+      return;
+    }
+
+    if (route.presentation === 'legacy') {
+      replaceRoute(isPwaPresentation ? receiverAppRouteFor(route.kind) : '/');
+      return;
+    }
+
+    if (!isPwaPresentation) {
+      replaceRoute('/');
+    }
+  }, [isPwaPresentation, replaceRoute, route]);
+
+  // Installed app bootstrap routes.
+  useEffect(() => {
+    if (route.kind !== 'root' && route.kind !== 'appRoot') {
+      return;
+    }
+
+    if (!isPwaPresentation) {
       return;
     }
 
@@ -607,35 +671,47 @@ export function RootApp({
         return;
       }
       setPairing(nextPairing);
-      replaceRoute(resolveRootDestination(appSurface, Boolean(nextPairing)));
+      replaceRoute(nextPairing ? RECEIVER_APP_ROUTES.receiver : RECEIVER_APP_ROUTES.pair);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [appSurface, replaceRoute, route.kind]);
+  }, [isPwaPresentation, replaceRoute, route.kind]);
 
   // Initial pairing handoff
   useEffect(() => {
-    if (route.kind !== 'pair' || !initialPairingHandoffRef.current) {
+    if (
+      !isPwaPresentation ||
+      !isReceiverRoute(route) ||
+      route.presentation !== 'app' ||
+      route.kind !== 'pair' ||
+      !initialPairingHandoffRef.current
+    ) {
       return;
     }
     const handoff = initialPairingHandoffRef.current;
     initialPairingHandoffRef.current = null;
     void reviewPairing(handoff);
-  }, [reviewPairing, route]);
+  }, [isPwaPresentation, reviewPairing, route]);
 
   // Initial share handoff
   useEffect(() => {
-    if (route.kind !== 'receiver' || !initialShareHandoffRef.current) {
+    if (
+      !isPwaPresentation ||
+      !isReceiverRoute(route) ||
+      route.presentation !== 'app' ||
+      route.kind !== 'receiver' ||
+      !initialShareHandoffRef.current
+    ) {
       return;
     }
     const handoff = initialShareHandoffRef.current;
     initialShareHandoffRef.current = null;
     void stashSharedLink(handoff);
-  }, [route, stashSharedLink]);
+  }, [isPwaPresentation, route, stashSharedLink]);
 
-  // Stop QR scanner when navigating away from /pair
+  // Stop QR scanner when navigating away from Mate.
   useEffect(() => {
     if (route.kind !== 'pair' && isQrScannerOpen) {
       stopQrScanner();
@@ -740,6 +816,16 @@ export function RootApp({
   }
 
   if (route.kind === 'root') {
+    if (!isPwaPresentation) {
+      return <LandingPage devEnvironment={devEnvironment} />;
+    }
+    return <RootBootstrapSplash />;
+  }
+
+  if (route.kind === 'appRoot') {
+    if (!isPwaPresentation) {
+      return <RootBootstrapSplash />;
+    }
     return <RootBootstrapSplash />;
   }
 
@@ -751,12 +837,14 @@ export function RootApp({
     return <BoardView coopId={route.coopId} snapshot={boardSnapshot} />;
   }
 
+  if (!isReceiverRoute(route) || route.presentation !== 'app' || !isPwaPresentation) {
+    if (isReceiverRoute(route)) {
+      return <RootBootstrapSplash />;
+    }
+    return <LandingPage devEnvironment={devEnvironment} />;
+  }
+
   const screenTitle = route.kind === 'pair' ? 'Mate' : route.kind === 'inbox' ? 'Roost' : 'Hatch';
-  const installNudgeMessage = installPrompt
-    ? 'Install Coop for one-tap capture, home-screen launch, and better share-target behavior.'
-    : appSurface.platform === 'ios'
-      ? 'Add Coop to your Home Screen from Safari’s Share menu for the cleanest mobile capture flow.'
-      : 'Use your browser menu to install Coop for faster capture and easier return on this device.';
 
   return (
     <ReceiverShell
@@ -768,13 +856,8 @@ export function RootApp({
       captureCount={captures.length}
       message={message}
       pairedNestDisplay={pairedNestDisplay}
-      installPrompt={installPrompt}
-      showInstallNudge={appSurface.isMobile && !appSurface.isStandalone && !installNudgeDismissed}
-      installNudgeMessage={installNudgeMessage}
       canNotify={browserUxCapabilities.canNotify}
       notificationsEnabled={receiverNotificationsEnabled}
-      onInstall={installApp}
-      onDismissInstallNudge={() => void dismissInstallNudge()}
       onToggleNotifications={() =>
         void setReceiverNotificationPreference(!receiverNotificationsEnabled)
       }
@@ -793,7 +876,7 @@ export function RootApp({
           onReviewPairing={(input) => void reviewPairing(input)}
           onStartQrScanner={() => void startQrScanner()}
           onStopQrScanner={stopQrScanner}
-          onNavigateHatch={() => navigate('/receiver')}
+          onNavigateHatch={() => navigate(RECEIVER_APP_ROUTES.receiver)}
           isQrScannerOpen={isQrScannerOpen}
           qrScanError={qrScanError}
           qrVideoRef={qrVideoRef}
@@ -817,8 +900,8 @@ export function RootApp({
           onStartRecording={() => void startRecording()}
           onFinishRecording={finishRecording}
           onPickFile={onPickFile}
-          onNavigateInbox={() => navigate('/inbox')}
-          onNavigatePair={() => navigate('/pair')}
+          onNavigateInbox={() => navigate(RECEIVER_APP_ROUTES.inbox)}
+          onNavigatePair={() => navigate(RECEIVER_APP_ROUTES.pair)}
         />
       ) : null}
 

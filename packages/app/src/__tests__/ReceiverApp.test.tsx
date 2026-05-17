@@ -12,13 +12,47 @@ import { bootstrapReceiverPairingHandoff } from '../pairing-handoff';
 import { bootstrapReceiverShareHandoff } from '../share-handoff';
 import { renderRootApp } from './root-app-test-utils';
 
+function stubStandaloneReceiver() {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: 390,
+  });
+  Object.defineProperty(navigator, 'userAgent', {
+    configurable: true,
+    value:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+  });
+  Object.defineProperty(navigator, 'maxTouchPoints', {
+    configurable: true,
+    value: 5,
+  });
+  Object.defineProperty(navigator, 'standalone', {
+    configurable: true,
+    value: true,
+  });
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: query === '(display-mode: standalone)' || query === '(pointer: coarse)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe('receiver app routes', () => {
   const createObjectUrl = vi.fn(() => 'blob:receiver-preview');
   const originalCreateObjectUrl = URL.createObjectURL;
 
   beforeEach(async () => {
     await resetReceiverDb();
-    window.history.pushState({}, '', '/receiver');
+    stubStandaloneReceiver();
+    window.history.pushState({}, '', '/app/receiver');
     createObjectUrl.mockClear();
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
@@ -43,6 +77,9 @@ describe('receiver app routes', () => {
     expect(screen.getByRole('link', { name: 'Mate' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Hatch' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: /media/i })).not.toBeInTheDocument();
+    expect(document.querySelector('.receiver-shell')).toHaveClass('is-hatch');
+    expect(document.querySelector('.receiver-main')).toHaveClass('is-hatch');
     expect(
       screen.getByRole('button', { name: /settings and status: not paired · 0 saved/i }),
     ).toBeVisible();
@@ -64,7 +101,7 @@ describe('receiver app routes', () => {
     });
     const pairingCode = encodeReceiverPairingPayload(payload);
 
-    window.history.pushState({}, '', '/pair');
+    window.history.pushState({}, '', '/app/pair');
 
     await renderRootApp();
 
@@ -124,7 +161,7 @@ describe('receiver app routes', () => {
 
     const handoff = bootstrapReceiverPairingHandoff(window);
 
-    expect(window.location.pathname).toBe('/pair');
+    expect(window.location.pathname).toBe('/app/pair');
     expect(window.location.search).toBe('');
     expect(window.location.hash).toBe('');
     expect(handoff).toBeTruthy();
@@ -147,6 +184,8 @@ describe('receiver app routes', () => {
     window.history.pushState({}, '', `/pair?payload=${encodeURIComponent(protocolLink)}`);
 
     const handoff = bootstrapReceiverPairingHandoff(window);
+
+    expect(window.location.pathname).toBe('/app/pair');
 
     await renderRootApp({ initialPairingInput: handoff });
 
@@ -241,6 +280,8 @@ describe('receiver app routes', () => {
 
     const handoff = bootstrapReceiverShareHandoff(window);
 
+    expect(window.location.pathname).toBe('/app/receiver');
+
     await renderRootApp({ initialShareInput: handoff });
 
     expect(
@@ -270,7 +311,7 @@ describe('receiver app routes', () => {
 
   it('falls back cleanly when QR scanning is unavailable', async () => {
     const user = userEvent.setup();
-    window.history.pushState({}, '', '/pair');
+    window.history.pushState({}, '', '/app/pair');
 
     await renderRootApp();
 

@@ -69,31 +69,18 @@ describe('useReceiverSettings behavior', () => {
     expect(result.current.message).toBe('Receiver notifications disabled.');
   });
 
-  it('handles install prompts, online state, and sound/haptic toggles', async () => {
+  it('handles online state and sound/haptic toggles without receiver install prompts', async () => {
     const db = makeDb();
-    const prompt = vi.fn(async () => undefined);
-    const installEvent = new Event('beforeinstallprompt') as Event & {
-      prompt: () => Promise<void>;
-      userChoice: Promise<{ outcome: 'accepted'; platform: string }>;
-      preventDefault: () => void;
-    };
-    installEvent.prompt = prompt;
-    installEvent.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' });
-    const preventDefault = vi.fn();
-    installEvent.preventDefault = preventDefault;
 
     const { result } = renderHook(() => useReceiverSettings(db));
 
     act(() => {
       window.dispatchEvent(new Event('offline'));
-      window.dispatchEvent(installEvent);
     });
 
     expect(result.current.online).toBe(false);
-    expect(result.current.installPrompt).not.toBeNull();
 
     await act(async () => {
-      await result.current.installApp();
       result.current.toggleSound();
       result.current.toggleHaptics();
     });
@@ -103,8 +90,6 @@ describe('useReceiverSettings behavior', () => {
     });
 
     await waitFor(() => expect(result.current.online).toBe(true));
-    expect(prompt).toHaveBeenCalledTimes(1);
-    expect(result.current.installPrompt).toBeNull();
     expect(result.current.soundPreferences.enabled).toBe(false);
     expect(result.current.hapticPreferences.enabled).toBe(true);
   });

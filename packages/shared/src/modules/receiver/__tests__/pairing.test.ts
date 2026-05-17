@@ -40,6 +40,7 @@ describe('receiver pairing payloads', () => {
 
     const deepLink = buildReceiverPairingDeepLink('http://127.0.0.1:3001', payload);
 
+    expect(deepLink).toContain('/app/pair#payload=');
     expect(deepLink).toContain('#payload=');
     expect(deepLink).not.toContain('?payload=');
     expect(parseReceiverPairingInput(deepLink, nowMs)).toEqual(payload);

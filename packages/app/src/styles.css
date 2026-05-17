@@ -83,7 +83,7 @@ pre {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 1rem;
   padding: 0.65rem 0 0;
 }
@@ -112,6 +112,121 @@ pre {
   right: 0;
   z-index: 20;
   padding: 0.3rem 0;
+}
+
+.landing-install-action {
+  min-height: 2.55rem;
+  padding: 0.62rem 1rem;
+  font-size: 0.82rem;
+  box-shadow: 0 10px 28px rgba(79, 46, 31, 0.16);
+}
+
+.public-install-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: end center;
+  padding: 1rem;
+  background: rgba(32, 20, 12, 0.46);
+}
+
+.public-install-dialog {
+  position: relative;
+  width: min(100%, 42rem);
+  max-height: calc(100vh - 2rem);
+  margin: 0;
+  overflow-y: auto;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  border-radius: var(--coop-radius-card);
+  background: rgba(255, 250, 244, 0.98);
+  box-shadow: 0 24px 80px rgba(32, 20, 12, 0.22);
+  color: var(--coop-brown);
+}
+
+.public-install-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(79, 46, 31, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.84);
+  color: var(--coop-brown);
+  cursor: pointer;
+}
+
+.public-install-copy {
+  display: grid;
+  gap: 0.45rem;
+  padding-right: 2.4rem;
+}
+
+.public-install-copy h2 {
+  margin: 0;
+  font-family: "Gill Sans", "Trebuchet MS", sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.public-install-qr-layout {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+}
+
+.public-install-qr {
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid rgba(79, 46, 31, 0.16);
+  border-radius: var(--coop-radius-input);
+  background: #fffaf3;
+  text-align: center;
+}
+
+.public-install-qr img,
+.public-install-qr-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.public-install-qr-placeholder {
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(79, 46, 31, 0.16), rgba(253, 138, 1, 0.12));
+}
+
+.public-install-qr figcaption {
+  margin-top: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(79, 46, 31, 0.66);
+}
+
+.public-install-steps {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.2rem 0 0;
+  padding-left: 1.2rem;
+  color: rgba(79, 46, 31, 0.82);
+  line-height: 1.5;
+}
+
+.public-install-qr-layout .public-install-steps {
+  margin-top: 0;
+}
+
+.public-install-url {
+  width: fit-content;
+  margin-top: 1.2rem;
 }
 
 .topnav {
@@ -3236,11 +3351,35 @@ pre {
 
 @media (max-width: 720px) {
   .topbar {
-    justify-content: flex-start;
+    width: min(100%, calc(100% - 1rem));
+    justify-content: space-between;
   }
 
   .wordmark {
     width: 84px;
+  }
+
+  .landing-install-action {
+    min-height: 2.3rem;
+    padding: 0.52rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .public-install-overlay {
+    padding: 0.75rem;
+  }
+
+  .public-install-dialog {
+    width: 100%;
+    border-radius: var(--coop-radius-card) var(--coop-radius-card) 0 0;
+  }
+
+  .public-install-qr-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .public-install-qr {
+    max-width: 14rem;
   }
 
   .story-card h1,
@@ -3637,6 +3776,10 @@ html.has-receiver {
   box-shadow: 0 1px 8px var(--coop-brown-4);
 }
 
+.receiver-shell.is-hatch .receiver-topbar {
+  padding: calc(env(safe-area-inset-top, 0px) + 0.45rem) 0.85rem 0.4rem;
+}
+
 .receiver-mark-link {
   position: relative;
   display: inline-grid;
@@ -3740,6 +3883,19 @@ html.has-receiver {
   gap: 1rem;
   padding: 0.75rem 1rem calc(5.5rem + env(safe-area-inset-bottom));
   z-index: 1;
+}
+
+.receiver-main.is-hatch {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.35rem, 1svh, 0.7rem);
+  overflow-y: hidden;
+  padding: clamp(0.35rem, 1svh, 0.65rem) clamp(0.65rem, 3vw, 1rem)
+    calc(5.15rem + env(safe-area-inset-bottom));
+}
+
+.receiver-main.is-hatch .pull-indicator {
+  display: none;
 }
 
 .receiver-main::-webkit-scrollbar {
@@ -4174,11 +4330,71 @@ html.has-receiver {
   gap: 0.85rem;
 }
 
+.receiver-hatch-grid {
+  grid-template-columns: 1fr;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.receiver-shell.is-hatch .receiver-grid {
+  grid-template-columns: 1fr;
+}
+
+.receiver-hatch-card {
+  min-height: 0;
+}
+
+.receiver-shell.is-hatch .receiver-hatch-card {
+  height: 100%;
+  align-content: stretch;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: clamp(0.3rem, 0.9svh, 0.7rem);
+  overflow: hidden;
+  padding: clamp(0.55rem, 1.4svh, 1rem);
+}
+
+.receiver-hatch-heading {
+  min-width: 0;
+}
+
+.receiver-shell.is-hatch .receiver-hatch-heading .eyebrow {
+  margin-bottom: 0.18rem;
+  font-size: 0.64rem;
+  line-height: 1.1;
+}
+
+.receiver-shell.is-hatch .receiver-hatch-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.12;
+}
+
 .egg-stage {
   display: grid;
   justify-items: center;
   gap: 1rem;
   padding: 1.2rem 0 0.4rem;
+}
+
+.receiver-shell.is-hatch .egg-stage {
+  min-height: 0;
+  align-content: center;
+  gap: clamp(0.3rem, 0.8svh, 0.7rem);
+  padding: 0;
+}
+
+.receiver-shell.is-hatch .egg-stage .cta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(18rem, 100%);
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.receiver-shell.is-hatch .egg-stage .button {
+  min-height: 40px;
+  padding: 0.52rem 0.6rem;
+  font-size: 0.8rem;
 }
 
 .egg-button {
@@ -4195,6 +4411,14 @@ html.has-receiver {
   overflow: visible;
   cursor: pointer;
   transition: transform 240ms ease, box-shadow 240ms ease;
+}
+
+.receiver-shell.is-hatch .egg-button {
+  width: min(clamp(6.25rem, 22svh, 14rem), 62vw);
+}
+
+.receiver-shell.is-hatch .receiver-hatch-card:has(.egg-button.is-recording) .egg-button {
+  width: min(clamp(5.4rem, 18svh, 10rem), 56vw);
 }
 
 .egg-button:active {
@@ -4288,6 +4512,17 @@ html.has-receiver {
   backdrop-filter: blur(12px);
 }
 
+.receiver-shell.is-hatch .receiver-actions-grid {
+  position: static;
+  margin: 0;
+  padding: 0;
+  gap: clamp(0.4rem, 1svh, 0.65rem);
+  border-radius: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .capture-action-btn {
   display: flex;
   align-items: center;
@@ -4307,6 +4542,13 @@ html.has-receiver {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: transform var(--coop-ease), box-shadow var(--coop-ease), border-color var(--coop-ease);
+}
+
+.receiver-shell.is-hatch .capture-action-btn {
+  min-height: 44px;
+  padding: 0.58rem 0.62rem;
+  gap: 0.45rem;
+  font-size: 0.82rem;
 }
 
 .capture-action-btn:active {
@@ -4332,6 +4574,24 @@ html.has-receiver {
   background: rgba(255, 255, 255, 0.7);
 }
 
+.receiver-shell.is-hatch .receiver-last-saved-strip {
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 3rem;
+  margin-top: 0;
+  padding: 0.5rem 0.62rem;
+}
+
+.receiver-shell.is-hatch .receiver-last-saved-strip:not(.is-empty) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.receiver-shell.is-hatch .receiver-last-saved-strip.is-empty p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .receiver-last-saved-strip.is-newborn {
   border-color: color-mix(in srgb, var(--coop-green) 30%, var(--coop-brown-8));
   box-shadow: 0 0 0 3px var(--coop-green-12);
@@ -4352,6 +4612,10 @@ html.has-receiver {
   min-width: 0;
 }
 
+.receiver-shell.is-hatch .receiver-last-saved-copy {
+  gap: 0.1rem;
+}
+
 .receiver-last-saved-copy strong,
 .receiver-last-saved-copy p {
   overflow: hidden;
@@ -4367,10 +4631,47 @@ html.has-receiver {
   letter-spacing: 0.06em;
 }
 
+.receiver-shell.is-hatch .receiver-last-saved-kind {
+  font-size: 0.66rem;
+  line-height: 1;
+}
+
 .receiver-last-saved-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.receiver-shell.is-hatch .receiver-last-saved-actions {
+  grid-column: 1 / -1;
+  gap: 0.35rem;
+}
+
+.receiver-shell.is-hatch .receiver-last-saved-actions .button {
+  min-height: 36px;
+  padding: 0.42rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.receiver-shell.is-hatch .receiver-hatch-audio-note,
+.receiver-shell.is-hatch .receiver-hatch-link-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.receiver-shell.is-hatch
+  .receiver-hatch-card:has(.egg-button.is-recording)
+  .receiver-hatch-audio-note {
+  display: none;
+}
+
+.receiver-shell.is-hatch .receiver-hatch-link-note {
+  -webkit-line-clamp: 1;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -4378,6 +4679,31 @@ html.has-receiver {
     border-color: var(--coop-brown-18);
     box-shadow: 0 4px 14px var(--coop-brown-8);
     transform: translateY(-1px);
+  }
+}
+
+@media (max-height: 640px) {
+  .receiver-shell.is-hatch .receiver-hatch-card {
+    gap: 0.32rem;
+    padding: 0.5rem;
+  }
+
+  .receiver-shell.is-hatch .receiver-hatch-heading h2 {
+    font-size: 0.9rem;
+  }
+
+  .receiver-shell.is-hatch .receiver-hatch-link-note {
+    display: none;
+  }
+
+  .receiver-shell.is-hatch .receiver-last-saved-strip {
+    min-height: 2.55rem;
+    padding: 0.4rem 0.52rem;
+  }
+
+  .receiver-shell.is-hatch .receiver-last-saved-actions .button {
+    min-height: 34px;
+    padding: 0.38rem 0.5rem;
   }
 }
 
@@ -5002,6 +5328,17 @@ audio {
   opacity: 0.5;
 }
 
+.receiver-main.is-hatch .receiver-status-summary {
+  min-height: 36px;
+  padding: 0.38rem 0.62rem;
+  font-size: 0.76rem;
+}
+
+.receiver-main.is-hatch .receiver-status-summary-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 .receiver-live-message {
   padding: 0.65rem 0.85rem;
   border-radius: var(--coop-radius-input);
@@ -5012,61 +5349,12 @@ audio {
   font-weight: 600;
 }
 
-.receiver-install-banner {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.75rem 0.85rem;
-  padding: 1rem 1.1rem;
-  border-radius: var(--coop-radius-card);
-  border: 1px solid color-mix(in srgb, var(--coop-orange) 20%, var(--coop-line));
-  background: linear-gradient(
-    160deg,
-    rgba(253, 138, 1, 0.06) 0%,
-    rgba(255, 252, 249, 0.94) 40%,
-    rgba(90, 125, 16, 0.05) 100%
-  );
-  box-shadow: var(--coop-shadow-sm);
-}
-
-.receiver-install-banner-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--coop-radius-chip);
-  background: var(--coop-orange-15);
-  color: var(--coop-orange);
-  grid-row: 1 / 3;
-}
-
-.receiver-install-copy {
-  display: grid;
-  gap: 0.2rem;
-  align-self: center;
-}
-
-.receiver-install-copy h2 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.receiver-install-copy .quiet-note {
-  margin: 0;
-  font-size: 0.82rem;
-}
-
-.receiver-install-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  grid-column: 1 / -1;
-}
-
-.receiver-install-btn-content {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+.receiver-main.is-hatch .receiver-live-message {
+  max-height: 2.15rem;
+  padding: 0.38rem 0.62rem;
+  overflow: hidden;
+  font-size: 0.74rem;
+  line-height: 1.18;
 }
 
 /* ── Receiver: touch feedback ── */
@@ -5250,11 +5538,6 @@ audio {
 
   .receiver-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .receiver-install-banner {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
   }
 }
 
@@ -5855,19 +6138,6 @@ audio {
   .empty-state {
     border-color: var(--coop-border);
     background: rgba(30, 24, 20, 0.4);
-  }
-
-  /* ── Install banner ── */
-
-  .receiver-install-banner {
-    border-color: color-mix(in srgb, var(--coop-orange) 16%, transparent);
-    background: linear-gradient(
-      160deg,
-      rgba(203, 113, 17, 0.14) 0%,
-      rgba(30, 24, 20, 0.88) 40%,
-      rgba(30, 24, 20, 0.92) 100%
-    );
-    box-shadow: var(--coop-shadow-sm);
   }
 
   /* ── Status chips ── */

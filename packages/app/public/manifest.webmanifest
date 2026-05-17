@@ -2,8 +2,8 @@
   "name": "Coop Receiver",
   "short_name": "Coop",
   "description": "No more chickens loose. A local-first receiver nest for audio, photos, and files before they sync into Coop.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/app",
+  "scope": "/app",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#fcf5ef",
@@ -40,19 +40,19 @@
   "shortcuts": [
     {
       "name": "Pair Receiver",
-      "url": "/pair"
+      "url": "/app/pair"
     },
     {
       "name": "Open Receiver",
-      "url": "/receiver"
+      "url": "/app/receiver"
     },
     {
       "name": "Open Inbox",
-      "url": "/inbox"
+      "url": "/app/inbox"
     }
   ],
   "share_target": {
-    "action": "/receiver",
+    "action": "/app/receiver",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
     "params": {
