@@ -16,7 +16,7 @@ Structured test cases for verifying agent quality. Run evals after modifying age
 
 ## Running Evals
 
-Evals are run manually by spawning the agent with a test scenario and comparing output against expected results.
+Evals are run manually by spawning the agent with a test scenario and comparing output against expected results. Computer-use evals must include browser evidence, not only a narrative answer.
 
 1. Pick a test case from the agent's eval directory
 2. Spawn the agent with the scenario prompt
@@ -28,6 +28,7 @@ Evals are run manually by spawning the agent with a test scenario and comparing 
 - **triage**: Classification accuracy (correct severity, type, package routing)
 - **code-reviewer**: Finding precision (true positives vs false positives, correct severity levels)
 - **oracle**: Research quality (sources cited, synthesis depth, actionability of conclusions)
+- **extension-flows**: Real-browser task completion, screenshot/error evidence, and proof-limit honesty
 
 ## Maturity
 
@@ -36,7 +37,7 @@ Evals are run manually by spawning the agent with a test scenario and comparing 
 | triage | 3 | ready |
 | code-reviewer | 2 | ready |
 | oracle | 2 | ready |
-| extension-flows | 4 | ready |
+| extension-flows | 5 | ready |
 
 ## When to Run
 

@@ -43,9 +43,12 @@ For every run, capture:
 - `chrome://extensions` or `brave://extensions` Coop card state, including whether an error button/panel is visible.
 - Console/service-worker errors if any.
 - Pass/fail score and proof limits.
+- For multimodal Gemma runs: explicit text, image, and audio proof status.
 
 Use `.plans/evidence/` for screenshots and JSON summaries when the user wants
 the evidence committed. Otherwise keep generated artifacts out of git.
+Record durable outcomes in `.claude/evals/results.md` using the Computer-Use
+Run Template.
 
 ## Computer-Use Runner Prompt
 
@@ -57,3 +60,18 @@ sidepanel, and extension-card error evidence. Keep receiver PWA flows out of
 scope unless the eval explicitly asks for them. Report score, failures, and
 proof limits.
 ```
+
+## Local Fixture Pages
+
+Some evals use deterministic local grant pages. Serve them over HTTP because
+extension tab capture only supports `http://` and `https://` URLs:
+
+```bash
+python3 -m http.server 8765 --directory .claude/evals/extension-flows/fixtures
+```
+
+Fixture URLs:
+
+- `http://127.0.0.1:8765/garden-grants.html`
+- `http://127.0.0.1:8765/watershed-resilience.html`
+- `http://127.0.0.1:8765/solar-coop.html`

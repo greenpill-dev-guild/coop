@@ -34,7 +34,7 @@ If Brave is unavailable, use `COOP_VERIFY_BROWSER=chrome` or
 4. Open the sidepanel screenshot and confirm it rendered.
 5. Inspect `brave://extensions` or `chrome://extensions`.
 6. Confirm the Coop extension card does not show an error button or error panel.
-7. If testing multimodal hardware proof, trigger one text/image/audio demo run and record whether native audio was proven or only transcript-to-Gemma was proven.
+7. Run `gemma-multimodal-proof.md` separately before making any text/image/audio submission claim.
 
 ## Expected Behavior
 
@@ -42,7 +42,7 @@ If Brave is unavailable, use `COOP_VERIFY_BROWSER=chrome` or
 - Sandbox CSP probe succeeds.
 - Popup and sidepanel render without blank screens.
 - No service-worker registration failure is visible in the browser extension UI.
-- Gemma/audio claims stay truthful: native audio is claimed only when the real run proves it.
+- Gemma/audio claims stay truthful: this eval only proves sandbox/runtime health; modality proof lives in `gemma-multimodal-proof.md`.
 
 ## Failure Conditions
 
@@ -50,7 +50,7 @@ If Brave is unavailable, use `COOP_VERIFY_BROWSER=chrome` or
 - Popup or sidepanel screenshot is blank.
 - Sandbox CSP probe fails.
 - Extension-card errors are visible.
-- Eval report claims native Gemma audio without runtime evidence.
+- Eval report claims text/image/audio modality proof from this health check alone.
 
 ## Scoring
 
