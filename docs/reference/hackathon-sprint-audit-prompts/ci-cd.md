@@ -1,19 +1,25 @@
 ---
 title: "CI/CD Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/ci-cd
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # CI/CD Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on CI/CD quality, release safety, validation robustness, and operational clarity.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - CI and release workflows live in `.github/workflows/`.
 - Validation orchestration lives in `scripts/validate.ts`.
 - Packaging and environment-profile behavior are driven by `package.json` scripts plus helper scripts.

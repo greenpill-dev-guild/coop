@@ -653,7 +653,7 @@ Internal repo files used for this memo:
 - `packages/shared/src/modules/policy/action-bundle.ts`
 - `packages/extension/src/background/handlers/action-executors.ts`
 - `packages/extension/src/background/handlers/session.ts`
-- `packages/extension/src/runtime/agent-runner.ts`
+- `packages/extension/src/runtime/agent/runner.ts`
 - `packages/extension/src/skills/green-goods-*`
 - `packages/contracts/src/CoopRegistry.sol`
 - `packages/shared/src/modules/fvm/fvm.ts`

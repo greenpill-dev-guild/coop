@@ -62,9 +62,13 @@
 }
 
 @media (max-width: 480px) {
+  .tabs {
+    gap: 0.15rem;
+  }
+
   .tab {
-    min-width: 5rem;
-    padding: 0.42rem 0.58rem;
-    font-size: 0.84rem;
+    min-width: 3.85rem;
+    padding: 0.38rem 0.36rem;
+    font-size: 0.78rem;
   }
 }

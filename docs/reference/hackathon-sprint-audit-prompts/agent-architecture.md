@@ -1,23 +1,30 @@
 ---
 title: "Agent Architecture Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/agent-architecture
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Agent Architecture Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on agent architecture, modularity, and execution seams.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - Agent contracts and memory helpers live in `packages/shared/src/modules/agent`.
-- Agent runtime orchestration lives in `packages/extension/src/runtime`.
+- Agent runtime orchestration lives in `packages/extension/src/runtime/agent`.
 - Executable skills live under `packages/extension/src/skills`.
-- The current architecture includes large runtime files such as `agent-runner-skills.ts` and `agent-output-handlers.ts`.
+- The April 1 architecture included split runner, skill, prompt, completion, and output-handler
+  modules; review whether those seams are now clean enough or still too coupled.
 
 Operating rules:
 - Stay read-only.
@@ -36,7 +43,7 @@ Start by reading:
 
 Then inspect:
 - `packages/shared/src/modules/agent`
-- `packages/extension/src/runtime/agent*`
+- `packages/extension/src/runtime/agent`
 - `packages/extension/src/skills/*`
 - nearby tests under `packages/shared/src/modules/agent/__tests__` and `packages/extension/src/runtime/__tests__`
 
@@ -50,10 +57,10 @@ Required checks:
 
 Suggested commands:
 - `find packages/shared/src/modules/agent -maxdepth 2 -type f | sort`
-- `find packages/extension/src/runtime -maxdepth 1 -type f | sort | grep 'agent'`
+- `find packages/extension/src/runtime/agent -maxdepth 1 -type f | sort`
 - `find packages/extension/src/skills -maxdepth 2 -type f | sort`
 - `rg -n "AgentObservation|AgentPlan|SkillManifest|SkillRun|memory" packages/shared/src/modules/agent packages/extension/src/runtime packages/extension/src/skills --glob '!**/dist/**'`
-- `wc -l packages/extension/src/runtime/agent-runner-skills.ts packages/extension/src/runtime/agent-output-handlers.ts packages/extension/src/runtime/agent-runner.ts 2>/dev/null`
+- `wc -l packages/extension/src/runtime/agent/runner-skills.ts packages/extension/src/runtime/agent/output-handlers.ts packages/extension/src/runtime/agent/runner.ts 2>/dev/null`
 - `rg -n "(describe\\(|test\\(|it\\()" packages/shared/src/modules/agent packages/extension/src/runtime --glob '!**/dist/**'`
 
 Deliverable format:

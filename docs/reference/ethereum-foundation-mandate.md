@@ -44,13 +44,13 @@ Coop embodies the mandate structurally, not just rhetorically:
 | Mandate Principle | Coop Implementation |
 |---|---|
 | Self-sovereign identity | Passkey-first, on-device credentials, no custodial provider |
-| Censorship resistance | P2P sync via y-webrtc, no central server owns data |
-| Privacy by default | Local-first, all data stays in browser until explicit publish |
+| Censorship resistance | P2P-first sync via y-webrtc plus explicit server-assisted fallback for shared state |
+| Privacy by default | Local-first capture and drafts; shared state begins only after explicit publish |
 | Open source | Full monorepo, shared modules are pure functions, no proprietary layers |
 | Security at boundaries | Zod validation, permit enforcement with expiry/replay protection |
 | Disintermediation | Safe smart accounts via passkey + ERC-4337, no wallet intermediary |
-| Sovereignty-preserving coordination | CRDT shared state, explicit publish model, durable Filecoin archives |
-| Walkaway test | Data survives in local exports + content-addressed Filecoin storage |
+| Sovereignty-preserving coordination | CRDT shared state, explicit publish model, optional archive receipts |
+| Walkaway test | Data survives in local exports; live archive paths can add content-addressed storage when configured |
 | Right association | Built for regenerative communities, knowledge commons, not extraction |
 
 ---

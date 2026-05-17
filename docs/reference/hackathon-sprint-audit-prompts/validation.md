@@ -1,17 +1,23 @@
 ---
 title: "Audit Prompt Pack Validation"
 slug: /reference/hackathon-sprint-audit-prompts/validation
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Audit Prompt Pack Validation
 
-Date: April 1, 2026
+<DocMeta />
 
-This note records the dry-run validation used while authoring the audit prompt pack.
+Snapshot date: April 1, 2026
+
+This note records the dry-run validation used while authoring the audit prompt pack. It is a
+historical snapshot, not evidence that the current repo still matches the April 1 findings.
 
 ## Method
 
-Two prompts were dry-run manually against the current repo:
+Two prompts were dry-run manually against the repo as it existed on April 1, 2026:
 
 - structure, naming, and code organization
 - P2P, Yjs, sync, and connection states
@@ -46,7 +52,7 @@ examples were:
     - `scripts/deploy-registry.ts`
     - `packages/shared/src/modules/fvm/fvm.ts`
 - large-file concentration that is structural rather than cosmetic:
-  - `packages/extension/src/runtime/agent-runner-skills.ts`
+  - `packages/extension/src/runtime/agent/runner-skills.ts`
   - `packages/app/src/views/Landing/index.tsx`
   - `packages/extension/src/background/handlers/archive.ts`
 

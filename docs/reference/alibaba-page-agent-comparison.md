@@ -96,7 +96,7 @@ Page Agent:
 
 Coop:
 
-- local-first inference cascade: WebLLM -> transformers.js -> heuristic
+- local-first provider contracts across Gemma, WebLLM, Transformers.js, and heuristics
 - persistent observations, plans, memories, skill runs, and logs
 - designed for repeated ongoing workflows, not only one-off page tasks
 

@@ -83,6 +83,10 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Reference',
       className: builderClassName,
+      link: {
+        type: 'doc',
+        id: 'reference/index',
+      },
       collapsed: true,
       items: [
         {

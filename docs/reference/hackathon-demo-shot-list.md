@@ -275,11 +275,12 @@ Reconnect the onchain beat back to the coop itself.
 
 - this shot is short but important because it closes the loop between knowledge and governance
 
-### Shot 14. Trigger Filecoin Archive
+### Shot 14. Trigger Archive Receipt
 
 #### Goal
 
-End on durable memory and proof.
+End on the explicit archive/provenance path. Only frame it as live Filecoin proof when live archive
+mode is enabled and proved for the recording.
 
 #### Operator actions
 
@@ -327,7 +328,7 @@ If you need to compress:
 2. keep the messy-tabs roundup
 3. keep the multi-coop routing beat
 4. keep Green Goods plus bounded pool creation
-5. keep the Filecoin close
+5. keep the archive receipt close
 6. shorten, but do not delete, the invite beat
 
 ## Related Docs

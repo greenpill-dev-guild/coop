@@ -545,3 +545,17 @@ pre[class*="language-"] {
     display: none;
   }
 }
+
+@media (max-width: 480px) {
+  .navbar__brand {
+    margin-right: 0.15rem;
+  }
+
+  .navbar__logo {
+    margin-right: 0;
+  }
+
+  .navbar__logo img {
+    height: 24px;
+  }
+}

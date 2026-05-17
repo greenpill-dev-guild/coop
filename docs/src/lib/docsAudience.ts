@@ -13,7 +13,12 @@ const STORAGE_KEYS: Record<DocsAudience, string> = {
 };
 
 function isBuilderAudiencePath(path: string): boolean {
-  return path === '/builder' || BUILDER_AUDIENCE_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    path === '/builder' ||
+    path === '/reference' ||
+    path === '/testing' ||
+    BUILDER_AUDIENCE_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 export function getDocsAudience(pathname: string): DocsAudience {

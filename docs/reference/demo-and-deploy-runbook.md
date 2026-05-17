@@ -1,11 +1,18 @@
 ---
 title: "Demo & Deploy Runbook"
 slug: /reference/demo-and-deploy-runbook
+audience: builder
+doc_type: runbook
+status: canonical
+validation_snapshot: "2026-04-19"
+docs_reviewed: "2026-05-16"
 ---
 
 # Coop Demo And Deploy Runbook
 
-Date: April 20, 2026
+<DocMeta />
+
+Docs review date: May 16, 2026
 
 This is the canonical runbook for local demos, peer pairing, and production deployment. Keep the
 stage-based checklist aligned to [Production Release Checklist](/reference/production-release-checklist).
@@ -32,10 +39,12 @@ copy. Show the coop landing in the **Coops** tab with its state badge.
 
 ### Beat 3 -- Capture And Synthesize (90s)
 
-Open several tabs in Chrome -- articles, notes, whatever fits the story. Trigger **Manual
-round-up** from the popup or agent tab. Show the candidates appearing in **Chickens**.
+Open several tabs in Chrome -- articles, notes, whatever fits the story. Trigger **Roundup
+Chickens** from the popup, keyboard shortcut, or context menu. Show the candidates appearing in
+**Chickens**.
 Open one candidate, demonstrate the AI synthesis output (summary, tags, opportunity signal).
-Emphasize: all processing happened in the browser with no cloud calls.
+Emphasize: capture analysis and model inference are designed to happen in the browser after the
+needed local model assets are available.
 
 ### Beat 4 -- Review And Publish (60s)
 
@@ -45,24 +54,25 @@ Open the board route to display the React Flow knowledge graph.
 
 ### Beat 5 -- Archive To Filecoin (45s)
 
-From the **Coops** tab, trigger an archive snapshot. Export the receipt. Explain: the
-published state is now anchored to Filecoin via Storacha, creating an immutable record of
-what the group knows and decided.
+From the **Coops** tab, trigger an archive snapshot. Export the receipt. In mock-first demos,
+explain this as a receipt and provenance rehearsal. Only claim live Filecoin anchoring when
+`VITE_COOP_ARCHIVE_MODE=live` is enabled and the live archive probe has passed with real
+trusted-node archive env.
 
 ### Beat 6 -- Green Goods Action (45s)
 
 If the coop has Green Goods enabled, open the **Roost** tab (Green Goods member workspace).
-Show the garden pass, member-account provisioning, and a bounded session-key action (e.g.
-create garden). Emphasize: onchain execution is scoped by policy and human-confirmed for
-high-stakes operations.
+Show the garden pass and member-account provisioning. Treat bounded session-key actions such as
+`create garden` as an operator-live demo only after the live env and probes are complete. Emphasize:
+onchain execution is scoped by policy and human-confirmed for high-stakes operations.
 
 ### Beat 7 -- The Larger Vision (60s)
 
 Zoom out. Recap the loop: scattered knowledge enters as loose chickens, gets refined locally
-by an in-browser agent, passes through human review, and becomes shared memory anchored
-onchain. Every step respects local-first privacy, passkey-first identity, and explicit
-publish. The product is already working -- what follows is deepening the knowledge graph,
-expanding community coordination patterns, and opening the agent harness to more skill types.
+by an in-browser agent, passes through human review, and becomes shared memory. Optional archive
+and onchain rails are explicit follow-on actions with separate readiness gates. The product loop is
+working in a mock-first posture; what follows is deepening the knowledge graph, expanding community
+coordination patterns, and hardening live/operator rails.
 
 ---
 
@@ -243,9 +253,10 @@ Manual staged-launch checks still include:
 - confirmation that public builds do not embed operator-only signing material
 - confirmation that remote knowledge-skill import remains quarantined in the shipped build
 
-As of April 19, 2026, the automated staged-launch bar is green. The remaining manual staged-launch
-gate is successful popup `Capture Tab` and `Screenshot` saves in real Chrome, plus the rest of the
-manual checks above.
+The latest recorded staged-launch validation snapshot is from April 19, 2026. Rerun the automated
+bar on the current tree before release signoff. The remaining manual staged-launch gate is
+successful popup `Capture Tab` and `Screenshot` saves in real Chrome, plus the rest of the manual
+checks above.
 
 ### Live Modes
 
@@ -448,11 +459,11 @@ Use this before demos and before production launch.
 3. If live Safe, session-key, or archive rails are enabled, wait until the staged launch bar is
    green and the live env contract is complete, then run
    `bun run validate:production-live-readiness`.
-5. Build the extension.
-6. Package the extension from `packages/extension/dist/chrome-mv3` with files at the archive root.
-7. Upload to the Chrome Web Store dashboard.
-8. Start as `Unlisted`.
-9. Add clear reviewer notes for sidepanel entry, passkey flows, mock vs live modes, receiver
+4. Build the extension.
+5. Package the extension from `packages/extension/dist/chrome-mv3` with files at the archive root.
+6. Upload to the Chrome Web Store dashboard.
+7. Start as `Unlisted`.
+8. Add clear reviewer notes for sidepanel entry, passkey flows, mock vs live modes, receiver
    pairing, private intake behavior, and the local-first data model.
 
 ## Validation Commands

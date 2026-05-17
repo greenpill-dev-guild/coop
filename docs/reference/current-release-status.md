@@ -1,11 +1,18 @@
 ---
 title: "Current Release Status"
 slug: /reference/current-release-status
+audience: builder
+doc_type: runbook
+status: current
+validation_snapshot: "2026-04-19"
+docs_reviewed: "2026-05-16"
 ---
 
 # Coop Current Release Status
 
-Date: April 20, 2026
+<DocMeta />
+
+Docs review date: May 16, 2026
 
 This is the canonical current-state release posture for Coop. Keep `README.md`,
 [Production Release Checklist](/reference/production-release-checklist), [Testing & Validation](/reference/testing-and-validation),
@@ -14,9 +21,9 @@ this page.
 
 ## Current Status
 
-As of April 19, 2026:
+The last recorded release validation snapshot is from April 19, 2026:
 
-- the automated mock-first staged-launch bar is green
+- the automated mock-first staged-launch bar was green on that snapshot
 - Coop is documentable and demoable in a mock-first posture with the automated release gate aligned
   to the shipped surfaces
 - the remaining staged-launch gate before a public Chrome Web Store release is manual real-Chrome
@@ -36,19 +43,21 @@ bun run validate:store-readiness
 bun run validate:production-readiness
 ```
 
-What the current result means:
+What that snapshot means:
 
-- the bar is green on the latest validated run from April 19, 2026
+- the bar was green on the validated run from April 19, 2026
 - the broadened release-critical coverage run cleared the `85/70/85/85` thresholds at
   `86.56/78.02/87.19/86.56` (statements / branches / functions / lines)
-- `validate:store-readiness` and `validate:production-readiness` are both green on the current tree
+- `validate:store-readiness` and `validate:production-readiness` were green for that snapshot
+- rerun the staged-launch bar on the current tree before treating this page as release signoff
 - manual Chrome checks still matter, but they are now the remaining staged-launch gate rather than
   a follow-up after a red automated bar
 
 ## Remaining Public-Release Gate
 
 Before a public Chrome Web Store release, manual QA in real Chrome is still required for popup
-`Capture Tab` and `Screenshot` success paths even though the automated staged-launch bar is green.
+`Capture Tab` and `Screenshot` success paths after the automated staged-launch bar has been rerun
+and is green on the current tree.
 
 Reason:
 
@@ -112,11 +121,12 @@ env vars in any release candidate.
 
 Safe to claim:
 
-- browser-first capture, review, and local AI refinement are implemented
+- browser-first capture, review, and local AI refinement are implemented, with local model execution
+  depending on the relevant model assets and runtime capability being available
 - receiver pairing and private intake sync are implemented
 - local-first sync uses Yjs with y-webrtc peers and y-websocket support
-- Chrome Web Store packaging, review docs, and the automated mock-first staged-launch bar are in
-  place for a public candidate
+- Chrome Web Store packaging and review docs are in place for a mock-first public candidate; the
+  automated staged-launch bar must be rerun on the current tree before release signoff
 
 Not safe to blur together:
 

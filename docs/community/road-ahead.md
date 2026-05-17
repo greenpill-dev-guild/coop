@@ -111,7 +111,7 @@ closely with how Coop already works.
 
 The core argument: coordination infrastructure should make it structurally difficult for any
 single actor to silently capture or redirect group value. Coop's architecture -- local-first
-storage, passkey identity, Safe multisig, session-key boundaries, and Filecoin archival --
+storage, passkey identity, Safe multisig, session-key boundaries, and explicit archive rails --
 was not designed to satisfy a framework, but the alignment is real and worth naming.
 
 ## Where To Look For More Detail

@@ -83,3 +83,9 @@ The cleanest first coop is one with:
 - a few seed contributions that show what useful signal looks like for this coop
 - at least one trusted member besides the creator when bounded operations matter
 - a shared understanding that publish is explicit, not automatic
+
+## Where To Go Next
+
+- Read [Joining A Coop](/joining-a-coop) to understand the new-member path.
+- Read [Sharing Knowledge](/sharing-knowledge) for what happens after capture and review.
+- Read [Privacy & Security](/privacy-security) before inviting people into sensitive work.

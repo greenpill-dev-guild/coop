@@ -1,0 +1,54 @@
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: -0.35rem 0 1.35rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--coop-border);
+  border-radius: var(--coop-radius-pill);
+  background: var(--coop-surface);
+  color: var(--coop-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  padding: 0.32rem 0.58rem;
+  white-space: nowrap;
+}
+
+.label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.value {
+  color: var(--coop-text-primary);
+  font-weight: 650;
+}
+
+.badge[data-meta-value="current"],
+.badge[data-meta-value="canonical"],
+.badge[data-meta-value="active"] {
+  border-color: var(--coop-card-highlight-border);
+  background: var(--coop-card-highlight-bg);
+}
+
+.badge[data-meta-value="historical"],
+.badge[data-meta-value="provisional"] {
+  border-color: var(--coop-card-warning-border);
+  background: var(--coop-card-warning-bg);
+}
+
+@media (max-width: 560px) {
+  .meta {
+    gap: 0.35rem;
+  }
+
+  .badge {
+    white-space: normal;
+  }
+}

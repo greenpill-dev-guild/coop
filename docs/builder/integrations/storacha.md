@@ -12,7 +12,7 @@ Storacha is Coop's upload and delegation path for archive actions.
 In Coop's docs model:
 
 - Storacha is the operational upload and delegation layer
-- Filecoin is the durable archive and provenance layer
+- Filecoin is the live durability and provenance layer when that mode is configured and proved
 
 Keeping those roles distinct makes the archive stack easier to reason about.
 

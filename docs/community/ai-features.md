@@ -49,3 +49,9 @@ difference between a suggestion and a group decision.
 - a magical replacement for editing, judgment, or trust inside a group
 
 The value is in legible assistance, not in pretending the hard parts of coordination disappeared.
+
+## Where To Go Next
+
+- Read [How It Works](/how-it-works) for the full capture, refine, review, and share loop.
+- Read [Sharing Knowledge](/sharing-knowledge) for the human review and publish boundary.
+- Read [The Road Ahead](/road-ahead) for which agent and local-model directions are still evolving.

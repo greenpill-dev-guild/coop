@@ -1,9 +1,15 @@
 ---
 title: "Agentic Browser OS — Architecture Roadmap"
 slug: /reference/agent-os-roadmap
+audience: builder
+doc_type: reference
+status: active
+last_verified: "2026-03-16"
 ---
 
 # Coop Agentic Browser OS — Architecture Roadmap
+
+<DocMeta />
 
 **Status**: Active roadmap
 **Created**: 2026-03-16
@@ -13,37 +19,38 @@ slug: /reference/agent-os-roadmap
 
 ## 1. Current Architecture Assessment
 
-Coop already has strong OS-like qualities: a 16-skill DAG with observation-driven triggers, a three-tier inference cascade, capability-based auth (policy/session/permit), CRDT sync via Yjs, and passkey identity. This section documents what exists, what works well, and where the architecture needs to evolve.
+Coop already has strong OS-like qualities: a registered skill graph with observation-driven triggers, explicit local runtime-provider contracts, capability-based auth (policy/session/permit), CRDT sync via Yjs, and passkey identity. This section documents what exists, what works well, and where the architecture needs to evolve.
 
 ### 1.1 What Exists Today
 
 #### Agent Harness
 
-The agent runs a fully autonomous observe→plan→act loop in the extension's offscreen document, with zero cloud dependencies for core operation.
+The agent runs an observe→plan→act loop in the extension runtime. Capture analysis and model execution are designed to stay local to the browser after model assets are available; publishing, archive, sync, and live onchain operations remain explicit, separate actions.
 
-| Component | File | Lines | Role |
-|-----------|------|-------|------|
-| Runner | `extension/src/runtime/agent-runner.ts` | ~1,670 | Main cycle loop, observation plans, action dispatch |
-| Models | `extension/src/runtime/agent-models.ts` | ~440 | Three-tier inference: WebLLM → Transformers.js → heuristic |
-| Harness | `extension/src/runtime/agent-harness.ts` | ~170 | Topological sort (Kahn's algorithm), skip conditions, DAG planning |
-| Knowledge | `extension/src/runtime/agent-knowledge.ts` | ~260 | External SKILL.md fetch, parse, route, cache |
-| Logger | `extension/src/runtime/agent-logger.ts` | ~180 | Structured trace logging with span correlation |
-| Registry | `extension/src/runtime/agent-registry.ts` | ~70 | Build-time skill manifest loading |
-| Config | `extension/src/runtime/agent-config.ts` | ~30 | Thresholds, timeouts, cycle state |
-| WebLLM Bridge | `extension/src/runtime/agent-webllm-bridge.ts` | ~120 | WebLLM worker communication |
-| Domain Model | `shared/src/modules/agent/agent.ts` | ~430 | Observations, plans, skills, drafts, memory |
+| Component | File | Role |
+|-----------|------|------|
+| Runner | `packages/extension/src/runtime/agent/runner.ts` and `runner-*.ts` | Cycle orchestration, observation planning, skill context, completion, and memory updates |
+| Models | `packages/extension/src/runtime/agent/models.ts` | Local model helpers for Gemma, WebLLM, Transformers.js, and heuristic fallback |
+| Provider Contracts | `packages/extension/src/runtime/agent/provider-contracts.ts` | Runtime provider capabilities, fallback order, and optional Chrome Prompt API scaffold |
+| Harness | `packages/extension/src/runtime/agent/harness.ts` | Topological sort, skip conditions, and DAG planning |
+| Knowledge | `packages/extension/src/runtime/agent/knowledge.ts` | External SKILL.md fetch, parse, route, and cache |
+| Logger / Trace | `packages/extension/src/runtime/agent/logger.ts` and `trace-records.ts` | Structured trace logging and persisted trace records |
+| Registry | `packages/extension/src/runtime/agent/registry.ts` | Build-time skill manifest loading |
+| Domain Model | `packages/shared/src/modules/agent/agent.ts` | Observations, plans, skills, drafts, and memory |
 
-**16 registered skills** in `packages/extension/src/skills/`, each a directory with `skill.json` manifest and `SKILL.md` instruction file. Skills declare dependencies via `depends` field; the harness topologically sorts them with alphabetical tie-breaking.
+**19 registered skills** currently live in `packages/extension/src/skills/`, each as a directory with a `skill.json` manifest and `SKILL.md` instruction file. The source inventory, not this prose, is the canonical count. Skills declare dependencies via `depends`; the harness topologically sorts them with alphabetical tie-breaking.
 
-**Three-tier inference cascade:**
+**Runtime provider contracts:**
 
-| Tier | Engine | Model | When Used |
-|------|--------|-------|-----------|
-| 1 | WebLLM (WebGPU) | Qwen2-0.5B-Instruct-q4f16_1 | WebGPU available, synthesis skills |
-| 2 | Transformers.js (WASM) | Qwen2.5-0.5B-Instruct (q4) | Extraction skills, WebGPU fallback |
-| 3 | Heuristic rules | None | Both models fail, or deterministic skills |
+| Provider | Runtime | When Used |
+|------|--------|-----------|
+| Gemma 4 | Transformers.js / WebGPU sandbox | Preferred for Gemma-backed text and multimodal-capable skills when available |
+| WebLLM | WebGPU worker | WebGPU local-model path and WebLLM promotion experiments |
+| Transformers.js | WASM / local model runtime | Portable local fallback and extraction-oriented skills |
+| Heuristic rules | Deterministic JS | Deterministic skills or final fallback |
+| Chrome Prompt API | Browser built-in API scaffold | Experimental, flag-gated future path only |
 
-**Output reliability stack:** JSON repair, retry-with-error-context, grammar-constrained generation (WebLLM XGrammar), Zod schema validation, graceful tier fallback.
+**Output reliability stack:** JSON repair, retry-with-error-context, provider-specific structured JSON support, Zod schema validation, and graceful fallback.
 
 **Human-in-the-loop:** Three approval tiers (`advisory`, `proposal`, `auto-run-eligible`). Auto-run is opt-in per skill. The agent never acts without authorization.
 
@@ -80,7 +87,7 @@ All domain types are Zod schemas in `contracts/schema.ts`, inferred with `z.infe
 
 #### Authorization Stack
 
-Four-layer capability-based auth chain (documented in detail in `docs/architecture/policy-session-permit.md`):
+Four-layer capability-based auth chain (documented in detail in `docs/reference/policy-session-permit.md`):
 
 1. **Policy** — Defines approval rules per action class (14 governed action types). EIP-712 typed action bundles with replay protection. Bounded executor with handler registry.
 2. **Session** — Scoped on-chain execution via ERC-4337 smart session keys (Rhinestone). Time-bounded, usage-limited, action-allowlisted, target-allowlisted. Encrypted key material (AES-256-GCM, PBKDF2).
@@ -89,10 +96,10 @@ Four-layer capability-based auth chain (documented in detail in `docs/architectu
 
 #### Extension Runtime
 
-- **MV3 service worker** at `packages/extension/src/background.ts`: 632 lines, 84 `case` statements across the `onMessage` switch, context menu handler, and keyboard command handler
+- **MV3 service worker** at `packages/extension/src/background.ts`, with domain handlers under `packages/extension/src/background/handlers/`
 - **Sidepanel**: Primary UX surface (React)
 - **Popup**: Quick actions and status
-- **Offscreen document**: WebRTC (y-webrtc) + agent inference (WebLLM/Transformers.js)
+- **Offscreen / sandbox documents**: WebRTC support plus local model hosts for WebLLM, Transformers.js, and Gemma paths
 
 #### Data Layer
 
@@ -127,20 +134,23 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
 
 The `sharedKeys` array includes collection fields (`members`, `invites`, `artifacts`, `archiveReceipts`, `memberCommitments`) that are arrays of objects. Serializing them as `JSON.stringify()` into `Y.Map<string>` means each write replaces the entire array atomically. When two peers concurrently modify different items in the same array, the last writer wins — silently discarding the other peer's changes.
 
-**Impact:** Concurrent edits to membership, artifacts, or archive receipts can lose data. This is the highest-priority architectural fix because it undermines the local-first sync guarantee. See `docs/architecture/knowledge-sharing-and-scaling.md` for detailed analysis of the JSON-in-CRDT anti-pattern, including sync amplification and document bloat measurements.
+**Impact:** Concurrent edits to membership, artifacts, or archive receipts can lose data. This is the highest-priority architectural fix because it undermines the local-first sync guarantee. See `docs/reference/knowledge-sharing-and-scaling.md` for detailed analysis of the JSON-in-CRDT anti-pattern, including sync amplification and document bloat measurements.
 
-#### Remotely-Hosted WASM
+#### Model Runtime Distribution And Sandbox CSP
 
-**Location:** `packages/extension/src/runtime/agent-models.ts:161` and `packages/extension/src/runtime/inference-worker.ts:63`
+**Current status:** the ONNX Runtime WASM asset is bundled into the extension build by
+`packages/extension/wxt.config.ts`; it is no longer correct to describe the active risk as
+runtime loading from `cdn.jsdelivr.net`.
 
-```typescript
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
-```
+The remaining release risk is narrower: the Gemma 4 sandbox route still relies on an
+`unsafe-eval`-allowed sandbox because onnxruntime-web's generated glue calls `new Function()` on the
+hot path. The Web Store-facing fix is a precompiled/runtime path that removes that sandbox eval
+requirement, not another CDN-bundling pass.
 
-ONNX Runtime WASM binaries (~22 MB) are loaded from `cdn.jsdelivr.net` at runtime. This:
-- **Blocks Chrome Web Store distribution** — Chrome Web Store policy requires all executable code to be bundled
-- **Fails offline** — First load without cache fails without internet
-- **Creates a supply chain risk** — CDN compromise could inject malicious WASM
+This also means offline behavior has two separate boundaries:
+
+- bundled runtime assets can load from the extension package
+- model weights still need to be present in browser storage before offline inference is available
 
 #### Battery Drain from Fixed-Interval Polling
 
@@ -163,9 +173,12 @@ Two `setInterval` timers run continuously at 1.5s intervals even when there are 
 
 632 lines with 84 `case` statements across the `onMessage` dispatcher, context menu handler, and keyboard command handler. Adding a new message type requires modifying this file, increasing merge conflict risk and making the dispatcher harder to reason about. No handler isolation — a throw in one handler can affect the switch scope.
 
-#### No Evaluation Harness
+#### Evaluation Harness Coverage Is Still Narrow
 
-There is no systematic quality measurement for skill outputs. The agent produces outputs and validates them against Zod schemas, but there are no golden fixtures, no quality scoring, and no regression detection. When a model upgrade or prompt change degrades a skill, the degradation is invisible until a user notices bad outputs.
+The repo now includes core eval fixtures, benchmark records, and provider release-gate helpers for the
+highest-value agent paths. The remaining risk is coverage breadth: not every skill or provider
+promotion path has enough golden, noisy, low-signal, and malicious fixtures to make regressions
+obvious before a user notices bad outputs.
 
 #### No Typed Event Bus
 
@@ -222,14 +235,12 @@ Capability Kernel (portable core — @coop/core extraction target)
         Golden fixtures, structural scoring, LLM-as-judge (gated),
         existing trace logging extended with eval metrics
 
-Compute Runtimes (pluggable, four-tier cascade)
-  ├── Tier 0: Built-in Browser Models
-  │     Gemini Nano via ai.languageModel API — zero cost, instant
-  ├── Tier 1: WebLLM (WebGPU)
-  │     Highest quality, paged KV cache, grammar-constrained JSON
-  ├── Tier 2: Transformers.js (WASM/WebGPU)
-  │     Most portable, v4 WebGPU runtime, standalone tokenizer
-  └── Tier 3: Heuristics
+Compute Runtimes (pluggable provider routing)
+  ├── Built-in Browser Models
+  │     Gemini Nano via ai.languageModel API — experimental, flag-gated path
+  ├── Gemma / WebLLM / Transformers.js
+  │     Browser-hosted local model providers with explicit capabilities
+  └── Heuristics
         Deterministic rules — always available, zero inference cost
 
 Data Substrates (pluggable)
@@ -247,7 +258,8 @@ Data Substrates (pluggable)
 2. **Event-driven, not poll-driven.** The typed event bus replaces implicit polling. Observations are generated in response to events, not on fixed intervals.
 3. **Evaluate before shipping.** Every skill has golden fixtures and quality scoring. Prompt changes require eval regression checks.
 4. **Design for interop.** Skill manifests are MCP/WebMCP-shaped from the start, enabling future tool exchange with external agents and websites.
-5. **Graceful degradation across four tiers.** Built-in browser models (Tier 0) provide instant, zero-cost inference; WebLLM (Tier 1) provides highest quality; Transformers.js (Tier 2) provides portability; heuristics (Tier 3) guarantee availability.
+5. **Graceful degradation across providers.** Capability detection selects the best available local
+   provider for the task while heuristics guarantee a deterministic fallback.
 
 ---
 
@@ -293,20 +305,21 @@ Each item is its own Y.Map entry. Concurrent edits to different items merge clea
 
 **Files:** `packages/shared/src/modules/coop/sync.ts`, `packages/shared/src/modules/storage/db.ts`, `packages/shared/src/contracts/schema.ts`
 
-#### Phase 1B: Bundle ONNX Runtime WASM
+#### Phase 1B: Remove Sandbox Eval From Model Runtime
 
-**Problem:** WASM loaded from `cdn.jsdelivr.net` at runtime blocks Chrome Web Store distribution and offline operation.
+**Problem:** ONNX Runtime WASM is now bundled, but the Gemma 4 sandbox still allows `unsafe-eval`
+because the current onnxruntime-web glue calls `new Function()`.
 
-**Solution:** Bundle ONNX Runtime WASM from `node_modules` into the extension's `dist/wasm/` directory at build time.
+**Solution:** Ship or generate a precompiled onnxruntime-web path that does not need dynamic function
+construction in the extension runtime.
 
 **Approach:**
-1. Add Vite plugin or build script to copy `onnxruntime-web` WASM files from `node_modules/onnxruntime-web/dist/` to `dist/wasm/` during build
-2. Change `wasmPaths` to `chrome.runtime.getURL('wasm/')` in the extension context
-3. For the offscreen document worker context, pass the resolved URL from the offscreen document (which has `chrome.runtime` access) to the worker (which does not)
-4. Add `wasm/` to `manifest.json` `web_accessible_resources`
-5. Update `inference-worker.ts:63` with the same pattern
+1. Keep `bundleOnnxRuntimeWasmPlugin()` as the packaged WASM source of truth
+2. Replace or precompile the runtime glue that currently requires `new Function()`
+3. Tighten the sandbox CSP once the hot path no longer requires `unsafe-eval`
+4. Add a store-readiness assertion that fails if the production sandbox still depends on dynamic eval
 
-**Files:** `packages/extension/src/runtime/agent-models.ts:161`, `packages/extension/src/runtime/inference-worker.ts:63`, `packages/extension/wxt.config.ts`
+**Files:** `packages/extension/src/runtime/agent/gemma4-sandbox-host.ts`, `packages/extension/src/runtime/agent/models.ts`, `packages/extension/wxt.config.ts`, `scripts/store-readiness.ts`
 
 #### Phase 1C: Event-Driven Scheduling
 
@@ -321,7 +334,7 @@ Each item is its own Y.Map entry. Concurrent edits to different items merge clea
 4. Adaptive idle backoff: keepalive extends to 300s after 3 consecutive idle cycles (no pending observations)
 5. Reset to 60s on next observation creation
 
-**Files:** `packages/extension/src/runtime/receiver-sync-offscreen.ts:355-360`, agent message handlers, `packages/extension/src/runtime/agent-config.ts`
+**Files:** `packages/extension/src/runtime/receiver-sync-offscreen.ts`, agent message handlers, `packages/extension/src/runtime/agent/config.ts`
 
 ---
 
@@ -403,13 +416,13 @@ Each skill manifest gains two new fields:
 1. Collect `promptSnippet` from all active skills → "Available capabilities" section
 2. Collect `promptGuidelines` from the current skill being executed → "Current task guidelines" section
 3. Inject knowledge skill content (existing mechanism)
-4. Tier-aware sizing: full prompt for Tier 0/1, stripped guidelines for Tier 2, no prompt for Tier 3 (heuristics don't use prompts)
+4. Provider-aware sizing: full prompt for capable local-model providers, stripped guidelines for smaller fallback providers, no prompt for deterministic heuristics
 
 **Key insight from pi-mono:** The compositional prompt pattern means adding a new skill automatically enriches the system prompt without editing a central prompt template.
 
 #### Phase 2D: Lazy Skill Loading (Pi-Mono SKILL.md Pattern)
 
-**Motivation:** Currently, skill definitions are loaded at build time via `agent-registry.ts`. The existing SKILL.md protocol (for knowledge skills) already demonstrates lazy loading from URLs. Apply the same pattern to executable skill instructions.
+**Motivation:** Currently, skill definitions are loaded at build time via `packages/extension/src/runtime/agent/registry.ts`. The existing SKILL.md protocol (for knowledge skills) already demonstrates lazy loading from URLs. Apply the same pattern to executable skill instructions.
 
 **Approach:**
 1. Skill manifests are always loaded at build time (small JSON, needed for DAG construction)
@@ -428,10 +441,10 @@ Each skill manifest gains two new fields:
 
 1. **Processing ledger**: Track which captures, tabs, and drafts were processed in each agent session. Store `{ observationId, processedAt, summary? }` records.
 2. **Compaction trigger**: When context exceeds 70% of the current model's context window, compact old context.
-3. **Tier-aware compaction**:
-   - Tier 0/1 (LLM available): Use the model to summarize old context into a condensed digest
-   - Tier 2 (smaller model): Use the model with a simpler summarization prompt
-   - Tier 3 (heuristic): Keep last N observations + all pending plans, discard processed observation details
+3. **Provider-aware compaction**:
+   - capable local model available: summarize old context into a condensed digest
+   - smaller fallback model available: use a simpler summarization prompt
+   - heuristic-only path: keep last N observations + all pending plans, discard processed observation details
 4. **Compaction boundaries**: Preserve `pendingObservations` and `activeProposals` across compaction. Only compact `completedObservations` and `processedCaptures`.
 
 **Key insight from pi-mono:** Context compaction is not just about token count — it's about preserving the agent's "working memory" (what it's currently doing) while compressing its "long-term memory" (what it has already processed).
@@ -609,7 +622,7 @@ These phases prepare for scale, user experience, and ecosystem integration.
 **Motivation:** WebLLM and Transformers.js models require significant downloads (100MB-2GB). Currently, download happens silently in the background with no user feedback.
 
 **Approach:**
-1. Surface download progress from `agent-webllm-bridge.ts` to sidepanel via event bus
+1. Surface download progress from `packages/extension/src/runtime/agent/webllm-bridge.ts` and related provider hosts to sidepanel via event bus
 2. **Model management UI** in sidepanel operator section:
    - Available models with sizes
    - Download status (not downloaded / downloading / ready / error)
@@ -617,20 +630,20 @@ These phases prepare for scale, user experience, and ecosystem integration.
 3. Gated behind existing `localInferenceOptIn` setting — no downloads without explicit user consent
 4. Progress events: `model:download-started`, `model:download-progress`, `model:download-complete`, `model:download-failed`
 
-#### Phase 4C: Four-Tier Inference Cascade
+#### Phase 4C: Broader Provider Routing
 
-**Motivation:** Chrome's built-in AI APIs (Gemini Nano) provide zero-cost, instant inference for simple tasks. Transformers.js v4 brings a ground-up WebGPU runtime. WebNN provides a future path to NPU/GPU/CPU routing. The current three-tier cascade should evolve to accommodate these.
+**Motivation:** Chrome's built-in AI APIs (Gemini Nano) may provide a low-latency path for simple tasks, Transformers.js v4 brings a ground-up WebGPU runtime, and WebNN provides a future path to NPU/GPU/CPU routing. The current provider contract model should evolve to accommodate these without presenting any one path as the only cascade.
 
-**Target cascade:**
+**Target provider map:**
 
-| Tier | Engine | Cost | Latency | Quality | Availability |
-|------|--------|------|---------|---------|-------------|
-| 0 | Built-in (Gemini Nano) | Zero | Instant | Good for simple tasks | Chrome 138+ with flag |
-| 1 | WebLLM (WebGPU) | GPU memory | Seconds | Highest (grammar-constrained) | WebGPU required |
-| 2 | Transformers.js v4 (WASM/WebGPU) | CPU/GPU | Seconds | Good (portable) | Universal |
-| 3 | Heuristics | Zero | Instant | Task-dependent | Always |
+| Provider | Cost | Latency | Quality | Availability |
+|------|------|---------|---------|-------------|
+| Built-in browser model | Zero | Instant | Good for simple tasks | Browser and flag dependent |
+| Gemma / WebLLM | GPU memory | Seconds | Higher for synthesis or multimodal paths | WebGPU and model assets required |
+| Transformers.js v4 | CPU/GPU | Seconds | Good portable fallback | Browser/runtime dependent |
+| Heuristics | Zero | Instant | Task-dependent | Always |
 
-**Tier 0 integration:**
+**Built-in browser model integration:**
 ```typescript
 // Capability detection
 const capabilities = await ai.languageModel.capabilities();
@@ -639,7 +652,9 @@ if (capabilities.available === 'readily') {
 }
 ```
 
-Tier 0 is best for skills that need quick classification or extraction (opportunity-extractor, theme-clusterer) where grammar-constrained JSON is not critical. Tier 1 remains preferred for synthesis skills (capital-formation-brief, review-digest) where output quality matters most.
+Built-in browser models are best for skills that need quick classification or extraction where
+schema-constrained JSON is not critical. Gemma or WebLLM remain better fits for synthesis skills
+where output quality or multimodal capability matters most.
 
 **Transformers.js v4 migration path:**
 - WebGPU runtime (replaces ONNX WASM for supported browsers): ~3x faster on GPU
@@ -649,16 +664,16 @@ Tier 0 is best for skills that need quick classification or extraction (opportun
 
 **WebNN slot (future):**
 - W3C draft with 95 operations, routes to DirectML (Windows), CoreML (macOS), NNAPI (Android)
-- Near-zero adoption currently — keep a slot in the cascade but don't depend on it
+- Near-zero adoption currently — keep a provider slot but don't depend on it
 - When available, can auto-route to NPU for efficient inference on supported hardware
 
 **Capability detection order:**
-1. `ai.languageModel` → Tier 0 (built-in)
-2. `navigator.gpu` → Tier 1 (WebLLM WebGPU) or Tier 2 (Transformers.js v4 WebGPU)
-3. WebAssembly support → Tier 2 (Transformers.js WASM fallback)
-4. Always → Tier 3 (heuristics)
+1. Feature flag and `ai.languageModel` availability for built-in browser models
+2. `navigator.gpu` plus model/provider readiness for Gemma, WebLLM, or Transformers.js WebGPU paths
+3. WebAssembly support for Transformers.js WASM fallback
+4. Always: deterministic heuristics
 
-**Depends on:** Phase 2C (compositional prompt — tier-aware prompt sizing)
+**Depends on:** Phase 2C (compositional prompt — provider-aware prompt sizing)
 
 #### Phase 4D: Interop-Ready Tool Registry
 
@@ -716,7 +731,7 @@ function skillManifestToMcpTool(manifest: SkillManifest): McpToolDefinition {
 
 **Design principle:** Shape the registry now, defer the protocol implementation until WebMCP stabilizes. The cost of adding `mcpToolId` and `sideEffects` fields is near zero; the benefit is avoiding a later retrofit.
 
-**Future exploration: `just-bash` as a scripted skill runtime.** [`just-bash`](https://github.com/vercel-labs/just-bash) is a browser-capable simulated Bash environment with a virtual filesystem and opt-in networking. It is a plausible fit for **deterministic, local-only executable skills** that transform structured observation/context files into validated JSON outputs, and for **fixture-driven eval cases** where shell-style assertions (`jq`, `rg`, `sed`, `diff`) are useful. It should be treated as a bounded scripting/tool layer, not as a replacement for the inference cascade or the typed TypeScript action/permit pipeline. If explored, the first use cases should be:
+**Future exploration: `just-bash` as a scripted skill runtime.** [`just-bash`](https://github.com/vercel-labs/just-bash) is a browser-capable simulated Bash environment with a virtual filesystem and opt-in networking. It is a plausible fit for **deterministic, local-only executable skills** that transform structured observation/context files into validated JSON outputs, and for **fixture-driven eval cases** where shell-style assertions (`jq`, `rg`, `sed`, `diff`) are useful. It should be treated as a bounded scripting/tool layer, not as a replacement for the model-provider layer or the typed TypeScript action/permit pipeline. If explored, the first use cases should be:
 
 1. advisory or local-only scripted skills with no privileged side effects
 2. eval harness cases that materialize fixture input as files and score structured output
@@ -919,7 +934,7 @@ Phase 2E (context compaction)  ────────────────�
                                │
 Phase 4A + 4B (quota + model UX) ─────────────────────────── ← parallel, independent
                                │
-Phase 4C (four-tier cascade)   ────────────────────────────── ← depends on 2C (tier-aware prompts)
+Phase 4C (provider routing)    ────────────────────────────── ← depends on 2C (provider-aware prompts)
 Phase 4D (interop tool registry) ─────────────────────────── ← depends on 2C/2D (skill system)
                                │
 Phase 5A + 5B (portability)    ────────────────────────────── ← when native development begins
@@ -929,7 +944,7 @@ Phase 5A + 5B (portability)    ────────────────�
 
 **Tier 1 — Do Now (correctness + compliance):**
 - Phase 1A: CRDT correctness (data loss risk)
-- Phase 1B: Bundle WASM (Chrome Web Store blocker)
+- Phase 1B: Remove sandbox eval from model runtime (Chrome Web Store hardening)
 
 **Tier 2 — Do Next (architecture hygiene):**
 - Phase 3A: Dispatcher refactor (reduces friction for all subsequent work)
@@ -940,7 +955,7 @@ Phase 5A + 5B (portability)    ────────────────�
 - Phase 3B: Host capabilities (enables testing)
 
 **Tier 4 — Scale + Ecosystem:**
-- Phase 4A-4D: Storage, model UX, cascade, interop
+- Phase 4A-4D: Storage, model UX, provider routing, interop
 
 **Tier 5 — When Ready:**
 - Phase 5A-5B: Portability (triggered by native development decision)

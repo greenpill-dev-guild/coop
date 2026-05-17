@@ -117,7 +117,8 @@ The IndexedDB wrapper used for structured local persistence in the browser.
 
 ### Filecoin
 
-The durable archive substrate used for long-memory, provenance, and verifiable receipt chains.
+The optional live archive substrate used for long-memory, provenance, and verifiable receipt chains
+when live archive mode is configured and proved.
 
 ### Member Account
 
@@ -151,7 +152,8 @@ formed.
 
 ### Storacha
 
-The delegated upload layer Coop uses to push archive data toward Filecoin-backed durability.
+The delegated upload layer Coop uses for live archive data when operator configuration enables that
+path.
 
 ### Token Linting
 

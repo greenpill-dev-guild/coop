@@ -1,19 +1,25 @@
 ---
 title: "P2P And Sync Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/p2p-sync
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # P2P And Sync Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on peer-to-peer functionality, Yjs sync, relay behavior, connection states, and sync observability.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - Coop sync logic lives in `packages/shared/src/modules/coop/sync.ts`.
 - Receiver sync logic lives in `packages/shared/src/modules/receiver/sync.ts`.
 - Blob relay and peer transfer logic live in `packages/shared/src/modules/blob`.

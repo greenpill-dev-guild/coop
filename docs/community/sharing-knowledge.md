@@ -77,3 +77,9 @@ Communities do better when they can tell the difference between:
 They also do better when they can tell the difference between ordinary member work and protected
 operator work. Green Goods follows that split: members submit work, while trusted operators handle
 approvals, assessments, admin sync, and later Hypercert or Karma GAP packaging.
+
+## Where To Go Next
+
+- Read [AI Features](/ai-features) for how local analysis supports review without replacing it.
+- Read [Privacy & Security](/privacy-security) for the publish boundary and sync trust model.
+- Read [The Road Ahead](/road-ahead) for what is landed, next, and deliberately deferred.

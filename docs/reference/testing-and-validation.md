@@ -1,11 +1,18 @@
 ---
 title: "Testing & Validation"
 slug: /reference/testing-and-validation
+audience: builder
+doc_type: runbook
+status: canonical
+validation_snapshot: "2026-04-19"
+docs_reviewed: "2026-05-16"
 ---
 
 # Coop Testing And Validation
 
-Date: April 20, 2026
+<DocMeta />
+
+Docs review date: May 16, 2026
 
 This document maps the release-facing validation commands to the actual suite graph in
 `scripts/validate.ts`. The canonical stage-based checklist lives in
@@ -14,14 +21,15 @@ boundary lives in [Current Release Status](/reference/current-release-status). T
 deployment steps live in [Demo & Deploy Runbook](/reference/demo-and-deploy-runbook). Operator-only
 second-gate guidance lives in [Live Rails Operator Runbook](/reference/live-rails-operator-runbook).
 
-As of April 19, 2026, the automated mock-first release bar is green. The latest staged-launch
-validation snapshot is:
+The latest recorded staged-launch validation snapshot is from April 19, 2026:
 
 - `bun run test:coverage` green at `86.56 / 78.02 / 87.19 / 86.56`
   (statements / branches / functions / lines)
 - `bun run build` green
 - `bun run validate:store-readiness` green
 - `bun run validate:production-readiness` green
+
+Rerun the relevant gate on the current tree before using that snapshot as release signoff.
 
 Manual real-Chrome confirmation of popup `Capture Tab` and `Screenshot` success paths remains
 required before a public Chrome Web Store release candidate is called fully signed off.
@@ -252,10 +260,11 @@ Commonly needed:
 
 Important:
 
-- `bun run validate:archive-live` falls back to an in-process static delegation when the trusted-node
-  archive env is missing.
-- Treat that fallback as a wiring check only. Use real trusted-node archive env when you need an
-  actual live-archive proof.
+- `bun run validate:archive-live` requires the trusted-node archive env before it can prove live
+  archive readiness.
+- An in-process static delegation fallback is available only when
+  `COOP_ALLOW_ARCHIVE_PROBE_FALLBACK=true`; treat that explicit fallback as a wiring check, not a
+  live-archive proof.
 
 ### Full Live-Rails Gate
 

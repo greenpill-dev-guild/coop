@@ -33,7 +33,7 @@ flowchart TD
     Shared --> Sync["Syncs to peers\nvia P2P"]
     Shared --> ArchiveQ{"Archive\nrequested?"}
     ArchiveQ -->|No| PeerOnly["Lives in\npeer network only"]
-    ArchiveQ -->|Yes| Durable["Archived to Filecoin\nwith receipt"]
+    ArchiveQ -->|Yes| Durable["Archive receipt created\nlive Filecoin only in live mode"]
 ```
 
 ## Passkey-First Identity
@@ -113,3 +113,9 @@ hardware-backed secure storage available to browser extensions.
 
 The important part is that the system's trust boundaries are meant to stay visible instead of being
 hidden inside a black box.
+
+## Where To Go Next
+
+- Read [Sharing Knowledge](/sharing-knowledge) for the practical publish boundary.
+- Read [Creating A Coop](/creating-a-coop) for trusted-member and operator expectations during setup.
+- Read the [Coop Privacy Policy](/privacy-policy) for the formal Chrome Web Store-facing disclosure.

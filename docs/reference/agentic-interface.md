@@ -13,7 +13,7 @@ How Coop's agent communicates with the user through the UI.
 
 ## Current Architecture
 
-Coop's agent operates as a 16-skill pipeline in the MV3 background service worker:
+Coop's agent operates as a registered skill graph in the MV3 extension runtime:
 
 ```text
 Observe → Plan → Execute → Record
@@ -21,7 +21,7 @@ Observe → Plan → Execute → Record
 
 1. **Observe**: Capture events (tab roundup, audio transcript, heartbeat) create `AgentObservation` records in Dexie
 2. **Plan**: The agent cycle selects skills for each observation, builds an `AgentPlan`
-3. **Execute**: Skills run via a 3-tier inference cascade (heuristic → WebLLM → cloud fallback), producing `SkillRun` records with validated outputs
+3. **Execute**: Skills run via explicit local provider contracts and deterministic fallback, producing `SkillRun` records with validated outputs
 4. **Record**: Outputs become `ReviewDraft` entries, `ActionProposal` bundles, or `AgentMemory` records
 
 The agent is governed by the coop's constitutional values (`coop.soul`) and operates within graduated authority tiers (Safe multisig → session keys → member accounts).
@@ -44,10 +44,10 @@ Inspired by the [AG-UI (Agent-User Interaction Protocol)](https://docs.ag-ui.com
 
 | Event | AG-UI Analog | Emitted From | Purpose |
 |-------|-------------|-------------|---------|
-| `AGENT_CYCLE_STARTED` | `RunStarted` | `agent-runner.ts` | Agent began processing observations |
-| `AGENT_CYCLE_FINISHED` | `RunFinished` | `agent-runner.ts` | Cycle complete with metrics |
+| `AGENT_CYCLE_STARTED` | `RunStarted` | `runtime/agent/runner.ts` | Agent began processing observations |
+| `AGENT_CYCLE_FINISHED` | `RunFinished` | `runtime/agent/runner.ts` | Cycle complete with metrics |
 | `AGENT_STATE_DELTA` | `StateDelta` | `agent.ts:notifyProactiveDelta()` | New drafts/actions/digests produced |
-| `AGENT_CYCLE_ERROR` | `RunError` | `agent-runner.ts` | Cycle caught a top-level error |
+| `AGENT_CYCLE_ERROR` | `RunError` | `runtime/agent/runner.ts` | Cycle caught a top-level error |
 
 ### Transport
 

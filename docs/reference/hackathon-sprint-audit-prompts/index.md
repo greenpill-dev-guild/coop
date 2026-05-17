@@ -1,25 +1,33 @@
 ---
 title: "Hackathon Sprint Audit Prompt Pack"
 slug: /reference/hackathon-sprint-audit-prompts
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Hackathon Sprint Audit Prompt Pack
 
-Date: April 1, 2026
+<DocMeta />
 
-This pack turns the current post-hackathon stabilization concerns into seven standalone, repo-aware
-audit prompts. Each prompt is written for a Codex or Claude style repo agent with direct read access
-to `/Users/afo/Code/greenpill/coop`.
+Snapshot date: April 1, 2026
+
+This pack preserves the April 1, 2026 post-hackathon stabilization prompts. Treat it as a dated
+review snapshot, not as current validation truth. Refresh commands, coverage, file paths, and repo
+facts against the live tree before reusing any prompt.
+
+Each prompt is written for a Codex or Claude style repo agent with direct read access to
+`/Users/afo/Code/greenpill/coop`.
 
 The prompts are designed to produce an `Audit Memo`, not a vague brainstorm and not an implementation
 plan without evidence.
 
-## Current Repo Context
+## Snapshot Repo Context
 
-Use these facts as the current baseline, not as proof that every surface is healthy:
+Use these facts as historical context, not as proof that every surface is healthy today:
 
 - `bun run validate quick` passed on April 1, 2026.
-- The current root Vitest coverage summary is about `86.1%` lines, `86.1%` statements,
+- The April 1 root Vitest coverage summary was about `86.1%` lines, `86.1%` statements,
   `86.23%` functions, and `77.04%` branches.
 - The repo is a Bun monorepo with a large shared-domain core in `packages/shared`, extension
   runtime and skill surfaces in `packages/extension`, websocket and Yjs server code in

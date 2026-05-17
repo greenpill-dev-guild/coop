@@ -1,9 +1,15 @@
 ---
 title: "Extension UI Redesign Plan"
 slug: /reference/extension-ui-redesign-plan
+audience: builder
+doc_type: design
+status: historical
+last_verified: "2026-03-22"
 ---
 
 # Extension UI Redesign Plan
+
+<DocMeta />
 
 :::note
 

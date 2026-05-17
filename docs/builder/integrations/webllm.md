@@ -5,12 +5,13 @@ slug: /builder/integrations/webllm
 
 # WebLLM
 
-WebLLM is the highest-capability local inference tier in Coop's browser-native cascade.
+WebLLM is one of Coop's browser-native local inference providers.
 
 ## Why Coop Uses It
 
 WebLLM lets the product attempt richer synthesis inside the browser when the device has the right
-WebGPU support. That keeps the AI story consistent with the local-first product posture.
+WebGPU support. That keeps the AI story consistent with the local-first product posture while still
+leaving room for Gemma, Transformers.js, and deterministic fallback paths.
 
 ## Where It Fits
 
@@ -20,7 +21,8 @@ WebLLM is best for:
 - higher-value draft shaping
 - contexts where the browser can afford model load and GPU use
 
-It is not the only path. Coop still keeps a fallback ladder through transformers.js and heuristics.
+It is not the only path. Coop uses explicit provider contracts across Gemma, WebLLM,
+Transformers.js, and heuristics.
 
 ## Builder Concerns
 

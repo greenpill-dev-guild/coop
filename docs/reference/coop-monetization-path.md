@@ -13,7 +13,9 @@ The framing here is deliberately disciplined:
 - monetization should align with real coordination value
 - value capture should not depend on obscuring power, fees, or lock-in
 
-For current grant targets, see [Grant Landscape](/reference/grant-landscape-2026-03).
+For reusable funding language, see the
+[Grant Framing Snapshot](/reference/grant-landscape-2026-03). It is not a current opportunity
+matrix.
 
 ## 1. Monetization Principle
 
@@ -225,5 +227,5 @@ The near-term story should be:
 ## 11. Related Docs
 
 - [Coop Strategy](/reference/coop-strategy)
-- [Grant Landscape](/reference/grant-landscape-2026-03)
+- [Grant Framing Snapshot](/reference/grant-landscape-2026-03)
 - [Coordination Integrity Review Framework](/reference/coordination-integrity-review-framework)

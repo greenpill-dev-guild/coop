@@ -5,12 +5,13 @@ slug: /builder/integrations/filecoin
 
 # Filecoin
 
-Filecoin is Coop's durability and provenance layer.
+Filecoin is Coop's optional live durability and provenance layer.
 
 ## Why Coop Uses It
 
-Coop wants archive to mean more than "we made a backup." Filecoin is used to give published
-artifacts and snapshots a stronger long-memory story with receipts the group can inspect later.
+Coop wants archive to mean more than "we made a backup." When live archive mode is enabled and
+proved, Filecoin can give published artifacts and snapshots a stronger long-memory story with
+receipts the group can inspect later.
 
 ## What Belongs Here
 
@@ -23,5 +24,5 @@ Filecoin is the right place to think about:
 
 ## What Does Not Belong Here
 
-Storacha handles the delegated upload and operational handoff. Filecoin is the durability layer
-beneath that.
+Storacha handles the delegated upload and operational handoff. Filecoin is the live durability layer
+beneath that when the operator has configured the live archive path.

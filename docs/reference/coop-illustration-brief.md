@@ -413,11 +413,12 @@ LANDING PAGE (desktop, full-width)
 > **Manage tab:** A gear or wrench shape combined with a nest outline — settings/admin.
 
 #### P20 — Archive / Persistence
-**Where:** When content is archived to permanent storage (Filecoin)
+**Where:** When content moves through the explicit archive/provenance path; live Filecoin permanence
+only applies when live archive mode is enabled and proved
 **Dimensions:** 160×120px
 **Emotional tone:** Permanence, trust, safekeeping
 
-> **Scene:** A chicken carefully placing an egg into a stone cellar or vault. The vault has a small green checkmark carved or glowing on it. Below ground level, visible root systems or geological layers suggest deep, permanent storage. Above ground is warm and green; below is cool stone — the contrast reinforces "this is saved for good."
+> **Scene:** A chicken carefully placing an egg into a stone cellar or vault. The vault has a small green checkmark carved or glowing on it. Below ground level, visible root systems or geological layers suggest an archive/provenance path. Above ground is warm and green; below is cool stone — the contrast reinforces "this is saved with a receipt."
 
 ---
 

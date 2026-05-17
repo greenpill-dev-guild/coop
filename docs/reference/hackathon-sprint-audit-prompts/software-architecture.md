@@ -1,19 +1,25 @@
 ---
 title: "Software Architecture Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/software-architecture
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Software Architecture Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on software architecture quality across SOLID, DDD, KISS, DRY, and event-driven boundaries.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - Core domain logic is intended to live in `@coop/shared`.
 - Surface code lives mainly in `packages/app` and `packages/extension`.
 - Runtime message boundaries are significant in the extension architecture.

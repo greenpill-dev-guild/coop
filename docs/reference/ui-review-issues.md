@@ -2,9 +2,15 @@
 title: "UI Review Issues"
 slug: /reference/ui-review-issues
 sidebar_label: UI Review Issues
+audience: builder
+doc_type: reference
+status: active
+last_verified: "2026-03-22"
 ---
 
 # UI Review - Issues, Regressions & Confusion Areas
+
+<DocMeta />
 
 **Date**: 2026-03-13
 **Branch**: `release/0.0`

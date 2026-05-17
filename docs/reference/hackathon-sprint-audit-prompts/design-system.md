@@ -1,19 +1,25 @@
 ---
 title: "Design System Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/design-system
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Design System Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on design system quality, component reuse, token discipline, accessibility, and consistency across app and extension surfaces.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - Shared design tokens live in `packages/shared/src/styles/tokens.css`.
 - App-level components live in `packages/app/src/components`.
 - Extension shared UI primitives live in `packages/extension/src/views/shared`.

@@ -1,9 +1,15 @@
 ---
 title: "Product Requirements"
 slug: /reference/product-requirements
+audience: builder
+doc_type: historical
+status: historical
+last_verified: "2026-03-27"
 ---
 
 # Coop - Product Requirements Document
+
+<DocMeta />
 
 **Version**: 0.0 (Pre-Release)
 **Last Updated**: 2026-03-27
@@ -29,7 +35,8 @@ Coop is a **browser-first, local-first knowledge commons** that helps communitie
 Enable communities to coordinate around knowledge, including funding leads, evidence, governance insights, and ecosystem signals, without extraction, surveillance, or centralized gatekeeping.
 
 ### Alignment
-Coop implements the Ethereum Foundation's March 2026 Mandate (CROPS: Censorship Resistance, Open Source, Privacy, Security) through passkey-first identity, P2P sync, local-first data, and durable Filecoin archiving.
+Coop aligns with the Ethereum Foundation's March 2026 Mandate framing through passkey-first
+identity, P2P-first sync, local-first data, and optional archive/provenance rails.
 
 #### Auth Model Glossary
 
@@ -381,7 +388,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 **Flow**:
 1. Opt in to local inference (settings toggle)
-2. WebGPU check → load Qwen2.5-0.5B-Instruct model in worker
+2. Runtime capability check -> use an available local provider
 3. Click "Refine" on a draft
 4. Worker generates: improved title, summary, category, tags
 5. Results shown as suggestions (not auto-applied)
@@ -526,7 +533,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 #### US-6.1: Archive Artifact
 **As a** trusted member,
-**I want to** archive an artifact to Storacha/Filecoin,
+**I want to** archive an artifact through Coop's explicit archive path,
 **So that** important knowledge is durably preserved.
 
 **Flow**:
@@ -541,12 +548,13 @@ Handles all business logic, storage, and message routing for the extension. Not 
 
 **Archive Modes**:
 - `mock`: Generates pseudo-CIDs, no network call
-- `live`: Uploads to Storacha, tracks Filecoin deals
+- `live`: Uploads through the configured archive provider and may track Filecoin deal status when
+  that operator configuration is enabled
 
 **Acceptance Criteria**:
 - Archive creates verifiable receipt with CID
 - Receipt includes gateway URL for retrieval
-- Filecoin status trackable (offered → indexed → sealed)
+- Filecoin status is trackable only for live archive configurations that support it
 - Failed archives show clear error with retry option
 
 ---
@@ -690,7 +698,7 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | `failed` | Red pill | Sync error (with retry option) |
 
 **Acceptance Criteria**:
-- Sync works via WebRTC (P2P, no central server)
+- Sync prefers WebRTC P2P and uses signaling/server-assisted paths where required
 - Offscreen document keeps sync alive when sidepanel closed
 - Failed syncs show error message + retry button
 - Notification sent on first successful sync
@@ -756,7 +764,8 @@ Handles all business logic, storage, and message routing for the extension. Not 
 | `ritual-review-due` | Weekly review cadence triggered |
 | `green-goods-*` | Garden operations needed |
 
-**Agent Skills** (16 registered, execution order):
+**Agent Skills** (historical March 2026 inventory; use [Agent Harness](/reference/agent-harness)
+for the current registered skill count and provider model):
 1. `opportunity-extractor`: Identifies funding/opportunity signals
 2. `grant-fit-scorer`: Scores grant fit
 3. `capital-formation-brief`: Generates capital formation summaries

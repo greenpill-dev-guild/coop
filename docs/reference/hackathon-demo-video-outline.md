@@ -29,7 +29,7 @@ The demo is built around these actions:
 4. invite a member and explain the local-first, peer-to-peer trust model
 5. connect the coop to Green Goods
 6. show bounded onchain governance and capital-allocation behavior
-7. close with Filecoin backup and proof
+7. close with an explicit archive receipt path
 
 The point is not just "look at the features." The point is "look at the loop."
 
@@ -76,7 +76,7 @@ That gives enough room for:
 - the multi-coop routing beat
 - the invite and trust beat
 - the Green Goods governance beat
-- the Filecoin close
+- the archive receipt close
 
 ## 5. Beat-By-Beat Flow
 
@@ -245,9 +245,9 @@ Suggested duration: 35 to 50 seconds
 
 #### Talk track
 
-> Coop data stays local-first and syncs peer-to-peer where appropriate, but it can also be backed
-> up through a decentralized Filecoin archive path. That gives the group durable memory and proof
-> instead of leaving its knowledge trapped in ephemeral tools.
+> Coop data stays local-first and syncs peer-to-peer where appropriate, but it can also move through
+> an explicit archive path. In mock mode, this shows the receipt and provenance flow; in live archive
+> mode, it can add Filecoin-backed durability for approved knowledge.
 
 #### If encrypted archive is enabled
 
@@ -266,7 +266,7 @@ Say:
 #### Proof point
 
 - local-first and long-memory can coexist
-- the close lands on durable record, not only interface polish
+- the close lands on an explicit archive/provenance path, not only interface polish
 
 ### Beat 9. Future Coda
 
@@ -311,7 +311,7 @@ If you need a single uninterrupted narration pass:
 - local-first boundary
 - peer-to-peer shared state
 - bounded session-key execution
-- Filecoin durability and proof
+- archive receipt versus live Filecoin proof
 
 ## 8. Related Docs
 

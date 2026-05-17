@@ -109,11 +109,12 @@ infrastructure, while still keeping policy, role, and execution scope legible.
 
 Finally, we close on the archive path.
 
-Coop data stays local-first and syncs peer-to-peer where appropriate, but it can also be backed up
-through a decentralized Filecoin archive path.
+Coop data stays local-first and syncs peer-to-peer where appropriate, but it can also move through
+an explicit archive path. In live archive mode, that path can include Filecoin-backed durability.
 
 That means the coop's knowledge does not have to disappear into ephemeral tools, screenshots, and
-private memory. It can become durable, portable, and provable.
+private memory. It can become portable and, when the live archive path is enabled and proved,
+durable and provable.
 
 If encrypted archive is enabled in the path we are showing, then durability also does not require
 giving up control over the contents.
@@ -124,11 +125,12 @@ So the full loop is:
 
 create the coop, round up messy knowledge, route that knowledge into the right collective contexts,
 invite people into the shared trust boundary, connect to Green Goods for onchain coordination and
-capital formation, and then back the coop's memory up through Filecoin.
+capital formation where that mode is enabled, and then archive the coop's memory through an explicit
+receipt path.
 
 That is Coop.
 
-It turns messy knowledge into opportunity, coordinated governance, and durable public memory.
+It turns messy knowledge into opportunity, coordinated governance, and reviewed shared memory.
 
 ### Future Coda
 

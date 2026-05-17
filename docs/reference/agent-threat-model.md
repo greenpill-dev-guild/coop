@@ -18,9 +18,11 @@ implementation work.
 
 **Vitalik's concern**: Cloud model providers receive, store, and can monetize private data.
 
-**Coop posture: Mitigated by design.** All inference runs locally via the three-tier cascade
-(WebGPU → WASM → heuristic rules). No capture content, observation, or skill output ever leaves
-the device for inference. There is no cloud LLM dependency.
+**Coop posture: Mitigated by design, with model-asset caveats.** Inference is designed to run locally
+through browser-hosted providers such as Gemma, WebLLM, Transformers.js, and deterministic
+heuristics. Capture content, observations, and skill outputs should not leave the device for model
+inference, but local-model assets may still need to be downloaded or cached before offline inference
+is available.
 
 **Existing docs**: [Agent Harness — Inference Layer](/reference/agent-harness)
 
@@ -111,17 +113,18 @@ requires explicit approval for publish, archive, and Safe operations.
 potential backdoors are unverifiable. "A hidden mechanism deliberately trained into the LLM" could
 activate under specific conditions.
 
-**Coop posture: Undocumented risk.** The harness uses Qwen2-0.5B-Instruct (WebLLM, q4f16_1) and
-Qwen2.5-0.5B-Instruct (Transformers.js, q4). These are Alibaba-released models. No documented
-rationale exists for why these models were selected, what verification was performed, or what the
-backdoor risk posture is.
+**Coop posture: Undocumented risk.** The harness can use multiple local model families, including
+Gemma, WebLLM-hosted models, and Transformers.js models. No complete documented rationale exists for
+why each provider or model is selected, what verification was performed, or what the backdoor risk
+posture is.
 
 **Existing docs**: [Alibaba PageAgent Comparison](/reference/alibaba-page-agent-comparison)
 (compares agent architectures, not model provenance)
 
 **Gaps to address**:
-- **Model selection criteria doc**: Why Qwen2? What alternatives were evaluated? What properties
-  matter (license, size, quantization support, WebGPU compatibility, instruction following)?
+- **Model selection criteria doc**: Which providers and models are allowed? What alternatives were
+  evaluated? What properties matter (license, size, quantization support, WebGPU compatibility,
+  instruction following, multimodal support)?
 - **Model hash verification**: Pin exact model file hashes in the build config. Verify on load
   that the model hasn't been tampered with.
 - **Backdoor risk assessment**: At 0.5B parameters, the capacity for sophisticated backdoors is

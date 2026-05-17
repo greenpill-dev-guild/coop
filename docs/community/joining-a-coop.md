@@ -68,3 +68,10 @@ Join is designed to avoid over-sharing:
 
 Joining a coop should feel like entering a shared workspace, not surrendering control over all of
 your private context.
+
+## Where To Go Next
+
+- Read [Sharing Knowledge](/sharing-knowledge) to understand what becomes shared coop memory.
+- Read [Privacy & Security](/privacy-security) for the local-first boundary and sync model.
+- Use the [Glossary](/glossary) when product terms like `Chickens`, `Coops`, `Roost`, or `Nest`
+  are unfamiliar.

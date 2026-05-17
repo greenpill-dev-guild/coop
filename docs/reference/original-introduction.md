@@ -28,11 +28,13 @@ layer and only leaves your device when you publish or sync it.
 ## How it works
 
 1. **Capture**: Round up browser tabs with a shortcut. Record audio, snap photos, attach files, or share links from your phone via the companion PWA.
-2. **Refine**: An in-browser AI agent analyzes captures through a 16-skill pipeline, extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. All inference runs locally via WebGPU/WASM. Nothing leaves the browser.
+2. **Refine**: An in-browser AI agent analyzes captures through the registered skill graph,
+   extracting opportunities, scoring grant fit, clustering themes, and drafting briefs. Inference is
+   designed to run locally after the needed model assets are available.
 3. **Review**: Members review candidates and drafts in the popup and Chickens before anything becomes shared.
 4. **Share**: Publish to a coop, a shared space backed by a Safe multisig on Arbitrum, syncing
-   through Coop's local-first Yjs layer and archived to Filecoin via Storacha when a group requests
-   durable proof. Passkey identity, no wallet required.
+   through Coop's local-first Yjs layer and optionally moving through live archive rails when a group
+   requests durable proof. Passkey identity, no wallet required.
 
 Through its Green Goods integration, coops can also bootstrap on-chain gardens, submit member work, run operator-side approvals and assessments, and package approved work into Hypercert and Karma GAP workflows.
 
@@ -55,10 +57,12 @@ Through its Green Goods integration, coops can also bootstrap on-chain gardens, 
 
 ## What's novel
 
-- **The agent runs in your browser.** Three-tier inference cascade (WebGPU, WASM, heuristics) with a skill DAG that chains analysis steps. No API keys, no cloud calls, no data exfiltration.
+- **The agent runs in your browser.** Local provider contracts and deterministic fallbacks chain
+  analysis steps while keeping capture content out of cloud LLM inference.
 - **Capture from anywhere.** Desktop tabs and mobile sensors (mic, camera, file picker) feed the same pipeline. Pair your phone once, capture on the go, review on desktop.
 - **Zero-knowledge participation.** Publish anonymously via Semaphore proofs. Prove you're a member without revealing who you are. ERC-5564 stealth addresses for private on-chain interactions.
-- **Filecoin as knowledge provenance.** Not backup, proof. Every archived artifact carries a verifiable receipt chain linking capture to human review to permanent storage.
+- **Filecoin as optional knowledge provenance.** Archive receipts can link capture to human review and
+  durable storage when live archive mode is explicitly enabled and proved.
 - **Passkey-first identity** bridged to Safe smart accounts (ERC-4337). The UX is WebAuthn, the backend is a real multisig.
 
 ## Standards

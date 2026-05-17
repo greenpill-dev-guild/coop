@@ -15,7 +15,7 @@ Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claud
 
 | | **Claude Code** | **Coop** |
 |---|---|---|
-| **Runtime** | Cloud LLM (Claude API) with streaming tool use | Local-first: Heuristic -> ONNX Transformers -> WebGPU/WebLLM |
+| **Runtime** | Cloud LLM (Claude API) with streaming tool use | Local-first provider contracts across heuristics, Transformers.js, WebLLM, and Gemma |
 | **Loop** | User prompt -> LLM reasons -> emits tool_use -> executor runs tool -> result fed back -> LLM continues until done | Observation (event) -> prioritize -> select skills -> build prompt -> local inference -> apply output |
 | **Trigger** | User-initiated (typed prompt) | Event-driven (draft saved, capture completed, tab batch ready, scheduled conditions) |
 | **Concurrency** | Sequential within one agent, parallel via subagent spawning | Batch up to 8 observations per cycle, sequential skill execution within each |
@@ -31,11 +31,11 @@ Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claud
 | **Registry** | Built-in tools (Read, Edit, Bash, Grep, Glob, Write) + MCP dynamic tools + deferred lazy-loading | `import.meta.glob()` at build time, validated on load |
 | **Dispatch** | LLM selects tools by name from schema list; executor pattern-matches | `selectSkillIdsForObservation()` filters by trigger type, topological sort on `depends/provides` |
 | **Schema** | Standard JSON Schema with `required`, types, descriptions | Custom manifest: `triggers`, `inputSchemaRef`, `outputSchemaRef`, `allowedTools`, `model` preference |
-| **Count** | ~15 built-in + unlimited MCP | 17 domain-specific skills |
+| **Count** | ~15 built-in + unlimited MCP | 19 domain-specific skills in the current source inventory |
 
 ### Patterns to adopt from Claude Code
 
-- **Deferred tool loading** — Claude Code lazy-loads tool schemas via `ToolSearch` to keep the initial context small. Coop loads all 17 skill manifests at build time. For scale, consider lazy-loading skill instructions.
+- **Deferred tool loading** — Claude Code lazy-loads tool schemas via `ToolSearch` to keep the initial context small. Coop loads skill manifests at build time. For scale, consider lazy-loading skill instructions.
 - **MCP as extensibility protocol** — Claude Code's MCP integration lets *anyone* add tools without modifying core. Coop skills are baked in. An MCP-like plugin protocol would let coop members bring their own skills.
 
 ## 3. Permission Model
@@ -88,7 +88,9 @@ Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claud
 
 ## 7. What Coop Does That Claude Code Doesn't
 
-1. **Local-first inference cascade** — The heuristic -> ONNX -> WebGPU fallback chain is unique. Claude Code is 100% cloud-dependent. Major differentiator for privacy and offline capability.
+1. **Local-first provider routing** — Coop can keep capture content out of cloud LLM inference by
+   routing through browser-hosted providers and deterministic fallbacks. That remains a major
+   differentiator for privacy and offline-capable workflows once model assets are present.
 
 2. **Quality-based self-regulation** — Tracking confidence trends and stalling when quality degrades. Claude Code has no equivalent — if the LLM gives bad output, it just keeps going.
 
@@ -98,7 +100,7 @@ Analysis date: 2026-03-31. Based on Claude Code OSS (github.com/anthropics/claud
 
 5. **Scoped memory with priority ranking** — Member > coop > pattern type hierarchy with stale decay is more nuanced than Claude Code's flat memory system.
 
-6. **Domain-specific skill pipeline** — 17 skills purpose-built for opportunity extraction, grant scoring, ecosystem analysis. Claude Code's tools are generic (read file, edit file, run command).
+6. **Domain-specific skill graph** — 19 source-registered skills purpose-built for opportunity extraction, grant scoring, ecosystem analysis, Green Goods, ERC-8004, and knowledge hygiene. Claude Code's tools are generic (read file, edit file, run command).
 
 ## 8. Actionable Adoption Roadmap
 

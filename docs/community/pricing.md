@@ -43,8 +43,8 @@ remain free for individuals and small groups.
 
 **Paid value accrues at the coordination layer:**
 
-- **Archive permanence**: Filecoin-anchored snapshots beyond a free tier could carry a per-snapshot
-  or per-GB cost, covering Storacha storage fees.
+- **Archive permanence**: Explicit archive snapshots beyond a free tier could carry a per-snapshot
+  or per-GB cost, covering storage and live archive-provider fees when that mode is enabled.
 - **Operator capabilities**: Trusted-node features (scheduled capture, background sync, advanced
   session-key management) could be part of an operator subscription.
 - **Community coop hosting**: Larger coops with many members, persistent sync, and shared board
@@ -69,5 +69,8 @@ will be revisited as the framework stabilizes externally.
 Today, Coop is best understood as an actively developed coordination product with an open codebase,
 an early-access installation posture, and a growing public docs surface.
 
-If that is the stage you want, the best next pages are [How It Works](/how-it-works),
-[Creating A Coop](/creating-a-coop), and [Builder Getting Started](/builder/getting-started).
+## Where To Go Next
+
+- Read [How It Works](/how-it-works) for the core product loop.
+- Read [Creating A Coop](/creating-a-coop) if you are evaluating Coop for a group.
+- Read [Builder Getting Started](/builder/getting-started) if you want to install or test the current build.

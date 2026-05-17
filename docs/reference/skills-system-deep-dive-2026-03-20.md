@@ -7,6 +7,13 @@ slug: /reference/skills-system-deep-dive-2026-03-20
 
 Date: 2026-03-20
 
+:::note
+
+This is a dated inspection memo. Use [Agent Harness](/reference/agent-harness) for the current
+provider contracts, registered skill count, and runtime file paths.
+
+:::
+
 ## Scope
 
 This memo analyzes Coop's current skill system from four angles:
@@ -20,12 +27,12 @@ This is based on direct inspection of the extension runtime, shared schemas, cur
 
 ## Files Reviewed
 
-- `packages/extension/src/runtime/agent-registry.ts`
-- `packages/extension/src/runtime/agent-runner.ts`
-- `packages/extension/src/runtime/agent-harness.ts`
-- `packages/extension/src/runtime/agent-knowledge.ts`
-- `packages/extension/src/runtime/agent-models.ts`
-- `packages/extension/src/runtime/agent-output-handlers.ts`
+- `packages/extension/src/runtime/agent/registry.ts`
+- `packages/extension/src/runtime/agent/runner.ts`
+- `packages/extension/src/runtime/agent/harness.ts`
+- `packages/extension/src/runtime/agent/knowledge.ts`
+- `packages/extension/src/runtime/agent/models.ts`
+- `packages/extension/src/runtime/agent/output-handlers.ts`
 - `packages/extension/src/background/handlers/agent.ts`
 - `packages/extension/src/views/Sidepanel/operator-sections.tsx`
 - `packages/shared/src/contracts/schema.ts`
@@ -49,8 +56,8 @@ The key distinction is this:
 The biggest implementation gap is that bundled executable `SKILL.md` files are currently required by the registry but are not actually used by the runner when constructing prompts. In practice, executable skill behavior is driven by:
 
 - `skill.json`
-- hard-coded prompt assembly in `agent-runner.ts`
-- hard-coded output handling branches in `agent-runner.ts`
+- prompt assembly in `packages/extension/src/runtime/agent/runner-skills-prompt.ts`
+- output handling in the split `packages/extension/src/runtime/agent/output-handlers*.ts` modules
 - hard-coded schema unions in `@coop/shared`
 
 So today, Coop's "skill system" is best understood as:
@@ -104,7 +111,7 @@ They are:
 - triggered by `AgentObservation`
 - selected by trigger
 - ordered by DAG dependencies
-- run through the local inference cascade
+- run through local provider contracts and deterministic fallback
 - converted into drafts or action proposals
 
 #### External knowledge skills
@@ -385,13 +392,13 @@ That makes them first-class citizens in Coop's governance model.
 
 For a genuinely new executable skill, you likely need to update:
 
-- `packages/shared/src/contracts/schema.ts`
+- `packages/shared/src/contracts/schema-*.ts`
   add trigger enum and/or output schema ref union
 - `packages/shared/src/modules/agent/agent.ts`
   register output schema validation and any draft helpers
 - `packages/extension/src/skills/<skill-id>/skill.json`
 - `packages/extension/src/skills/<skill-id>/SKILL.md`
-- `packages/extension/src/runtime/agent-runner.ts`
+- `packages/extension/src/runtime/agent/output-handlers*.ts`
   add output handling and any side effects
 - observation emitters if the trigger is new
 - tests
@@ -648,7 +655,7 @@ This is the best scalability move for first-party skill growth.
 Goal:
 
 - one handler module per output schema or per skill family
-- minimal branching in `agent-runner.ts`
+- minimal branching in the runner and output dispatch path
 - clearer path for adding new skill types
 
 ### 4. Enforce the manifest fields that already exist

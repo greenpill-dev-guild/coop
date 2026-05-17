@@ -1,9 +1,15 @@
 ---
 title: "Coop OS Architecture"
 slug: /reference/coop-os-architecture-vnext
+audience: builder
+doc_type: historical
+status: historical
+last_verified: "2026-03-15"
 ---
 
 # Coop V1 Build Plan
+
+<DocMeta />
 
 :::note
 
@@ -15,10 +21,11 @@ landing-only app behavior describe an earlier build phase. Use
 
 :::
 
-**Status**: Canonical v1 plan
+**Status**: Historical v1 build plan
 **Updated**: 2026-03-15
 **Build Context**: PL Genesis hackathon prototype
-**Document Role**: Single source of truth for the first Coop implementation
+**Document Role**: Historical planning context for the first Coop implementation, not the current
+source of truth
 
 ---
 
@@ -180,15 +187,15 @@ These were not part of the locked prototype loop. Items marked *(since shipped)*
 - encrypted archive workflows for sensitive content
 - full Green Goods garden binding
 - built-in API-key-based LLM integrations
-- ~~autonomous agent execution~~ *(since shipped -- agent harness with 16-skill pipeline, 3-tier inference)*
-- ~~session-key based transactions~~ *(since shipped -- session module with time-bounded capabilities)*
-- ~~ZK membership proofs~~ *(since shipped -- privacy module with Semaphore v4 proofs and anonymous publishing)*
-- ~~stealth addresses~~ *(since shipped -- stealth module with ERC-5564 secp256k1 stealth addresses)*
-- ~~action approval workflows~~ *(since shipped -- policy module with typed EIP-712 action bundles, replay protection, bounded executor)*
-- ~~execution permits~~ *(since shipped -- permit module with delegated action enforcement and privilege logs)*
-- ~~operator/anchor runtime~~ *(since shipped -- operator module with anchor capability and privileged action logging)*
-- ~~on-chain agent registry~~ *(since shipped -- ERC-8004 module with identity registration, reputation, and agent manifests)*
-- ~~self-hosted API server~~ *(since shipped -- packages/api with Hono + Bun, WebSocket signaling relay, deployed to Fly.io)*
+- autonomous agent execution *(now represented by the current agent harness and registered skill graph; see Agent Harness for current provider details)*
+- session-key based transactions *(module and probes exist, but live use remains an operator-gated readiness path)*
+- ZK membership proofs *(privacy module exists; product exposure depends on the current action map)*
+- stealth addresses *(stealth module exists; product exposure depends on the current action map)*
+- action approval workflows *(policy module exists; high-stakes execution remains explicit and reviewable)*
+- execution permits *(permit module exists; live use remains scoped by operator configuration)*
+- operator/anchor runtime *(operator module exists; do not treat it as public-build default behavior)*
+- on-chain agent registry *(ERC-8004 module exists; live registry behavior is a separate live-rails gate)*
+- self-hosted API server *(packages/api provides Hono + Bun signaling and sync support)
 - end-user skill management UI
 
 The app package started as landing-page-only but now also hosts the receiver PWA shell.

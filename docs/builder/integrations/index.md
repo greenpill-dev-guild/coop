@@ -29,7 +29,7 @@ page is the map before the deeper integration pages.
 | Integration | Why It Exists In Coop |
 | --- | --- |
 | Storacha | Delegated upload and archive workflow |
-| Filecoin | Durable storage and provenance story |
+| Filecoin | Optional live durability and provenance story |
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#5a7d10', 'primaryTextColor': '#4f2e1f', 'primaryBorderColor': '#6b4a36', 'lineColor': '#6b4a36', 'secondaryColor': '#fcf5ef', 'tertiaryColor': '#fff8f2'}}}%%

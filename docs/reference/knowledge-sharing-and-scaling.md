@@ -1,11 +1,17 @@
 ---
 title: "Knowledge Sharing, Agent Synthesis & Scaling"
 slug: /reference/knowledge-sharing-and-scaling
+audience: builder
+doc_type: reference
+status: historical
+last_verified: "2026-03-13"
 ---
 
 # Knowledge Sharing, Agent Synthesis & Scaling Architecture
 
-**Status**: Architectural assessment with remediation plan
+<DocMeta />
+
+**Status**: Historical architectural assessment with remediation plan
 **Updated**: 2026-03-13
 **Scope**: Knowledge flow, agent feedback loop, Yjs scaling, long-term storage
 **Audience**: Core contributors, protocol reviewers, grant evaluators
@@ -22,7 +28,10 @@ to "the Roost" describe the local draft-review step that now lives primarily in 
 
 ## 1. Executive Summary
 
-Coop is a browser-first, local-first knowledge commons. Knowledge enters through browser tabs, mobile captures, and agent observations. It flows through a six-stage pipeline (capture, draft, publish, sync, feed, archive) with a fully autonomous in-browser agent that synthesizes insights and proposes actions back into the shared knowledge graph.
+Coop is a browser-first, local-first knowledge commons. Knowledge enters through browser tabs,
+mobile captures, and agent observations. This historical assessment describes a six-stage pipeline
+(capture, draft, publish, sync, feed, archive) with an in-browser agent that synthesizes insights and
+proposes actions back into the shared knowledge graph.
 
 The architecture is fundamentally sound for current scale (small coops, \<20 members, \<500 artifacts). **The critical risk is not the choice of CRDT library (Yjs scales well) but how we use it.** Storing entire state arrays as JSON strings inside Y.Map values defeats CRDT merge semantics, causes silent data loss on concurrent edits, and bloats document size proportional to total operations rather than current state size.
 
@@ -140,7 +149,9 @@ Member    Capture    Draft      Coop       Artifact    Archive
 
 ### 3.1 Overview
 
-The agent runs entirely in-browser, with no cloud APIs and no data leaving the device. It executes in the extension's offscreen document on a 1.5-second polling interval:
+The agent is designed to run in-browser and keep capture content out of cloud LLM inference. This
+historical section describes an earlier offscreen polling model; use [Agent Harness](/reference/agent-harness)
+for the current runtime shape:
 
 ```
 OBSERVE → PLAN → EXECUTE (skill DAG) → SYNTHESIZE → PROPOSE → APPROVE
@@ -190,9 +201,14 @@ erc8004-feedback (root) → provides: agent-feedback
 - `no-scores`: No grant fit scores from prior skill
 - `no-draft`: No draft context available
 
-### 3.4 Three-Tier Inference Cascade
+### 3.4 Historical Local Inference Snapshot
 
-Each skill runs through a fallback chain until one succeeds:
+This section preserves the March 2026 inference model. Use [Agent Harness](/reference/agent-harness)
+for the current provider contracts, Gemma/WebLLM/Transformers/heuristic fallback behavior, and
+registered skill inventory.
+
+In that earlier design, each skill was expected to run through a local fallback path until one
+succeeded:
 
 | Tier | Provider | Model | Runtime | Max Tokens |
 |------|----------|-------|---------|------------|
@@ -231,7 +247,7 @@ The agent's outputs feed back into the knowledge pipeline at two points:
 2. Agent cycle picks up pending observation
 3. buildSkillContext() hydrates coopDoc → readCoopState()
 4. selectKnowledgeSkills() scores external SKILL.md files, injects top 3
-5. Skills execute in DAG order through inference cascade
+5. Skills execute in DAG order through the available local provider path
 6. Skill outputs → ReviewDraft records saved to Dexie
 7. publish-readiness-check → ActionProposal dispatched to background
 8. If auto-execute: background mutates Y.Doc → encodeCoopDoc → Dexie
@@ -437,7 +453,7 @@ This runs on every Y.Doc update (debounced 280ms in the sidepanel) and on every 
 │  Piece CIDs      ─ Filecoin piece identifiers              │
 │                                                             │
 ├─────────────────────────────────────────────────────────────┤
-│  Filecoin (cryptographic proof, multi-year persistence)     │
+│  Filecoin (live-mode proof and persistence when configured) │
 │                                                             │
 │  Sealed deals    ─ Aggregated piece CIDs                    │
 │  Deal proofs     ─ On-chain verification                    │
@@ -487,7 +503,7 @@ createArchiveBundle({
 | `exportCoopSnapshotJson(state)` | Full state JSON with timestamp |
 | `exportArtifactTextBundle(artifact)` | Markdown with metadata |
 | `exportSnapshotTextBundle(state)` | Markdown summary of coop |
-| `exportArchiveReceiptTextBundle(receipt)` | Markdown with Filecoin deal IDs |
+| `exportArchiveReceiptTextBundle(receipt)` | Markdown with archive receipt details and any live Filecoin deal IDs |
 
 ### 7.4 What Is Missing
 
@@ -708,19 +724,19 @@ summarizeSyncTransportHealth(webrtc?) → {
 | **Board/feed** | `packages/shared/src/modules/coop/board.ts` |
 | **Coop flows** | `packages/shared/src/modules/coop/flows.ts` |
 | **Storage (Dexie)** | `packages/shared/src/modules/storage/db.ts` |
-| **Schema contracts** | `packages/shared/src/contracts/schema.ts` |
+| **Schema contracts** | `packages/shared/src/contracts/schema-*.ts` |
 | **Archive core** | `packages/shared/src/modules/archive/archive.ts` |
 | **Storacha client** | `packages/shared/src/modules/archive/storacha.ts` |
 | **Archive export** | `packages/shared/src/modules/archive/export.ts` |
 | **Receiver sync** | `packages/shared/src/modules/receiver/sync.ts` |
 | **Receiver relay** | `packages/shared/src/modules/receiver/relay.ts` |
-| **Agent runner** | `packages/extension/src/runtime/agent-runner.ts` |
-| **Agent harness** | `packages/extension/src/runtime/agent-harness.ts` |
-| **Agent models** | `packages/extension/src/runtime/agent-models.ts` |
-| **Agent knowledge** | `packages/extension/src/runtime/agent-knowledge.ts` |
-| **WebLLM bridge** | `packages/extension/src/runtime/agent-webllm-bridge.ts` |
-| **Agent config** | `packages/extension/src/runtime/agent-config.ts` |
-| **Agent logger** | `packages/extension/src/runtime/agent-logger.ts` |
+| **Agent runner** | `packages/extension/src/runtime/agent/runner.ts` and `runner-*.ts` |
+| **Agent harness** | `packages/extension/src/runtime/agent/harness.ts` |
+| **Agent models** | `packages/extension/src/runtime/agent/models.ts` |
+| **Agent knowledge** | `packages/extension/src/runtime/agent/knowledge.ts` |
+| **WebLLM bridge** | `packages/extension/src/runtime/agent/webllm-bridge.ts` |
+| **Agent config** | `packages/extension/src/runtime/agent/config.ts` |
+| **Agent logger** | `packages/extension/src/runtime/agent/logger.ts` |
 | **Background worker** | `packages/extension/src/background.ts` |
 | **Sync bindings** | `packages/extension/src/views/Sidepanel/hooks/useSyncBindings.ts` |
 | **Privacy** | `packages/shared/src/modules/privacy/` |

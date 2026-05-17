@@ -1,19 +1,25 @@
 ---
 title: "Structure Audit Prompt"
 slug: /reference/hackathon-sprint-audit-prompts/structure
+audience: builder
+doc_type: prompt-pack
+status: historical
 ---
 
 # Structure Audit Prompt
 
-Copy and run this prompt as-is with a repo-aware agent:
+<DocMeta />
+
+This is an April 1, 2026 snapshot prompt. Refresh commands, coverage, file paths, and repo facts
+against the live tree before reusing it.
 
 ```text
 Audit this repo read-only and produce an Audit Memo focused on file and folder structure, naming conventions, and code structure.
 
 Repo: /Users/afo/Code/greenpill/coop
-Date context: April 1, 2026
+Snapshot context: April 1, 2026. Refresh the baseline against the live repo before treating any fact below as current.
 
-Current repo facts to use as baseline, not proof:
+Snapshot repo facts from April 1, 2026; refresh before use and treat as context, not proof:
 - `bun run validate quick` passed on April 1, 2026.
 - The repo is a Bun monorepo with major code in `packages/shared`, `packages/app`, `packages/extension`, and `packages/api`.
 - A sidecar `packages/contracts` folder also exists and should be assessed against the documented architecture rather than ignored.

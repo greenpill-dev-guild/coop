@@ -31,7 +31,7 @@ graph TB
         Sidepanel[Sidepanel]
         BG[Background Worker]
         Offscreen[Offscreen Doc]
-        Skills[16 Agent Skills]
+        Skills[19 Agent Skills]
     end
 
     subgraph App["App (PWA)"]
@@ -86,7 +86,8 @@ Coop deliberately uses different storage layers for different jobs:
 - y-indexeddb for local persistence of Yjs docs
 - y-webrtc for direct browser-to-browser transport
 - y-websocket for server-assisted document sync and relay-backed blob transport
-- Filecoin-backed archive flows for durable receipts and provenance
+- optional Filecoin-backed archive flows for durable receipts and provenance when archive mode is
+  explicitly enabled
 
 ## The Product Loop In Architecture Terms
 

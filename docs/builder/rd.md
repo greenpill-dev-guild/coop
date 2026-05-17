@@ -13,7 +13,8 @@ long-form audits.
 The current reference docs repeatedly point to the same core issues:
 
 - CRDT correctness where shared arrays are still written too coarsely
-- remotely hosted WASM that weakens offline and extension-distribution guarantees
+- sandbox/CSP pressure from local model runtimes that still need dynamic-eval-free packaging before
+  a clean public Web Store posture
 - fixed-interval polling that burns battery and CPU
 - ~~missing evaluation harnesses for the agent~~ — resolved: agent-eval.ts provides skill eval fixtures and structural/semantic assertion passes
 - weak eventing between contexts compared with a typed bus model
@@ -21,7 +22,7 @@ The current reference docs repeatedly point to the same core issues:
 ## Near-Term Research Lanes
 
 - make the sync model more correct before adding more autonomy
-- improve model loading, capability detection, and fallback behavior
+- improve model loading, capability detection, provider fallback behavior, and offline model-asset UX
 - ~~extract monolithic runtime files into clearer handlers and interfaces~~ — largely resolved:
   background.ts uses handler decomposition (12 handler modules), SidepanelApp.tsx is 174 lines with
   orchestration extracted to hooks, PopupApp.tsx is a thin shell with a screen router, and
