@@ -1,19 +1,22 @@
 import * as Y from 'yjs';
 import type {
   CoopSharedState,
+  KnowledgeSourceContent,
   ReadablePageExtract,
   ReviewDraft,
   TabCandidate,
 } from '../../contracts/schema';
 import {
   coopSharedStateSchema,
+  knowledgeSourceContentSchema,
   readablePageExtractSchema,
   reviewDraftSchema,
   tabCandidateSchema,
 } from '../../contracts/schema';
-import { nowIso } from '../../utils';
+import { hashText, nowIso } from '../../utils';
 // Direct import to avoid circular dependency: storage barrel → coop barrel → outbox → storage
 import { arePageExtractsNearDuplicates } from '../coop/pipeline';
+import { mirrorSourcesFromYDocToDexie } from '../knowledge-source/sync-sources';
 import {
   encodeCoopDoc,
   hydrateCoopDoc,
@@ -24,9 +27,11 @@ import {
 import {
   buildEncryptedLocalPayloadId,
   buildEncryptedLocalPayloadRecord,
+  buildRedactedKnowledgeSourceContent,
   buildRedactedPageExtract,
   buildRedactedReviewDraft,
   buildRedactedTabCandidate,
+  hydrateKnowledgeSourceContentRecord,
   hydratePageExtractRecord,
   hydrateReviewDraftRecord,
   hydrateTabCandidateRecord,
@@ -58,7 +63,7 @@ export async function mergeCoopStateUpdate(
   coopId: string,
   encodedState: Uint8Array,
 ) {
-  return db.transaction('rw', db.coopDocs, async () => {
+  return db.transaction('rw', db.coopDocs, db.knowledgeSources, async () => {
     const existing = await db.coopDocs.get(coopId);
     const doc = hydrateCoopDoc(existing?.encodedState);
 
@@ -72,6 +77,7 @@ export async function mergeCoopStateUpdate(
         encodedState: encodeCoopDoc(doc),
         updatedAt: nowIso(),
       });
+      await mirrorSourcesFromYDocToDexie(db, doc, { coopId, pruneMissing: true });
 
       // Try to parse the merged state. If Zod validation fails, return a
       // partial result with a warning instead of throwing — transient states
@@ -233,6 +239,64 @@ export async function listPageExtracts(db: CoopDexie) {
     extracts.map((extract) => hydratePageExtractRecord(db, extract)),
   );
   return hydrated.filter((extract): extract is ReadablePageExtract => Boolean(extract));
+}
+
+export async function saveKnowledgeSourceContent(
+  db: CoopDexie,
+  input: Omit<KnowledgeSourceContent, 'id' | 'bodyHash' | 'createdAt'> &
+    Partial<Pick<KnowledgeSourceContent, 'id' | 'bodyHash' | 'createdAt'>>,
+) {
+  const bodyHash = input.bodyHash ?? hashText(input.body);
+  const id =
+    input.id ??
+    `ks-content-${hashText(`${input.sourceId}:${input.sourceRef}:${bodyHash}`).slice(2, 18)}`;
+  const content = knowledgeSourceContentSchema.parse({
+    ...input,
+    id,
+    bodyHash,
+    createdAt: input.createdAt ?? nowIso(),
+  });
+  const payload = await buildEncryptedLocalPayloadRecord({
+    db,
+    kind: 'knowledge-source-content',
+    entityId: content.id,
+    bytes: new TextEncoder().encode(JSON.stringify(content)),
+  });
+
+  await db.transaction('rw', db.knowledgeSourceContents, db.encryptedLocalPayloads, async () => {
+    await db.knowledgeSourceContents.put(buildRedactedKnowledgeSourceContent(content));
+    await db.encryptedLocalPayloads.put(payload);
+  });
+
+  return content;
+}
+
+export async function getKnowledgeSourceContent(db: CoopDexie, contentId: string) {
+  return hydrateKnowledgeSourceContentRecord(db, await db.knowledgeSourceContents.get(contentId));
+}
+
+export async function listKnowledgeSourceContents(
+  db: CoopDexie,
+  filters: { sourceId?: string; coopId?: string; limit?: number } = {},
+) {
+  let rows = filters.sourceId
+    ? await db.knowledgeSourceContents.where('sourceId').equals(filters.sourceId).toArray()
+    : filters.coopId
+      ? await db.knowledgeSourceContents.where('coopId').equals(filters.coopId).toArray()
+      : await db.knowledgeSourceContents.toArray();
+
+  if (filters.sourceId && filters.coopId) {
+    rows = rows.filter((content) => content.coopId === filters.coopId);
+  }
+  rows.sort((left, right) => right.fetchedAt.localeCompare(left.fetchedAt));
+  if (typeof filters.limit === 'number') {
+    rows = rows.slice(0, filters.limit);
+  }
+
+  const hydrated = await Promise.all(
+    rows.map((content) => hydrateKnowledgeSourceContentRecord(db, content)),
+  );
+  return hydrated.filter((content): content is KnowledgeSourceContent => Boolean(content));
 }
 
 export async function saveReviewDraft(db: CoopDexie, draft: ReviewDraft) {

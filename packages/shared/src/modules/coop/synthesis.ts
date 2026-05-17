@@ -3,8 +3,9 @@ import type {
   CoopSoul,
   CoopSpaceType,
   RitualDefinition,
+  SetupInsights,
 } from '../../contracts/schema';
-import { compactWhitespace, truncateWords, unique } from '../../utils';
+import { compactWhitespace, nowIso, truncateWords, unique } from '../../utils';
 
 export interface SynthesizeCoopFromPurposeInput {
   coopName: string;
@@ -275,6 +276,64 @@ export function summarizeRitualArtifact(ritual: RitualDefinition) {
     `${ritual.weeklyReviewCadence} centers ${formatList(ritual.namedMoments.slice(0, 2))}.`,
     28,
   );
+}
+
+function distinctClean(values: string[], maxItems: number) {
+  return unique(
+    values
+      .map((value) => clean(value))
+      .filter((value) => value.length > 0)
+      .map((value) => stripTrailingPunctuation(value)),
+  ).slice(0, maxItems);
+}
+
+export function buildMemoryCharter(input: {
+  purpose: string;
+  setupInsights: SetupInsights;
+  soul: CoopSoul;
+  updatedByMemberId?: string;
+  updatedAt?: string;
+}): NonNullable<CoopSoul['memoryCharter']> {
+  const lensSignals = input.setupInsights.lenses.flatMap((lens) => [
+    lens.improvements,
+    lens.currentState,
+  ]);
+  const lensAntiSignals = input.setupInsights.lenses.map((lens) => lens.painPoints);
+  const evidenceStandards = distinctClean(
+    [
+      ...input.setupInsights.lenses.map((lens) => `${lens.lens}: ${lens.improvements}`),
+      'Prefer member-approved artifacts before treating a memory as shared truth',
+      'Keep source provenance visible on recommendations',
+    ],
+    6,
+  );
+
+  return {
+    version: 1,
+    goals: distinctClean(
+      [
+        input.purpose,
+        input.setupInsights.summary,
+        ...input.setupInsights.crossCuttingOpportunities,
+      ],
+      5,
+    ),
+    opportunityThesis: truncateWords(
+      `${input.soul.whyThisCoopExists} ${input.setupInsights.summary}`,
+      42,
+    ),
+    desiredSignals: distinctClean([...input.soul.artifactFocus, ...lensSignals], 8),
+    antiSignals: distinctClean(
+      input.setupInsights.crossCuttingPainPoints.concat(lensAntiSignals),
+      8,
+    ),
+    evidenceStandards,
+    vocabulary: input.soul.vocabularyTerms,
+    prohibitedTopics: input.soul.prohibitedTopics,
+    confidenceThreshold: input.soul.confidenceThreshold,
+    updatedAt: input.updatedAt ?? nowIso(),
+    updatedByMemberId: input.updatedByMemberId,
+  };
 }
 
 export interface SynthesizeTranscriptsInput {

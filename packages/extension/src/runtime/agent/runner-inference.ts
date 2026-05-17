@@ -386,6 +386,11 @@ function isEntityCandidate(name: string, sentence: string) {
 }
 
 function extractSourceRef(rawContext: string) {
+  const sourceContentMatch = rawContext.match(/Source content sourceRef:\s*([^\n]+)/i);
+  if (sourceContentMatch) {
+    return sourceContentMatch[1].trim();
+  }
+
   const archiveMatch = rawContext.match(/Archive root CID:\s*([a-z0-9]+)/i);
   if (archiveMatch) {
     return `archive:${archiveMatch[1]}`;

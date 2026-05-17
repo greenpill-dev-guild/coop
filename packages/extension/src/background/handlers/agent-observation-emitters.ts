@@ -107,7 +107,9 @@ export async function syncHighConfidenceDraftObservations(drafts: ReviewDraft[])
 export async function emitSourceContentObservation(input: {
   sourceId: string;
   sourceLabel: string;
+  contentId: string;
   contentTitle: string;
+  sourceRef: string;
   coopId?: string;
 }) {
   return emitAgentObservationIfMissing({
@@ -117,7 +119,10 @@ export async function emitSourceContentObservation(input: {
     coopId: input.coopId,
     payload: {
       sourceId: input.sourceId,
+      contentId: input.contentId,
       contentTitle: input.contentTitle,
+      sourceRef: input.sourceRef,
+      contextLabel: 'observed/unconfirmed',
     },
   });
 }

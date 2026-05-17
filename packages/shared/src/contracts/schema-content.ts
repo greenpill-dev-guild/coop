@@ -37,6 +37,21 @@ export const coopSoulSchema = z.object({
   vocabularyTerms: z.array(z.string()).default([]),
   prohibitedTopics: z.array(z.string()).default([]),
   confidenceThreshold: z.number().min(0).max(1).default(0.72),
+  memoryCharter: z
+    .object({
+      version: z.literal(1).default(1),
+      goals: z.array(z.string()).default([]),
+      opportunityThesis: z.string().min(1),
+      desiredSignals: z.array(z.string()).default([]),
+      antiSignals: z.array(z.string()).default([]),
+      evidenceStandards: z.array(z.string()).default([]),
+      vocabulary: z.array(z.string()).default([]),
+      prohibitedTopics: z.array(z.string()).default([]),
+      confidenceThreshold: z.number().min(0).max(1).default(0.72),
+      updatedAt: z.string().datetime(),
+      updatedByMemberId: z.string().min(1).optional(),
+    })
+    .optional(),
 });
 
 export const ritualDefinitionSchema = z.object({
@@ -171,6 +186,10 @@ export const reviewDraftSchema = z.object({
   workflowStage: reviewDraftWorkflowStageSchema.default('ready'),
   archiveWorthiness: archiveWorthinessSchema.optional(),
   attachments: z.array(artifactAttachmentSchema).default([]),
+  sourceRefs: z.array(z.string()).optional(),
+  precedentTraceIds: z.array(z.string()).optional(),
+  contextLabels: z.array(z.string()).optional(),
+  confidenceAdjustment: z.number().min(-0.15).max(0.15).optional(),
   provenance: reviewDraftProvenanceSchema,
   createdAt: z.string().datetime(),
 });

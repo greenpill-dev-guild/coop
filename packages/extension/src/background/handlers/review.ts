@@ -218,9 +218,11 @@ export async function publishDraftWithContext(input: {
 
     // Knowledge sandbox compound loop: strengthen edges + create insight on approval
     try {
-      const { getGraphStore } = await import('../../runtime/agent/graph-store-singleton');
+      const { loadGraphSnapshot, scheduleSave } = await import(
+        '../../runtime/agent/graph-store-singleton'
+      );
       const { strengthenSourceEdges, createValidatedInsight } = await import('@coop/shared');
-      const graphStore = getGraphStore();
+      const graphStore = await loadGraphSnapshot(db, coopId);
       const agentProvenance = validation.draft.provenance as {
         type: 'agent';
         observationId: string;
@@ -236,6 +238,7 @@ export async function publishDraftWithContext(input: {
           traceId: lastTrace.traceId,
         });
         lastTrace.outcome = 'approved';
+        scheduleSave(db, coopId);
       }
     } catch {
       // Knowledge sandbox not available — skip compound loop
@@ -312,7 +315,8 @@ export async function handleUpdateReviewDraft(
     persistedDraft.workflowStage !== validation.draft.workflowStage
   ) {
     const promoted = validation.draft.workflowStage === 'ready';
-    const skillId = persistedDraft.provenance.skillId;
+    const agentProvenance = persistedDraft.provenance;
+    const skillId = agentProvenance.skillId;
     const coopId = validation.draft.suggestedTargetCoopIds[0];
     createAgentMemory(db, {
       type: 'user-feedback',
@@ -322,8 +326,28 @@ export async function handleUpdateReviewDraft(
         ? `Draft accepted: "${validation.draft.title}" (skill: ${skillId})`
         : `Draft demoted back to candidate: "${validation.draft.title}" (skill: ${skillId})`,
       confidence: 1,
-      sourceObservationId: persistedDraft.provenance.observationId,
+      sourceObservationId: agentProvenance.observationId,
     }).catch(() => {});
+
+    if (!promoted) {
+      try {
+        const { loadGraphSnapshot, scheduleSave } = await import(
+          '../../runtime/agent/graph-store-singleton'
+        );
+        const { weakenSourceEdges } = await import('@coop/shared');
+        const graphStore = await loadGraphSnapshot(db, coopId);
+        const lastTrace = graphStore.traces
+          .filter((trace) => trace.observationId === agentProvenance.observationId)
+          .at(-1);
+        if (lastTrace) {
+          weakenSourceEdges(graphStore, lastTrace.traceId, 'rejected');
+          lastTrace.outcome = 'rejected';
+          scheduleSave(db, coopId);
+        }
+      } catch {
+        // Knowledge sandbox not available — skip compound loop
+      }
+    }
   }
 
   return {

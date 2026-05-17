@@ -2,6 +2,7 @@ import type {
   AgentMemory,
   EncryptedLocalPayload,
   EncryptedLocalPayloadKind,
+  KnowledgeSourceContent,
   PrivacyIdentityRecord,
   ReadablePageExtract,
   ReceiverCapture,
@@ -12,6 +13,7 @@ import type {
 import {
   agentMemorySchema,
   encryptedLocalPayloadSchema,
+  knowledgeSourceContentSchema,
   privacyIdentityRecordSchema,
   readablePageExtractSchema,
   receiverCaptureSchema,
@@ -127,6 +129,16 @@ export function buildRedactedAgentMemory(memory: AgentMemory): AgentMemory {
   });
 }
 
+export function buildRedactedKnowledgeSourceContent(
+  content: KnowledgeSourceContent,
+): KnowledgeSourceContent {
+  return knowledgeSourceContentSchema.parse({
+    ...content,
+    body: 'Encrypted source content.',
+    metadata: {},
+  });
+}
+
 export function buildRedactedPrivacyIdentityRecord(
   record: PrivacyIdentityRecord,
 ): PrivacyIdentityRecord {
@@ -166,6 +178,10 @@ export function looksRedactedReceiverCapture(capture: ReceiverCapture) {
 
 export function looksRedactedAgentMemory(memory: AgentMemory) {
   return memory.content === 'Encrypted local memory';
+}
+
+export function looksRedactedKnowledgeSourceContent(content: KnowledgeSourceContent) {
+  return content.body === 'Encrypted source content.';
 }
 
 export function looksRedactedPrivacyIdentity(record: PrivacyIdentityRecord) {
@@ -437,6 +453,20 @@ export async function hydrateAgentMemoryRecord(db: CoopDexie, memory?: AgentMemo
     (await loadEncryptedJsonPayload(db, 'agent-memory', memory.id, (value) =>
       agentMemorySchema.parse(value),
     )) ?? memory
+  );
+}
+
+export async function hydrateKnowledgeSourceContentRecord(
+  db: CoopDexie,
+  content?: KnowledgeSourceContent,
+) {
+  if (!content) {
+    return undefined;
+  }
+  return (
+    (await loadEncryptedJsonPayload(db, 'knowledge-source-content', content.id, (value) =>
+      knowledgeSourceContentSchema.parse(value),
+    )) ?? content
   );
 }
 

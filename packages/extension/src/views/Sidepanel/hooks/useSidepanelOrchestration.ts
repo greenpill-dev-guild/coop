@@ -158,6 +158,7 @@ export interface SidepanelOrchestration {
         | 'usefulSignalDefinition'
         | 'toneAndWorkingStyle'
         | 'artifactFocus'
+        | 'memoryCharter'
       >
     >;
     setupInsights?: SetupInsights;

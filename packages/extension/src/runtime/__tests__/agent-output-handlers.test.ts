@@ -321,12 +321,51 @@ describe('applySkillOutput', () => {
         suggestedNextStep: 'Reach out this week.',
         tags: ['grant'],
       },
+      context: {
+        ...buildInput().context,
+        sourceContents: [
+          {
+            id: 'ks-content-1',
+            sourceId: 'ks-1',
+            coopId: 'coop-1',
+            sourceRef: 'github:greenpill/coop',
+            title: 'Coop repo',
+            body: 'Context',
+            bodyHash: '0xhash',
+            metadata: {},
+            fetchedAt: '2026-04-06T00:00:00.000Z',
+            createdAt: '2026-04-06T00:00:01.000Z',
+          },
+        ],
+        precedents: [
+          {
+            traceId: 'trace-approved',
+            skillRunId: 'run-old',
+            observationId: 'obs-old',
+            observationText: 'grant lead',
+            contextEntityIds: [],
+            precedentTraceIds: [],
+            confidence: 0.84,
+            outputSummary: 'Approved similar grant.',
+            outcome: 'approved',
+            createdAt: '2026-04-05T00:00:00.000Z',
+          },
+        ],
+        precedentConfidenceAdjustment: 0.05,
+        graphContext: 'graph context',
+      },
       saveReviewDraft,
     });
 
     const created = await applySkillOutput(withCoop);
     expect(saveReviewDraft).toHaveBeenCalledTimes(1);
     expect(created.createdDraftIds).toHaveLength(1);
+    expect(getFirstSavedDraft(saveReviewDraft)).toMatchObject({
+      sourceRefs: ['github:greenpill/coop'],
+      precedentTraceIds: ['trace-approved'],
+      contextLabels: ['observed/unconfirmed', 'graph-context'],
+      confidenceAdjustment: 0.05,
+    });
 
     const withoutCoop = await applySkillOutput({
       ...withCoop,

@@ -40,6 +40,7 @@ describe('assembleGraphContext', () => {
     const context = assembleGraphContext(results, 2000);
 
     expect(context).toContain('test:x');
+    expect(context).toContain('label: inferred/unconfirmed');
   });
 
   it('labels stale source context explicitly', () => {
@@ -60,7 +61,27 @@ describe('assembleGraphContext', () => {
 
     const context = assembleGraphContext(results, 2000);
 
-    expect(context).toContain('source: source:removed; stale');
+    expect(context).toContain('source: source:removed; label: stale');
+  });
+
+  it('labels adapter source refs as observed unconfirmed context', () => {
+    const results: RetrievalResult[] = [
+      {
+        entity: {
+          id: 'github-entity',
+          name: 'Coop repo',
+          type: 'organization',
+          description: 'Repo context',
+          sourceRef: 'github:greenpill/coop',
+        },
+        score: 1,
+        sources: ['text'],
+      },
+    ];
+
+    const context = assembleGraphContext(results, 2000);
+
+    expect(context).toContain('source: github:greenpill/coop; label: observed/unconfirmed');
   });
 
   it('prioritizes by relevance score', () => {

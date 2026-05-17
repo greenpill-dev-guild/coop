@@ -3,16 +3,23 @@ import type {
   AgentProvider,
   CoopSharedState,
   EntityExtractionOutput,
+  KnowledgeSourceContent,
   ReadablePageExtract,
   ReviewDraft,
   TabRouterOutput,
   TabRouting,
 } from '@coop/shared';
-import { assembleGraphContext, hybridSearch } from '@coop/shared';
+import {
+  assembleGraphContext,
+  computePrecedentAdjustment,
+  hybridSearch,
+  queryPrecedents,
+} from '@coop/shared';
 import {
   createAgentObservation,
   findAgentObservationByFingerprint,
   getAuthSession,
+  getKnowledgeSourceContent,
   getPageExtract,
   getReceiverCapture,
   getReviewDraft,
@@ -42,6 +49,21 @@ export async function loadExtractsForObservation(observation: AgentObservation) 
     resolveObservationExtractIds(observation).map((extractId) => getPageExtract(db, extractId)),
   );
   return extracts.filter((extract): extract is ReadablePageExtract => Boolean(extract));
+}
+
+export async function loadSourceContentsForObservation(observation: AgentObservation) {
+  const payload = observation.payload ?? {};
+  const contentIds = [
+    typeof payload.contentId === 'string' ? payload.contentId : undefined,
+    ...(Array.isArray(payload.contentIds)
+      ? payload.contentIds.filter((value): value is string => typeof value === 'string')
+      : []),
+  ].filter((value): value is string => Boolean(value));
+
+  const contents = await Promise.all(
+    contentIds.map((contentId) => getKnowledgeSourceContent(db, contentId)),
+  );
+  return contents.filter((content): content is KnowledgeSourceContent => Boolean(content));
 }
 
 export async function emitObservationIfMissing(observation: AgentObservation) {
@@ -280,11 +302,12 @@ export async function buildSkillContext(
   } = {},
 ): Promise<SkillExecutionContext> {
   const coops = options.availableCoops ?? (await getCoops());
-  const [draft, capture, authSession, extracts] = await Promise.all([
+  const [draft, capture, authSession, extracts, sourceContents] = await Promise.all([
     observation.draftId ? getReviewDraft(db, observation.draftId) : Promise.resolve(null),
     observation.captureId ? getReceiverCapture(db, observation.captureId) : Promise.resolve(null),
     getAuthSession(db),
     loadExtractsForObservation(observation),
+    loadSourceContentsForObservation(observation),
   ]);
   const coop =
     (observation.coopId
@@ -316,16 +339,24 @@ export async function buildSkillContext(
 
   // Graph-based context retrieval (knowledge sandbox)
   let graphContext: string | undefined;
+  let precedents: SkillExecutionContext['precedents'] = [];
+  let precedentConfidenceAdjustment = 0;
   try {
-    const { getGraphStore } = await import('./graph-store-singleton');
-    const graphStore = getGraphStore();
+    const { getGraphStore, loadGraphSnapshot } = await import('./graph-store-singleton');
+    const graphStore = coop ? await loadGraphSnapshot(db, coop.profile.id) : getGraphStore();
+    const queryText = [
+      observation.title,
+      observation.summary,
+      ...sourceContents.map((content) => `${content.title} ${content.body}`),
+    ].join(' ');
     if (graphStore.entities.size > 0) {
-      const queryText = `${observation.title} ${observation.summary}`;
       const results = hybridSearch(graphStore, queryText, { maxResults: 5 });
       if (results.length > 0) {
         graphContext = assembleGraphContext(results, 2000);
       }
     }
+    precedents = queryPrecedents(graphStore, queryText, { limit: 3 });
+    precedentConfidenceAdjustment = computePrecedentAdjustment(precedents);
   } catch {
     // Graph store not available — continue without graph context
   }
@@ -341,6 +372,7 @@ export async function buildSkillContext(
     scores: [],
     createdDraftIds: [],
     extracts,
+    sourceContents,
     relatedDrafts,
     relatedArtifacts: coop?.artifacts ?? [],
     relatedRoutings:
@@ -350,6 +382,8 @@ export async function buildSkillContext(
           )
         : relatedRoutings,
     memories,
+    precedents,
+    precedentConfidenceAdjustment,
     graphContext,
   };
 }

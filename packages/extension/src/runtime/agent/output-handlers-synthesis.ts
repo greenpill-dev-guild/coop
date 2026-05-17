@@ -13,6 +13,7 @@ import {
 import { configuredOnchainMode } from '../config';
 import type { SkillOutputHandler } from './output-handlers-helpers';
 import {
+  applyContextProvenanceToDraft,
   patchSynthesisDraft,
   pushCreatedDraft,
   queueActionProposals,
@@ -35,20 +36,26 @@ export const handleMemoryInsightOutput: SkillOutputHandler = async (input) => {
   const insights = (input.output as MemoryInsightOutput).insights;
   const synthesisContext = resolveSynthesisDraftContext(input.context);
   for (const [index, insight] of insights.entries()) {
-    const generatedDraft = createMemoryInsightDraft({
-      observationId: input.observation.id,
-      planId: input.plan.id,
-      skillRunId: input.run.id,
-      skillId: input.skillId,
-      coopId: input.context.coop.profile.id,
-      output: insight,
-    });
+    const generatedDraft = applyContextProvenanceToDraft(
+      createMemoryInsightDraft({
+        observationId: input.observation.id,
+        planId: input.plan.id,
+        skillRunId: input.run.id,
+        skillId: input.skillId,
+        coopId: input.context.coop.profile.id,
+        output: insight,
+      }),
+      input.context,
+    );
     if (index === 0 && synthesisContext.existingDraft) {
-      const patchedDraft = patchSynthesisDraft({
-        draft: synthesisContext.existingDraft,
-        generated: generatedDraft,
-        targetCoopIds: synthesisContext.targetCoopIds,
-      });
+      const patchedDraft = applyContextProvenanceToDraft(
+        patchSynthesisDraft({
+          draft: synthesisContext.existingDraft,
+          generated: generatedDraft,
+          targetCoopIds: synthesisContext.targetCoopIds,
+        }),
+        input.context,
+      );
       await input.saveReviewDraft(patchedDraft);
       input.context.draft = patchedDraft;
       continue;
@@ -91,23 +98,29 @@ export const handleReviewDigestOutput: SkillOutputHandler = async (input) => {
     };
   }
 
-  const generatedDraft = createReviewDigestDraft({
-    observationId: input.observation.id,
-    planId: input.plan.id,
-    skillRunId: input.run.id,
-    skillId: input.skillId,
-    coopId: input.context.coop.profile.id,
-    output: input.output as ReviewDigestOutput,
-  });
+  const generatedDraft = applyContextProvenanceToDraft(
+    createReviewDigestDraft({
+      observationId: input.observation.id,
+      planId: input.plan.id,
+      skillRunId: input.run.id,
+      skillId: input.skillId,
+      coopId: input.context.coop.profile.id,
+      output: input.output as ReviewDigestOutput,
+    }),
+    input.context,
+  );
   const synthesisContext = resolveSynthesisDraftContext(input.context);
   let createdDraftIds: string[] = [];
 
   if (synthesisContext.existingDraft) {
-    const patchedDraft = patchSynthesisDraft({
-      draft: synthesisContext.existingDraft,
-      generated: generatedDraft,
-      targetCoopIds: synthesisContext.targetCoopIds,
-    });
+    const patchedDraft = applyContextProvenanceToDraft(
+      patchSynthesisDraft({
+        draft: synthesisContext.existingDraft,
+        generated: generatedDraft,
+        targetCoopIds: synthesisContext.targetCoopIds,
+      }),
+      input.context,
+    );
     await input.saveReviewDraft(patchedDraft);
     input.context.draft = patchedDraft;
   } else {

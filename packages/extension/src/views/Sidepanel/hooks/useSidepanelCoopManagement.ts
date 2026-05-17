@@ -47,6 +47,7 @@ export function useSidepanelCoopManagement(deps: SidepanelCoopManagementDeps) {
         | 'usefulSignalDefinition'
         | 'toneAndWorkingStyle'
         | 'artifactFocus'
+        | 'memoryCharter'
       >
     >;
     setupInsights?: SetupInsights;

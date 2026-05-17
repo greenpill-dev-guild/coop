@@ -33,6 +33,7 @@ import {
   updateCoopState,
 } from './sync';
 import {
+  buildMemoryCharter,
   summarizeRitualArtifact,
   summarizeSoulArtifact,
   synthesizeCoopFromPurpose,
@@ -227,12 +228,22 @@ export function createCoop(input: CreateCoopInput) {
     safeAddress: onchainState.safeAddress,
     active: true,
   };
-  const { soul, rituals } = synthesizeCoopFromPurpose({
+  const synthesized = synthesizeCoopFromPurpose({
     coopName: input.coopName,
     purpose: input.purpose,
     spaceType,
     captureMode: input.captureMode,
   });
+  const soul = {
+    ...synthesized.soul,
+    memoryCharter: buildMemoryCharter({
+      purpose: input.purpose,
+      setupInsights,
+      soul: synthesized.soul,
+      updatedByMemberId: creator.id,
+    }),
+  };
+  const { rituals } = synthesized;
   const artifacts = createInitialArtifacts({
     coopId,
     creator,

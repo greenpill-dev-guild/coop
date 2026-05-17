@@ -154,6 +154,42 @@ describe('create, join, and publish flows', () => {
     expect(soul.confidenceThreshold).toBe(0.72);
   });
 
+  it('derives a memory charter from purpose and setup insights at coop creation', () => {
+    const created = createCoop({
+      coopName: 'Forest Coop',
+      purpose: 'Coordinate forest stewardship and shared funding context.',
+      creatorDisplayName: 'June',
+      captureMode: 'manual',
+      seedContribution: 'I want our research and field notes to stay visible.',
+      setupInsights: buildSetupInsights(),
+    });
+
+    const charter = created.state.soul.memoryCharter;
+    expect(charter).toBeDefined();
+    expect(charter?.version).toBe(1);
+    expect(charter?.updatedByMemberId).toBe(created.creator.id);
+    expect(charter?.goals).toEqual(
+      expect.arrayContaining([
+        'Coordinate forest stewardship and shared funding context',
+        'Members can publish cleaner shared artifacts',
+      ]),
+    );
+    expect(charter?.opportunityThesis).toMatch(/Forest Coop exists/i);
+    expect(charter?.desiredSignals).toEqual(
+      expect.arrayContaining(['funding leads', 'Capture leads into a coop feed']),
+    );
+    expect(charter?.antiSignals).toEqual(
+      expect.arrayContaining(['Knowledge is fragmented', 'No shared memory for grants']),
+    );
+    expect(charter?.evidenceStandards).toEqual(
+      expect.arrayContaining([
+        'Prefer member-approved artifacts before treating a memory as shared truth',
+        'Keep source provenance visible on recommendations',
+      ]),
+    );
+    expect(charter?.confidenceThreshold).toBe(0.72);
+  });
+
   it('stores the selected space preset in the coop profile', () => {
     const created = createCoop({
       coopName: 'Personal Research Coop',

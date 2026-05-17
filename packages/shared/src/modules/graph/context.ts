@@ -1,6 +1,40 @@
 import type { RetrievalResult } from './retrieval';
 
 const CHARS_PER_TOKEN = 4;
+const OBSERVED_SOURCE_PREFIXES = new Set([
+  'github',
+  'npm',
+  'reddit',
+  'rss',
+  'web',
+  'wikipedia',
+  'youtube',
+]);
+
+function contextLabelForSourceRef(sourceRef: string, stale?: boolean) {
+  if (stale) {
+    return 'stale';
+  }
+  if (
+    sourceRef.startsWith('source:') ||
+    sourceRef.startsWith('source-content:') ||
+    sourceRef.startsWith('extract:') ||
+    sourceRef.startsWith('capture:')
+  ) {
+    return 'observed/unconfirmed';
+  }
+  const sourceType = sourceRef.split(':', 1)[0];
+  if (sourceType && OBSERVED_SOURCE_PREFIXES.has(sourceType)) {
+    return 'observed/unconfirmed';
+  }
+  if (sourceRef.startsWith('validated-insight:') || sourceRef.startsWith('artifact:')) {
+    return 'confirmed';
+  }
+  if (sourceRef.startsWith('import:')) {
+    return 'imported/unconfirmed';
+  }
+  return 'inferred/unconfirmed';
+}
 
 /**
  * Format retrieval results into a context string for skill prompts.
@@ -17,9 +51,8 @@ export function assembleGraphContext(results: RetrievalResult[], tokenBudget: nu
   let totalChars = 0;
 
   for (const r of sorted) {
-    const sourceLabel = r.entity.stale
-      ? `source: ${r.entity.sourceRef}; stale`
-      : `source: ${r.entity.sourceRef}`;
+    const label = contextLabelForSourceRef(r.entity.sourceRef, r.entity.stale);
+    const sourceLabel = `source: ${r.entity.sourceRef}; label: ${label}`;
     const line = `- ${r.entity.name} (${r.entity.type}): ${r.entity.description} [${sourceLabel}]`;
 
     if (totalChars + line.length > maxChars) break;

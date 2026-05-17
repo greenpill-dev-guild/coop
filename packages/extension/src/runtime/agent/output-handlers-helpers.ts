@@ -5,9 +5,11 @@ import type {
   CoopSharedState,
   EntityExtractionOutput,
   GrantFitScore,
+  KnowledgeSourceContent,
   OpportunityCandidate,
   PublishReadinessCheckOutput,
   ReadablePageExtract,
+  ReasoningTrace,
   ReviewDraft,
   SkillManifest,
   SkillRun,
@@ -25,6 +27,10 @@ export type SkillOutputHandlerExecutionContext = {
   createdDraftIds: string[];
   relatedDrafts: ReviewDraft[];
   relatedRoutings: TabRouting[];
+  sourceContents?: KnowledgeSourceContent[];
+  precedents?: ReasoningTrace[];
+  precedentConfidenceAdjustment?: number;
+  graphContext?: string;
 };
 
 export type PersistedTabRouterResult = {
@@ -93,6 +99,37 @@ export function pushCreatedDraft(input: {
   input.createdDraftIds.push(input.draftId);
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+export function applyContextProvenanceToDraft(
+  draft: ReviewDraft,
+  context: SkillOutputHandlerExecutionContext,
+): ReviewDraft {
+  const sourceRefs = uniqueStrings([
+    ...(draft.sourceRefs ?? []),
+    ...(context.sourceContents ?? []).map((content) => content.sourceRef),
+  ]);
+  const precedentTraceIds = uniqueStrings([
+    ...(draft.precedentTraceIds ?? []),
+    ...(context.precedents ?? []).map((trace) => trace.traceId),
+  ]);
+  const contextLabels = uniqueStrings([
+    ...(draft.contextLabels ?? []),
+    ...(context.sourceContents ?? []).map(() => 'observed/unconfirmed'),
+    ...(context.graphContext ? ['graph-context'] : []),
+  ]);
+
+  return {
+    ...draft,
+    sourceRefs,
+    precedentTraceIds,
+    contextLabels,
+    confidenceAdjustment: context.precedentConfidenceAdjustment ?? draft.confidenceAdjustment ?? 0,
+  };
+}
+
 export function resolveSynthesisDraftContext(context: SkillOutputHandlerExecutionContext) {
   const routedTargetCoopIds = [
     ...new Set(
@@ -142,6 +179,20 @@ export function patchSynthesisDraft(input: {
     suggestedTargetCoopIds: [
       ...new Set([...input.draft.suggestedTargetCoopIds, ...input.targetCoopIds]),
     ],
+    sourceRefs: uniqueStrings([
+      ...(input.draft.sourceRefs ?? []),
+      ...(input.generated.sourceRefs ?? []),
+    ]),
+    precedentTraceIds: uniqueStrings([
+      ...(input.draft.precedentTraceIds ?? []),
+      ...(input.generated.precedentTraceIds ?? []),
+    ]),
+    contextLabels: uniqueStrings([
+      ...(input.draft.contextLabels ?? []),
+      ...(input.generated.contextLabels ?? []),
+    ]),
+    confidenceAdjustment:
+      input.generated.confidenceAdjustment || input.draft.confidenceAdjustment || 0,
   } satisfies ReviewDraft;
 }
 

@@ -433,6 +433,7 @@ export type RuntimeRequest =
             | 'usefulSignalDefinition'
             | 'toneAndWorkingStyle'
             | 'artifactFocus'
+            | 'memoryCharter'
           >
         >;
         setupInsights?: SetupInsights;

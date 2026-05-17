@@ -6,8 +6,10 @@ import type {
   AuthSession,
   CoopSharedState,
   GrantFitScore,
+  KnowledgeSourceContent,
   OpportunityCandidate,
   ReadablePageExtract,
+  ReasoningTrace,
   ReceiverCapture,
   ReviewDraft,
   SkillManifest,
@@ -54,6 +56,9 @@ export type SkillExecutionContext = {
   relatedArtifacts: CoopSharedState['artifacts'];
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
+  sourceContents?: KnowledgeSourceContent[];
+  precedents?: ReasoningTrace[];
+  precedentConfidenceAdjustment?: number;
   /** Graph-based context from knowledge sandbox retrieval (if available) */
   graphContext?: string;
 };

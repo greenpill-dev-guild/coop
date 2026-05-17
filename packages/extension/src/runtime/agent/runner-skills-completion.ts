@@ -10,9 +10,11 @@ import type {
   EntityExtractionOutput,
   GrantFitScore,
   GrantFitScorerOutput,
+  KnowledgeSourceContent,
   OpportunityCandidate,
   PublishReadinessCheckOutput,
   ReadablePageExtract,
+  ReasoningTrace,
   ReceiverCapture,
   ReviewDraft,
   TabRouterOutput,
@@ -93,6 +95,9 @@ export async function completeSkill<T>(input: {
   relatedArtifacts: CoopSharedState['artifacts'];
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
+  sourceContents?: KnowledgeSourceContent[];
+  precedents?: ReasoningTrace[];
+  precedentConfidenceAdjustment?: number;
   graphContext?: string;
   preparedPrompt?: PreparedSkillPrompt;
   preferredProvider?: AgentProvider;

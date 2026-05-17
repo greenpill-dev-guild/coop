@@ -10,6 +10,8 @@ export {
   writeSourceToYDoc,
   removeSourceFromYDoc,
   readSourcesFromYDoc,
+  mirrorSourcesFromYDocToDexie,
+  writeSourcesFromDexieToYDoc,
   watchSourceChanges,
 } from './sync-sources';
 export { appendLogEntry, getRecentLog } from './activity-log';

@@ -1318,6 +1318,32 @@ describe('NestTab', () => {
     });
   });
 
+  it('saves member-authored memory charter edits', async () => {
+    const user = userEvent.setup();
+    const base = baseOrchestration();
+
+    render(<NestTab {...base} />);
+    openNestSection('Edit Memory Charter');
+
+    await user.clear(screen.getByLabelText('Goals'));
+    await user.type(screen.getByLabelText('Goals'), 'Track source-backed grants');
+    await user.clear(screen.getByLabelText('Confidence threshold'));
+    await user.type(screen.getByLabelText('Confidence threshold'), '0.8');
+    await user.click(screen.getByRole('button', { name: 'Save memory charter' }));
+
+    expect(base.orchestration.updateCoopDetails).toHaveBeenCalledWith({
+      soul: {
+        memoryCharter: expect.objectContaining({
+          version: 1,
+          goals: ['Track source-backed grants'],
+          desiredSignals: ['Funding leads', 'Research notes'],
+          confidenceThreshold: 0.8,
+          updatedAt: expect.any(String),
+        }),
+      },
+    });
+  });
+
   it('saves ritual edits with named moments as individual entries', async () => {
     const user = userEvent.setup();
     const base = baseOrchestration();

@@ -5,8 +5,10 @@ import type {
   CapitalFormationBriefOutput,
   CoopSharedState,
   GrantFitScore,
+  KnowledgeSourceContent,
   OpportunityCandidate,
   ReadablePageExtract,
+  ReasoningTrace,
   ReceiverCapture,
   ReviewDraft,
   TabRouting,
@@ -33,6 +35,9 @@ export async function buildSkillPrompt(input: {
   relatedArtifacts: CoopSharedState['artifacts'];
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
+  sourceContents?: KnowledgeSourceContent[];
+  precedents?: ReasoningTrace[];
+  precedentConfidenceAdjustment?: number;
   graphContext?: string;
 }) {
   const sanitize = (value?: string, maxWords = 80) =>
@@ -75,6 +80,29 @@ export async function buildSkillPrompt(input: {
               .join(', ')}`
           : undefined,
         `Confidence threshold: ${input.coop.soul.confidenceThreshold}`,
+        input.coop.soul.memoryCharter
+          ? `Memory charter goals: ${input.coop.soul.memoryCharter.goals
+              .map((value) => sanitize(value, 14))
+              .join(', ')}`
+          : undefined,
+        input.coop.soul.memoryCharter
+          ? `Memory charter opportunity thesis: ${sanitize(input.coop.soul.memoryCharter.opportunityThesis, 40)}`
+          : undefined,
+        input.coop.soul.memoryCharter?.desiredSignals.length
+          ? `Desired signals: ${input.coop.soul.memoryCharter.desiredSignals
+              .map((value) => sanitize(value, 10))
+              .join(', ')}`
+          : undefined,
+        input.coop.soul.memoryCharter?.antiSignals.length
+          ? `Anti-signals: ${input.coop.soul.memoryCharter.antiSignals
+              .map((value) => sanitize(value, 10))
+              .join(', ')}`
+          : undefined,
+        input.coop.soul.memoryCharter?.evidenceStandards.length
+          ? `Evidence standards: ${input.coop.soul.memoryCharter.evidenceStandards
+              .map((value) => sanitize(value, 12))
+              .join('; ')}`
+          : undefined,
       ]).join('\n')
     : 'No coop context available.';
 
@@ -189,14 +217,45 @@ export async function buildSkillPrompt(input: {
           .join('\n')}`
       : '';
 
+  const persistedSourceContext =
+    input.sourceContents && input.sourceContents.length > 0
+      ? `Persisted source content:\n${input.sourceContents
+          .slice(0, 4)
+          .map((content) => {
+            const sourceRef = sanitizeTextForInference(content.sourceRef);
+            const body = sanitizeUntrusted(content.body, 90) ?? 'No source body text available.';
+            return `- [observed/unconfirmed] ${content.id} (${sourceRef}): ${sanitizeUntrusted(
+              content.title,
+              18,
+            )}\n  Source content sourceRef: ${sourceRef}\n  ${body}`;
+          })
+          .join('\n')}`
+      : '';
+
   const knowledgeGraphContext = input.graphContext
     ? `Knowledge graph context:\n${input.graphContext}`
     : '';
 
+  const precedentContext =
+    input.precedents && input.precedents.length > 0
+      ? `Precedent context:\n${input.precedents
+          .map(
+            (trace) =>
+              `- ${trace.traceId} [${trace.outcome}; confidence ${trace.confidence.toFixed(2)}]: ${sanitizeTextForInference(
+                sanitizeIngested(trace.outputSummary),
+              )}`,
+          )
+          .join('\n')}\nPrecedent confidence adjustment: ${(
+          input.precedentConfidenceAdjustment ?? 0
+        ).toFixed(2)}`
+      : '';
+
   const prompt = [
     coopContext,
     ...(memoryContext ? [memoryContext] : []),
+    ...(persistedSourceContext ? [persistedSourceContext] : []),
     ...(knowledgeGraphContext ? [knowledgeGraphContext] : []),
+    ...(precedentContext ? [precedentContext] : []),
     extractContext,
     sourceContext,
     candidateContext,
@@ -213,7 +272,9 @@ export async function buildSkillPrompt(input: {
       sourceContext,
       candidateContext,
       scoreContext,
+      persistedSourceContext,
       knowledgeGraphContext,
+      precedentContext,
     ]
       .filter(Boolean)
       .join('\n'),

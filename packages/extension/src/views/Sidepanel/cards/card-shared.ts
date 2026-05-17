@@ -4,7 +4,15 @@ import type { useDraftEditor } from '../hooks/useDraftEditor';
 
 export type DraftEditorReturn = ReturnType<typeof useDraftEditor>;
 
-const KNOWN_SOURCE_TYPES = new Set<string>(['youtube', 'github', 'rss', 'web']);
+const KNOWN_SOURCE_TYPES = new Set<string>([
+  'github',
+  'npm',
+  'reddit',
+  'rss',
+  'web',
+  'wikipedia',
+  'youtube',
+]);
 
 /**
  * Parse a source reference string like "youtube:UC_xxx" into a typed object.

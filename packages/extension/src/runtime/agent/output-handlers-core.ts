@@ -8,7 +8,7 @@ import type {
 } from '@coop/shared';
 import { createCapitalFormationDraft } from '@coop/shared';
 import type { SkillOutputHandler } from './output-handlers-helpers';
-import { pushCreatedDraft } from './output-handlers-helpers';
+import { applyContextProvenanceToDraft, pushCreatedDraft } from './output-handlers-helpers';
 
 export const handleOpportunityExtractorOutput: SkillOutputHandler = async (input) => {
   input.context.candidates = (input.output as OpportunityExtractorOutput).candidates.map(
@@ -104,14 +104,17 @@ export const handleCapitalFormationBriefOutput: SkillOutputHandler = async (inpu
     };
   }
 
-  const draft = createCapitalFormationDraft({
-    observationId: input.observation.id,
-    planId: input.plan.id,
-    skillRunId: input.run.id,
-    skillId: input.skillId,
-    coopId: input.context.coop.profile.id,
-    output: input.output as CapitalFormationBriefOutput,
-  });
+  const draft = applyContextProvenanceToDraft(
+    createCapitalFormationDraft({
+      observationId: input.observation.id,
+      planId: input.plan.id,
+      skillRunId: input.run.id,
+      skillId: input.skillId,
+      coopId: input.context.coop.profile.id,
+      output: input.output as CapitalFormationBriefOutput,
+    }),
+    input.context,
+  );
   await input.saveReviewDraft(draft);
 
   const createdDraftIds: string[] = [];

@@ -18,6 +18,7 @@ describe('DraftCardProvenance', () => {
     expect(screen.getByText('Sourced from')).toBeInTheDocument();
     expect(screen.getByText('UC_abc')).toBeInTheDocument();
     expect(screen.getByText('org/repo')).toBeInTheDocument();
+    expect(screen.getByText('observed/unconfirmed')).toBeInTheDocument();
   });
 
   it('does not render "Sourced from" when sourceRefs is undefined', () => {

@@ -18,6 +18,7 @@ import type {
   GraphSnapshot,
   KnowledgeSkill,
   KnowledgeSource,
+  KnowledgeSourceContent,
   LocalMemberSignerBinding,
   LocalPasskeyIdentity,
   PermitLogEntry,
@@ -119,6 +120,7 @@ export class CoopDexie extends Dexie {
   coopBlobs!: EntityTable<CoopBlobRecord, 'blobId'>;
   syncOutbox!: EntityTable<SyncOutboxEntry, 'id'>;
   knowledgeSources!: EntityTable<KnowledgeSource, 'id'>;
+  knowledgeSourceContents!: EntityTable<KnowledgeSourceContent, 'id'>;
   graphSnapshots!: EntityTable<GraphSnapshot, 'id'>;
   skillVariants!: EntityTable<SkillVariant, 'id'>;
   experimentRecords!: EntityTable<ExperimentRecord, 'id'>;
@@ -531,6 +533,9 @@ export class CoopDexie extends Dexie {
     this.version(24).stores({
       reviewItemFeedbacks:
         'id, itemKind, itemId, [itemKind+itemId], coopId, action, remindAt, updatedAt',
+    });
+    this.version(25).stores({
+      knowledgeSourceContents: 'id, sourceId, coopId, sourceRef, bodyHash, fetchedAt',
     });
   }
 }

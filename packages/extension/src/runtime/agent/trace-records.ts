@@ -9,8 +9,10 @@ import type {
   CoopDexie,
   CoopSharedState,
   GrantFitScore,
+  KnowledgeSourceContent,
   OpportunityCandidate,
   ReadablePageExtract,
+  ReasoningTrace,
   ReceiverCapture,
   ReviewDraft,
   TabRouting,
@@ -31,6 +33,9 @@ type TraceSkillContext = {
   relatedArtifacts: CoopSharedState['artifacts'];
   relatedRoutings: TabRouting[];
   memories: AgentMemory[];
+  sourceContents?: KnowledgeSourceContent[];
+  precedents?: ReasoningTrace[];
+  precedentConfidenceAdjustment?: number;
   graphContext?: string;
 };
 
@@ -73,12 +78,15 @@ export function buildAgentTraceContextInventory(input: TraceSkillContext) {
     `related-artifacts:${input.relatedArtifacts.length}`,
     `related-routings:${input.relatedRoutings.length}`,
     `memories:${input.memories.length}`,
+    input.sourceContents ? `source-contents:${input.sourceContents.length}` : undefined,
+    input.precedents ? `precedents:${input.precedents.length}` : undefined,
     input.graphContext ? 'graph-context:1' : undefined,
   ].filter((value): value is string => Boolean(value));
 }
 
 export function classifyAgentTraceSourceRisk(input: TraceSkillContext): AgentTraceSourceRisk {
-  const hasUntrustedSources = Boolean(input.capture) || input.extracts.length > 0;
+  const hasUntrustedSources =
+    Boolean(input.capture) || input.extracts.length > 0 || (input.sourceContents?.length ?? 0) > 0;
   const hasTrustedSources =
     Boolean(input.coop) ||
     Boolean(input.draft) ||
@@ -89,6 +97,7 @@ export function classifyAgentTraceSourceRisk(input: TraceSkillContext): AgentTra
     input.relatedArtifacts.length > 0 ||
     input.relatedRoutings.length > 0 ||
     input.memories.length > 0 ||
+    (input.precedents?.length ?? 0) > 0 ||
     typeof input.graphContext === 'string';
 
   if (hasUntrustedSources && hasTrustedSources) {

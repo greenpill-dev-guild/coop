@@ -106,4 +106,89 @@ describe('buildSkillPrompt', () => {
     expect(prepared.prompt).toContain('inferred/unconfirmed; context only');
     expect(prepared.prompt).toContain('stale/stale; stale context only');
   });
+
+  it('includes memory charter, persisted source content, graph context, and precedents', async () => {
+    const fixture = loadAgentSecurityBenchmarkFixtures().find(
+      (entry) => entry.skillId === 'tab-router',
+    );
+    if (!fixture?.coop) {
+      throw new Error('Expected a tab-router security fixture.');
+    }
+    const skill = getRegisteredSkill(fixture.skillId);
+    if (!skill) {
+      throw new Error(`Expected skill "${fixture.skillId}" to be registered.`);
+    }
+
+    const prepared = await buildSkillPrompt({
+      skill,
+      observation: fixture.observation,
+      coop: {
+        ...fixture.coop,
+        soul: {
+          ...fixture.coop.soul,
+          memoryCharter: {
+            version: 1,
+            goals: ['Track funding leads with proof'],
+            opportunityThesis: 'This coop watches source-backed funding opportunities.',
+            desiredSignals: ['funding leads', 'validated impact evidence'],
+            antiSignals: ['unsourced claims'],
+            evidenceStandards: ['Prefer member-approved artifacts'],
+            vocabulary: [],
+            prohibitedTopics: [],
+            confidenceThreshold: 0.72,
+            updatedAt: '2026-05-08T00:00:00.000Z',
+          },
+        },
+      },
+      draft: fixture.draft,
+      capture: fixture.capture,
+      receipt: fixture.receipt,
+      candidates: fixture.candidates,
+      scores: fixture.scores,
+      extracts: fixture.extracts,
+      relatedDrafts: fixture.relatedDrafts,
+      relatedArtifacts: fixture.relatedArtifacts,
+      relatedRoutings: fixture.relatedRoutings,
+      memories: fixture.memories,
+      sourceContents: [
+        {
+          id: 'ks-content-1',
+          sourceId: 'ks-1',
+          coopId: fixture.coop.profile.id,
+          sourceRef: 'rss:https://example.test/feed#1',
+          title: 'Funding update',
+          body: 'The River Foundation opened a watershed grant for regional crews.',
+          bodyHash: '0xhash',
+          metadata: {},
+          fetchedAt: '2026-05-08T00:00:00.000Z',
+          createdAt: '2026-05-08T00:00:01.000Z',
+        },
+      ],
+      graphContext:
+        '- River Foundation (organization): grant maker [source: source-content:ks-content-1; label: observed/unconfirmed]',
+      precedents: [
+        {
+          traceId: 'trace-approved',
+          skillRunId: 'run-1',
+          observationId: 'obs-1',
+          observationText: 'watershed grant',
+          contextEntityIds: [],
+          sourceRefs: ['rss:https://example.test/feed#0'],
+          precedentTraceIds: [],
+          confidence: 0.84,
+          outputSummary: 'Approved a similar funding brief.',
+          outcome: 'approved',
+          createdAt: '2026-05-01T00:00:00.000Z',
+        },
+      ],
+      precedentConfidenceAdjustment: 0.05,
+    });
+
+    expect(prepared.prompt).toContain('Memory charter goals');
+    expect(prepared.prompt).toContain('Persisted source content');
+    expect(prepared.prompt).toContain('[observed/unconfirmed] ks-content-1');
+    expect(prepared.prompt).toContain('Knowledge graph context');
+    expect(prepared.prompt).toContain('Precedent context');
+    expect(prepared.prompt).toContain('Precedent confidence adjustment: 0.05');
+  });
 });

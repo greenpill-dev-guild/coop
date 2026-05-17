@@ -67,6 +67,10 @@ export * from './runner-skills-completion';
 export * from './runner-skills-context';
 export * from './runner-skills-memory';
 
+function clampConfidence(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
 export async function runObservationPlan(
   observation: AgentObservation,
   options: {
@@ -303,6 +307,10 @@ export async function runObservationPlan(
       relatedArtifacts: context.relatedArtifacts,
       relatedRoutings: context.relatedRoutings,
       memories: context.memories,
+      sourceContents: context.sourceContents ?? [],
+      precedents: context.precedents ?? [],
+      precedentConfidenceAdjustment: context.precedentConfidenceAdjustment ?? 0,
+      graphContext: context.graphContext,
     });
     const promptHash = await hashTraceValue(`${preparedPrompt.system}\n\n${preparedPrompt.prompt}`);
     const traceContext = {
@@ -318,6 +326,10 @@ export async function runObservationPlan(
       relatedArtifacts: context.relatedArtifacts,
       relatedRoutings: context.relatedRoutings,
       memories: context.memories,
+      sourceContents: context.sourceContents ?? [],
+      precedents: context.precedents ?? [],
+      precedentConfidenceAdjustment: context.precedentConfidenceAdjustment ?? 0,
+      graphContext: context.graphContext,
     };
     const startedAtMs = Date.now();
     let run = createSkillRun({
@@ -350,6 +362,10 @@ export async function runObservationPlan(
         relatedArtifacts: context.relatedArtifacts,
         relatedRoutings: context.relatedRoutings,
         memories: context.memories,
+        sourceContents: context.sourceContents ?? [],
+        precedents: context.precedents ?? [],
+        precedentConfidenceAdjustment: context.precedentConfidenceAdjustment ?? 0,
+        graphContext: context.graphContext,
         preparedPrompt,
         preferredProvider,
       });
@@ -366,10 +382,13 @@ export async function runObservationPlan(
         completed.output,
         completed.provider,
       );
+      const adjustedConfidence = clampConfidence(
+        recalculatedConfidence + (context.precedentConfidenceAdjustment ?? 0),
+      );
       const qualityThreshold = registered.manifest.qualityThreshold;
 
-      if (typeof qualityThreshold === 'number' && recalculatedConfidence < qualityThreshold) {
-        const message = `Skill "${skillId}" output confidence ${recalculatedConfidence.toFixed(
+      if (typeof qualityThreshold === 'number' && adjustedConfidence < qualityThreshold) {
+        const message = `Skill "${skillId}" output confidence ${adjustedConfidence.toFixed(
           2,
         )} fell below the configured quality threshold ${qualityThreshold.toFixed(2)}.`;
 
@@ -387,7 +406,7 @@ export async function runObservationPlan(
           steps: workingPlan.steps.map((candidate) =>
             candidate.id === currentStep.id ? currentStep : candidate,
           ),
-          confidence: Math.min(workingPlan.confidence, recalculatedConfidence),
+          confidence: Math.min(workingPlan.confidence, adjustedConfidence),
           failureReason: message,
         });
         await saveAgentPlan(db, workingPlan);
@@ -406,7 +425,7 @@ export async function runObservationPlan(
           output: completed.output,
           repairSteps,
           validationErrors: [message],
-          confidenceScore: recalculatedConfidence,
+          confidenceScore: adjustedConfidence,
           outcome: 'rejected',
         });
 
@@ -452,9 +471,9 @@ export async function runObservationPlan(
       await saveSkillRun(db, run);
       result.completedSkillRunIds.push(run.id);
 
-      if (recalculatedConfidence < workingPlan.confidence) {
+      if (adjustedConfidence < workingPlan.confidence) {
         workingPlan = updateAgentPlan(workingPlan, {
-          confidence: recalculatedConfidence,
+          confidence: adjustedConfidence,
         });
       }
 
@@ -463,7 +482,7 @@ export async function runObservationPlan(
         output,
         observation,
         run.id,
-        recalculatedConfidence,
+        adjustedConfidence,
       );
 
       // Record reasoning trace for knowledge sandbox precedent system
@@ -476,9 +495,26 @@ export async function runObservationPlan(
           observationId: observation.id,
           observationText: `${observation.title}: ${observation.summary}`,
           contextEntityIds: handled.contextEntityIds ?? [],
-          precedentTraceIds: [],
-          confidence: recalculatedConfidence,
-          outputSummary: `${skillId} completed with confidence ${recalculatedConfidence.toFixed(2)}`,
+          sourceRefs: [
+            ...(context.sourceContents ?? []).map((content) => content.sourceRef),
+            ...(handled.contextEntityIds ?? []),
+          ],
+          precedentTraceIds: (context.precedents ?? []).map((trace) => trace.traceId),
+          providerId: completed.provider,
+          modelId: completed.model,
+          promptHash,
+          baseConfidence: recalculatedConfidence,
+          confidenceAdjustment: context.precedentConfidenceAdjustment ?? 0,
+          contextLabels: [
+            ...context.memories.map(
+              (memory) =>
+                `${memory.provenanceLabel ?? 'inferred'}/${memory.confirmationStatus ?? 'unconfirmed'}`,
+            ),
+            ...(context.sourceContents ?? []).map(() => 'observed/unconfirmed'),
+            ...(context.graphContext ? ['graph-context'] : []),
+          ],
+          confidence: adjustedConfidence,
+          outputSummary: `${skillId} completed with confidence ${adjustedConfidence.toFixed(2)}`,
           outcome: 'pending',
           createdAt: nowIsoUtil(),
         });
@@ -502,7 +538,7 @@ export async function runObservationPlan(
         durationMs: completed.durationMs,
         output,
         repairSteps,
-        confidenceScore: recalculatedConfidence,
+        confidenceScore: adjustedConfidence,
         outcome: repairSteps.length > 0 ? 'fallback' : 'completed',
       });
 
@@ -520,8 +556,8 @@ export async function runObservationPlan(
         model: completed.model,
         durationMs: completed.durationMs,
         confidenceBefore,
-        confidenceAfter: recalculatedConfidence,
-        confidenceDelta: recalculatedConfidence - confidenceBefore,
+        confidenceAfter: adjustedConfidence,
+        confidenceDelta: adjustedConfidence - confidenceBefore,
       });
 
       currentStep = updateAgentPlanStep(currentStep, {

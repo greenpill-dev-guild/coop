@@ -47,6 +47,19 @@ type RitualEditFormState = {
   defaultCapturePosture: string;
 };
 
+type MemoryCharter = NonNullable<CoopSoul['memoryCharter']>;
+
+type MemoryCharterEditFormState = {
+  goals: string;
+  opportunityThesis: string;
+  desiredSignals: string;
+  antiSignals: string;
+  evidenceStandards: string;
+  vocabulary: string;
+  prohibitedTopics: string;
+  confidenceThreshold: string;
+};
+
 const setupLensFieldMap = [
   {
     lens: 'capital-formation',
@@ -118,6 +131,30 @@ function createRitualEditForm(activeCoop: CoopSharedState): RitualEditFormState 
   };
 }
 
+function createMemoryCharterEditForm(activeCoop: CoopSharedState): MemoryCharterEditFormState {
+  const charter = activeCoop.soul.memoryCharter;
+  return {
+    goals: listToMultiline(charter?.goals ?? [activeCoop.profile.purpose]),
+    opportunityThesis:
+      charter?.opportunityThesis ?? activeCoop.soul.whyThisCoopExists ?? activeCoop.profile.purpose,
+    desiredSignals: listToMultiline(charter?.desiredSignals ?? activeCoop.soul.artifactFocus),
+    antiSignals: listToMultiline(charter?.antiSignals ?? []),
+    evidenceStandards: listToMultiline(
+      charter?.evidenceStandards ?? [
+        'Prefer member-approved artifacts before treating a memory as shared truth',
+        'Keep source provenance visible on recommendations',
+      ],
+    ),
+    vocabulary: listToMultiline(charter?.vocabulary ?? activeCoop.soul.vocabularyTerms),
+    prohibitedTopics: listToMultiline(
+      charter?.prohibitedTopics ?? activeCoop.soul.prohibitedTopics,
+    ),
+    confidenceThreshold: String(
+      charter?.confidenceThreshold ?? activeCoop.soul.confidenceThreshold,
+    ),
+  };
+}
+
 function createSetupEditForm(activeCoop: CoopSharedState): SetupEditFormState {
   const lensById = new Map(
     (activeCoop.setupInsights?.lenses ?? []).map((lens) => [lens.lens, lens]),
@@ -147,6 +184,41 @@ function buildSoulPatch(form: ReturnType<typeof createSoulEditForm>): CoreSoulPa
     usefulSignalDefinition: form.usefulSignalDefinition,
     toneAndWorkingStyle: form.toneAndWorkingStyle,
     artifactFocus: multilineToList(form.artifactFocus),
+  };
+}
+
+function parseConfidenceThreshold(value: string, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(1, Math.max(0, parsed));
+}
+
+function buildMemoryCharterPatch(
+  form: MemoryCharterEditFormState,
+  current: MemoryCharter | undefined,
+  fallback: CoopSharedState,
+): MemoryCharter {
+  return {
+    version: 1,
+    goals: multilineToList(form.goals),
+    opportunityThesis:
+      form.opportunityThesis.trim() ||
+      current?.opportunityThesis ||
+      fallback.soul.whyThisCoopExists ||
+      fallback.profile.purpose,
+    desiredSignals: multilineToList(form.desiredSignals),
+    antiSignals: multilineToList(form.antiSignals),
+    evidenceStandards: multilineToList(form.evidenceStandards),
+    vocabulary: multilineToList(form.vocabulary),
+    prohibitedTopics: multilineToList(form.prohibitedTopics),
+    confidenceThreshold: parseConfidenceThreshold(
+      form.confidenceThreshold,
+      current?.confidenceThreshold ?? fallback.soul.confidenceThreshold,
+    ),
+    updatedAt: new Date().toISOString(),
+    updatedByMemberId: current?.updatedByMemberId,
   };
 }
 
@@ -350,6 +422,145 @@ export function NestSoulSection({
           type="button"
         >
           Save soul
+        </button>
+      </div>
+    </details>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NestMemoryCharterSection
+// ---------------------------------------------------------------------------
+
+export function NestMemoryCharterSection({
+  activeCoop,
+  updateCoopDetails,
+}: {
+  activeCoop: CoopSharedState;
+  updateCoopDetails: SidepanelOrchestration['updateCoopDetails'];
+}) {
+  const [charterForm, setCharterForm] = useState(() => createMemoryCharterEditForm(activeCoop));
+
+  useEffect(() => {
+    setCharterForm(createMemoryCharterEditForm(activeCoop));
+  }, [activeCoop]);
+
+  const initialCharter = createMemoryCharterEditForm(activeCoop);
+  const hasChanges = JSON.stringify(charterForm) !== JSON.stringify(initialCharter);
+
+  return (
+    <details className="panel-card collapsible-card">
+      <summary>
+        <h2>Edit Memory Charter</h2>
+      </summary>
+      <div className="collapsible-card__content stack">
+        <div className="field-grid">
+          <label htmlFor="edit-memory-goals">Goals</label>
+          <textarea
+            id="edit-memory-goals"
+            value={charterForm.goals}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, goals: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-thesis">Opportunity thesis</label>
+          <textarea
+            id="edit-memory-thesis"
+            value={charterForm.opportunityThesis}
+            onChange={(event) =>
+              setCharterForm((current) => ({
+                ...current,
+                opportunityThesis: event.target.value,
+              }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-desired-signals">Desired signals</label>
+          <textarea
+            id="edit-memory-desired-signals"
+            value={charterForm.desiredSignals}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, desiredSignals: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-anti-signals">Anti-signals</label>
+          <textarea
+            id="edit-memory-anti-signals"
+            value={charterForm.antiSignals}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, antiSignals: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-evidence">Evidence standards</label>
+          <textarea
+            id="edit-memory-evidence"
+            value={charterForm.evidenceStandards}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, evidenceStandards: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-vocabulary">Vocabulary</label>
+          <textarea
+            id="edit-memory-vocabulary"
+            value={charterForm.vocabulary}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, vocabulary: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-prohibited">Prohibited topics</label>
+          <textarea
+            id="edit-memory-prohibited"
+            value={charterForm.prohibitedTopics}
+            onChange={(event) =>
+              setCharterForm((current) => ({ ...current, prohibitedTopics: event.target.value }))
+            }
+          />
+        </div>
+        <div className="field-grid">
+          <label htmlFor="edit-memory-threshold">Confidence threshold</label>
+          <input
+            id="edit-memory-threshold"
+            max="1"
+            min="0"
+            step="0.01"
+            type="number"
+            value={charterForm.confidenceThreshold}
+            onChange={(event) =>
+              setCharterForm((current) => ({
+                ...current,
+                confidenceThreshold: event.target.value,
+              }))
+            }
+          />
+        </div>
+        <button
+          className="primary-button"
+          disabled={!hasChanges}
+          onClick={() => {
+            void updateCoopDetails({
+              soul: {
+                memoryCharter: buildMemoryCharterPatch(
+                  charterForm,
+                  activeCoop.soul.memoryCharter,
+                  activeCoop,
+                ),
+              },
+            });
+          }}
+          type="button"
+        >
+          Save memory charter
         </button>
       </div>
     </details>

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   loadGraphSnapshot: vi.fn(),
   saveGraphSnapshot: vi.fn(),
   updateKnowledgeSourceMeta: vi.fn(),
+  saveKnowledgeSourceContent: vi.fn(),
   nowIso: vi.fn(() => '2026-04-06T00:00:00.000Z'),
   emitSourceContentObservation: vi.fn(),
   fetchStructuredContentForSource: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@coop/shared', async (importOriginal) => {
     listKnowledgeSources: mocks.listKnowledgeSources,
     getAuthSession: mocks.getAuthSession,
     updateKnowledgeSourceMeta: mocks.updateKnowledgeSourceMeta,
+    saveKnowledgeSourceContent: mocks.saveKnowledgeSourceContent,
     nowIso: mocks.nowIso,
   };
 });
@@ -418,6 +420,18 @@ describe('handleRefreshKnowledgeSource', () => {
       },
     ]);
     mocks.updateKnowledgeSourceMeta.mockResolvedValue(undefined);
+    mocks.saveKnowledgeSourceContent.mockResolvedValue({
+      id: 'ks-content-1',
+      sourceId: SOURCE_ID,
+      coopId: COOP_ID,
+      sourceRef: 'youtube:video',
+      title: 'Source Dispatch Result',
+      body: 'content',
+      bodyHash: '0xhash',
+      metadata: {},
+      fetchedAt: '2026-04-06T00:00:00.000Z',
+      createdAt: '2026-04-06T00:00:00.000Z',
+    });
     mocks.emitSourceContentObservation.mockResolvedValue(undefined);
 
     const result = await handleRefreshKnowledgeSource({
@@ -435,6 +449,16 @@ describe('handleRefreshKnowledgeSource', () => {
       lastFetchedAt: '2026-04-06T00:00:00.000Z',
       entityCount: 1,
     });
+    expect(mocks.saveKnowledgeSourceContent).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        sourceId: SOURCE_ID,
+        coopId: COOP_ID,
+        sourceRef: 'youtube:video',
+        title: 'Source Dispatch Result',
+        body: 'content',
+      }),
+    );
     expect(mocks.listKnowledgeSources).toHaveBeenCalledWith(expect.anything(), {
       coopId: COOP_ID,
       active: true,
@@ -443,7 +467,9 @@ describe('handleRefreshKnowledgeSource', () => {
       expect.objectContaining({
         sourceId: SOURCE_ID,
         sourceLabel: 'My Channel',
+        contentId: 'ks-content-1',
         contentTitle: 'Source Dispatch Result',
+        sourceRef: 'youtube:video',
       }),
     );
   });
@@ -463,6 +489,18 @@ describe('handleRefreshKnowledgeSource', () => {
         },
       ]);
     mocks.updateKnowledgeSourceMeta.mockResolvedValue(undefined);
+    mocks.saveKnowledgeSourceContent.mockResolvedValue({
+      id: 'ks-content-2',
+      sourceId: 'ks-def',
+      coopId: COOP_ID,
+      sourceRef: 'youtube:video',
+      title: 'Second content',
+      body: 'content',
+      bodyHash: '0xhash',
+      metadata: {},
+      fetchedAt: '2026-04-06T00:00:00.000Z',
+      createdAt: '2026-04-06T00:00:00.000Z',
+    });
     mocks.emitSourceContentObservation.mockResolvedValue(undefined);
 
     const result = await handleRefreshKnowledgeSource({

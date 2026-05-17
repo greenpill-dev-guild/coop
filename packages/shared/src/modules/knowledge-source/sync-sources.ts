@@ -1,5 +1,7 @@
 import type * as Y from 'yjs';
 import type { KnowledgeSource } from '../../contracts/schema-knowledge';
+import { knowledgeSourceSchema } from '../../contracts/schema-knowledge';
+import type { CoopDexie } from '../storage/db-schema';
 
 const SOURCES_MAP_KEY = 'knowledge-sources-v1';
 
@@ -27,10 +29,52 @@ export function readSourcesFromYDoc(doc: Y.Doc): KnowledgeSource[] {
   const sources: KnowledgeSource[] = [];
   for (const value of map.values()) {
     try {
-      sources.push(JSON.parse(value));
+      sources.push(knowledgeSourceSchema.parse(JSON.parse(value)));
     } catch {
       // skip corrupted entries
     }
+  }
+  return sources;
+}
+
+export async function mirrorSourcesFromYDocToDexie(
+  db: CoopDexie,
+  doc: Y.Doc,
+  options: { coopId?: string; pruneMissing?: boolean } = {},
+): Promise<KnowledgeSource[]> {
+  const sources = readSourcesFromYDoc(doc).filter(
+    (source) => !options.coopId || source.coopId === options.coopId,
+  );
+  if (sources.length > 0 || options.pruneMissing) {
+    if (options.pruneMissing) {
+      const nextIds = new Set(sources.map((source) => source.id));
+      const existing = options.coopId
+        ? await db.knowledgeSources.where('coopId').equals(options.coopId).toArray()
+        : await db.knowledgeSources.toArray();
+      const staleIds = existing
+        .map((source) => source.id)
+        .filter((sourceId) => !nextIds.has(sourceId));
+      if (staleIds.length > 0) {
+        await db.knowledgeSources.bulkDelete(staleIds);
+      }
+    }
+    if (sources.length > 0) {
+      await db.knowledgeSources.bulkPut(sources);
+    }
+  }
+  return sources;
+}
+
+export async function writeSourcesFromDexieToYDoc(
+  db: CoopDexie,
+  doc: Y.Doc,
+  options: { coopId?: string } = {},
+): Promise<KnowledgeSource[]> {
+  const sources = options.coopId
+    ? await db.knowledgeSources.where('coopId').equals(options.coopId).toArray()
+    : await db.knowledgeSources.toArray();
+  for (const source of sources) {
+    writeSourceToYDoc(doc, source);
   }
   return sources;
 }

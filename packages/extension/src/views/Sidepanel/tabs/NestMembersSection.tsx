@@ -4,6 +4,7 @@ import { Tooltip } from '../../shared/Tooltip';
 import { getAddressExplorerUrl, truncateAddress } from '../helpers';
 import type { SidepanelOrchestration } from '../hooks/useSidepanelOrchestration';
 import {
+  NestMemoryCharterSection,
   NestProfileSection,
   NestRitualSection,
   NestSetupSection,
@@ -160,6 +161,10 @@ export function NestMembersSection({
             updateCoopDetails={orchestration.updateCoopDetails}
           />
           <NestSoulSection
+            activeCoop={activeCoop}
+            updateCoopDetails={orchestration.updateCoopDetails}
+          />
+          <NestMemoryCharterSection
             activeCoop={activeCoop}
             updateCoopDetails={orchestration.updateCoopDetails}
           />

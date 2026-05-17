@@ -1,12 +1,21 @@
+import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
+import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
+import { createCoopDb } from '../../storage/db';
 import {
+  mirrorSourcesFromYDocToDexie,
   readSourcesFromYDoc,
   removeSourceFromYDoc,
   watchSourceChanges,
   writeSourceToYDoc,
+  writeSourcesFromDexieToYDoc,
 } from '../sync-sources';
 import { makeKnowledgeSource } from './fixtures';
+
+Dexie.dependencies.indexedDB = indexedDB;
+Dexie.dependencies.IDBKeyRange = IDBKeyRange;
 
 function createTestDoc() {
   return new Y.Doc();
@@ -122,5 +131,74 @@ describe('source Yjs sync', () => {
     expect(events[events.length - 1]).toContain('watch-1');
 
     unsub();
+  });
+
+  it('round-trips the shared source registry between Dexie and Yjs', async () => {
+    const db = createCoopDb(`test-source-sync-${crypto.randomUUID()}`);
+    const doc = createTestDoc();
+    docs.push(doc);
+    try {
+      await db.knowledgeSources.put(
+        makeKnowledgeSource({
+          id: 'dexie-source',
+          coopId: 'coop-1',
+          type: 'github',
+          identifier: 'greenpill/coop',
+          label: 'Coop repo',
+        }),
+      );
+
+      const written = await writeSourcesFromDexieToYDoc(db, doc, { coopId: 'coop-1' });
+      expect(written).toHaveLength(1);
+      expect(readSourcesFromYDoc(doc).map((source) => source.id)).toEqual(['dexie-source']);
+
+      await db.knowledgeSources.clear();
+      const mirrored = await mirrorSourcesFromYDocToDexie(db, doc, { coopId: 'coop-1' });
+      expect(mirrored).toHaveLength(1);
+      expect((await db.knowledgeSources.get('dexie-source'))?.label).toBe('Coop repo');
+    } finally {
+      await db.delete();
+    }
+  });
+
+  it('prunes local sources missing from an incoming shared registry when requested', async () => {
+    const db = createCoopDb(`test-source-sync-prune-${crypto.randomUUID()}`);
+    const doc = createTestDoc();
+    docs.push(doc);
+    try {
+      await db.knowledgeSources.bulkPut([
+        makeKnowledgeSource({
+          id: 'keep-source',
+          coopId: 'coop-1',
+          type: 'github',
+          identifier: 'greenpill/coop',
+          label: 'Coop repo',
+        }),
+        makeKnowledgeSource({
+          id: 'remove-source',
+          coopId: 'coop-1',
+          type: 'rss',
+          identifier: 'example.test/feed',
+          label: 'Old feed',
+        }),
+      ]);
+      writeSourceToYDoc(
+        doc,
+        makeKnowledgeSource({
+          id: 'keep-source',
+          coopId: 'coop-1',
+          type: 'github',
+          identifier: 'greenpill/coop',
+          label: 'Coop repo',
+        }),
+      );
+
+      await mirrorSourcesFromYDocToDexie(db, doc, { coopId: 'coop-1', pruneMissing: true });
+
+      expect(await db.knowledgeSources.get('keep-source')).toBeDefined();
+      expect(await db.knowledgeSources.get('remove-source')).toBeUndefined();
+    } finally {
+      await db.delete();
+    }
   });
 });

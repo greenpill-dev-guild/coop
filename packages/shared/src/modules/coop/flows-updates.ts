@@ -18,6 +18,7 @@ export function updateCoopDetails(input: {
       | 'usefulSignalDefinition'
       | 'toneAndWorkingStyle'
       | 'artifactFocus'
+      | 'memoryCharter'
     >
   >;
   setupInsights?: SetupInsights;

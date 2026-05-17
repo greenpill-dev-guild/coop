@@ -1,4 +1,4 @@
-export type SourceType = 'youtube' | 'github' | 'rss' | 'reddit' | 'npm' | 'wikipedia';
+export type SourceType = 'youtube' | 'github' | 'rss' | 'reddit' | 'npm' | 'wikipedia' | 'web';
 
 const SOURCE_ICONS: Record<SourceType, string> = {
   youtube: '\u25B6',
@@ -7,6 +7,7 @@ const SOURCE_ICONS: Record<SourceType, string> = {
   reddit: '\u2B21',
   npm: '\u2B22',
   wikipedia: 'W',
+  web: '\u25CE',
 };
 
 interface SourceBadgeProps {

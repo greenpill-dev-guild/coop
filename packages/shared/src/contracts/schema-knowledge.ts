@@ -26,6 +26,21 @@ export const knowledgeSourceSchema = z.object({
 
 export type KnowledgeSource = z.infer<typeof knowledgeSourceSchema>;
 
+export const knowledgeSourceContentSchema = z.object({
+  id: z.string().min(1),
+  sourceId: z.string().min(1),
+  coopId: z.string().min(1),
+  sourceRef: z.string().min(1),
+  title: z.string().min(1),
+  body: z.string(),
+  bodyHash: z.string().min(1),
+  metadata: z.record(z.any()).default({}),
+  fetchedAt: z.string().datetime(),
+  createdAt: z.string().datetime(),
+});
+
+export type KnowledgeSourceContent = z.infer<typeof knowledgeSourceContentSchema>;
+
 // ---------------------------------------------------------------------------
 // POLE+O Entity Model (Person, Organization, Location, Event + Object)
 // ---------------------------------------------------------------------------
@@ -85,7 +100,14 @@ export const reasoningTraceSchema = z.object({
   observationId: z.string().min(1),
   observationText: z.string().min(1),
   contextEntityIds: z.array(z.string()).default([]),
+  sourceRefs: z.array(z.string()).optional(),
   precedentTraceIds: z.array(z.string()).default([]),
+  providerId: z.string().min(1).optional(),
+  modelId: z.string().min(1).optional(),
+  promptHash: z.string().min(1).optional(),
+  baseConfidence: z.number().min(0).max(1).optional(),
+  confidenceAdjustment: z.number().min(-0.15).max(0.15).optional(),
+  contextLabels: z.array(z.string().min(1)).optional(),
   confidence: z.number().min(0).max(1),
   outputSummary: z.string().min(1),
   outcome: reasoningTraceOutcomeSchema,

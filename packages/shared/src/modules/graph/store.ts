@@ -108,12 +108,13 @@ function sourceRefsForSource(source: KnowledgeSource): string[] {
     `source:${source.id}`,
     `${source.type}:${source.identifier}`,
     `${source.type}:${source.identifier}:`,
+    `${source.type}:${source.identifier}#`,
   ];
 }
 
 export function isGraphRefFromSource(ref: string, source: KnowledgeSource): boolean {
   return sourceRefsForSource(source).some((candidate) => {
-    if (candidate.endsWith(':')) {
+    if (candidate.endsWith(':') || candidate.endsWith('#')) {
       return ref.startsWith(candidate);
     }
     return ref === candidate;

@@ -19,6 +19,18 @@ import {
   summarizeSourceLine,
 } from './card-shared';
 
+function buildPrecedentIndicator(draft: ReviewDraft): Precedent | null {
+  const count = draft.precedentTraceIds?.length ?? 0;
+  if (count === 0) {
+    return null;
+  }
+  return {
+    decision: `${count} prior decision${count === 1 ? '' : 's'}`,
+    outcome: (draft.confidenceAdjustment ?? 0) < 0 ? 'negative' : 'positive',
+    timeAgo: 'in memory',
+  };
+}
+
 export interface DraftCardProps {
   draft: ReviewDraft;
   context: 'roost' | 'meeting';
@@ -38,10 +50,7 @@ export function DraftCard({
   onShareToFeed,
 }: DraftCardProps) {
   const value = draftEditor.draftValue(draft);
-  const extended = value as ReviewDraft & {
-    sourceRefs?: string[];
-    precedent?: Precedent | null;
-  };
+  const extended = value as ReviewDraft & { precedent?: Precedent | null };
   const selectedCoops = coops.filter((coop) =>
     value.suggestedTargetCoopIds.includes(coop.profile.id),
   );
@@ -72,9 +81,11 @@ export function DraftCard({
       </div>
       <DraftCardProvenance
         provenanceType={value.provenance.type}
-        sourceRefs={extended.sourceRefs}
-        precedent={extended.precedent}
+        sourceRefs={value.sourceRefs}
+        contextLabels={value.contextLabels}
+        precedent={extended.precedent ?? buildPrecedentIndicator(value)}
         confidence={value.confidence}
+        confidenceAdjustment={value.confidenceAdjustment ?? 0}
       />
       {selectedCoops.length > 0 ? (
         <div className="stack" style={{ gap: '0.35rem' }}>
