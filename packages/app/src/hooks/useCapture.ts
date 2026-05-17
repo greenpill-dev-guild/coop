@@ -101,6 +101,7 @@ export function useCapture(
     reconcilePairingRef: React.RefObject<() => Promise<void>>;
     pairingRef: React.RefObject<ReceiverPairingRecord | null>;
     refreshLocalStateRef: React.RefObject<() => Promise<void>>;
+    mockMedia?: boolean;
   },
 ): CaptureState {
   const {
@@ -112,6 +113,7 @@ export function useCapture(
     reconcilePairingRef,
     pairingRef,
     refreshLocalStateRef,
+    mockMedia = false,
   } = deps;
 
   const [captures, setCaptures] = useState<CaptureCard[]>([]);
@@ -123,6 +125,7 @@ export function useCapture(
   const recorderStreamRef = useRef<MediaStream | null>(null);
   const recorderChunksRef = useRef<Blob[]>([]);
   const recorderCommitRef = useRef<'save' | 'cancel'>('save');
+  const mockRecordingRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const capturesRef = useRef<CaptureCard[]>([]);
 
@@ -262,6 +265,14 @@ export function useCapture(
   );
 
   const startRecording = useCallback(async () => {
+    if (mockMedia) {
+      mockRecordingRef.current = true;
+      recorderCommitRef.current = 'save';
+      setIsRecording(true);
+      setMessage('Recording into the nest…');
+      return;
+    }
+
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setMessage('This browser cannot record audio here yet.');
       return;
@@ -369,16 +380,35 @@ export function useCapture(
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not start recording.');
     }
-  }, [db, isMountedRef, setMessage, stashCapture]);
+  }, [db, isMountedRef, mockMedia, setMessage, stashCapture]);
 
-  const finishRecording = useCallback((mode: 'save' | 'cancel') => {
-    if (!recorderRef.current || recorderRef.current.state === 'inactive') {
-      return;
-    }
-    recorderCommitRef.current = mode;
-    recorderRef.current.stop();
-    setIsRecording(false);
-  }, []);
+  const finishRecording = useCallback(
+    (mode: 'save' | 'cancel') => {
+      if (mockRecordingRef.current) {
+        mockRecordingRef.current = false;
+        setIsRecording(false);
+        if (mode === 'save') {
+          void stashCapture({
+            blob: new Blob(['mock receiver voice note'], { type: 'audio/webm' }),
+            kind: 'audio',
+            fileName: 'qa-voice-note.webm',
+            title: 'Voice note',
+          });
+        } else {
+          setMessage('Recording canceled before it hatched.');
+        }
+        return;
+      }
+
+      if (!recorderRef.current || recorderRef.current.state === 'inactive') {
+        return;
+      }
+      recorderCommitRef.current = mode;
+      recorderRef.current.stop();
+      setIsRecording(false);
+    },
+    [setMessage, stashCapture],
+  );
 
   const onPickFile = useCallback(
     async (event: ChangeEvent<HTMLInputElement>, kind: 'photo' | 'file') => {

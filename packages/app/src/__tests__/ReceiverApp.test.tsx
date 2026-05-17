@@ -106,7 +106,7 @@ describe('receiver app routes', () => {
     await renderRootApp();
 
     expect(await screen.findByRole('heading', { name: /^Mate$/i })).toBeVisible();
-    expect(screen.getByRole('button', { name: /scan qr/i })).toBeVisible();
+    expect(await screen.findByRole('button', { name: /scan qr/i })).toBeVisible();
     expect(screen.queryByLabelText(/nest code or coop link/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /paste code/i }));
@@ -307,6 +307,36 @@ describe('receiver app routes', () => {
     const sharedLinkUser = userEvent.setup();
     await sharedLinkUser.click(within(linkItem).getByRole('button', { name: /more actions/i }));
     expect(await screen.findByRole('button', { name: /copy link/i })).toBeVisible();
+  });
+
+  it('loads local PWA QA fixtures and saves mock voice notes without OS media prompts', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/app/receiver?presentation=pwa&qa=seed-failed-sync,mock-media',
+    );
+
+    await renderRootApp();
+
+    expect(await screen.findByRole('heading', { name: /^Hatch$/i })).toBeVisible();
+    expect(await screen.findByText(/QA mode ready: seed-failed-sync, mock-media/i)).toBeVisible();
+    expect(await screen.findByText(/QA failed sync file/i)).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: /start recording/i }));
+
+    expect(await screen.findByRole('button', { name: /save voice note/i })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: /save voice note/i }));
+
+    expect(await screen.findByText(/nest item saved locally and queued for sync/i)).toBeVisible();
+    expect((await screen.findAllByText('Voice note')).length).toBeGreaterThan(0);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('link', { name: 'Roost' }));
+    });
+
+    expect(await screen.findByText(/QA failed sync file/i)).toBeVisible();
+    expect(screen.getByRole('button', { name: /retry sync/i })).toBeVisible();
   });
 
   it('falls back cleanly when QR scanning is unavailable', async () => {

@@ -136,7 +136,7 @@ export function PairView({
   }, [pairingError, pairingInput, pendingPairing]);
 
   return (
-    <section className="receiver-grid">
+    <section className="receiver-grid" data-qa="mate-screen">
       <Card>
         <p className="eyebrow">Mate</p>
         <h2>Mate this phone to a trusted Coop browser.</h2>
@@ -149,13 +149,18 @@ export function PairView({
             variant="primary"
             onClick={() => void onStartQrScanner()}
             className="pair-cta-primary"
+            data-qa="scan-qr"
           >
             Scan QR
           </Button>
-          <Button variant="secondary" onClick={() => setPasteOpen((open) => !open)}>
+          <Button
+            variant="secondary"
+            data-qa="paste-code"
+            onClick={() => setPasteOpen((open) => !open)}
+          >
             Paste code
           </Button>
-          <Button variant="secondary" onClick={onNavigateHatch}>
+          <Button variant="secondary" data-qa="continue-without-pairing" onClick={onNavigateHatch}>
             Continue without pairing
           </Button>
         </div>
@@ -173,11 +178,12 @@ export function PairView({
             </label>
             <textarea
               id="pairing-payload"
+              data-qa="pairing-payload"
               onChange={(event) => onPairingInputChange(event.target.value)}
               placeholder="coop-receiver:..., web+coop-receiver://..., or https://.../app/pair#payload=..."
               value={pairingInput}
             />
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" data-qa="check-nest-code">
               Check nest code
             </Button>
           </form>
@@ -223,7 +229,7 @@ export function PairView({
           </div>
         ) : null}
         {pendingPairing ? (
-          <div className="pair-confirm-card">
+          <div className="pair-confirm-card" data-qa="pair-confirm-card">
             <div className="pair-confirm-header">
               {ShieldIcon}
               <p className="quiet-note">
@@ -249,10 +255,15 @@ export function PairView({
               </div>
             </div>
             <div className="cta-row">
-              <Button variant="primary" onClick={onConfirmPairing} className="pair-join-button">
+              <Button
+                variant="primary"
+                data-qa="join-coop"
+                onClick={onConfirmPairing}
+                className="pair-join-button"
+              >
                 Join this coop
               </Button>
-              <Button variant="secondary" onClick={onCancelPairing}>
+              <Button variant="secondary" data-qa="cancel-pairing" onClick={onCancelPairing}>
                 Cancel
               </Button>
             </div>

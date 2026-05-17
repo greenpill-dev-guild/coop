@@ -74,7 +74,7 @@ export function ReceiverShell({
   const mainClassName = ['receiver-main', isHatch ? 'is-hatch' : ''].filter(Boolean).join(' ');
 
   return (
-    <div className={shellClassName} data-route={activeRoute}>
+    <div className={shellClassName} data-qa="receiver-shell" data-route={activeRoute}>
       <header className="receiver-topbar">
         <a
           className="receiver-mark-link"
@@ -100,6 +100,7 @@ export function ReceiverShell({
 
       <main
         className={mainClassName}
+        data-qa="receiver-main"
         ref={mainRef}
         onTouchStart={onPullStart}
         onTouchMove={onPullMove}
@@ -116,6 +117,7 @@ export function ReceiverShell({
 
         <button
           className="receiver-status-summary"
+          data-qa="receiver-status-summary"
           onClick={() => setSettingsOpen(true)}
           type="button"
           aria-label={`Settings and status: ${statusSummary}`}
@@ -173,7 +175,11 @@ export function ReceiverShell({
         </button>
 
         {message ? (
-          <output className="receiver-live-message" aria-live="polite">
+          <output
+            className="receiver-live-message"
+            data-qa="receiver-live-message"
+            aria-live="polite"
+          >
             {message}
           </output>
         ) : null}
@@ -333,7 +339,7 @@ export function ReceiverShell({
         {children}
       </main>
 
-      <nav aria-label="Receiver navigation" className="receiver-appbar">
+      <nav aria-label="Receiver navigation" className="receiver-appbar" data-qa="receiver-nav">
         {receiverNavItems.map(({ href, kind, label, Icon }) => {
           const active = activeRoute === kind;
 
@@ -341,6 +347,7 @@ export function ReceiverShell({
             <a
               aria-current={active ? 'page' : undefined}
               className={active ? 'receiver-appbar-link is-active' : 'receiver-appbar-link'}
+              data-qa={`receiver-nav-${kind}`}
               href={href}
               key={kind}
               onClick={(event) => {

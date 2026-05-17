@@ -81,7 +81,7 @@ export function CaptureView({
   onNavigatePair,
 }: CaptureViewProps) {
   return (
-    <section className="receiver-grid receiver-hatch-grid">
+    <section className="receiver-grid receiver-hatch-grid" data-qa="hatch-screen">
       <Card className="receiver-capture-card receiver-hatch-card">
         <div className="receiver-hatch-heading">
           <p className="eyebrow">Primary Capture</p>
@@ -92,6 +92,7 @@ export function CaptureView({
             aria-label={isRecording ? 'Stop recording' : 'Start recording'}
             aria-pressed={isRecording}
             className={isRecording ? 'egg-button is-recording' : 'egg-button'}
+            data-qa="record-button"
             onClick={() => (isRecording ? onFinishRecording('save') : void onStartRecording())}
             type="button"
           >
@@ -116,10 +117,18 @@ export function CaptureView({
           </p>
           {isRecording ? (
             <div className="cta-row">
-              <Button variant="primary" onClick={() => onFinishRecording('save')}>
+              <Button
+                variant="primary"
+                data-qa="save-voice-note"
+                onClick={() => onFinishRecording('save')}
+              >
                 Save voice note
               </Button>
-              <Button variant="secondary" onClick={() => onFinishRecording('cancel')}>
+              <Button
+                variant="secondary"
+                data-qa="cancel-voice-note"
+                onClick={() => onFinishRecording('cancel')}
+              >
                 Cancel
               </Button>
             </div>
@@ -129,6 +138,7 @@ export function CaptureView({
         <div className="receiver-actions-grid">
           <button
             className="capture-action-btn"
+            data-qa="take-photo"
             onClick={() => photoInputRef.current?.click()}
             type="button"
           >
@@ -137,6 +147,7 @@ export function CaptureView({
           </button>
           <button
             className="capture-action-btn"
+            data-qa="attach-file"
             onClick={() => fileInputRef.current?.click()}
             type="button"
           >
@@ -155,6 +166,7 @@ export function CaptureView({
           ]
             .filter(Boolean)
             .join(' ')}
+          data-qa="last-saved-strip"
         >
           {newestCapture ? (
             <>
@@ -171,11 +183,21 @@ export function CaptureView({
               </div>
               <SyncPill state={newestCapture.syncState} />
               <div className="receiver-last-saved-actions">
-                <Button variant="secondary" size="small" onClick={onNavigateInbox}>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  data-qa="view-roost"
+                  onClick={onNavigateInbox}
+                >
                   View Roost
                 </Button>
                 {!pairingReady ? (
-                  <Button variant="secondary" size="small" onClick={onNavigatePair}>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    data-qa="mate-to-sync"
+                    onClick={onNavigatePair}
+                  >
                     Mate to sync
                   </Button>
                 ) : null}
@@ -189,6 +211,7 @@ export function CaptureView({
           accept="image/*"
           aria-label="Take photo"
           capture="environment"
+          data-qa="photo-input"
           hidden
           onChange={(event) => void onPickFile(event, 'photo')}
           ref={photoInputRef}
@@ -196,6 +219,7 @@ export function CaptureView({
         />
         <input
           aria-label="Attach file"
+          data-qa="file-input"
           hidden
           onChange={(event) => void onPickFile(event, 'file')}
           ref={fileInputRef}

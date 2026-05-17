@@ -26,6 +26,7 @@ import { useCapture } from './hooks/useCapture';
 import { usePairingFlow } from './hooks/usePairingFlow';
 import { useReceiverSettings } from './hooks/useReceiverSettings';
 import { useReceiverSync } from './hooks/useReceiverSync';
+import { applyReceiverQaFixture, isReceiverQaMockMedia } from './receiver-qa-fixtures';
 import {
   RECEIVER_APP_ROUTES,
   type ReceiverAppRoute,
@@ -338,6 +339,9 @@ export function RootApp({
 
   const initialPairingHandoffRef = useRef<string | null>(initialPairingInput ?? null);
   const initialShareHandoffRef = useRef<ReceiverShareHandoff | null>(initialShareInput ?? null);
+  const receiverQaFixturePromiseRef = useRef<Promise<
+    Awaited<ReturnType<typeof applyReceiverQaFixture>>
+  > | null>(null);
   const notifiedFailureIdsRef = useRef<Set<string>>(new Set());
   const pairingNotificationRef = useRef<{
     pairingId: string | null;
@@ -355,6 +359,8 @@ export function RootApp({
   const soundPreferencesRef = useRef({ enabled: true, reducedMotion: false, reducedSound: false });
   const hapticPreferencesRef = useRef({ enabled: true, reducedMotion: false });
   const pairingRef = useRef<ReceiverPairingRecord | null>(null);
+  const currentUrl = new URL(window.location.href);
+  const receiverQaMockMedia = isReceiverQaMockMedia(currentUrl);
 
   // --- Hook 1: Settings (device identity, sound, haptic, notifications, online) ---
   const settings = useReceiverSettings(receiverDb);
@@ -382,6 +388,7 @@ export function RootApp({
     reconcilePairingRef,
     pairingRef,
     refreshLocalStateRef,
+    mockMedia: receiverQaMockMedia,
   });
   const {
     captures,
@@ -503,7 +510,6 @@ export function RootApp({
         memberDisplayName: pairing.memberDisplayName,
       }
     : null;
-  const currentUrl = new URL(window.location.href);
   const isPwaPresentation = isReceiverPwaPresentation(appSurface, currentUrl);
   const isPublicDevOrigin = import.meta.env.DEV && !isLocalHostname(currentUrl.hostname);
   const requiresDevAccess = isDevAccessRequired(devEnvironment, currentUrl);
@@ -590,14 +596,49 @@ export function RootApp({
   }, [devEnvironmentEnabled]);
 
   useEffect(() => {
-    void refreshLocalState();
+    let cancelled = false;
+
+    const loadReceiverState = async () => {
+      let qaMessage: string | null = null;
+      try {
+        if (!receiverQaFixturePromiseRef.current) {
+          receiverQaFixturePromiseRef.current = applyReceiverQaFixture(
+            receiverDb,
+            new URL(window.location.href),
+          );
+        }
+        const qaResult = await receiverQaFixturePromiseRef.current;
+        qaMessage = qaResult.message;
+      } catch (error) {
+        receiverQaFixturePromiseRef.current = null;
+        if (isMountedRef.current) {
+          setMessage(
+            error instanceof Error
+              ? `Could not apply receiver QA fixture: ${error.message}`
+              : 'Could not apply receiver QA fixture.',
+          );
+        }
+      }
+
+      if (!cancelled) {
+        await refreshLocalState();
+      }
+      if (!cancelled && qaMessage && isMountedRef.current) {
+        setMessage(qaMessage);
+      }
+    };
+
+    void loadReceiverState();
 
     const onPopState = () => {
       setRoute(resolveRoute(window.location.pathname));
     };
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, [refreshLocalState]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [isMountedRef, refreshLocalState, setMessage]);
 
   useEffect(() => {
     if (!devEnvironment) {

@@ -726,6 +726,7 @@ function LandingPageContent({
               <a
                 className="button button-primary landing-install-action"
                 data-install-action={action}
+                data-qa="public-install-action"
                 href={href}
                 onClick={onClick}
               >
@@ -762,6 +763,7 @@ function LandingPageContent({
                 <a
                   className="button button-primary hero-cta-primary hero-install-cta"
                   data-install-action={action}
+                  data-qa="public-hero-install-action"
                   href={href}
                   onClick={onClick}
                 >

@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type ButtonProps = {
+type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'type'> & {
   variant: 'primary' | 'secondary';
   size?: 'default' | 'small';
   children: ReactNode;
-  onClick?: () => void;
   type?: 'button' | 'submit';
   className?: string;
 };
@@ -13,9 +12,9 @@ export function Button({
   variant,
   size = 'default',
   children,
-  onClick,
   type = 'button',
   className,
+  ...buttonProps
 }: ButtonProps) {
   const classes = [
     'button',
@@ -27,7 +26,7 @@ export function Button({
     .join(' ');
 
   return (
-    <button className={classes} onClick={onClick} type={type}>
+    <button className={classes} type={type} {...buttonProps}>
       {children}
     </button>
   );

@@ -45,7 +45,7 @@ export function InboxView({
   const [actionCard, setActionCard] = useState<CaptureCard | null>(null);
 
   return (
-    <section className="receiver-grid">
+    <section className="receiver-grid" data-qa="roost-screen">
       <Card className="receiver-inbox-card">
         <p className="eyebrow">Your Roost</p>
         <h2>Everything stays local until this nest is mated and one trusted browser syncs.</h2>
@@ -58,6 +58,8 @@ export function InboxView({
                   : 'nest-item-card'
               }
               key={card.capture.id}
+              data-qa="roost-item"
+              data-sync-state={card.capture.syncState}
             >
               <div className="nest-item-topline">
                 <span className="nest-item-chick">{receiverItemLabel(card.capture.kind)}</span>
@@ -88,12 +90,18 @@ export function InboxView({
                 <p>{card.capture.note || 'Shared link saved locally.'}</p>
               ) : null}
               <div className="receiver-item-actions">
-                <Button variant="secondary" size="small" onClick={() => setActionCard(card)}>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  data-qa="more-actions"
+                  onClick={() => setActionCard(card)}
+                >
                   More actions
                 </Button>
                 <Button
                   variant="secondary"
                   size="small"
+                  data-qa="remove-item"
                   onClick={() => void onRemoveCapture(card.capture)}
                 >
                   Remove
@@ -102,6 +110,7 @@ export function InboxView({
                   <Button
                     variant="secondary"
                     size="small"
+                    data-qa="retry-sync"
                     onClick={() => void onRetrySync(card.capture.id)}
                   >
                     Retry sync
@@ -130,6 +139,7 @@ export function InboxView({
             {canShare ? (
               <Button
                 variant="secondary"
+                data-qa="share-item"
                 onClick={() => {
                   void onShareCapture(actionCard);
                   setActionCard(null);
@@ -141,6 +151,7 @@ export function InboxView({
             {actionCard.capture.kind !== 'link' && actionCard.previewUrl ? (
               <Button
                 variant="secondary"
+                data-qa="download-item"
                 onClick={() => {
                   void onDownloadCapture(actionCard);
                   setActionCard(null);
@@ -152,6 +163,7 @@ export function InboxView({
             {actionCard.capture.kind === 'link' && actionCard.capture.sourceUrl ? (
               <Button
                 variant="secondary"
+                data-qa="copy-link"
                 onClick={() => {
                   void onCopyCaptureLink(actionCard.capture);
                   setActionCard(null);

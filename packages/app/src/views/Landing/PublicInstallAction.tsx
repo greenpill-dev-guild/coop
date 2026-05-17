@@ -266,6 +266,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
             ref={dialogRef}
             aria-modal="true"
             className="public-install-dialog"
+            data-qa="public-install-dialog"
             aria-labelledby="public-install-title"
             onCancel={(event) => {
               event.preventDefault();
@@ -276,6 +277,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
               ref={closeButtonRef}
               aria-label="Close install instructions"
               className="public-install-close"
+              data-qa="public-install-close"
               type="button"
               onClick={() => setDialogMode(null)}
             >
