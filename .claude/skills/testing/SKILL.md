@@ -5,8 +5,8 @@ version: "1.0.0"
 status: active
 packages: ["shared", "app", "extension"]
 dependencies: []
-last_updated: "2026-03-12"
-last_verified: "2026-03-12"
+last_updated: "2026-05-17"
+last_verified: "2026-05-17"
 ---
 
 # Testing Skill
@@ -304,6 +304,21 @@ Keep E2E focused on critical user journeys. Use page objects, role-based selecto
 
 See `.claude/skills/testing/references/playwright.md` for the full Playwright guide (pyramid, selectors, network mocking, a11y, debugging).
 
+### Browser, Chrome, And Computer Use Lanes
+
+Choose the proof surface before choosing the command:
+
+| Lane | Use When | Commands / Evidence |
+|------|----------|---------------------|
+| Browser-first local app | Receiver PWA, app shell, docs, and public localhost routes that do not require sign-in. | `bun run test:e2e:receiver-pwa-eval`, `bun run validate e2e:receiver-pwa-eval`, Browser screenshot or Playwright trace. |
+| Extension GUI | Popup, sidepanel, extension-card errors, toolbar grants, screenshot capture, and WXT-launched Chromium behavior. | `bun run test:e2e:popup`, `bun run test:e2e:extension`, Computer Use or headed Chromium screenshots when real extension chrome matters. |
+| Visual regression | Popup/sidepanel layout and screenshot-baseline checks. | `bun run test:visual`; update baselines only when the visual change is intentional and reviewed. |
+| Signed-in/profiled browser | Flows that depend on Chrome profile state, cookies, or authenticated pages. | Codex Chrome extension evidence with browser/profile recorded. |
+| Installed PWA / OS prompts | Installed app shell, real media/file-picker prompts, browser permission prompts, and cross-app flows. | Computer Use evidence with target app, route, screenshot, and proof limits. |
+
+Do not claim GUI success from unit, typecheck, lint, or headless-only proof when the changed surface
+depends on real browser chrome, extension permissions, or OS prompts.
+
 ---
 
 ## Verification Checklist
@@ -321,6 +336,8 @@ Before marking work complete:
 ### Validation Commands
 - [ ] Run `bun format && bun lint && bun run test` -- no errors/warnings
 - [ ] Package-specific: `cd packages/[pkg] && npx tsc --noEmit`
+- [ ] UI-impacting changes include Browser, Playwright, Chrome, or Computer Use proof for the
+      affected surface
 
 ### Documentation & Communication
 - [ ] Update relevant documentation when behavior changes
@@ -338,9 +355,12 @@ Can't check all boxes? You skipped TDD. Start over.
 - Ignoring cleanup tests for timers/listeners/async hooks
 - Using brittle snapshots where behavioral assertions are required
 - Declaring completion without running `bun run test`, `bun lint`, and build checks
+- Using Computer Use for local app routes when Browser or a Playwright mirror would give cleaner,
+  repeatable proof
 
 ## Related Skills
 
 - `react` -- React Testing Library patterns and component testing
 - `data-layer` -- Testing offline scenarios, Dexie with fake-indexeddb, Yjs sync
+- `browser-verification` -- Rendered browser, Chrome, and Computer Use proof selection
 - `xstate` -- Testing state machines with Vitest

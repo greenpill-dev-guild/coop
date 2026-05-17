@@ -81,6 +81,28 @@
       "dependencies": []
     },
     {
+      "name": "browser-verification",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "passive",
+      "triggers": [
+        "browser verification",
+        "visual QA",
+        "computer use",
+        "rendered proof",
+        "screenshot evidence"
+      ],
+      "dependencies": ["testing", "ui-compliance"]
+    },
+    {
+      "name": "skill-authoring",
+      "status": "active",
+      "listed_in_index": true,
+      "default_mode": "interactive",
+      "triggers": ["create skill", "update skill", "skill drift", "agent guidance"],
+      "dependencies": []
+    },
+    {
       "name": "react",
       "status": "active",
       "listed_in_index": true,
@@ -197,6 +219,12 @@
     "playwright": "testing",
     "tdd": "testing",
     "e2e": "testing",
+    "browser-qa": "browser-verification",
+    "visual-qa": "browser-verification",
+    "rendered-proof": "browser-verification",
+    "computer-use": "browser-verification",
+    "skill-drift": "skill-authoring",
+    "skill-authoring": "skill-authoring",
     "vulnerability": "security",
     "xss": "security",
     "csp": "security"

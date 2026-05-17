@@ -160,6 +160,8 @@ Skills are domain knowledge that Claude loads when relevant. Most activate autom
 | **web3** | "Safe", "passkey", "ERC-4337", "onchain" | — |
 | **data-layer** | "Dexie", "Yjs", "sync", "offline", "local-first" | [storage-lifecycle.md](data-layer/storage-lifecycle.md), [service-worker.md](data-layer/service-worker.md) |
 | **testing** | "test", "TDD", "vitest", "playwright" | — |
+| **browser-verification** | "browser verification", "visual QA", "computer use", "rendered proof" | — |
+| **skill-authoring** | "create skill", "update skill", "skill drift", "agent guidance" | — |
 | **security** | "vulnerability", "XSS", "key exposure" | — |
 | **performance** | "bundle size", "memory leak", "Lighthouse" | — |
 | **architecture** | `/architecture`, "refactor", "module boundaries" | — |
@@ -181,11 +183,11 @@ Bundles group skills for common workflows. The system uses these to load the rig
 
 | Bundle | Skills loaded | When |
 |--------|-------------|------|
-| **extension-change** | react, testing, ui-compliance | Extension UI work |
+| **extension-change** | react, testing, ui-compliance, browser-verification | Extension UI work |
 | **shared-module-change** | react, web3, data-layer, testing | Shared module changes |
 | **onchain-change** | web3, security, testing | Safe/passkey/chain work |
 | **sync-change** | data-layer, testing, security | Yjs/sync/storage work |
-| **app-change** | react, testing, ui-compliance | App/landing page work |
+| **app-change** | react, testing, ui-compliance, browser-verification | App/landing page work |
 | **cross-package-change** | review, testing | Multi-package verification |
 | **incident-hotfix** | debug, testing | Emergency response |
 

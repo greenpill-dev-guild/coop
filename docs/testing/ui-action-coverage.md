@@ -27,6 +27,15 @@ unit-covered, and what still needs manual or live rehearsal.
 | Operator console trusted-helper loop | `packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`, `test:unit:agent-loop`, and `test:unit:onchain-ui` | `test:e2e:agent-loop` covers the focused trusted-helper run loop. `test:e2e:extension` also exercises the same `@agent-loop` slice inside the broader extension flow. | None | Browser E2E does not drive every operator policy branch end to end. |
 | Member smart-account provisioning and garden-pass issuance | `test:unit:onchain-ui` via `packages/extension/src/views/Sidepanel/hooks/__tests__/useSidepanelOnchainActions.test.ts`, `packages/extension/src/views/Sidepanel/__tests__/operator-console.test.tsx`, and `packages/extension/src/background/handlers/__tests__/member-account-handlers.test.ts` | `test:e2e:extension` now drives mock-path member-account provisioning and garden-pass issuance in the real sidepanel. | `probe:onchain-live`, `probe:session-key-live` | Live wallet and live Smart Session execution remain opt-in and are not part of the default browser release slice. |
 
+## Receiver PWA
+
+| Action class | Unit / integration coverage | Browser E2E coverage | Computer Use coverage | Known gaps |
+|---|---|---|---|---|
+| Browser boundary and public install education | App route and receiver shell tests where touched | `test:e2e:receiver-pwa-eval` proves normal `/app/*` browser visits stay website-first and the public install action opens install education. | Optional only for installed-PWA or browser-shell checks. | Add to Home Screen behavior still needs a real device/browser-shell rehearsal before claiming install UX signoff. |
+| Hatch mobile capture layout | Receiver component/unit coverage where touched | `test:e2e:receiver-pwa-eval` checks Hatch at `320x568`, `360x640`, `390x844`, and `430x932`, including no scroll, visible media actions, nav reachability, and tap target minimums. | Optional only for real media prompt behavior. | Layout proof uses local preview mode, not every mobile browser chrome combination. |
+| Audio capture without OS prompts | Mock-media receiver path | `test:e2e:receiver-pwa-eval` drives `qa=mock-media` record and save. | Required for real microphone permission prompt and real audio device behavior. | Browser-first proof intentionally avoids OS prompt state. |
+| Mate and Roost receiver actions | Receiver persistence and sync tests where touched | `test:e2e:receiver-pwa-eval` proves Mate QR-first defaults, paste disclosure, failed-only retry, and item action sheet visibility. | Optional only for cross-app or installed-PWA handoff checks. | Full receiver-to-extension sync remains covered by `test:e2e:receiver-sync`, not this local PWA mirror. |
+
 ## Persistence Seams
 
 | Seam | Coverage | Known gaps |
@@ -66,6 +75,7 @@ unit-covered, and what still needs manual or live rehearsal.
 - `bun run test:unit:agent-loop`
 - `bun run test:e2e:popup`
 - `bun run test:e2e:sync`
+- `bun run test:e2e:receiver-pwa-eval`
 - `bun run validate:store-readiness`
 - `bun run validate:production-readiness`
 - `bun run validate:production-live-readiness`
@@ -86,6 +96,8 @@ unit-covered, and what still needs manual or live rehearsal.
 - Popup roundup and popup failure states are browser-covered, but successful popup `Capture Tab`
   and `Screenshot` saves still require manual verification because Chrome does not grant popup
   `activeTab` in the same way under automation.
+- Receiver PWA local UI is Browser-covered through `test:e2e:receiver-pwa-eval`, while installed
+  PWA shell behavior and real OS media prompts remain Computer Use or device-check territory.
 - Browser sync resilience now covers persisted degraded and recovered runtime health, but not full
   transport loss and peer reconnection orchestration.
 - Live Smart Session execution can still be partially blocked by missing ERC-7579 support on the

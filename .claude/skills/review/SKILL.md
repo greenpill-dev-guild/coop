@@ -183,7 +183,7 @@ Qualitatively flag diffs when they:
 
 ```bash
 # Full workspace verification
-bun format && bun lint && bun run test && bun build
+bun format && bun lint && bun run test && bun run build
 ```
 
 **What to verify:**
@@ -277,7 +277,7 @@ Do NOT commit until the verdict is `COMMIT`.
 ### Verification
 `bun run test`
 `bun lint`
-`bun build`
+`bun run build`
 
 ### Recommendation
 **[APPROVE / REQUEST_CHANGES]**
@@ -317,7 +317,7 @@ Only post when PR context exists. For working-copy reviews, return findings in c
 ```bash
 # Prepare
 git log main..HEAD --oneline
-bun build && bun run test && bun lint
+bun run build && bun run test && bun lint
 
 # Create PR
 gh pr create --title "feat(scope): description" --body "..."

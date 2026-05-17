@@ -7,8 +7,8 @@ version: "1.0.0"
 status: active
 packages: ["app", "extension", "docs"]
 dependencies: ["ui-compliance", "testing"]
-last_updated: "2026-05-15"
-last_verified: "2026-05-15"
+last_updated: "2026-05-17"
+last_verified: "2026-05-17"
 ---
 
 # Browser Verification Skill
@@ -28,6 +28,15 @@ This skill does not replace tests. It catches the things static checks miss: bla
 | CSS, token, layout, or animation changed | Capture screenshot proof and inspect console |
 | Receiver/PWA flow changed | Verify app route and responsive state |
 | Visual QA requested | Use Playwright or browser automation and report proof limits |
+
+## Tool Selection
+
+| Tool | Use For | Proof Limits |
+|------|---------|--------------|
+| Codex Browser / Browser Use | Local app routes, receiver PWA preview routes, docs, public pages without sign-in, screenshots, and responsive checks. | Cannot load unpacked extension UI, signed-in Chrome state, browser extensions, or OS prompts. |
+| Playwright | Repeatable checks for Browser-covered flows, layout invariants, routing, and regression gates. | Does not replace real extension-card, toolbar popup grant, installed PWA, or permission-prompt evidence. |
+| Codex Chrome extension | Signed-in Chrome/profile state and browser tasks that need the user's real Chrome context. | Prefer Browser for unauthenticated localhost routes. |
+| Computer Use / real headed Chromium | Unpacked extension popup/sidepanel, extension-card errors, `activeTab`, screenshot capture, installed PWA behavior, OS/browser prompts, and cross-app GUI flows. | Keep tasks narrow and record app/browser/profile because it can affect state outside the repo. |
 
 ## Scope Selection
 
@@ -97,6 +106,7 @@ Report proof in the final or handoff:
 ```markdown
 ### Browser Verification
 - Surface: popup / sidepanel / app / docs
+- Tool: Browser / Playwright / Chrome / Computer Use / manual headed browser
 - Target: http://127.0.0.1:3001/... or extension dev window
 - Checks: rendered, primary action, console, responsive width
 - Evidence: screenshot path or Playwright command

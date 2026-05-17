@@ -56,7 +56,7 @@ DELTA (computed):
    - `bun format --check 2>&1`
    - `bun lint 2>&1`
    - `bun run test 2>&1` (NEVER `bun test`) — parse per-test pass/fail identity
-   - `bun build 2>&1` — parse per-package success/failure and error fingerprints
+   - `bun run build 2>&1` — parse per-package success/failure and error fingerprints
 3. Record as baseline
 
 Output:

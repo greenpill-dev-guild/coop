@@ -66,5 +66,5 @@ Required section order:
 - [ ] Dependency order followed: shared → app → extension
 - [ ] Each package builds and tests pass before moving to the next
 - [ ] Incremental commits per successfully migrated package
-- [ ] Cross-package validation passed (`bun build && bun lint && bun run test`)
+- [ ] Cross-package validation passed (`bun run build && bun lint && bun run test`)
 - [ ] Rollback path documented

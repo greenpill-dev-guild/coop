@@ -3,7 +3,7 @@
     "extension-change": {
       "entrypoint": "/plan",
       "default_mode": "interactive",
-      "skills": ["react", "testing", "ui-compliance"],
+      "skills": ["react", "testing", "ui-compliance", "browser-verification"],
       "user_facing": true
     },
     "shared-module-change": {
@@ -28,7 +28,7 @@
     "app-change": {
       "entrypoint": "/plan",
       "default_mode": "interactive",
-      "skills": ["react", "testing", "ui-compliance"],
+      "skills": ["react", "testing", "ui-compliance", "browser-verification"],
       "user_facing": true
     },
     "cross-package-change": {

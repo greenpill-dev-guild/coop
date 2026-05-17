@@ -44,7 +44,7 @@ GATHER → PLAN → TEST → IMPLEMENT → VERIFY
 2. **PLAN**: Brief implementation plan (no code yet)
 3. **TEST**: Write failing tests first (RED)
 4. **IMPLEMENT**: Write minimal code to pass (GREEN)
-5. **VERIFY**: Run full validation (`bun run test && bun build`)
+5. **VERIFY**: Run full validation (`bun run test && bun run build`)
 
 ## Judgment & Scope Discipline
 
@@ -73,7 +73,7 @@ GATHER → PLAN → TEST → IMPLEMENT → VERIFY
 - [ ] All tests pass (`bun run test`)
 - [ ] Typecheck passes (`tsc --noEmit`)
 - [ ] Lint passes (`bun lint`)
-- [ ] Build succeeds (`bun build`)
+- [ ] Build succeeds (`bun run build`)
 - [ ] Module boundaries respected (shared modules in @coop/shared)
 - [ ] Barrel exports updated if new public API was added
 - [ ] Cathedral Check performed (most similar existing file used as reference)

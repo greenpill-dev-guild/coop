@@ -32,14 +32,14 @@ When invoked:
 | Main bundle (app) | < 150KB gzipped | `bun --filter app build` |
 | Extension popup | < 100KB gzipped | `bun --filter extension build` |
 | Per-route chunk | < 50KB gzipped | Vite code splitting |
-| Total JS (app) | < 400KB gzipped | `bun build` output |
+| Total JS (app) | < 400KB gzipped | `bun run build` output |
 
 ### Bundle Analysis
 
 ```bash
 # Analyze bundle composition
 cd packages/app
-ANALYZE=true bun build
+ANALYZE=true bun run build
 
 # Or use vite-bundle-visualizer
 npx vite-bundle-visualizer
@@ -70,7 +70,7 @@ Before adding any dependency:
 npx bundlephobia <package-name>
 
 # Or check locally after adding
-bun build 2>&1 | grep "chunk size"
+bun run build 2>&1 | grep "chunk size"
 ```
 
 | Category | Max Size | Examples |
@@ -372,7 +372,7 @@ const tabs = useLiveQuery(
 
 ### Performance Investigation
 
-- [ ] Bundle size within budgets? (`bun build` output)
+- [ ] Bundle size within budgets? (`bun run build` output)
 - [ ] Web Vitals in "good" range? (LCP < 2.5s, CLS < 0.1)
 - [ ] No memory leaks? (Yjs docs, blob URLs, listeners cleaned up)
 - [ ] Lists virtualized if 50+ items?

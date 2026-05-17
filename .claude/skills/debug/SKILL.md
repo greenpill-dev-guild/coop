@@ -71,7 +71,7 @@ Before any deep investigation, rule out the simple causes that waste entire sess
 
 | Priority | Check | Command | Time |
 |----------|-------|---------|------|
-| 1 | **Stale build / cache** | `rm -rf dist .docusaurus node_modules/.vite && bun build` | 45s |
+| 1 | **Stale build / cache** | `rm -rf dist .docusaurus node_modules/.vite && bun run build` | 45s |
 | 2 | **Missing import** | Verify the module/component is actually imported where it's used | 15s |
 | 3 | **Wrong file** | Confirm you're editing the file that's actually rendered (check Vite aliases, barrel re-exports) | 15s |
 | 4 | **Env var stale** | Env vars bake at build time — did you rebuild after changing `.env.local`? | 15s |
@@ -139,7 +139,7 @@ Only proceed to Phase 1 if all sanity checks pass.
 | Claim | Command |
 |-------|---------|
 | "Tests pass" | `bun run test` (NOT `bun test` -- see CLAUDE.md) |
-| "Build succeeds" | `bun build` |
+| "Build succeeds" | `bun run build` |
 | "Linting clean" | `bun lint` |
 
 ### Suspicious Language
@@ -165,7 +165,7 @@ If you say these, STOP and verify first:
 
 ```bash
 # Check extension build output
-cd packages/extension && bun build
+cd packages/extension && bun run build
 
 # Reload extension in Chrome
 # chrome://extensions > Developer mode > Reload
@@ -181,7 +181,7 @@ cd packages/extension && bun build
 
 ```bash
 # Check app build
-cd packages/app && bun build
+cd packages/app && bun run build
 
 # Service Worker registration: Chrome DevTools > Application > Service Workers
 
@@ -199,7 +199,7 @@ cd packages/shared && npx tsc --noEmit
 cd packages/app && npx tsc --noEmit
 
 # Vite build with verbose output
-cd packages/app && DEBUG=vite:* bun build
+cd packages/app && DEBUG=vite:* bun run build
 ```
 
 ### Onchain Issues
@@ -318,7 +318,7 @@ Required sequence:
 2. **Explain** root cause in one concise statement
 3. **Fix** with minimal code change (GREEN)
 4. **Verify** reproduction test passes
-5. **Regression** — run broader suite: `bun run test && bun lint && bun build`
+5. **Regression** — run broader suite: `bun run test && bun lint && bun run build`
 6. **Report** with severity mapping (Critical/High → must-fix, Medium → should-fix, Low → nice-to-have)
 
 Anti-patterns for TDD bugfix:

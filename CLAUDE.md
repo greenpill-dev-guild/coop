@@ -15,7 +15,7 @@ cd packages/extension && bun run build  # Build extension only
 bun format && bun lint       # Format (Biome) and lint workspace
 bun run test                 # Run all unit tests (vitest)
 bun run test:e2e             # Run all Playwright E2E tests
-bun build                    # Build everything (shared → app → extension)
+bun run build                # Build everything (shared → app → extension)
 bun run validate smoke       # Quick confidence run
 bun run validate core-loop   # Main extension workflow validation
 bun run validate full        # Full local pass before demos or bigger merges
@@ -126,7 +126,7 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 
 **Build and Verify**: After making changes, choose the appropriate verification tier and verify the result before reporting the task is done. Never tell the user a change is ready without verifying first. UI/CSS changes are invisible until the Vite build runs and the extension or app is reloaded.
 
-**Build Scope**: Default to the smallest build that matches the change. Use `cd packages/extension && bun run build` for extension-only work and `cd packages/app && bun run build` for app-only work. Reserve root `bun build` for shared exports, shared styles/tokens, other cross-package changes, and pre-commit verification.
+**Build Scope**: Default to the smallest build that matches the change. Use `cd packages/extension && bun run build` for extension-only work and `cd packages/app && bun run build` for app-only work. Reserve root `bun run build` for shared exports, shared styles/tokens, other cross-package changes, and pre-commit verification.
 
 **Verification Tiers**: Not every change needs a full build. Choose the lightest tier that covers your change:
 
@@ -135,10 +135,10 @@ import { createCoop, joinCoop } from '@coop/shared'; // correct
 | **typecheck** | `bun run validate typecheck` | Single-package changes, no shared export changes | ~10s |
 | **quick** | `bun run validate quick` | Typecheck + lint, good for formatting/type fixes | ~15s |
 | **smoke** | `bun run validate smoke` | Cross-package changes, shared module edits | ~1m |
-| **build** | `bun build` | CSS token changes, new shared exports, pre-commit | ~45s |
+| **build** | `bun run build` | CSS token changes, new shared exports, pre-commit | ~45s |
 | **core-loop** | `bun run validate core-loop` | UI workflow changes needing E2E confirmation | ~5m |
 
-Use `typecheck` or `quick` during iteration. Use `smoke` or higher before committing. Full `bun build` is required when: changing `@coop/shared` exports consumed by downstream packages, modifying CSS tokens in `shared/src/styles/`, or as part of pre-commit validation.
+Use `typecheck` or `quick` during iteration. Use `smoke` or higher before committing. Full `bun run build` is required when: changing `@coop/shared` exports consumed by downstream packages, modifying CSS tokens in `shared/src/styles/`, or as part of pre-commit validation.
 
 **Agentic Engineering Loop**:
 - Treat review attention as scarce. Keep changes inside the smallest owned surface that can solve the task cleanly.
@@ -296,7 +296,7 @@ Automation entrypoints:
 - Types: feat, fix, refactor, chore, docs, test, perf, ci
 - Scopes: shared, extension, app, claude
 
-**Validation before committing**: `bun format && bun lint && bun run test && bun build`
+**Validation before committing**: `bun format && bun lint && bun run test && bun run build`
 
 ## Context Hygiene
 

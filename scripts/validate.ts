@@ -102,6 +102,16 @@ const suites: Record<string, Suite> = {
       },
     ],
   },
+  'e2e:receiver-pwa-eval': {
+    description:
+      'Browser-first receiver PWA eval mirror for Mate, Hatch, Roost, local routing, mobile fit, and mock-media capture.',
+    steps: [
+      {
+        label: 'e2e:receiver-pwa-eval',
+        command: ['bun', 'run', 'test:e2e:receiver-pwa-eval'],
+      },
+    ],
+  },
   'e2e:sync': {
     description:
       'Focused extension sync browser coverage for popup sync resilience and degraded-state recovery.',
@@ -279,13 +289,19 @@ const suites: Record<string, Suite> = {
   },
   'receiver-slice': {
     description:
-      'Receiver vertical slice validation: unit tests, build, app shell, and pair+sync E2E.',
-    includes: ['unit', 'build', 'e2e:app:desktop', 'e2e:receiver-sync'],
+      'Receiver vertical slice validation: unit tests, build, app shell, pair+sync E2E, and Browser-first PWA eval.',
+    includes: [
+      'unit',
+      'build',
+      'e2e:app:desktop',
+      'e2e:receiver-sync',
+      'e2e:receiver-pwa-eval',
+    ],
   },
   'receiver-hardening': {
     description:
-      'Receiver hardening validation: lint, unit coverage, build, and sidepanel-closed sync E2E.',
-    includes: ['lint', 'unit', 'build', 'e2e:receiver-sync'],
+      'Receiver hardening validation: lint, unit coverage, build, sidepanel-closed sync E2E, and Browser-first PWA eval.',
+    includes: ['lint', 'unit', 'build', 'e2e:receiver-sync', 'e2e:receiver-pwa-eval'],
   },
   'multi-coop-routing': {
     description:
@@ -431,6 +447,7 @@ const suites: Record<string, Suite> = {
       'unit:session-key',
       'e2e:extension',
       'e2e:receiver-sync',
+      'e2e:receiver-pwa-eval',
       'e2e:agent-loop',
       'e2e:app:mobile',
     ],
@@ -458,6 +475,7 @@ const suites: Record<string, Suite> = {
       'popup-slice',
       'e2e:extension',
       'e2e:receiver-sync',
+      'e2e:receiver-pwa-eval',
       'e2e:agent-loop',
       'e2e:flow-board',
     ],

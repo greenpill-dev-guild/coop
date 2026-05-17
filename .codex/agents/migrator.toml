@@ -30,7 +30,7 @@ Each package must build and pass tests before moving to the next.
 2. Follow dependency order: shared -> app -> extension
 3. Build and test each package before moving to the next
 4. Make incremental commits per successfully migrated package
-5. Run cross-package validation: `bun build && bun lint && bun run test`
+5. Run cross-package validation: `bun run build && bun lint && bun run test`
 6. Document rollback path
 
 ## Judgment & Scope Discipline

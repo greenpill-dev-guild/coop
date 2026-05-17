@@ -18,7 +18,7 @@ paths:
 - Run a specific module's tests: `bun run test packages/shared/src/modules/coop/`
 - Run with coverage: `bun run test --coverage`
 - E2E tests: `bun run test:e2e` (Playwright)
-- Validation before committing: `bun format && bun lint && bun run test && bun build`
+- Validation before committing: `bun format && bun lint && bun run test && bun run build`
 
 ## Test Architecture
 

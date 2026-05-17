@@ -1,8 +1,8 @@
 # Extension Flow Evals
 
-Computer-use evals for Coop's extension-first product loop. These are durable
+GUI evals for Coop's extension-first product loop. These are durable
 manual/agent-run scenarios, not unit tests. They are intended for Codex Computer
-Use, Claude Computer Use, or a human watching a real browser.
+Use, Claude Computer Use, the Codex Chrome extension, or a human watching a real browser.
 
 ## Scope
 
@@ -18,6 +18,17 @@ Out of scope for this folder:
 - Receiver PWA onboarding, mobile capture UX, and install prompts.
 - Authenticated Kaggle, YouTube, Loom, or production deployment surfaces.
 - Unit-test-only proof.
+
+## Tool Routing
+
+- Use Computer Use or a real headed Chromium-family browser for unpacked extension popup,
+  sidepanel, extension-card errors, `activeTab`, screenshot capture, and OS/browser permission
+  checks.
+- Use the Codex Chrome extension when the eval depends on a signed-in Chrome profile.
+- Use Codex Browser / Browser Use for local receiver PWA or docs routes that do not need extension
+  state. Those flows belong in receiver/app runbooks, not this extension-flow folder.
+- Use Playwright mirrors only as repeatable guardrails. A headless pass does not replace extension
+  card, popup grant, or real GUI evidence.
 
 ## Shared Setup
 
@@ -50,15 +61,15 @@ the evidence committed. Otherwise keep generated artifacts out of git.
 Record durable outcomes in `.claude/evals/results.md` using the Computer-Use
 Run Template.
 
-## Computer-Use Runner Prompt
+## GUI Runner Prompt
 
 ```text
 Run the named Coop extension-flow eval from .claude/evals/extension-flows.
-Use a real headed Brave/Chromium-family browser with the unpacked extension.
-Do not claim success from unit tests or a headless-only run. Capture popup,
-sidepanel, and extension-card error evidence. Keep receiver PWA flows out of
-scope unless the eval explicitly asks for them. Report score, failures, and
-proof limits.
+Use Computer Use, the Codex Chrome extension, or a real headed Brave/Chromium-family browser with
+the unpacked extension. Do not claim success from unit tests, Browser-only localhost checks, or a
+headless-only run. Capture popup, sidepanel, and extension-card error evidence. Keep receiver PWA
+flows out of scope unless the eval explicitly asks for them. Report score, failures, and proof
+limits.
 ```
 
 ## Local Fixture Pages

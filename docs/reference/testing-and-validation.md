@@ -5,14 +5,14 @@ audience: builder
 doc_type: runbook
 status: canonical
 validation_snapshot: "2026-04-19"
-docs_reviewed: "2026-05-16"
+docs_reviewed: "2026-05-17"
 ---
 
 # Coop Testing And Validation
 
 <DocMeta />
 
-Docs review date: May 16, 2026
+Docs review date: May 17, 2026
 
 This document maps the release-facing validation commands to the actual suite graph in
 `scripts/validate.ts`. The canonical stage-based checklist lives in
@@ -72,6 +72,23 @@ Opt-in live-rails gate:
 bun run validate:production-live-readiness
 ```
 
+## Browser, Chrome, And Computer Use Routing
+
+Use the lightest tool that proves the real user surface:
+
+| Tool | Use for | Do not use as proof for |
+|------|---------|-------------------------|
+| Codex Browser / Browser Use | Local app routes, receiver PWA preview routes, public pages without sign-in, screenshot and responsive proof. | Authenticated Chrome state, browser extensions, installed PWA shell, OS prompts. |
+| Playwright mirrors | Repeatable CI/local checks for Browser-covered flows and layout invariants. | GUI-only permissions, toolbar popup grants, extension-card errors. |
+| Codex Chrome extension | Signed-in Chrome/profile state and browser tasks that need the real Chrome profile. | Local unauthenticated dev routes where Browser is enough. |
+| Computer Use | Unpacked extension popup/sidepanel, extension-card errors, installed PWA behavior, OS/browser permission prompts, and cross-app GUI flows. | Deterministic localhost route checks already covered by Browser or Playwright. |
+
+OpenAI's current Codex docs explicitly recommend the in-app Browser first for local development
+servers and Computer Use only when command output or structured/browser tools are not enough. Keep
+this split aligned with the official [In-app browser](https://developers.openai.com/codex/app/browser),
+[Codex Chrome extension](https://developers.openai.com/codex/app/chrome-extension), and
+[Computer Use](https://developers.openai.com/codex/app/computer-use) docs.
+
 ## Canonical Suite Graph
 
 ### Release Gates
@@ -81,8 +98,8 @@ bun run validate:production-live-readiness
 - `production-readiness`
   Runs `lint`, `build`, `popup-slice`, `unit:sidepanel-actions`, `unit:archive-hardening`,
   `sync-hardening`, `onchain-ui`, `unit:agent-loop`, `unit:onchain-config`, `unit:session-key`,
-  `store-readiness`, `e2e:extension`, `e2e:receiver-sync`, `e2e:agent-loop`, and
-  `e2e:app:mobile`.
+  `store-readiness`, `e2e:extension`, `e2e:receiver-sync`, `e2e:receiver-pwa-eval`,
+  `e2e:agent-loop`, and `e2e:app:mobile`.
 - `production-live-readiness`
   Runs `production-readiness`, `arbitrum-safe-live`, `session-key-live`, `greengoods-live`,
   `archive-live`, and `fvm-registry-live`.
@@ -98,7 +115,7 @@ bun run validate:production-live-readiness
 - `core-loop`
   Runs `unit`, `build`, and `e2e:extension`.
 - `receiver-hardening`
-  Runs `lint`, `unit`, `build`, and `e2e:receiver-sync`.
+  Runs `lint`, `unit`, `build`, `e2e:receiver-sync`, and `e2e:receiver-pwa-eval`.
 
 ## What The Browser Suites Actually Cover
 
@@ -112,6 +129,9 @@ bun run validate:production-live-readiness
 - `bun run test:e2e:receiver-sync`
   Covers receiver pair, private intake sync, sidepanel-closed receiver runtime, and multi-coop
   publish from extension review.
+- `bun run test:e2e:receiver-pwa-eval`
+  Covers Browser-first receiver PWA checks for website-first routing, install education, Hatch
+  mobile fit, mock-media audio save, Mate pairing defaults, and Roost failed-sync actions.
 - `bun run test:e2e:sync`
   Covers degraded and recovered sync runtime-health persisted across popup reopen. It does not do
   full network fault injection.
@@ -149,6 +169,7 @@ bun run test:e2e:popup
 bun run test:e2e:sync
 bun run test:e2e:extension
 bun run test:e2e:receiver-sync
+bun run test:e2e:receiver-pwa-eval
 bun run test:e2e:agent-loop
 bun run test:e2e:app:mobile
 ```
@@ -316,3 +337,4 @@ That gate layers these suites on top of `production-readiness`:
 - [Extension Install & Distribution](/reference/extension-install-and-distribution)
 - [Chrome Web Store Checklist](/reference/chrome-web-store-checklist)
 - [UI Action Coverage Map](/testing/ui-action-coverage)
+- [Receiver PWA Browser + Computer Use QA](/testing/receiver-pwa-computer-use)

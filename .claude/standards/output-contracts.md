@@ -75,7 +75,7 @@ Required section order:
 - [ ] `Human Judgment Callouts` section included (`None.` if empty)
 - [ ] Judgment callouts cover dependencies, migrations/state changes, auth/permissions, destructive ops, API/export or cross-package contract changes, and build/model/provider/runtime boundary changes when present
 - [ ] Severity mapping applied (Critical|High -> must-fix, Medium -> should-fix, Low -> nice-to-have)
-- [ ] Verification commands run (`bun format && bun lint && bun run test && bun build`)
+- [ ] Verification commands run (`bun format && bun lint && bun run test && bun run build`)
 - [ ] Final verdict is APPROVE or REQUEST_CHANGES (never ambiguous)
 - [ ] No files edited or written (strictly read-only)
 - [ ] Output follows ordered template
@@ -95,7 +95,7 @@ Required section order:
 - [ ] Failing tests written before implementation (TDD)
 - [ ] All tests pass (`bun run test`)
 - [ ] Lint passes (`bun lint`)
-- [ ] Build succeeds (`bun build`)
+- [ ] Build succeeds (`bun run build`)
 - [ ] Module boundaries respected (shared modules in @coop/shared)
 - [ ] Barrel exports updated if new public API was added
 - [ ] Cathedral Check performed (most similar existing file used as reference)
@@ -107,7 +107,7 @@ Required section order:
 - [ ] Dependency order followed: shared -> app -> extension
 - [ ] Each package builds and tests pass before moving to the next
 - [ ] Incremental commits per successfully migrated package
-- [ ] Cross-package validation passed (`bun build && bun lint && bun run test`)
+- [ ] Cross-package validation passed (`bun run build && bun lint && bun run test`)
 - [ ] Rollback path documented
 
 ## Cross-Agent Routing Matrix
