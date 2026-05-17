@@ -1,7 +1,11 @@
 import type { CoopSharedState } from '@coop/shared';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { useDraftEditor } from '../hooks/useDraftEditor';
-import type { ReviewItem } from './chickens-helpers';
+import {
+  type ReviewItem,
+  type ReviewItemTarget,
+  filterMeaningfulRouteTargets,
+} from './chickens-helpers';
 
 // ---------------------------------------------------------------------------
 // PushControls
@@ -16,27 +20,76 @@ export interface PushControlsProps {
 /** Render push controls for all review items — unified across signals and drafts. */
 export function PushControls(props: PushControlsProps) {
   const { item, coops, draftEditor } = props;
-  const [showPicker, setShowPicker] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const availableCoopIds = useMemo(() => new Set(coops.map((coop) => coop.profile.id)), [coops]);
+  const routeTargets = useMemo(() => resolveRouteTargets(item, coops), [item, coops]);
+  const initialSelectedTargetIds = useMemo(
+    () => selectedTargetIds(routeTargets, availableCoopIds),
+    [routeTargets, availableCoopIds],
+  );
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedTargetIds);
+
+  useEffect(() => {
+    setSelectedIds(initialSelectedTargetIds);
+  }, [initialSelectedTargetIds]);
 
   // Stale observations have no push target
   if (item.kind === 'stale' || !draftEditor) return null;
 
-  const handlePush = (coopId: string) => {
-    if (item.draft) {
-      // Draft exists — publish directly
-      if (!item.draft.suggestedTargetCoopIds.includes(coopId)) {
-        draftEditor.toggleDraftTargetCoop(item.draft, coopId);
-      }
-      void draftEditor.publishDraft(item.draft);
-    } else if (item.signal) {
-      // Orphan signal — promote to draft then publish
-      void draftEditor.promoteSignalAndPublish(item.signal, coopId);
+  const recommendedTarget = routeTargets[0];
+  const alternateTargets = routeTargets.slice(1);
+  const selectedTargetNames = selectedIds
+    .map((coopId) => coops.find((coop) => coop.profile.id === coopId)?.profile.name)
+    .filter((name): name is string => Boolean(name));
+
+  const handleShare = async () => {
+    const targetCoopIds = selectedIds.filter((coopId) => availableCoopIds.has(coopId));
+    if (targetCoopIds.length === 0) {
+      return;
     }
-    setShowPicker(false);
+
+    if (item.draft) {
+      const publishableDraft = {
+        ...item.draft,
+        suggestedTargetCoopIds: targetCoopIds,
+        workflowStage: 'ready' as const,
+      };
+      if (item.draft.workflowStage !== 'ready') {
+        const savedDraft = await draftEditor.saveDraft(publishableDraft, 'ready');
+        if (!savedDraft) return;
+        await draftEditor.publishDraft(savedDraft);
+        return;
+      }
+      await draftEditor.publishDraft(publishableDraft);
+      setReviewOpen(false);
+      return;
+    }
+
+    if (item.signal) {
+      const draft = await draftEditor.promoteSignalToDraft(item.signal);
+      if (!draft) return;
+      await draftEditor.publishDraft({
+        ...draft,
+        suggestedTargetCoopIds: targetCoopIds,
+        workflowStage: 'ready',
+      });
+      setReviewOpen(false);
+    }
+  };
+
+  const toggleTarget = (coopId: string) => {
+    setSelectedIds((current) => {
+      if (current.includes(coopId)) {
+        const next = current.filter((id) => id !== coopId);
+        return next.length > 0 ? next : current;
+      }
+      return [...current, coopId];
+    });
   };
 
   // 0 targets: "Select coops"
-  if (coops.length === 0) {
+  if (coops.length === 0 || !recommendedTarget) {
     return (
       <div className="compact-card__actions">
         <button
@@ -50,62 +103,82 @@ export function PushControls(props: PushControlsProps) {
     );
   }
 
-  // 1 target: "Push to <Coop>"
-  if (coops.length === 1) {
-    return (
+  return (
+    <div className="compact-card__route-controls">
       <div className="compact-card__actions">
         <button
           className="compact-card__push-btn"
-          onClick={() => handlePush(coops[0].profile.id)}
+          onClick={() => setReviewOpen((current) => !current)}
           type="button"
         >
-          Push to {coops[0].profile.name}
+          Review route
         </button>
       </div>
-    );
-  }
 
-  // 2-4 targets: equal target pills
-  if (coops.length <= 4) {
-    return (
-      <div className="compact-card__actions compact-card__actions--pills">
-        {coops.map((coop) => (
+      {reviewOpen ? (
+        <div className="compact-card__route-review">
+          <div className="compact-card__route-review-header">
+            <strong>Best fit: {recommendedTarget.name}</strong>
+            {recommendedTarget.rationale ? <p>{recommendedTarget.rationale}</p> : null}
+          </div>
+
+          {alternateTargets.length > 0 ? (
+            <div className="compact-card__route-options">
+              {alternateTargets.map((target) => (
+                <label className="compact-card__route-option" key={target.id}>
+                  <input
+                    checked={selectedIds.includes(target.id)}
+                    onChange={() => toggleTarget(target.id)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <strong>{target.name}</strong>
+                    {target.rationale ? <small>{target.rationale}</small> : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="compact-card__detail-row">
+            <span className="compact-card__detail-label">What will be shared</span>
+            <p>
+              {item.title}
+              {selectedTargetNames.length > 0 ? ` to ${selectedTargetNames.join(', ')}` : ''}
+            </p>
+          </div>
+
           <button
-            className="compact-card__target-pill"
-            key={coop.profile.id}
-            onClick={() => handlePush(coop.profile.id)}
+            className="compact-card__push-btn"
+            onClick={() => void handleShare()}
             type="button"
           >
-            {coop.profile.name}
+            Share to selected coops
           </button>
-        ))}
-      </div>
-    );
-  }
-
-  // 5+ targets: selector/dropdown
-  return (
-    <div className="compact-card__actions">
-      <div className="compact-card__push-wrap">
-        <button
-          className="compact-card__push-btn"
-          onClick={() => setShowPicker((prev) => !prev)}
-          type="button"
-        >
-          Push to...
-        </button>
-        {showPicker ? (
-          <ul className="compact-card__coop-picker">
-            {coops.map((coop) => (
-              <li key={coop.profile.id}>
-                <button onClick={() => handlePush(coop.profile.id)} type="button">
-                  {coop.profile.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function resolveRouteTargets(item: ReviewItem, coops: CoopSharedState[]): ReviewItemTarget[] {
+  if (item.targetCoops.length > 0) {
+    return filterMeaningfulRouteTargets(item.targetCoops);
+  }
+
+  return coops.slice(0, 1).map((coop) => ({
+    id: coop.profile.id,
+    name: coop.profile.name,
+    matchedRitualLenses: [],
+    selected: true,
+  }));
+}
+
+function selectedTargetIds(targets: ReviewItemTarget[], availableCoopIds: Set<string>) {
+  const selected = targets
+    .filter((target) => target.selected && availableCoopIds.has(target.id))
+    .map((target) => target.id);
+  if (selected.length > 0) return selected;
+  const firstAvailable = targets.find((target) => availableCoopIds.has(target.id));
+  return firstAvailable ? [firstAvailable.id] : [];
 }

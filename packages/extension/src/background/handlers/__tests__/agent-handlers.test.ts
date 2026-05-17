@@ -961,14 +961,14 @@ describe('agent handlers', () => {
         insightDrafts: 0,
         reviewDigests: 0,
         pendingActions: 0,
-        message: '2 tab signal(s) routed locally.',
+        message: '2 routed signal(s) ready locally.',
         emittedAt: '2026-03-24T00:00:00.000Z',
       });
       expect(mockNotifyAgentEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'AGENT_STATE_DELTA',
           routedTabs: 2,
-          message: '2 tab signal(s) routed locally.',
+          message: '2 routed signal(s) ready locally.',
         }),
       );
     });

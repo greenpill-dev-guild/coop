@@ -160,7 +160,10 @@ export async function publishDraftWithContext(input: {
     ),
   );
 
-  if (validation.draft.provenance.type === 'tab') {
+  if (
+    validation.draft.provenance.type === 'tab' ||
+    validation.draft.provenance.type === 'receiver'
+  ) {
     const publishedCoopIds = new Set(validation.targetActors.map((target) => target.coopId));
     const relatedRoutings = await listTabRoutings(db, {
       extractId: validation.draft.extractId,
@@ -271,7 +274,10 @@ export async function handleUpdateReviewDraft(
   }
 
   await saveReviewDraft(db, validation.draft);
-  if (validation.draft.provenance.type === 'tab') {
+  if (
+    validation.draft.provenance.type === 'tab' ||
+    validation.draft.provenance.type === 'receiver'
+  ) {
     const relatedRoutings = await listTabRoutings(db, {
       extractId: validation.draft.extractId,
       limit: 500,

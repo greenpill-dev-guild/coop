@@ -209,6 +209,7 @@ describe('sidepanel cards coverage', () => {
     expect(screen.getByText('Pocket finding')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://example.com/capture' })).toBeInTheDocument();
     expect(screen.getByText('worth saving')).toBeInTheDocument();
+    expect(screen.getByText(/add context before sharing/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Remove save mark' }));
     expect(draftEditor.toggleReceiverCaptureArchiveWorthiness).toHaveBeenCalledWith(capture);

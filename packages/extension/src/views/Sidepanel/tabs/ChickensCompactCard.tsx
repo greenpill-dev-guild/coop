@@ -4,6 +4,7 @@ import { PushControls } from './ChickensPushControls';
 import {
   type ReviewItem,
   faviconUrl,
+  filterMeaningfulRouteTargets,
   formatCategoryLabel,
   formatRelativeTime,
   resolvePreviewImage,
@@ -32,6 +33,8 @@ export function CompactCard(props: CompactCardProps) {
   const sourceUrl = resolveSourceUrl(item);
   const favicon = faviconUrl(item);
   const isAdvancedMode = uiMode === 'advanced';
+  const primaryTarget = item.targetCoops[0];
+  const routeTargets = filterMeaningfulRouteTargets(item.targetCoops);
 
   // Unified detail fields — prefer draft data when present, fall back to signal
   const summary = item.draft?.summary ?? item.signal?.targetCoops[0]?.rationale;
@@ -88,6 +91,17 @@ export function CompactCard(props: CompactCardProps) {
           ) : null}
 
           <strong className="compact-card__title">{item.title}</strong>
+
+          {primaryTarget ? (
+            <div className="compact-card__route-row">
+              <span className="compact-card__route-badge">Best fit: {primaryTarget.name}</span>
+              {!isAdvancedMode ? (
+                <span className="compact-card__route-hint">
+                  {formatCategoryLabel(item.category)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
           {item.insight ? <p className="compact-card__insight">{item.insight}</p> : null}
 
@@ -163,6 +177,31 @@ export function CompactCard(props: CompactCardProps) {
             <div className="compact-card__detail-row">
               <span className="compact-card__detail-label">Suggested next move</span>
               <p>{nextMove}</p>
+            </div>
+          ) : null}
+          {routeTargets.length > 0 ? (
+            <div className="compact-card__detail-row">
+              <span className="compact-card__detail-label">Route</span>
+              <ul className="list-reset compact-card__route-list">
+                {routeTargets.map((target, index) => (
+                  <li key={`${item.id}:route:${target.id}`}>
+                    <strong>{index === 0 ? `Best fit: ${target.name}` : target.name}</strong>
+                    {target.rationale ? (
+                      <span className="helper-text">{target.rationale}</span>
+                    ) : null}
+                    {target.matchedRitualLenses.length > 0 ? (
+                      <span className="helper-text">
+                        Matches {target.matchedRitualLenses.join(', ')}
+                      </span>
+                    ) : null}
+                    {isAdvancedMode && typeof target.relevanceScore === 'number' ? (
+                      <span className="helper-text">
+                        Confidence {Math.round(target.relevanceScore * 100)}%
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
           {item.signal?.support && item.signal.support.length > 0 ? (

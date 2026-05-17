@@ -271,7 +271,7 @@ describe('agent dashboard helpers', () => {
       expect.objectContaining({
         type: 'AGENT_STATE_DELTA',
         routedTabs: 1,
-        message: '1 tab signal(s) routed locally.',
+        message: '1 routed signal(s) ready locally.',
       }),
     );
     expect(contextMocks.notifyExtensionEvent).toHaveBeenCalledWith(

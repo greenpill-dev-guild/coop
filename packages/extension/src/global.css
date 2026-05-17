@@ -1442,6 +1442,33 @@ button.sidepanel-header__brand {
   opacity: 0.85;
 }
 
+.compact-card__route-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.compact-card__route-badge,
+.compact-card__route-hint {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.compact-card__route-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--coop-green);
+  font-weight: 700;
+}
+
+.compact-card__route-hint {
+  color: var(--coop-brown-soft);
+  opacity: 0.72;
+}
+
 .compact-card__surface-tags {
   display: flex;
   gap: 0.2rem;
@@ -1484,6 +1511,69 @@ button.sidepanel-header__brand {
 .compact-card__actions--feedback {
   justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+.compact-card__route-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.compact-card__route-review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(90, 125, 16, 0.16);
+  border-radius: var(--coop-radius-sm, 8px);
+  background: rgba(90, 125, 16, 0.05);
+}
+
+.compact-card__route-review-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.compact-card__route-review-header strong {
+  font-size: 0.8rem;
+  color: var(--coop-brown);
+}
+
+.compact-card__route-review-header p {
+  margin: 0;
+  color: var(--coop-brown-soft);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.compact-card__route-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.compact-card__route-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  color: var(--coop-brown);
+  font-size: 0.78rem;
+}
+
+.compact-card__route-option input {
+  margin-top: 0.15rem;
+}
+
+.compact-card__route-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.compact-card__route-option small {
+  color: var(--coop-brown-soft);
+  line-height: 1.35;
 }
 
 .compact-card__target-pill {
@@ -1644,6 +1734,26 @@ button.sidepanel-header__brand {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+}
+
+.compact-card__route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.compact-card__route-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--coop-radius-sm, 8px);
+  background: rgba(66, 40, 24, 0.04);
+}
+
+.compact-card__route-list strong {
+  color: var(--coop-brown);
+  font-size: 0.78rem;
 }
 
 /* ---- Time group sections (Apple Finder style) ---- */

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { ReceiverCapture, ReviewDraft } from '../../../contracts/schema';
 import {
   buildMeetingModeSections,
+  buildReceiverRoutingExtract,
   createReceiverDraftSeed,
+  createReceiverExtractId,
+  createReceiverSourceCandidateId,
   filterPrivateReceiverIntake,
   filterVisibleReviewDrafts,
   isReviewDraftVisibleForMemberContext,
@@ -44,6 +47,8 @@ describe('receiver review workflow', () => {
     });
 
     expect(draft.id).toBe('draft-receiver-capture-1');
+    expect(draft.extractId).toBe(createReceiverExtractId('capture-1'));
+    expect(draft.sourceCandidateId).toBe(createReceiverSourceCandidateId('capture-1'));
     expect(draft.workflowStage).toBe('candidate');
     expect(draft.summary).toContain('Summary placeholder');
     expect(draft.provenance).toMatchObject({
@@ -53,6 +58,41 @@ describe('receiver review workflow', () => {
       seedMethod: 'metadata-only',
     });
     expect(draft.suggestedTargetCoopIds).toEqual(['coop-1']);
+  });
+
+  it('builds routeable extracts from receiver metadata', () => {
+    const extract = buildReceiverRoutingExtract({
+      capture: {
+        ...baseCapture,
+        id: 'capture-file',
+        kind: 'file',
+        title: 'Watershed grant notes.pdf',
+        note: 'Grant notes for watershed restoration and community science.',
+        fileName: 'watershed-grant-notes.pdf',
+        mimeType: 'application/pdf',
+        sourceUrl: 'https://example.org/grants/watershed',
+      },
+      createdAt: '2026-03-12T18:10:00.000Z',
+    });
+
+    expect(extract.id).toBe(createReceiverExtractId('capture-file'));
+    expect(extract.sourceCandidateId).toBe(createReceiverSourceCandidateId('capture-file'));
+    expect(extract.cleanedTitle).toBe('Watershed grant notes.pdf');
+    expect(extract.domain).toBe('example.org');
+    expect(extract.metaDescription).toContain('Grant notes');
+    expect(extract.salientTextBlocks.join(' ')).toContain('watershed-grant-notes.pdf');
+  });
+
+  it('uses audio transcript text as receiver routing evidence when available', () => {
+    const extract = buildReceiverRoutingExtract({
+      capture: baseCapture,
+      transcriptText:
+        'We found a funding opportunity for river restoration, community science, and soil sampling.',
+    });
+
+    expect(extract.id).toBe(createReceiverExtractId('capture-1'));
+    expect(extract.leadParagraphs[0]).toContain('funding opportunity');
+    expect(extract.salientTextBlocks.join(' ')).toContain('community science');
   });
 
   it('creates editable ready drafts directly from private receiver intake', () => {
@@ -311,7 +351,7 @@ describe('receiver review workflow', () => {
 
     expect(isReviewDraftVisibleForMemberContext(receiverDraft, 'coop-1', 'member-1')).toBe(true);
     expect(isReviewDraftVisibleForMemberContext(receiverDraft, 'coop-1', 'member-2')).toBe(false);
-    expect(isReviewDraftVisibleForMemberContext(receiverDraft, 'coop-2', 'member-1')).toBe(false);
+    expect(isReviewDraftVisibleForMemberContext(receiverDraft, 'coop-2', 'member-1')).toBe(true);
     expect(filterVisibleReviewDrafts([receiverDraft, tabDraft], 'coop-1', 'member-2')).toEqual([
       tabDraft,
     ]);

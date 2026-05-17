@@ -213,8 +213,8 @@ function buildDraftEditor(): ReturnType<typeof useDraftEditor> {
     draftValue: vi.fn(),
     updateDraft: vi.fn(),
     toggleDraftTargetCoop: vi.fn(),
-    saveDraft: vi.fn(),
-    publishDraft: vi.fn(),
+    saveDraft: vi.fn(async (draft) => draft),
+    publishDraft: vi.fn(async () => undefined),
     refineDraft: vi.fn(),
     refineResults: {},
     refiningDrafts: new Set<string>(),
@@ -227,7 +227,18 @@ function buildDraftEditor(): ReturnType<typeof useDraftEditor> {
     convertReceiverCapture: vi.fn(),
     archiveReceiverCapture: vi.fn(),
     toggleReceiverCaptureArchiveWorthiness: vi.fn(),
-    promoteSignalToDraft: vi.fn(),
+    promoteSignalToDraft: vi.fn(async () =>
+      makeDraft({
+        workflowStage: 'ready',
+        suggestedTargetCoopIds: ['coop-1'],
+        provenance: {
+          type: 'tab',
+          interpretationId: 'interp-1',
+          extractId: 'extract-1',
+          sourceCandidateId: 'candidate-1',
+        },
+      }),
+    ),
     promoteSignalAndPublish: vi.fn(),
     recordReviewFeedback: vi.fn(),
   } as unknown as ReturnType<typeof useDraftEditor>;
@@ -558,7 +569,7 @@ describe('ChickensTab interactions', () => {
     render(<ChickensTab {...buildProps({ uiMode: 'simple' })} />);
 
     expect(screen.getByText('Restore wetland corridor')).toBeInTheDocument();
-    expect(screen.getAllByText('Shared habitat restoration opportunity').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/suggested for alpha coop/i).length).toBeGreaterThan(0);
     expect(document.querySelector('.compact-card__category')).toBeNull();
     expect(document.querySelector('.compact-card__surface-tag')).toBeNull();
     for (const button of screen.getAllByRole('button', { name: /not useful/i })) {
@@ -570,7 +581,7 @@ describe('ChickensTab interactions', () => {
     expect(screen.getAllByRole('button', { name: /not useful/i }).length).toBeGreaterThan(0);
   });
 
-  it('renders push controls on orphan signals via promoteSignalAndPublish', async () => {
+  it('reviews route before sharing orphan signals', async () => {
     const user = userEvent.setup();
     const draftEditor = buildDraftEditor();
 
@@ -589,16 +600,20 @@ describe('ChickensTab interactions', () => {
       />,
     );
 
-    // Orphan signal should have a push button
-    const pushBtn = screen.getByRole('button', { name: /push to alpha coop/i });
-    expect(pushBtn).toBeInTheDocument();
+    const reviewRoute = screen.getByRole('button', { name: /review route/i });
+    expect(reviewRoute).toBeInTheDocument();
 
-    await user.click(pushBtn);
+    await user.click(reviewRoute);
+    expect(screen.getAllByText(/best fit: alpha coop/i).length).toBeGreaterThan(0);
 
-    expect(draftEditor.promoteSignalAndPublish).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: /share to selected coops/i }));
+
+    expect(draftEditor.promoteSignalToDraft).toHaveBeenCalledTimes(1);
+    expect(draftEditor.publishDraft).toHaveBeenCalledTimes(1);
+    expect(draftEditor.promoteSignalAndPublish).not.toHaveBeenCalled();
   });
 
-  it('renders push controls on merged signal+draft cards via publishDraft', async () => {
+  it('reviews route before sharing merged signal+draft cards', async () => {
     const user = userEvent.setup();
     const draftEditor = buildDraftEditor();
 
@@ -611,13 +626,78 @@ describe('ChickensTab interactions', () => {
       />,
     );
 
-    // Merged card should have a push button
-    const pushBtn = screen.getByRole('button', { name: /push to alpha coop/i });
-    expect(pushBtn).toBeInTheDocument();
+    const reviewRoute = screen.getByRole('button', { name: /review route/i });
+    expect(reviewRoute).toBeInTheDocument();
 
-    await user.click(pushBtn);
+    await user.click(reviewRoute);
+    expect(screen.getByText(/what will be shared/i)).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /share to selected coops/i }));
+
+    expect(draftEditor.saveDraft).toHaveBeenCalledTimes(1);
     expect(draftEditor.publishDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('only discloses alternate coops when the second fit is meaningful', async () => {
+    const user = userEvent.setup();
+    const signal = makeSignal({
+      id: 'multi-route',
+      draftId: undefined,
+      title: 'Multi route signal',
+      targetCoops: [
+        {
+          coopId: 'coop-1',
+          coopName: 'Alpha Coop',
+          relevanceScore: 0.82,
+          rationale: 'Matches the primary restoration focus.',
+          suggestedNextStep: 'Review the route.',
+          matchedRitualLenses: ['knowledge-garden-resources'],
+        },
+        {
+          coopId: 'coop-2',
+          coopName: 'Beta Coop',
+          relevanceScore: 0.77,
+          rationale: 'Also matches the shared learning focus.',
+          suggestedNextStep: 'Review as an alternate.',
+          matchedRitualLenses: ['impact-reporting'],
+        },
+        {
+          coopId: 'coop-3',
+          coopName: 'Gamma Coop',
+          relevanceScore: 0.32,
+          rationale: 'Weak incidental overlap.',
+          suggestedNextStep: 'Do not foreground this route.',
+          matchedRitualLenses: [],
+        },
+      ],
+    });
+
+    render(
+      <ChickensTab
+        {...buildProps({
+          dashboard: buildDashboard({
+            coops: [
+              makeCoopState({ profile: { id: 'coop-1', name: 'Alpha Coop' } }),
+              makeCoopState({ profile: { id: 'coop-2', name: 'Beta Coop' } }),
+              makeCoopState({ profile: { id: 'coop-3', name: 'Gamma Coop' } }),
+            ],
+            proactiveSignals: [signal],
+          }),
+          visibleDrafts: [],
+          agentDashboard: buildAgentDashboard({ observations: [] }),
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /review route/i }));
+
+    expect(screen.getAllByText('Beta Coop').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Gamma Coop')).toBeNull();
+
+    await user.click(screen.getByText('Details'));
+
+    expect(screen.getAllByText(/Beta Coop/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Gamma Coop/i)).toBeNull();
   });
 
   it('records lightweight feedback from review cards', async () => {

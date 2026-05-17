@@ -266,7 +266,7 @@ export async function persistTabRouterOutput(input: {
       createAgentObservation({
         trigger: 'memory-insight-due',
         title: `Memory insight due for ${coopsById.get(coopId)?.profile.name ?? 'this coop'}`,
-        summary: 'New routed tabs suggest a reusable local insight or digest.',
+        summary: 'New routed signals suggest a reusable local insight or digest.',
         coopId,
         payload: {
           routingIds: routings.map((routing) => routing.id),

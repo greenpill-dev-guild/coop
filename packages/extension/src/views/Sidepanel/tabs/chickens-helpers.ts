@@ -67,6 +67,16 @@ export interface ReviewItemFeedbackSubject {
   observationId?: string;
 }
 
+export interface ReviewItemTarget {
+  id: string;
+  name: string;
+  rationale?: string;
+  relevanceScore?: number;
+  suggestedNextStep?: string;
+  matchedRitualLenses: string[];
+  selected: boolean;
+}
+
 export interface ReviewItem {
   id: string;
   kind: ReviewItemKind;
@@ -75,13 +85,23 @@ export interface ReviewItem {
   tags: string[];
   category: string;
   timestamp: string;
-  targetCoops: { id: string; name: string }[];
+  targetCoops: ReviewItemTarget[];
   feedbackSubject: ReviewItemFeedbackSubject;
   feedbackSubjects: ReviewItemFeedbackSubject[];
   /** Original data for progressive disclosure */
   signal?: ProactiveSignal;
   draft?: ReviewDraft;
   staleObservation?: NonNullable<AgentDashboardResponse>['observations'][number];
+}
+
+export function filterMeaningfulRouteTargets(targets: ReviewItemTarget[]) {
+  if (targets.length === 0) return [];
+  const primaryScore = targets[0]?.relevanceScore;
+  return targets.filter((target, index) => {
+    if (index === 0 || target.selected) return true;
+    if (primaryScore === undefined || target.relevanceScore === undefined) return false;
+    return target.relevanceScore >= 0.18 && primaryScore - target.relevanceScore <= 0.08;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +149,72 @@ function feedbackMatchesSubject(feedback: ReviewItemFeedback, subject: ReviewIte
       (subject.extractId && feedback.extractId === subject.extractId) ||
       (subject.sourceCandidateId && feedback.sourceCandidateId === subject.sourceCandidateId),
   );
+}
+
+function targetFromSignalTarget(
+  target: ProactiveSignal['targetCoops'][number],
+  selectedCoopIds: Set<string> | undefined,
+  index: number,
+): ReviewItemTarget {
+  return {
+    id: target.coopId,
+    name: target.coopName,
+    rationale: target.rationale,
+    relevanceScore: target.relevanceScore,
+    suggestedNextStep: target.suggestedNextStep,
+    matchedRitualLenses: target.matchedRitualLenses,
+    selected: selectedCoopIds ? selectedCoopIds.has(target.coopId) : index === 0,
+  };
+}
+
+function targetFromDraft(
+  draft: ReviewDraft,
+  coopNameById: Map<string, string>,
+  coopId: string,
+): ReviewItemTarget {
+  return {
+    id: coopId,
+    name: coopNameById.get(coopId) ?? 'Coop',
+    rationale: draft.rationale,
+    relevanceScore: draft.confidence,
+    suggestedNextStep: draft.suggestedNextStep,
+    matchedRitualLenses: [],
+    selected: true,
+  };
+}
+
+function targetsForDraft(
+  draft: ReviewDraft,
+  coopNameById: Map<string, string>,
+  signal?: ProactiveSignal,
+) {
+  const selectedCoopIds = new Set(draft.suggestedTargetCoopIds ?? []);
+  const signalTargets =
+    signal?.targetCoops.map((target, index) =>
+      targetFromSignalTarget(target, selectedCoopIds, index),
+    ) ?? [];
+  const signalTargetIds = new Set(signalTargets.map((target) => target.id));
+  const draftOnlyTargets = (draft.suggestedTargetCoopIds ?? [])
+    .filter((coopId) => !signalTargetIds.has(coopId))
+    .map((coopId) => targetFromDraft(draft, coopNameById, coopId));
+  return [...signalTargets, ...draftOnlyTargets];
+}
+
+function targetsForSignal(signal: ProactiveSignal) {
+  return signal.targetCoops.map((target, index) =>
+    targetFromSignalTarget(target, undefined, index),
+  );
+}
+
+function recommendedInsight(targets: ReviewItemTarget[], fallback: string) {
+  const primary = targets[0];
+  if (!primary) {
+    return fallback;
+  }
+  const reason = primary.rationale?.replace(/\.$/, '');
+  return reason
+    ? `Suggested for ${primary.name} because ${reason}.`
+    : `Suggested for ${primary.name}.`;
 }
 
 export function isReviewItemSuppressed(
@@ -186,19 +272,17 @@ export function buildReviewItems(
         draftId: linkedDraft.id,
       };
       // Merge: use draft as the actionable base but carry signal support data
+      const targetCoops = targetsForDraft(linkedDraft, coopNameById, signal);
       mergedDraftIds.add(linkedDraft.id);
       items.push({
         id: `draft-${linkedDraft.id}`,
         kind: 'draft',
         title: linkedDraft.title,
-        insight: linkedDraft.whyItMatters,
+        insight: recommendedInsight(targetCoops, linkedDraft.whyItMatters),
         tags: (linkedDraft.tags ?? []).slice(0, 3),
         category: linkedDraft.category,
         timestamp: linkedDraft.createdAt,
-        targetCoops: (linkedDraft.suggestedTargetCoopIds ?? []).map((id) => ({
-          id,
-          name: coopNameById.get(id) ?? 'Coop',
-        })),
+        targetCoops,
         feedbackSubject: draftSubject,
         feedbackSubjects: [draftSubject, signalSubject],
         draft: linkedDraft,
@@ -213,15 +297,16 @@ export function buildReviewItems(
         sourceCandidateId: signal.sourceCandidateId,
       };
       // Orphan signal — no draft yet, still reviewable and pushable
+      const targetCoops = targetsForSignal(signal);
       items.push({
         id: `signal-${signal.id}`,
         kind: 'signal',
         title: signal.title,
-        insight: primary?.rationale ?? '',
+        insight: recommendedInsight(targetCoops, primary?.rationale ?? ''),
         tags: (signal.tags ?? []).slice(0, 3),
         category: signal.category,
         timestamp: signal.updatedAt,
-        targetCoops: signal.targetCoops.map((t) => ({ id: t.coopId, name: t.coopName })),
+        targetCoops,
         feedbackSubject: signalSubject,
         feedbackSubjects: [signalSubject],
         signal,
@@ -232,6 +317,7 @@ export function buildReviewItems(
   // Emit remaining drafts that were not merged with a signal
   for (const draft of drafts) {
     if (mergedDraftIds.has(draft.id)) continue;
+    const targetCoops = targetsForDraft(draft, coopNameById);
     const draftSubject: ReviewItemFeedbackSubject = {
       itemKind: 'draft',
       itemId: draft.id,
@@ -244,14 +330,11 @@ export function buildReviewItems(
       id: `draft-${draft.id}`,
       kind: 'draft',
       title: draft.title,
-      insight: draft.whyItMatters,
+      insight: recommendedInsight(targetCoops, draft.whyItMatters),
       tags: (draft.tags ?? []).slice(0, 3),
       category: draft.category,
       timestamp: draft.createdAt,
-      targetCoops: (draft.suggestedTargetCoopIds ?? []).map((id) => ({
-        id,
-        name: coopNameById.get(id) ?? 'Coop',
-      })),
+      targetCoops,
       feedbackSubject: draftSubject,
       feedbackSubjects: [draftSubject],
       draft,

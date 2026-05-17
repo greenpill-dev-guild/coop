@@ -1,11 +1,12 @@
 import type {
   ArtifactAttachment,
   ArtifactCategory,
+  ReadablePageExtract,
   ReceiverCapture,
   ReviewDraft,
   ReviewDraftWorkflowStage,
 } from '../../contracts/schema';
-import { compactWhitespace, nowIso, slugify, truncateWords, unique } from '../../utils';
+import { compactWhitespace, hashText, nowIso, slugify, truncateWords, unique } from '../../utils';
 import { inferFromTranscript } from './pipeline';
 
 export interface MeetingModeSections {
@@ -16,6 +17,93 @@ export interface MeetingModeSections {
 
 export function createReceiverDraftId(captureId: string) {
   return `draft-receiver-${captureId}`;
+}
+
+export function createReceiverSourceCandidateId(captureId: string) {
+  return `receiver-source:${captureId}`;
+}
+
+export function createReceiverExtractId(captureId: string) {
+  return `receiver-extract:${captureId}`;
+}
+
+function receiverSourceUrl(capture: ReceiverCapture) {
+  return capture.sourceUrl ?? `coop://receiver/${capture.id}`;
+}
+
+function receiverDomain(capture: ReceiverCapture) {
+  if (!capture.sourceUrl) {
+    return 'receiver.local';
+  }
+
+  try {
+    return new URL(capture.sourceUrl).hostname.replace(/^www\./, '') || 'receiver.local';
+  } catch {
+    return 'receiver.local';
+  }
+}
+
+function receiverKindLabel(capture: ReceiverCapture) {
+  switch (capture.kind) {
+    case 'audio':
+      return 'Voice note';
+    case 'photo':
+      return 'Photo capture';
+    case 'file':
+      return 'File capture';
+    case 'link':
+      return 'Link note';
+  }
+}
+
+export function buildReceiverRoutingExtract(input: {
+  capture: ReceiverCapture;
+  transcriptText?: string;
+  createdAt?: string;
+}): ReadablePageExtract {
+  const title =
+    compactWhitespace(input.capture.title) ||
+    compactWhitespace(input.capture.fileName ?? '') ||
+    receiverKindLabel(input.capture);
+  const note = compactWhitespace(input.capture.note ?? '');
+  const fileName = compactWhitespace(input.capture.fileName ?? '');
+  const transcriptText = compactWhitespace(input.transcriptText ?? '');
+  const kindLabel = receiverKindLabel(input.capture);
+  const headings = unique([kindLabel, fileName].filter(Boolean));
+  const sourceDescription = [
+    `${kindLabel} captured privately${input.capture.memberDisplayName ? ` by ${input.capture.memberDisplayName}` : ''}.`,
+    input.capture.sourceUrl ? `Source: ${input.capture.sourceUrl}` : '',
+    fileName ? `File: ${fileName}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const metaDescription = compactWhitespace([sourceDescription, note].filter(Boolean).join(' '));
+  const leadParagraphs = unique([transcriptText, note, metaDescription].filter(Boolean)).slice(
+    0,
+    2,
+  );
+  const salientTextBlocks = unique(
+    [...leadParagraphs, fileName, input.capture.mimeType, input.capture.coopDisplayName].filter(
+      Boolean,
+    ) as string[],
+  ).slice(0, 5);
+  const textHash = hashText(
+    [title, metaDescription, ...headings, ...leadParagraphs, ...salientTextBlocks].join(' '),
+  );
+
+  return {
+    id: createReceiverExtractId(input.capture.id),
+    sourceCandidateId: createReceiverSourceCandidateId(input.capture.id),
+    canonicalUrl: receiverSourceUrl(input.capture),
+    cleanedTitle: title,
+    domain: receiverDomain(input.capture),
+    metaDescription: metaDescription ? truncateWords(metaDescription, 32) : undefined,
+    topHeadings: headings.slice(0, 5),
+    leadParagraphs,
+    salientTextBlocks,
+    textHash,
+    createdAt: input.createdAt ?? input.capture.updatedAt ?? input.capture.createdAt ?? nowIso(),
+  };
 }
 
 export function normalizeDraftTargetCoopIds(targetCoopIds: string[], availableCoopIds: string[]) {
@@ -112,7 +200,9 @@ export function isReviewDraftVisibleForMemberContext(
     return false;
   }
 
-  return draft.provenance.coopId === coopId && draft.provenance.memberId === memberId;
+  const belongsToCaptureCoop = draft.provenance.coopId === coopId;
+  const isSuggestedForCoop = draft.suggestedTargetCoopIds.includes(coopId);
+  return (belongsToCaptureCoop || isSuggestedForCoop) && draft.provenance.memberId === memberId;
 }
 
 export function filterVisibleReviewDrafts(
@@ -217,8 +307,8 @@ export function createReceiverDraftSeed(input: {
   return {
     id: createReceiverDraftId(input.capture.id),
     interpretationId: `receiver-interpretation-${input.capture.id}`,
-    extractId: `receiver-extract-${input.capture.id}`,
-    sourceCandidateId: `receiver-source-${input.capture.id}`,
+    extractId: createReceiverExtractId(input.capture.id),
+    sourceCandidateId: createReceiverSourceCandidateId(input.capture.id),
     title,
     summary: transcriptText
       ? truncateToSentences(transcriptText, 3)

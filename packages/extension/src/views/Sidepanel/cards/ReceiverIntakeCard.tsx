@@ -23,6 +23,11 @@ export function ReceiverIntakeCard({ capture, draftEditor }: ReceiverIntakeCardP
       <div className="helper-text">
         {capture.fileName ?? `${capture.byteSize} bytes`} · {capture.mimeType}
       </div>
+      {(capture.intakeStatus ?? 'private-intake') === 'private-intake' ? (
+        <div className="helper-text">
+          Add context before sharing so Coop can suggest the right route.
+        </div>
+      ) : null}
       {capture.sourceUrl ? (
         <div className="helper-text">
           <a className="source-link" href={capture.sourceUrl} rel="noreferrer" target="_blank">

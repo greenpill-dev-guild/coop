@@ -387,10 +387,10 @@ function heuristicOutput(schemaRef: SkillOutputSchemaRef, rawContext: string) {
           {
             title: 'Local routing insight',
             summary:
-              rawContext.slice(0, 220) || 'Recent routed tabs suggest a reusable local insight.',
+              rawContext.slice(0, 220) || 'Recent routed signals suggest a reusable local insight.',
             whyItMatters: 'A compact local insight helps the member decide what to review next.',
             suggestedNextStep:
-              'Review the routed tabs and decide whether this should stay local or be polished.',
+              'Review the routed signals and decide whether this should stay local or be polished.',
             tags: ['insight', 'routing'],
             category: 'insight',
             confidence: 0.68,

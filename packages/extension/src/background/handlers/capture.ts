@@ -63,8 +63,39 @@ import {
   emitRoundupBatchObservation,
 } from './agent';
 import { queueFollowUp } from './follow-up';
+import { routeReceiverCaptureToCoops } from './receiver-routing';
 
 const EXPLICIT_ACTIVE_TAB_DEDUP_COOLDOWN_MS = 5_000;
+
+async function routeReceiverCaptureAfterSave(input: {
+  capture: ReceiverCapture;
+  transcriptText?: string;
+  workflowStage?: 'candidate' | 'ready';
+}) {
+  try {
+    const result = await routeReceiverCaptureToCoops(input);
+    if (result.status === 'needs-context') {
+      await notifyExtensionEvent({
+        eventKind: 'receiver-routing',
+        entityId: input.capture.id,
+        state: 'needs-context',
+        title: 'Capture saved privately',
+        message: 'Add a little context when you are ready and Coop can suggest a route.',
+      }).catch(() => {});
+    }
+    return result;
+  } catch (error) {
+    console.warn('[coop] receiver routing failed:', error instanceof Error ? error.message : error);
+    await notifyExtensionEvent({
+      eventKind: 'receiver-routing',
+      entityId: input.capture.id,
+      state: 'failed',
+      title: 'Capture saved',
+      message: 'Saved privately. Coop could not suggest a route yet.',
+    }).catch(() => {});
+    return null;
+  }
+}
 
 export async function collectCandidate(
   tab: chrome.tabs.Tab,
@@ -490,6 +521,12 @@ async function startAudioTranscription(
       durationSeconds: durationSeconds || result.duration,
     });
 
+    await routeReceiverCaptureAfterSave({
+      capture,
+      transcriptText: result.text,
+      workflowStage: 'ready',
+    });
+
     await notifyExtensionEvent({
       eventKind: 'transcript-ready',
       entityId: capture.id,
@@ -563,6 +600,12 @@ export async function savePopupCapture(payload: PopupPreparedCapture): Promise<R
   if (payload.kind === 'audio') {
     void startAudioTranscription(capture, blob, payload.durationSeconds ?? 0);
   }
+
+  queueFollowUp(
+    'capture',
+    `route-receiver-capture:${capture.id}`,
+    routeReceiverCaptureAfterSave({ capture, workflowStage: 'ready' }),
+  );
 
   if (payload.kind === 'photo') {
     await notifyExtensionEvent({
@@ -750,6 +793,15 @@ export async function createNoteDraft(payload: { text: string }) {
   } satisfies ReceiverCapture;
 
   await saveReceiverCapture(db, capture, blob);
+
+  const routed = await routeReceiverCaptureAfterSave({
+    capture,
+    workflowStage: 'candidate',
+  });
+  if (routed?.draft) {
+    await refreshBadge();
+    return routed.draft;
+  }
 
   const availableCoopIds = coops.map((state) => state.profile.id);
   const preferredCoopId = activeContext.activeCoopId ?? capture.coopId;

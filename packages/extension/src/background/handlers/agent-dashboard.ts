@@ -200,7 +200,7 @@ async function notifyProactiveDelta(input: {
         ? `${delta.reviewDigests} review digest draft(s) ready.`
         : delta.insightDrafts > 0
           ? `${delta.insightDrafts} local insight draft(s) ready for review.`
-          : `${delta.routedTabs} tab signal(s) routed locally.`;
+          : `${delta.routedTabs} routed signal(s) ready locally.`;
   const focusIntent =
     delta.pendingActions > 0
       ? ({ tab: 'nest', segment: 'agent' } as const)
@@ -232,7 +232,7 @@ async function notifyProactiveDelta(input: {
             ? `Your onboarding run prepared ${delta.reviewDigests} review digest draft(s).`
             : delta.insightDrafts > 0
               ? `Your onboarding run prepared ${delta.insightDrafts} local insight draft(s).`
-              : `Your onboarding run routed ${delta.routedTabs} tab signal(s).`,
+              : `Your onboarding run routed ${delta.routedTabs} signal(s).`,
       intent: focusIntent,
     });
     return;
@@ -279,7 +279,7 @@ async function notifyProactiveDelta(input: {
     entityId: `roundup:${nowIso()}`,
     state: `${delta.routedTabs}`,
     title: 'Roundup summary',
-    message: `${delta.routedTabs} new routed tab signal(s) are ready locally.`,
+    message: `${delta.routedTabs} new routed signal(s) are ready locally.`,
     intent: focusIntent,
   });
 }

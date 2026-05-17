@@ -59,6 +59,7 @@ import {
   syncHighConfidenceDraftObservations,
 } from './agent';
 import { queueFollowUp } from './follow-up';
+import { routeReceiverCaptureToCoops } from './receiver-routing';
 
 /**
  * Persist an invite mutation into the Yjs doc record stored in Dexie.
@@ -443,6 +444,11 @@ export async function handleIngestReceiverCapture(
   };
 
   await saveReceiverCapture(db, capture, receiverSyncAssetToBlob(envelope.asset));
+  queueFollowUp(
+    'receiver',
+    `route-receiver-capture:${capture.id}`,
+    routeReceiverCaptureToCoops({ capture, workflowStage: 'ready' }),
+  );
   const firstSyncForPairing = !pairing.lastSyncedAt;
   await updateReceiverPairing(db, pairingId, {
     lastSyncedAt: syncedAt,

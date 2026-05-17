@@ -252,8 +252,8 @@ describe('receiver runtime helpers', () => {
       {
         id: 'draft-receiver-1',
         interpretationId: 'receiver-interpretation-1',
-        extractId: 'receiver-extract-1',
-        sourceCandidateId: 'receiver-source-1',
+        extractId: 'receiver-extract:capture-1',
+        sourceCandidateId: 'receiver-source:capture-1',
         title: 'Receiver note',
         summary: 'Private receiver summary',
         sources: [{ label: 'Receiver', url: 'coop://receiver/1', domain: 'receiver.local' }],
