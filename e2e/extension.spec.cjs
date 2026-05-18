@@ -402,6 +402,29 @@ async function seedExtensionCoop(page, input) {
   };
 }
 
+async function setSidepanelUiMode(page, uiMode) {
+  const current = await sendRuntimeMessage(page, {
+    type: 'get-ui-preferences',
+  });
+  if (!current?.ok || !current.data) {
+    throw new Error(current?.error ?? 'Could not load UI preferences.');
+  }
+
+  const response = await sendRuntimeMessage(page, {
+    type: 'set-ui-preferences',
+    payload: {
+      ...current.data,
+      uiMode,
+    },
+  });
+  if (!response?.ok) {
+    throw new Error(response?.error ?? `Could not switch sidepanel UI mode to ${uiMode}.`);
+  }
+
+  await page.reload();
+  await page.waitForLoadState('domcontentloaded');
+}
+
 async function waitForDashboardValue(page, select, timeoutMs = 30000, label = 'dashboard value') {
   const startedAt = Date.now();
   let lastDashboard = null;
@@ -925,6 +948,7 @@ test.describe('extension workflow', () => {
         knowledgePain: 'The same research gets repeated.',
         knowledgeImprove: 'Cluster themes into reusable shared memory.',
       });
+      await setSidepanelUiMode(creatorProfile.page, 'advanced');
       await waitForDashboardValue(
         creatorProfile.page,
         (dashboard) =>

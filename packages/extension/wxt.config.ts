@@ -39,6 +39,13 @@ const receiverBridgeMatches = resolveReceiverBridgeMatches(process.env.VITE_COOP
 const localDevStartUrl = `http://127.0.0.1:${process.env.COOP_DEV_APP_PORT ?? '3001'}`;
 const extensionDevServerPort = Number(process.env.COOP_DEV_EXTENSION_PORT ?? '3020');
 const buildSourceMaps = process.env.COOP_EXTENSION_SOURCEMAP === '1';
+const extensionHtmlEntries = [
+  'catalog.html',
+  'entrypoints/agent-sandbox.html',
+  'entrypoints/offscreen.html',
+  'entrypoints/popup.html',
+  'entrypoints/sidepanel.html',
+];
 
 /**
  * Replaces Vite's modulepreload polyfill with a service-worker-safe no-op.
@@ -218,6 +225,9 @@ export default defineConfig({
   },
   hooks: {
     'vite:devServer:extendConfig': (config) => {
+      config.optimizeDeps ??= {};
+      config.optimizeDeps.entries = extensionHtmlEntries;
+
       // WXT rewrites entry HTML scripts from `/src/...` to `/@fs/src/...`.
       // Vite 6 serves /@fs/ files without running transforms, so JSX/TS
       // source reaches the browser raw and causes SyntaxErrors.  Redirect
