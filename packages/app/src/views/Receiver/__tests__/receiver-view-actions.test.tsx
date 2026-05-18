@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CaptureView } from '../CaptureView';
 import { InboxView } from '../InboxView';
+import { ReceiverShell } from '../ReceiverShell';
 
 function makeCapture(overrides: Record<string, unknown> = {}) {
   return {
@@ -80,7 +81,7 @@ describe('receiver view actions', () => {
 
     expect(screen.queryByText('Hatch Preview')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View Roost' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Mate to sync' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pair to sync' }));
 
     expect(onStartRecording).toHaveBeenCalledTimes(1);
     expect(inputClick).toHaveBeenCalledTimes(2);
@@ -110,6 +111,59 @@ describe('receiver view actions', () => {
 
     expect(onFinishRecording).toHaveBeenCalledWith('save');
     expect(onFinishRecording).toHaveBeenCalledWith('cancel');
+  });
+
+  it('marks receiver live errors as warnings instead of neutral status copy', () => {
+    const { rerender } = render(
+      <ReceiverShell
+        screenTitle="Hatch"
+        activeRoute="receiver"
+        navigate={vi.fn()}
+        online
+        pairingStatusLabel="Not paired"
+        captureCount={0}
+        message="Could not start recording."
+        pairedNestDisplay={null}
+        canNotify={false}
+        notificationsEnabled={false}
+        onToggleNotifications={vi.fn()}
+        onRefresh={vi.fn()}
+      >
+        <div data-testid="receiver-child" />
+      </ReceiverShell>,
+    );
+
+    expect(screen.getByText('Could not start recording.')).toHaveClass('is-warning');
+    expect(
+      screen.getByRole('button', { name: /settings and status: not paired · 0 saved/i }),
+    ).toBeVisible();
+
+    for (const message of [
+      'This browser cannot record audio here yet.',
+      'Web Share is not available in this browser.',
+      'File captures must stay under 8 MB.',
+    ]) {
+      rerender(
+        <ReceiverShell
+          screenTitle="Hatch"
+          activeRoute="receiver"
+          navigate={vi.fn()}
+          online
+          pairingStatusLabel="Not paired"
+          captureCount={0}
+          message={message}
+          pairedNestDisplay={null}
+          canNotify={false}
+          notificationsEnabled={false}
+          onToggleNotifications={vi.fn()}
+          onRefresh={vi.fn()}
+        >
+          <div data-testid="receiver-child" />
+        </ReceiverShell>,
+      );
+
+      expect(screen.getByText(message)).toHaveClass('is-warning');
+    }
   });
 
   it('renders inbox media states and routes primary and secondary actions', () => {

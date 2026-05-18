@@ -174,7 +174,7 @@ describe('useCapture error paths', () => {
       });
     });
 
-    expect(deps.setMessage).toHaveBeenCalledWith('This nest item is missing its local preview.');
+    expect(deps.setMessage).toHaveBeenCalledWith('This capture is missing its local preview.');
   });
 
   it('refuses to record when MediaRecorder is unavailable in this runtime', async () => {

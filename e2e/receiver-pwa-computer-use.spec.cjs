@@ -93,6 +93,33 @@ async function expectHatchLayoutToFit(page, viewport) {
   expect(metrics.mainScrollDelta).toBeLessThanOrEqual(1);
 }
 
+async function expectReceiverRouteReadableAt(page, route, viewport) {
+  await page.setViewportSize(viewport);
+  await page.goto(`${route}?presentation=pwa&qa=reset,seed-empty`);
+
+  await expect(qa(page, 'receiver-shell')).toBeVisible();
+  await expect(qa(page, 'receiver-nav')).toBeVisible();
+  await expect(qa(page, route.includes('/pair') ? 'mate-screen' : 'roost-screen')).toBeVisible();
+
+  const metrics = await page.evaluate(() => {
+    const main = document.querySelector('[data-qa="receiver-main"]');
+    const card = document.querySelector('.receiver-card');
+    const mainRect = main?.getBoundingClientRect();
+    const cardRect = card?.getBoundingClientRect();
+    return {
+      cardWidth: cardRect?.width ?? 0,
+      horizontalOverflow:
+        Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) -
+        window.innerWidth,
+      mainWidth: mainRect?.width ?? 0,
+    };
+  });
+
+  expect(metrics.horizontalOverflow).toBeLessThanOrEqual(1);
+  expect(metrics.mainWidth).toBeGreaterThanOrEqual(600);
+  expect(metrics.cardWidth).toBeGreaterThanOrEqual(560);
+}
+
 test.describe('receiver PWA Browser-first evals', () => {
   test('normal browser hits to app routes stay website-first', async ({ page }) => {
     await page.goto('/app/receiver');
@@ -110,10 +137,7 @@ test.describe('receiver PWA Browser-first evals', () => {
     await expect(qa(page, 'public-install-dialog')).toBeVisible();
     await expect(page.getByText(/install coop on this phone/i)).toBeVisible();
     await expect(page.getByText(/install app|add to home screen/i).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /open coop receiver/i })).toHaveAttribute(
-      'href',
-      /\/app/,
-    );
+    await expect(page.locator('.public-install-url')).toHaveAttribute('href', /\/app/);
   });
 
   for (const viewport of hatchViewports) {
@@ -133,7 +157,7 @@ test.describe('receiver PWA Browser-first evals', () => {
 
     await qa(page, 'save-voice-note').click();
 
-    await expect(qa(page, 'receiver-live-message')).toContainText(/nest item saved locally/i);
+    await expect(qa(page, 'receiver-live-message')).toContainText(/saved on this phone/i);
     await expect(qa(page, 'last-saved-strip')).toContainText(/Voice note/i);
   });
 
@@ -165,5 +189,18 @@ test.describe('receiver PWA Browser-first evals', () => {
       .click();
 
     await expect(qa(page, 'copy-link')).toBeVisible();
+  });
+
+  test('Mate and Roost stay readable in the desktop/narrow PWA shell', async ({ browser }) => {
+    const viewport = { width: 1024, height: 768 };
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+
+    try {
+      await expectReceiverRouteReadableAt(page, '/app/pair', viewport);
+      await expectReceiverRouteReadableAt(page, '/app/inbox', viewport);
+    } finally {
+      await context.close();
+    }
   });
 });

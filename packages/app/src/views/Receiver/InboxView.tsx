@@ -22,13 +22,13 @@ type InboxViewProps = {
 function receiverItemLabel(kind: ReceiverCapture['kind']) {
   switch (kind) {
     case 'audio':
-      return 'Voice chick';
+      return 'Voice note';
     case 'photo':
-      return 'Photo chick';
+      return 'Photo';
     case 'file':
-      return 'File chick';
+      return 'File';
     case 'link':
-      return 'Link chick';
+      return 'Link';
   }
 }
 
@@ -48,7 +48,7 @@ export function InboxView({
     <section className="receiver-grid" data-qa="roost-screen">
       <Card className="receiver-inbox-card">
         <p className="eyebrow">Your Roost</p>
-        <h2>Everything stays local until this nest is mated and one trusted browser syncs.</h2>
+        <h2>Saved items stay on this phone until you pair and sync.</h2>
         <div className="receiver-list">
           {captures.map((card) => (
             <article
@@ -87,7 +87,7 @@ export function InboxView({
                 <img alt={card.capture.title} className="nest-photo" src={card.previewUrl} />
               ) : null}
               {card.capture.kind === 'link' ? (
-                <p>{card.capture.note || 'Shared link saved locally.'}</p>
+                <p>{card.capture.note || 'Shared link saved on this phone.'}</p>
               ) : null}
               <div className="receiver-item-actions">
                 <Button
@@ -125,7 +125,8 @@ export function InboxView({
         </div>
         {captures.length === 0 ? (
           <div className="empty-nest">
-            Your inbox is empty. Head to Hatch to save the first note, photo, or link.
+            No captures yet. Go to Hatch to record, take a photo, attach a file, or save a shared
+            link.
           </div>
         ) : null}
       </Card>

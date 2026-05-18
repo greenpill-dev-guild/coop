@@ -24,6 +24,15 @@ type ReceiverShellProps = {
   children: ReactNode;
 };
 
+function receiverLiveMessageClassName(message: string) {
+  const warningPattern =
+    /blocked|cannot|could not|denied|expired|failed|inactive|invalid|missing|must stay under|no source|no usable|not available|not local files|not supported|retry|unavailable|unsupported/iu;
+
+  return warningPattern.test(message)
+    ? 'receiver-live-message is-warning'
+    : 'receiver-live-message';
+}
+
 export function ReceiverShell({
   screenTitle,
   activeRoute,
@@ -176,7 +185,7 @@ export function ReceiverShell({
 
         {message ? (
           <output
-            className="receiver-live-message"
+            className={receiverLiveMessageClassName(message)}
             data-qa="receiver-live-message"
             aria-live="polite"
           >

@@ -45,13 +45,76 @@ function stubStandaloneReceiver() {
   });
 }
 
+class ReceiverAppMockWebSocket {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSING = 2;
+  readonly CLOSED = 3;
+  binaryType: BinaryType = 'arraybuffer';
+  bufferedAmount = 0;
+  extensions = '';
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onopen: ((event: Event) => void) | null = null;
+  protocol = '';
+  readyState = ReceiverAppMockWebSocket.CONNECTING;
+  readonly url: string;
+  private listeners = new Map<string, Set<(event: Event) => void>>();
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  addEventListener(event: string, listener: (event: Event) => void) {
+    const listeners = this.listeners.get(event) ?? new Set();
+    listeners.add(listener);
+    this.listeners.set(event, listeners);
+  }
+
+  removeEventListener(event: string, listener: (event: Event) => void) {
+    this.listeners.get(event)?.delete(listener);
+  }
+
+  dispatchEvent(event: Event) {
+    for (const listener of this.listeners.get(event.type) ?? []) {
+      listener(event);
+    }
+    return true;
+  }
+
+  close() {
+    if (this.readyState === ReceiverAppMockWebSocket.CLOSED) {
+      return;
+    }
+    this.readyState = ReceiverAppMockWebSocket.CLOSED;
+    const event = new CloseEvent('close');
+    this.onclose?.(event);
+    this.dispatchEvent(event);
+  }
+
+  send(_data: string | ArrayBufferLike | Blob | ArrayBufferView) {}
+}
+
 describe('receiver app routes', () => {
   const createObjectUrl = vi.fn(() => 'blob:receiver-preview');
   const originalCreateObjectUrl = URL.createObjectURL;
+  let originalGlobalWebSocket: typeof globalThis.WebSocket;
+  let originalWindowWebSocket: typeof window.WebSocket | undefined;
 
   beforeEach(async () => {
     await resetReceiverDb();
     stubStandaloneReceiver();
+    originalGlobalWebSocket = globalThis.WebSocket;
+    originalWindowWebSocket = typeof window !== 'undefined' ? window.WebSocket : undefined;
+    globalThis.WebSocket = ReceiverAppMockWebSocket as unknown as typeof WebSocket;
+    if (typeof window !== 'undefined') {
+      window.WebSocket = ReceiverAppMockWebSocket as unknown as typeof WebSocket;
+    }
     window.history.pushState({}, '', '/app/receiver');
     createObjectUrl.mockClear();
     Object.defineProperty(URL, 'createObjectURL', {
@@ -67,6 +130,10 @@ describe('receiver app routes', () => {
       configurable: true,
       value: originalCreateObjectUrl,
     });
+    globalThis.WebSocket = originalGlobalWebSocket;
+    if (typeof window !== 'undefined' && originalWindowWebSocket) {
+      window.WebSocket = originalWindowWebSocket;
+    }
   });
 
   it('renders the receiver shell with audio-first and local-first actions', async () => {
@@ -212,7 +279,11 @@ describe('receiver app routes', () => {
       { timeout: 10_000 },
     );
     expect(
-      await screen.findByText(/nest item saved locally/i, {}, { timeout: 10_000 }),
+      await screen.findByText(
+        'Saved on this phone. Pair with a coop when you are ready to sync.',
+        {},
+        { timeout: 10_000 },
+      ),
     ).toBeVisible();
     expect(
       await screen.findByRole('button', { name: /saved on this phone/i }, { timeout: 10_000 }),
@@ -288,7 +359,7 @@ describe('receiver app routes', () => {
       (await screen.findAllByText('Shared Grant', {}, { timeout: 10_000 })).length,
     ).toBeGreaterThan(0);
     expect(
-      await screen.findByText(/shared link saved locally/i, {}, { timeout: 10_000 }),
+      await screen.findByText(/shared link saved on this phone/i, {}, { timeout: 10_000 }),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Roost' })).toBeVisible();
 
@@ -328,7 +399,7 @@ describe('receiver app routes', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /save voice note/i }));
 
-    expect(await screen.findByText(/nest item saved locally and queued for sync/i)).toBeVisible();
+    expect(await screen.findByText(/saved on this phone and queued to sync/i)).toBeVisible();
     expect((await screen.findAllByText('Voice note')).length).toBeGreaterThan(0);
 
     await act(async () => {

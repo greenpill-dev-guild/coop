@@ -137,7 +137,7 @@ describe('useCapture behavior', () => {
     expect(result.current.captures[0]?.capture.fileName).toBe('note.txt');
     expect(result.current.captures[0]?.previewUrl).toMatch(/^blob:/);
     expect(deps.setMessage).toHaveBeenCalledWith(
-      'Nest item saved locally. Pair with a coop when you are ready to sync.',
+      'Saved on this phone. Pair with a coop when you are ready to sync.',
     );
     expect(deps.refreshLocalStateRef.current).toHaveBeenCalledTimes(1);
     expect(deps.reconcilePairingRef.current).not.toHaveBeenCalled();
@@ -174,7 +174,9 @@ describe('useCapture behavior', () => {
     expect(result.current.captures).toHaveLength(1);
     expect(result.current.captures[0]?.capture.kind).toBe('link');
     expect(result.current.captures[0]?.capture.coopId).toBe('coop-1');
-    expect(deps.setMessage).toHaveBeenCalledWith('Shared link saved locally and queued for sync.');
+    expect(deps.setMessage).toHaveBeenCalledWith(
+      'Shared link saved on this phone and queued to sync.',
+    );
     expect(deps.reconcilePairingRef.current).toHaveBeenCalledTimes(1);
   });
 
@@ -280,7 +282,7 @@ describe('useCapture behavior', () => {
     });
 
     expect(result.current.isRecording).toBe(true);
-    expect(deps.setMessage).toHaveBeenCalledWith('Recording into the nest…');
+    expect(deps.setMessage).toHaveBeenCalledWith('Recording on this phone...');
 
     await act(async () => {
       FakeMediaRecorder.instance?.ondataavailable?.({

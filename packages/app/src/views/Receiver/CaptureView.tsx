@@ -22,13 +22,13 @@ type CaptureViewProps = {
 function receiverPreviewLabel(kind: ReceiverCapture['kind']) {
   switch (kind) {
     case 'audio':
-      return 'Chick';
+      return 'Voice note';
     case 'photo':
-      return 'Feather';
+      return 'Photo';
     case 'file':
-      return 'Twig';
+      return 'File';
     case 'link':
-      return 'Trail';
+      return 'Link';
   }
 }
 
@@ -156,7 +156,7 @@ export function CaptureView({
           </button>
         </div>
         <p className="quiet-note receiver-hatch-link-note">
-          Links shared from other apps arrive here and stay saved on this phone first.
+          Shared links save here first.
         </p>
         <div
           className={[
@@ -198,13 +198,13 @@ export function CaptureView({
                     data-qa="mate-to-sync"
                     onClick={onNavigatePair}
                   >
-                    Mate to sync
+                    Pair to sync
                   </Button>
                 ) : null}
               </div>
             </>
           ) : (
-            <p>Nothing saved yet. Record, photograph, attach, or share into Coop.</p>
+            <p>No captures yet. Record, take a photo, attach a file, or share a link.</p>
           )}
         </div>
         <input

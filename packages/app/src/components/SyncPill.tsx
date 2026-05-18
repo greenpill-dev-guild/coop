@@ -10,9 +10,9 @@ function syncStateLabel(state: ReceiverCapture['syncState']) {
     case 'local-only':
       return 'Saved on this phone';
     case 'queued':
-      return 'Ready to sync';
+      return 'Waiting to sync';
     case 'synced':
-      return 'Synced to intake';
+      return 'In private intake';
     case 'failed':
       return 'Needs retry';
   }
@@ -23,7 +23,7 @@ function syncDetailText(state: ReceiverCapture['syncState']) {
     case 'local-only':
       return 'Saved on this phone. Pair when you are ready to sync.';
     case 'queued':
-      return 'Ready to sync through the paired browser.';
+      return 'Waiting for the paired browser to receive it.';
     case 'synced':
       return 'Sent to private intake. Nothing publishes automatically.';
     case 'failed':

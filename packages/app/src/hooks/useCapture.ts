@@ -178,16 +178,16 @@ export function useCapture(
         triggerHaptic('capture-saved', hapticPreferencesRef.current);
         setMessage(
           usablePairing
-            ? 'Nest item saved locally and queued for sync.'
+            ? 'Saved on this phone and queued to sync.'
             : activePairingStatus?.status === 'expired'
-              ? 'Nest item saved locally. The current nest code expired, so it stayed local until you join with a fresh one.'
+              ? 'Saved on this phone. The current pairing expired, so it will stay here until you accept a fresh code.'
               : activePairingStatus?.status === 'invalid'
-                ? 'Nest item saved locally. The current nest code is invalid, so it stayed local until you join with a fresh one.'
+                ? 'Saved on this phone. The current pairing is invalid, so it will stay here until you accept a fresh code.'
                 : activePairingStatus?.status === 'missing-signaling'
-                  ? 'Nest item saved locally. This nest code has no usable signaling path yet, so sync is blocked for now.'
+                  ? 'Saved on this phone. This pairing cannot reach a sync path yet.'
                   : activePairingStatus?.status === 'inactive'
-                    ? 'Nest item saved locally. This nest code is inactive, so it stayed local until you reactivate or replace it.'
-                    : 'Nest item saved locally. Pair with a coop when you are ready to sync.',
+                    ? 'Saved on this phone. This pairing is inactive, so it will stay here until you reactivate or replace it.'
+                    : 'Saved on this phone. Pair with a coop when you are ready to sync.',
         );
         await refreshLocalStateRef.current();
         if (usablePairing) {
@@ -196,7 +196,7 @@ export function useCapture(
         return { captureId: capture.id, coopId: capture.coopId };
       } catch (error) {
         if (isMountedRef.current) {
-          setMessage(error instanceof Error ? error.message : 'Could not save this nest item.');
+          setMessage(error instanceof Error ? error.message : 'Could not save this capture.');
         }
         return undefined;
       }
@@ -238,8 +238,8 @@ export function useCapture(
         triggerHaptic('capture-saved', hapticPreferencesRef.current);
         setMessage(
           usablePairing
-            ? 'Shared link saved locally and queued for sync.'
-            : 'Shared link saved locally. Pair with a coop when you are ready to sync it.',
+            ? 'Shared link saved on this phone and queued to sync.'
+            : 'Shared link saved on this phone. Pair with a coop when you are ready to sync it.',
         );
         await refreshLocalStateRef.current();
         if (usablePairing) {
@@ -269,7 +269,7 @@ export function useCapture(
       mockRecordingRef.current = true;
       recorderCommitRef.current = 'save';
       setIsRecording(true);
-      setMessage('Recording into the nest…');
+      setMessage('Recording on this phone...');
       return;
     }
 
@@ -363,7 +363,7 @@ export function useCapture(
               });
           }
         } else if (isMountedRef.current) {
-          setMessage('Recording canceled before it hatched.');
+          setMessage('Recording canceled before saving.');
         }
       };
 
@@ -376,7 +376,7 @@ export function useCapture(
         }
       }
       setIsRecording(true);
-      setMessage('Recording into the nest\u2026');
+      setMessage('Recording on this phone...');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not start recording.');
     }
@@ -395,7 +395,7 @@ export function useCapture(
             title: 'Voice note',
           });
         } else {
-          setMessage('Recording canceled before it hatched.');
+          setMessage('Recording canceled before saving.');
         }
         return;
       }
@@ -472,7 +472,7 @@ export function useCapture(
 
         await shareNavigator.share(shareData);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Could not share this nest item.');
+        setMessage(error instanceof Error ? error.message : 'Could not share this capture.');
       }
     },
     [db, setMessage],
@@ -501,7 +501,7 @@ export function useCapture(
   const downloadCapture = useCallback(
     async (card: CaptureCard) => {
       if (!card.previewUrl) {
-        setMessage('This nest item is missing its local preview.');
+        setMessage('This capture is missing its local preview.');
         return;
       }
       const anchor = document.createElement('a');

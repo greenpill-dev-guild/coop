@@ -3873,6 +3873,7 @@ html.has-receiver {
 .receiver-main {
   position: relative;
   flex: 1;
+  width: min(100%, 42rem);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -4587,9 +4588,12 @@ html.has-receiver {
 }
 
 .receiver-shell.is-hatch .receiver-last-saved-strip.is-empty p {
+  display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .receiver-last-saved-strip.is-newborn {
@@ -4648,7 +4652,7 @@ html.has-receiver {
 }
 
 .receiver-shell.is-hatch .receiver-last-saved-actions .button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0.42rem 0.6rem;
   font-size: 0.78rem;
 }
@@ -4702,7 +4706,7 @@ html.has-receiver {
   }
 
   .receiver-shell.is-hatch .receiver-last-saved-actions .button {
-    min-height: 34px;
+    min-height: 44px;
     padding: 0.38rem 0.5rem;
   }
 }
@@ -5329,7 +5333,7 @@ audio {
 }
 
 .receiver-main.is-hatch .receiver-status-summary {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0.38rem 0.62rem;
   font-size: 0.76rem;
 }
@@ -5347,6 +5351,12 @@ audio {
   color: var(--coop-brown);
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+.receiver-live-message.is-warning {
+  border-color: color-mix(in srgb, var(--coop-error) 32%, var(--coop-orange));
+  background: color-mix(in srgb, var(--coop-error) 8%, rgba(255, 252, 249, 0.9));
+  color: var(--coop-error);
 }
 
 .receiver-main.is-hatch .receiver-live-message {
@@ -5538,6 +5548,10 @@ audio {
 
   .receiver-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .receiver-shell .receiver-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -6092,6 +6106,11 @@ audio {
   .receiver-status-summary,
   .receiver-live-message {
     background: rgba(30, 24, 20, 0.85);
+  }
+
+  .receiver-live-message.is-warning {
+    background: color-mix(in srgb, var(--coop-error) 14%, rgba(30, 24, 20, 0.9));
+    color: var(--coop-error);
   }
 
   .qr-scanner-dialog {

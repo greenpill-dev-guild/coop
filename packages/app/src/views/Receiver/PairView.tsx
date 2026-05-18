@@ -139,7 +139,7 @@ export function PairView({
     <section className="receiver-grid" data-qa="mate-screen">
       <Card>
         <p className="eyebrow">Mate</p>
-        <h2>Mate this phone to a trusted Coop browser.</h2>
+        <h2>Pair this phone to a trusted Coop browser.</h2>
         <p className="lede">
           Scan the QR from your browser extension. Anything already saved here can sync after you
           join.
