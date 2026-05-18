@@ -142,6 +142,7 @@ const { getCoops, notifyExtensionEvent, saveState, setLocalSetting } = await imp
 );
 const { getOperatorState, logPrivilegedAction } = await import('../../operator');
 const { emitAgentObservationIfMissing, ensureOnboardingBurst } = await import('../agent');
+const { refreshBadge } = await import('../../dashboard');
 const shared = await import('@coop/shared');
 
 function makeAnchorCapability(overrides: Partial<AnchorCapability> = {}): AnchorCapability {
@@ -212,6 +213,65 @@ describe('coop handlers', () => {
       memberId: expect.any(String),
       reason: 'coop-create-first',
     });
+  });
+
+  it('returns created coops without waiting for onboarding or badge follow-up work', async () => {
+    const neverSettles: Promise<never> = new Promise(() => {});
+    vi.mocked(ensureOnboardingBurst).mockReturnValueOnce(neverSettles);
+    vi.mocked(refreshBadge).mockReturnValueOnce(neverSettles);
+
+    const result = await Promise.race([
+      handleCreateCoop({
+        type: 'create-coop',
+        payload: {
+          coopName: 'Follow-up Coop',
+          purpose: 'Validate create-coop returns before nonessential follow-up work settles.',
+          creatorDisplayName: 'Mina',
+          captureMode: 'manual',
+          seedContribution: 'I bring receiver sync setup reliability context.',
+          setupInsights: {
+            summary: 'Receiver sync E2E setup should not wait on follow-up work.',
+            crossCuttingPainPoints: ['Follow-up work can outlive setup.'],
+            crossCuttingOpportunities: ['Keep setup runtime messages bounded.'],
+            lenses: [
+              {
+                lens: 'capital-formation',
+                currentState: 'N/A',
+                painPoints: 'N/A',
+                improvements: 'N/A',
+              },
+              {
+                lens: 'impact-reporting',
+                currentState: 'N/A',
+                painPoints: 'N/A',
+                improvements: 'N/A',
+              },
+              {
+                lens: 'governance-coordination',
+                currentState: 'N/A',
+                painPoints: 'N/A',
+                improvements: 'N/A',
+              },
+              {
+                lens: 'knowledge-garden-resources',
+                currentState: 'N/A',
+                painPoints: 'N/A',
+                improvements: 'N/A',
+              },
+            ],
+          },
+        },
+      }),
+      new Promise<'timed-out'>((resolve) => setTimeout(() => resolve('timed-out'), 500)),
+    ]);
+
+    expect(result).not.toBe('timed-out');
+    if (result === 'timed-out') {
+      throw new Error('create-coop waited for follow-up work.');
+    }
+    expect(result.ok).toBe(true);
+    expect(vi.mocked(ensureOnboardingBurst)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(refreshBadge)).toHaveBeenCalledTimes(1);
   });
 
   it('returns a deferred live onchain state when anchor mode is off', async () => {

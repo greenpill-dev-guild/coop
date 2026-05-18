@@ -54,6 +54,7 @@ import { listReceiverPairings, selectActiveReceiverPairingsForSync } from '@coop
 import { filterVisibleReceiverPairings } from '../runtime/receiver';
 import { consumePendingSidepanelIntent, setPendingSidepanelIntent } from './context';
 import { getDashboard, refreshBadge } from './dashboard';
+import { queueFollowUp } from './handlers/follow-up';
 import {
   handleApproveAction,
   handleExecuteAction,
@@ -255,11 +256,15 @@ export const handlerRegistry: HandlerRecord = {
       const authSession = await getAuthSession(db);
       const activeContext = await getActiveReviewContextForSession(coops, authSession);
       if (activeContext.activeCoop?.profile.id && activeContext.activeMemberId) {
-        await ensureOnboardingBurst({
-          coopId: activeContext.activeCoop.profile.id,
-          memberId: activeContext.activeMemberId,
-          reason: 'sidepanel-open',
-        });
+        queueFollowUp(
+          'dashboard',
+          'onboarding-burst',
+          ensureOnboardingBurst({
+            coopId: activeContext.activeCoop.profile.id,
+            memberId: activeContext.activeMemberId,
+            reason: 'sidepanel-open',
+          }),
+        );
       }
     }
     return {
@@ -466,7 +471,7 @@ export const handlerRegistry: HandlerRecord = {
     } catch {
       // Offscreen sync will refresh on heartbeat.
     }
-    await refreshBadge();
+    queueFollowUp('coop', 'refresh-badge', refreshBadge());
     return { ok: true };
   },
 

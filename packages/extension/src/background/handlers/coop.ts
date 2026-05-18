@@ -45,6 +45,7 @@ import {
 import { refreshBadge } from '../dashboard';
 import { getOperatorState, logPrivilegedAction } from '../operator';
 import { emitAgentObservationIfMissing, ensureOnboardingBurst, requestAgentCycle } from './agent';
+import { queueFollowUp } from './follow-up';
 
 async function saveSyncRoomSecretAndRedact(state: CoopSharedState) {
   await ensureSyncRoomSecretRecord(db, state.syncRoom);
@@ -347,11 +348,15 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
   try {
     const creatorMemberId = latestState.members[0]?.id;
     if (creatorMemberId) {
-      await ensureOnboardingBurst({
-        coopId: latestState.profile.id,
-        memberId: creatorMemberId,
-        reason: existingCoops.length === 0 ? 'coop-create-first' : 'coop-create',
-      });
+      queueFollowUp(
+        'coop',
+        'onboarding-burst',
+        ensureOnboardingBurst({
+          coopId: latestState.profile.id,
+          memberId: creatorMemberId,
+          reason: existingCoops.length === 0 ? 'coop-create-first' : 'coop-create',
+        }),
+      );
     }
   } catch (onboardingError) {
     console.warn(
@@ -359,7 +364,7 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
       onboardingError,
     );
   }
-  await refreshBadge();
+  queueFollowUp('coop', 'refresh-badge', refreshBadge());
   return {
     ok: true,
     data: latestState,
@@ -533,15 +538,19 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
   await saveState(latestState);
 
   try {
-    await ensureOnboardingBurst({
-      coopId: latestState.profile.id,
-      memberId: joinedMember.id,
-      reason: 'coop-join',
-    });
+    queueFollowUp(
+      'coop',
+      'join-onboarding-burst',
+      ensureOnboardingBurst({
+        coopId: latestState.profile.id,
+        memberId: joinedMember.id,
+        reason: 'coop-join',
+      }),
+    );
   } catch (onboardingError) {
     console.warn('[coop:onboarding] Failed to schedule join proactive cycle:', onboardingError);
   }
-  await refreshBadge();
+  queueFollowUp('coop', 'refresh-badge', refreshBadge());
   return {
     ok: true,
     data: latestState,

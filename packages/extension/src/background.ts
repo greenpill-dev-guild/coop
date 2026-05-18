@@ -71,6 +71,7 @@ import {
 
 import { handleAlarmEvent } from './background/alarm-dispatch';
 import { dispatchRegistryMessage } from './background/handler-registry';
+import { queueFollowUp } from './background/handlers/follow-up';
 // ---- Operator ----
 import { getActiveReviewContextForSession } from './background/operator';
 import {
@@ -402,11 +403,15 @@ export function startBackground() {
             const authSession = await getAuthSession(db);
             const activeContext = await getActiveReviewContextForSession(coops, authSession);
             if (activeContext.activeCoop?.profile.id && activeContext.activeMemberId) {
-              await ensureOnboardingBurst({
-                coopId: activeContext.activeCoop.profile.id,
-                memberId: activeContext.activeMemberId,
-                reason: 'sidepanel-open',
-              });
+              queueFollowUp(
+                'dashboard',
+                'onboarding-burst',
+                ensureOnboardingBurst({
+                  coopId: activeContext.activeCoop.profile.id,
+                  memberId: activeContext.activeMemberId,
+                  reason: 'sidepanel-open',
+                }),
+              );
             }
           }
           sendResponse({
@@ -612,7 +617,7 @@ export function startBackground() {
           } catch {
             // Offscreen sync will refresh on heartbeat.
           }
-          await refreshBadge();
+          queueFollowUp('coop', 'refresh-badge', refreshBadge());
           sendResponse({ ok: true } satisfies RuntimeActionResponse);
           return;
         case 'persist-coop-state': {
