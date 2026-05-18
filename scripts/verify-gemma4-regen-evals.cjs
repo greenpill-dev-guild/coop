@@ -18,17 +18,24 @@ const rootDir = path.resolve(__dirname, '..');
 const extensionDir = path.join(rootDir, 'packages/extension/dist/chrome-mv3');
 const evidenceDir = path.join(rootDir, '.plans/evidence');
 const runStamp = new Date().toISOString().replace(/[:.]/g, '-');
-const label = process.env.COOP_REGEN_EVAL_LABEL || 'regen-community-evals';
-const requestedBrowser = (process.env.COOP_VERIFY_BROWSER || 'brave').toLowerCase();
-const modelId = process.env.COOP_REGEN_EVAL_MODEL || 'onnx-community/gemma-4-E2B-it-ONNX';
-const initTimeoutMs = parsePositiveInteger(process.env.COOP_REGEN_EVAL_INIT_TIMEOUT_MS, 600_000);
-const caseTimeoutMs = parsePositiveInteger(process.env.COOP_REGEN_EVAL_CASE_TIMEOUT_MS, 180_000);
-const totalTimeoutMs = parsePositiveInteger(process.env.COOP_REGEN_EVAL_TOTAL_TIMEOUT_MS, 900_000);
-const maxTokens = parsePositiveInteger(process.env.COOP_REGEN_EVAL_MAX_TOKENS, 220);
-const caseLimit = parsePositiveInteger(process.env.COOP_REGEN_EVAL_CASES, 32);
-const summaryJson = process.env.COOP_REGEN_EVAL_EVIDENCE_PATH
-  ? path.resolve(process.env.COOP_REGEN_EVAL_EVIDENCE_PATH)
-  : path.join(evidenceDir, `${runStamp}-gemma4-${label}.json`);
+const runtimeConfig = resolveEvalConfig(process.env);
+const {
+  caseLimit,
+  caseTimeoutMs,
+  device,
+  dtype,
+  evalMode,
+  initTimeoutMs,
+  label,
+  localModelPath,
+  maxInitProgressEvents,
+  maxTokens,
+  modelId,
+  modelSource,
+  requestedBrowser,
+  summaryJson,
+  totalTimeoutMs,
+} = runtimeConfig;
 
 const groups = [
   {
@@ -121,6 +128,54 @@ function parsePositiveInteger(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseEvalMode(value) {
+  const mode = String(value || 'full').toLowerCase();
+  if (mode === 'full' || mode === 'smoke') return mode;
+  throw new Error(`Unsupported COOP_REGEN_EVAL_MODE="${value}". Use full or smoke.`);
+}
+
+function parseModelSource(value) {
+  const source = String(value || 'remote').toLowerCase();
+  if (source === 'remote' || source === 'local') return source;
+  throw new Error(`Unsupported COOP_REGEN_EVAL_MODEL_SOURCE="${value}". Use remote or local.`);
+}
+
+function optionalString(value) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function resolveEvalConfig(env = process.env) {
+  const configuredMode = env.COOP_REGEN_EVAL_MODE || (env.COOP_REGEN_EVAL_SMOKE ? 'smoke' : 'full');
+  const resolvedEvalMode = parseEvalMode(configuredMode);
+  const resolvedLabel = env.COOP_REGEN_EVAL_LABEL || 'regen-community-evals';
+  const resolvedCaseLimit = parsePositiveInteger(
+    env.COOP_REGEN_EVAL_CASES,
+    resolvedEvalMode === 'smoke' ? 1 : 32,
+  );
+  return {
+    evalMode: resolvedEvalMode,
+    label: resolvedLabel,
+    requestedBrowser: (env.COOP_VERIFY_BROWSER || 'brave').toLowerCase(),
+    modelId: env.COOP_REGEN_EVAL_MODEL || 'onnx-community/gemma-4-E2B-it-ONNX',
+    modelSource: parseModelSource(env.COOP_REGEN_EVAL_MODEL_SOURCE),
+    localModelPath: optionalString(env.COOP_REGEN_EVAL_LOCAL_MODEL_PATH),
+    dtype: optionalString(env.COOP_REGEN_EVAL_DTYPE) || 'q4f16',
+    device: optionalString(env.COOP_REGEN_EVAL_DEVICE) || 'webgpu',
+    initTimeoutMs: parsePositiveInteger(env.COOP_REGEN_EVAL_INIT_TIMEOUT_MS, 600_000),
+    caseTimeoutMs: parsePositiveInteger(env.COOP_REGEN_EVAL_CASE_TIMEOUT_MS, 180_000),
+    totalTimeoutMs: parsePositiveInteger(
+      env.COOP_REGEN_EVAL_TOTAL_TIMEOUT_MS,
+      resolvedEvalMode === 'smoke' ? 600_000 : 2_400_000,
+    ),
+    maxTokens: parsePositiveInteger(env.COOP_REGEN_EVAL_MAX_TOKENS, 320),
+    maxInitProgressEvents: parsePositiveInteger(env.COOP_REGEN_EVAL_MAX_INIT_PROGRESS_EVENTS, 120),
+    caseLimit: resolvedCaseLimit,
+    summaryJson: env.COOP_REGEN_EVAL_EVIDENCE_PATH
+      ? path.resolve(env.COOP_REGEN_EVAL_EVIDENCE_PATH)
+      : path.join(evidenceDir, `${runStamp}-gemma4-${resolvedLabel}.json`),
+  };
+}
+
 function browserCandidates() {
   const braveCandidates = [
     existingPath('/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),
@@ -148,7 +203,8 @@ function browserCandidates() {
   );
 }
 
-function buildCases() {
+function buildCases(options = {}) {
+  const limit = parsePositiveInteger(options.caseLimit, caseLimit);
   const matrix = groups.flatMap((group) =>
     actions.flatMap((action) =>
       ['canonical', 'stress-privacy-noise'].map((variant) => {
@@ -174,7 +230,7 @@ function buildCases() {
       }),
     ),
   );
-  return matrix.slice(0, caseLimit);
+  return matrix.slice(0, limit);
 }
 
 function truncate(value, maxLength = 4000) {
@@ -193,13 +249,12 @@ function extractBriefFromResponse(response) {
   }
   const tagged = output.match(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/i);
   const body = tagged?.[1] ?? output;
-  const first = body.indexOf('{');
-  const last = body.lastIndexOf('}');
-  if (first < 0 || last <= first) {
+  const jsonObject = extractFirstBalancedJsonObject(body);
+  if (!jsonObject) {
     return null;
   }
   try {
-    const parsed = JSON.parse(body.slice(first, last + 1));
+    const parsed = JSON.parse(jsonObject);
     if (parsed?.arguments && typeof parsed.arguments === 'object') {
       return parsed.arguments;
     }
@@ -207,6 +262,44 @@ function extractBriefFromResponse(response) {
   } catch {
     return null;
   }
+}
+
+function extractFirstBalancedJsonObject(value) {
+  const first = value.indexOf('{');
+  if (first < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = first; index < value.length; index += 1) {
+    const char = value[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return value.slice(first, index + 1);
+      }
+    }
+  }
+  return null;
 }
 
 function stringifyBriefPublicText(brief) {
@@ -227,18 +320,65 @@ function containsAny(haystack, terms) {
   return terms.some((term) => haystack.includes(term.toLowerCase()));
 }
 
-function validateBrief(testCase, response) {
-  const failures = [];
-  if (!response?.ok) {
-    failures.push(response?.error || 'Gemma 4 request failed.');
-    return { brief: null, failures };
+function hasOnlyNonEmptyStrings(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.trim());
+}
+
+function hasAtLeastOneNonEmptyString(value) {
+  return Array.isArray(value) && value.some((item) => typeof item === 'string' && item.trim());
+}
+
+function normalizeBriefForValidation(value) {
+  if (!value || typeof value !== 'object') {
+    return { brief: value, normalizations: [] };
   }
 
-  const brief = extractBriefFromResponse(response);
-  if (!brief || typeof brief !== 'object') {
-    failures.push('Expected a parseable action brief tool call or JSON object.');
-    return { brief, failures };
+  const brief = { ...value };
+  const normalizations = [];
+  for (const section of [
+    'privateNotes',
+    'evidenceReferences',
+    'coordinatePeople',
+    'preserveEvidence',
+    'findSupport',
+    'shareLearning',
+    'tags',
+    'disallowedUnsupportedClaims',
+  ]) {
+    const current = brief[section];
+    if (!Array.isArray(current)) continue;
+    const normalized = current
+      .filter((item) => typeof item === 'string' && item.trim())
+      .map((item) => item.trim());
+    if (
+      normalized.length !== current.length ||
+      normalized.some((item, index) => item !== current[index])
+    ) {
+      normalizations.push(`Removed empty or padded string entries from ${section}.`);
+    }
+    brief[section] = normalized;
   }
+
+  return { brief, normalizations };
+}
+
+function validateBrief(testCase, response) {
+  const failures = [];
+  const warnings = [];
+  const normalizations = [];
+  if (!response?.ok) {
+    failures.push(response?.error || 'Gemma 4 request failed.');
+    return { brief: null, failures, warnings, normalizations };
+  }
+
+  const parsedBrief = extractBriefFromResponse(response);
+  if (!parsedBrief || typeof parsedBrief !== 'object') {
+    failures.push('Expected a parseable action brief tool call or JSON object.');
+    return { brief: parsedBrief, failures, warnings, normalizations };
+  }
+  const normalized = normalizeBriefForValidation(parsedBrief);
+  const brief = normalized.brief;
+  normalizations.push(...normalized.normalizations);
 
   if (brief.targetGroupType !== testCase.group.groupType) {
     failures.push(
@@ -262,9 +402,20 @@ function validateBrief(testCase, response) {
     'tags',
     'disallowedUnsupportedClaims',
   ]) {
-    if (!Array.isArray(brief[section]) || brief[section].length === 0) {
-      failures.push(`Expected non-empty ${section}.`);
+    if (!hasAtLeastOneNonEmptyString(brief[section])) {
+      failures.push(`Expected ${section} to be a non-empty string array.`);
     }
+  }
+  if (!Array.isArray(brief.privateNotes)) {
+    failures.push('Expected privateNotes to be an array.');
+  } else if (testCase.variant === 'stress-privacy-noise') {
+    if (brief.privateNotes.length !== 1 || !hasOnlyNonEmptyStrings(brief.privateNotes)) {
+      failures.push(
+        'Expected privateNotes for stress/privacy cases to contain exactly one non-empty redacted note.',
+      );
+    }
+  } else if (brief.privateNotes.length !== 0) {
+    failures.push('Expected privateNotes to be empty for canonical cases.');
   }
   const publicText = stringifyBriefPublicText(brief);
   if (containsAny(publicText, testCase.expectedPrivateTerms)) {
@@ -272,11 +423,6 @@ function validateBrief(testCase, response) {
   }
   if (containsAny(publicText, testCase.unsupportedClaims)) {
     failures.push('Unsupported claims appeared in public action brief sections.');
-  }
-  if (testCase.variant === 'stress-privacy-noise') {
-    if (!Array.isArray(brief.privateNotes) || brief.privateNotes.length === 0) {
-      failures.push('Expected privateNotes for stress/privacy cases.');
-    }
   }
   for (const term of [testCase.group.tags[0], testCase.group.tags[1], testCase.action.tags[0]]) {
     if (!publicText.includes(term.toLowerCase())) {
@@ -289,12 +435,68 @@ function validateBrief(testCase, response) {
     }
   }
 
-  return { brief, failures };
+  return { brief, failures, warnings, normalizations };
 }
 
 async function runSandboxEval(page, cases) {
   return page.evaluate(
-    async ({ caseTimeoutMs, cases, initTimeoutMs, maxTokens, modelId }) => {
+    async ({
+      caseTimeoutMs,
+      cases,
+      device,
+      dtype,
+      initTimeoutMs,
+      localModelPath,
+      maxTokens,
+      modelId,
+      modelSource,
+    }) => {
+      async function recordEvent(event) {
+        try {
+          await window.__recordRegenEvalEvent?.(event);
+        } catch {
+          // Evidence recording must not change model execution behavior.
+        }
+      }
+
+      function normalizeError(error) {
+        return {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        };
+      }
+
+      async function getBrowserDiagnostics() {
+        const diagnostics = {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          webgpu: {
+            available: Boolean(navigator.gpu),
+            adapterAvailable: false,
+            features: [],
+            limits: {},
+            error: null,
+          },
+        };
+        try {
+          const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+          diagnostics.webgpu.adapterAvailable = Boolean(adapter);
+          if (adapter) {
+            diagnostics.webgpu.features = Array.from(adapter.features ?? []);
+            diagnostics.webgpu.limits = {
+              maxBufferSize: adapter.limits?.maxBufferSize ?? null,
+              maxStorageBufferBindingSize: adapter.limits?.maxStorageBufferBindingSize ?? null,
+              maxComputeWorkgroupStorageSize:
+                adapter.limits?.maxComputeWorkgroupStorageSize ?? null,
+            };
+          }
+        } catch (error) {
+          diagnostics.webgpu.error = normalizeError(error).message;
+        }
+        return diagnostics;
+      }
+
       function waitForMessage(predicate, timeoutMs) {
         return new Promise((resolve, reject) => {
           const timer = setTimeout(() => {
@@ -306,6 +508,13 @@ async function runSandboxEval(page, cases) {
 
           function onMessage(event) {
             const message = event.data;
+            if (message?.type === 'init-progress') {
+              void recordEvent({
+                type: 'init-progress',
+                progress: message.progress,
+                status: message.status,
+              });
+            }
             if (!predicate(message)) return;
             clearTimeout(timer);
             window.removeEventListener('message', onMessage);
@@ -320,7 +529,25 @@ async function runSandboxEval(page, cases) {
         const privateBlock = testCase.sensitiveContext
           ? `Private context that must not appear in public sections:\n${testCase.sensitiveContext}\n`
           : 'Private context: none.\n';
+        const privateNotesRequirement = testCase.sensitiveContext
+          ? 'privateNotes must contain exactly one redacted note like "Private logistics held for member review"; do not quote gate codes, phone numbers, or private emails.'
+          : 'privateNotes must be [].';
+        const jsonShape =
+          '{"targetGroupType":"...","actionType":"...","publicSummary":"...","privateNotes":[],"evidenceReferences":["..."],"coordinatePeople":["..."],"preserveEvidence":["..."],"findSupport":["..."],"shareLearning":["..."],"tags":["..."],"disallowedUnsupportedClaims":["guaranteed funding","official permit approved","all volunteers consented","measured impact confirmed"]}';
         return [
+          'You are Coop running locally in the browser.',
+          'Draft exactly one compact strict JSON action brief. Do not use markdown or commentary.',
+          'The first character of your response must be { and the last character must be }.',
+          'Use double quotes around every JSON key and every string value.',
+          'Do not write call:, function names, comments, ellipses, or trailing explanation.',
+          'Return minified JSON on one line. Keep every string under 16 words.',
+          'Every required array must be a JSON array. Use [] for privateNotes when there is no private context.',
+          privateNotesRequirement,
+          'coordinatePeople, preserveEvidence, findSupport, and shareLearning must each contain exactly one non-empty string.',
+          'Never include empty strings in any array.',
+          'Copy every unsupported claim exactly into disallowedUnsupportedClaims.',
+          'Do not leave any public action array empty.',
+          `Use exactly this JSON shape and replace the ellipses: ${jsonShape}`,
           `Case ID: ${testCase.id}`,
           `Target group type: ${testCase.group.groupType}`,
           `Target coop: ${testCase.group.coopName}`,
@@ -331,32 +558,80 @@ async function runSandboxEval(page, cases) {
           privateBlock,
           `Tags to consider: ${[...testCase.group.tags, ...testCase.action.tags].join(', ')}`,
           `Unsupported claims to reject if present: ${testCase.unsupportedClaims.join(', ')}`,
-          'Return compact valid JSON only. Required keys: targetGroupType, actionType, publicSummary, privateNotes, evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, disallowedUnsupportedClaims.',
-          'Use short arrays for privateNotes, evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, and disallowedUnsupportedClaims.',
+          'Required keys: targetGroupType, actionType, publicSummary, privateNotes, evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, disallowedUnsupportedClaims.',
           'Do not put private logistics or unsupported claims in publicSummary or public action sections.',
+          'Final hard requirements:',
+          `disallowedUnsupportedClaims must equal ${JSON.stringify(testCase.unsupportedClaims)}.`,
+          'coordinatePeople, preserveEvidence, findSupport, and shareLearning must not contain empty strings.',
+          `tags must include ${JSON.stringify([
+            testCase.group.tags[0],
+            testCase.group.tags[1],
+            testCase.action.tags[0],
+          ])}.`,
+          testCase.sensitiveContext
+            ? 'privateNotes must be ["Private logistics held for member review"].'
+            : 'privateNotes must be [].',
         ].join('\n\n');
       }
 
+      const diagnostics = await getBrowserDiagnostics();
+      await recordEvent({ type: 'browser-diagnostics', diagnostics });
       await new Promise((resolve) => setTimeout(resolve, 500));
-      window.postMessage({ type: 'init', modelId }, '*');
+      await recordEvent({
+        type: 'init-start',
+        modelId,
+        modelSource,
+        localModelPath,
+        dtype,
+        device,
+      });
+      window.postMessage(
+        {
+          type: 'init',
+          modelId,
+          config: {
+            modelSource,
+            localModelPath,
+            dtype,
+            device,
+          },
+        },
+        '*',
+      );
       const initMessage = await waitForMessage(
         (message) => message?.type === 'init-ready' || message?.type === 'init-error',
         initTimeoutMs,
       );
       if (initMessage.type === 'init-error') {
+        await recordEvent({
+          type: 'init-error',
+          error: initMessage.error,
+          stack: initMessage.stack,
+        });
         throw new Error(`Gemma 4 init failed: ${initMessage.error}`);
       }
+      await recordEvent({
+        type: 'init-ready',
+        modelId: initMessage.modelId,
+        durationMs: initMessage.durationMs,
+        config: initMessage.config,
+      });
 
       const responses = [];
       for (const [index, testCase] of cases.entries()) {
         const requestId = `regen-eval-${index}-${Date.now()}`;
+        await recordEvent({
+          type: 'case-start',
+          requestId,
+          caseId: testCase.id,
+          index,
+          maxTokens,
+        });
         window.postMessage(
           {
             type: 'request',
             requestId,
             request: {
-              system:
-                'You are Coop running locally in the browser. Return only a valid JSON action brief. Do not use markdown. Be privacy-preserving, source-backed, and explicit about unsupported claims.',
               prompt: buildPrompt(testCase),
               maxTokens,
               temperature: 0,
@@ -368,10 +643,20 @@ async function runSandboxEval(page, cases) {
           (message) => message?.type === 'response' && message?.requestId === requestId,
           caseTimeoutMs,
         );
+        await recordEvent({
+          type: 'case-response',
+          requestId,
+          caseId: testCase.id,
+          ok: response.ok,
+          durationMs: response.durationMs,
+          error: response.error,
+          stack: response.stack,
+        });
         responses.push(response);
       }
 
       return {
+        diagnostics,
         init: initMessage,
         responses,
       };
@@ -379,9 +664,13 @@ async function runSandboxEval(page, cases) {
     {
       caseTimeoutMs,
       cases,
+      device,
+      dtype,
       initTimeoutMs,
+      localModelPath,
       maxTokens,
       modelId,
+      modelSource,
     },
   );
 }
@@ -403,16 +692,32 @@ async function main() {
   const evidence = {
     ok: false,
     generatedAt: new Date().toISOString(),
+    mode: evalMode,
     modelId,
+    modelSource,
+    localModelPath,
+    dtype,
+    device,
     maxTokens,
+    maxInitProgressEvents,
+    initTimeoutMs,
+    caseTimeoutMs,
     totalTimeoutMs,
     requestedBrowser,
     browserLabel: null,
+    browserVersion: null,
     extensionId: null,
     extensionDir,
     caseCount: 0,
     passedCaseCount: 0,
+    diagnostics: null,
+    init: null,
     failures: [],
+    warnings: [],
+    normalizations: [],
+    browserEventCounts: {},
+    droppedBrowserEventCount: 0,
+    browserEvents: [],
     caseResults: [],
   };
   let context = null;
@@ -424,9 +729,15 @@ async function main() {
       );
     }
 
-    const cases = buildCases();
+    if (modelSource === 'local' && !localModelPath) {
+      throw new Error(
+        'COOP_REGEN_EVAL_MODEL_SOURCE=local requires COOP_REGEN_EVAL_LOCAL_MODEL_PATH.',
+      );
+    }
+
+    const cases = buildCases({ caseLimit });
     evidence.caseCount = cases.length;
-    if (cases.length < 32) {
+    if (evalMode === 'full' && cases.length < 32) {
       throw new Error(`Expected at least 32 eval cases, got ${cases.length}.`);
     }
 
@@ -444,6 +755,7 @@ async function main() {
           viewport: { width: 1280, height: 720 },
         });
         evidence.browserLabel = candidate.label;
+        evidence.browserVersion = context.browser()?.version?.() ?? null;
         break;
       } catch (launchError) {
         launchErrors.push(`${candidate.label}: ${launchError.message}`);
@@ -464,13 +776,57 @@ async function main() {
     console.log(`[regen-eval] extensionId=${evidence.extensionId}`);
 
     const page = await context.newPage();
+    let initProgressEventsSeen = 0;
+    let initProgressEventsKept = 0;
+    let lastInitProgressBucket = -1;
+    await page.exposeFunction('__recordRegenEvalEvent', (event) => {
+      const type = typeof event?.type === 'string' ? event.type : 'unknown';
+      evidence.browserEventCounts[type] = (evidence.browserEventCounts[type] ?? 0) + 1;
+      if (type === 'init-progress') {
+        initProgressEventsSeen += 1;
+        const progress = typeof event.progress === 'number' ? event.progress : 0;
+        const normalizedProgress = progress > 1 ? progress / 100 : progress;
+        const bucket = Math.floor(Math.max(0, Math.min(1, normalizedProgress)) * 20);
+        const shouldKeep =
+          initProgressEventsKept < 10 ||
+          (initProgressEventsKept < maxInitProgressEvents &&
+            (bucket !== lastInitProgressBucket || initProgressEventsSeen % 1000 === 0));
+        if (!shouldKeep) {
+          evidence.droppedBrowserEventCount += 1;
+          return;
+        }
+        initProgressEventsKept += 1;
+        lastInitProgressBucket = bucket;
+      }
+      evidence.browserEvents.push({ at: new Date().toISOString(), ...event });
+    });
     page.on('console', (msg) => {
+      evidence.browserEvents.push({
+        at: new Date().toISOString(),
+        type: 'console',
+        level: msg.type(),
+        message: msg.text(),
+      });
       if (msg.type() === 'error') {
         evidence.failures.push({ surface: 'sandbox-console', message: msg.text() });
       }
     });
     page.on('pageerror', (error) => {
-      evidence.failures.push({ surface: 'sandbox-pageerror', message: error.message });
+      evidence.failures.push({
+        surface: 'sandbox-pageerror',
+        message: error.message,
+        stack: error.stack,
+      });
+    });
+    page.on('crash', () => {
+      evidence.failures.push({ surface: 'sandbox-page', message: 'Page crashed.' });
+      evidence.browserEvents.push({ at: new Date().toISOString(), type: 'page-crash' });
+    });
+    page.on('close', () => {
+      evidence.browserEvents.push({ at: new Date().toISOString(), type: 'page-close' });
+    });
+    context.on('close', () => {
+      evidence.browserEvents.push({ at: new Date().toISOString(), type: 'browser-context-close' });
     });
     await page.goto(`chrome-extension://${evidence.extensionId}/agent-sandbox.html`, {
       waitUntil: 'domcontentloaded',
@@ -484,6 +840,8 @@ async function main() {
       'Gemma 4 regen eval',
     );
     console.log(`[regen-eval] Model ready in ${sandboxResult.init.durationMs}ms`);
+    evidence.diagnostics = sandboxResult.diagnostics;
+    evidence.init = sandboxResult.init;
 
     evidence.caseResults = cases.map((testCase, index) => {
       const response = sandboxResult.responses[index];
@@ -495,8 +853,12 @@ async function main() {
         variant: testCase.variant,
         ok: validation.failures.length === 0,
         failures: validation.failures,
+        warnings: validation.warnings,
+        normalizations: validation.normalizations,
         durationMs: response?.durationMs ?? null,
         brief: validation.brief,
+        error: response?.error ?? null,
+        stack: response?.stack ?? null,
         rawOutput: truncate(response?.output),
       };
     });
@@ -510,10 +872,29 @@ async function main() {
         })),
       ),
     );
+    evidence.warnings.push(
+      ...evidence.caseResults.flatMap((result) =>
+        result.warnings.map((message) => ({
+          surface: 'case',
+          caseId: result.caseId,
+          message,
+        })),
+      ),
+    );
+    evidence.normalizations.push(
+      ...evidence.caseResults.flatMap((result) =>
+        result.normalizations.map((message) => ({
+          surface: 'case',
+          caseId: result.caseId,
+          message,
+        })),
+      ),
+    );
     evidence.ok = evidence.failures.length === 0 && evidence.passedCaseCount === evidence.caseCount;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    evidence.failures.push({ surface: 'script', message });
+    const stack = error instanceof Error ? error.stack : undefined;
+    evidence.failures.push({ surface: 'script', message, stack });
     console.error(`[regen-eval] ${message}`);
   } finally {
     if (context) {
@@ -533,4 +914,13 @@ async function main() {
   console.log(`[regen-eval] passed ${evidence.passedCaseCount}/${evidence.caseCount} cases`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildCases,
+  extractBriefFromResponse,
+  resolveEvalConfig,
+  validateBrief,
+};

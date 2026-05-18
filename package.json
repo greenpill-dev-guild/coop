@@ -74,6 +74,7 @@
     "test:unit:extension-dist": "COOP_REQUIRE_EXTENSION_DIST=1 vitest run packages/extension/src/__tests__/sw-safety.test.ts",
     "test:store-readiness": "bun run ./scripts/store-readiness.ts",
     "verify:gemma4-regen-evals": "node scripts/verify-gemma4-regen-evals.cjs",
+    "verify:gemma4-regen-evals:smoke": "COOP_REGEN_EVAL_MODE=smoke node scripts/verify-gemma4-regen-evals.cjs",
     "deploy:registry": "bun run ./scripts/deploy-registry.ts",
     "probe:onchain-live": "bun run ./scripts/probe-onchain-live.ts",
     "probe:session-key-live": "bun run ./scripts/probe-session-key-live.ts",

@@ -10,7 +10,17 @@ type Gemma4Tool = {
 };
 
 type WorkerInboundMessage =
-  | { type: 'init'; modelId: string }
+  | {
+      type: 'init';
+      modelId: string;
+      config?: {
+        modelSource?: 'remote' | 'local';
+        localModelPath?: string | null;
+        dtype?: string;
+        device?: string;
+        useBrowserCache?: boolean;
+      };
+    }
   | {
       type: 'request';
       requestId: string;
@@ -38,6 +48,7 @@ let processor: any = null;
 // biome-ignore lint/suspicious/noExplicitAny: transformers.js exports are runtime-loaded
 let model: any = null;
 let activeModelId = '';
+let activeModelConfigKey = '';
 let started = false;
 
 export function canUseBrowserCache(globalScope: object = globalThis) {
@@ -53,6 +64,28 @@ export function canUseBrowserCache(globalScope: object = globalThis) {
 export function isUnsupportedChatTemplateError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('Unknown ArrayValue filter: trim');
+}
+
+export function normalizeGemma4InitConfig(
+  config: Extract<WorkerInboundMessage, { type: 'init' }>['config'] = {},
+) {
+  const modelSource = config.modelSource === 'local' ? 'local' : 'remote';
+  const localModelPath =
+    typeof config.localModelPath === 'string' && config.localModelPath.trim().length > 0
+      ? config.localModelPath.trim()
+      : null;
+  const dtype =
+    typeof config.dtype === 'string' && config.dtype.trim() ? config.dtype.trim() : 'q4f16';
+  const device =
+    typeof config.device === 'string' && config.device.trim() ? config.device.trim() : 'webgpu';
+  return {
+    modelSource,
+    localModelPath,
+    dtype,
+    device,
+    useBrowserCache:
+      typeof config.useBrowserCache === 'boolean' ? config.useBrowserCache : undefined,
+  };
 }
 
 // transformers.js currently cannot render some upstream Gemma 4 chat templates
@@ -126,7 +159,7 @@ export function startGemma4Host(transport: Gemma4HostTransport) {
     if (!message || typeof message !== 'object') return;
 
     if (message.type === 'init') {
-      await handleInit(transport, message.modelId);
+      await handleInit(transport, message.modelId, message.config);
       return;
     }
 
@@ -139,13 +172,25 @@ export function startGemma4Host(transport: Gemma4HostTransport) {
       processor = null;
       model = null;
       activeModelId = '';
+      activeModelConfigKey = '';
     }
   });
 }
 
-async function handleInit(transport: Gemma4HostTransport, modelId: string) {
-  if (model && activeModelId === modelId) {
-    transport.postMessage({ type: 'init-ready', modelId, durationMs: 0 });
+async function handleInit(
+  transport: Gemma4HostTransport,
+  modelId: string,
+  config?: Extract<WorkerInboundMessage, { type: 'init' }>['config'],
+) {
+  const runtimeConfig = normalizeGemma4InitConfig(config);
+  const modelConfigKey = JSON.stringify({ modelId, ...runtimeConfig });
+  if (model && activeModelId === modelId && activeModelConfigKey === modelConfigKey) {
+    transport.postMessage({
+      type: 'init-ready',
+      modelId,
+      durationMs: 0,
+      config: runtimeConfig,
+    });
     return;
   }
   const start = Date.now();
@@ -155,14 +200,22 @@ async function handleInit(transport: Gemma4HostTransport, modelId: string) {
       // biome-ignore lint/suspicious/noExplicitAny: dynamic import of transformers
     )) as any;
     if (env) {
-      env.allowLocalModels = false;
-      env.useBrowserCache = canUseBrowserCache();
+      env.allowLocalModels = runtimeConfig.modelSource === 'local';
+      env.allowRemoteModels = runtimeConfig.modelSource !== 'local';
+      env.useBrowserCache = runtimeConfig.useBrowserCache ?? canUseBrowserCache();
+      if (runtimeConfig.localModelPath) {
+        env.localModelPath = runtimeConfig.localModelPath;
+      }
     }
 
-    processor = await AutoProcessor.from_pretrained(modelId);
+    const sourceOptions =
+      runtimeConfig.modelSource === 'local' ? { local_files_only: true } : undefined;
+
+    processor = await AutoProcessor.from_pretrained(modelId, sourceOptions);
     model = await Gemma4ForConditionalGeneration.from_pretrained(modelId, {
-      dtype: 'q4f16',
-      device: 'webgpu',
+      ...sourceOptions,
+      dtype: runtimeConfig.dtype,
+      device: runtimeConfig.device,
       // biome-ignore lint/suspicious/noExplicitAny: progress info has loose shape
       progress_callback: (info: any) => {
         const progress = typeof info?.progress === 'number' ? info.progress : 0;
@@ -171,10 +224,17 @@ async function handleInit(transport: Gemma4HostTransport, modelId: string) {
       },
     });
     activeModelId = modelId;
-    transport.postMessage({ type: 'init-ready', modelId, durationMs: Date.now() - start });
+    activeModelConfigKey = modelConfigKey;
+    transport.postMessage({
+      type: 'init-ready',
+      modelId,
+      durationMs: Date.now() - start,
+      config: runtimeConfig,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    transport.postMessage({ type: 'init-error', error: errorMessage });
+    const stack = error instanceof Error ? error.stack : undefined;
+    transport.postMessage({ type: 'init-error', error: errorMessage, stack });
   }
 }
 
@@ -239,12 +299,16 @@ async function handleRequest(
             ? await processor(promptText, null, audio)
             : await processor(promptText);
 
-    const outputs = await model.generate({
+    const generateOptions = {
       ...inputs,
       max_new_tokens: request.maxTokens ?? 512,
       do_sample: typeof request.temperature === 'number' && request.temperature > 0,
-      temperature: request.temperature ?? 0,
-    });
+    };
+    if (typeof request.temperature === 'number' && request.temperature > 0) {
+      Object.assign(generateOptions, { temperature: request.temperature });
+    }
+
+    const outputs = await model.generate(generateOptions);
 
     const decoded = processor.batch_decode(
       outputs.slice(null, [inputs.input_ids.dims.at(-1), null]),
@@ -271,11 +335,13 @@ async function handleRequest(
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
     transport.postMessage({
       type: 'response',
       requestId,
       ok: false,
       error: errorMessage,
+      stack,
       durationMs: Date.now() - start,
     });
   }

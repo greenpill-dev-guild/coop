@@ -3,7 +3,7 @@ feature: regen-community-evals
 title: Regen Community Evals state lane
 lane: state
 agent: codex
-status: ready
+status: done
 source_branch: feature/hackathon-simplify
 work_branch: codex/state/regen-community-evals
 depends_on:
@@ -23,7 +23,7 @@ skills:
   - state-logic
   - shared
   - testing
-updated: 2026-05-17
+updated: 2026-05-18
 ---
 
 # State Lane — Regen Community Evals
@@ -35,22 +35,22 @@ positioning.
 
 ## Tasks
 
-- [ ] Expand seeded fixtures to 32+ cases across four group types and four action types.
-- [ ] Assert action-brief shape for every case: target coop, action type, public summary, private
+- [x] Expand seeded fixtures to 32+ cases across four group types and four action types.
+- [x] Assert action-brief shape for every case: target coop, action type, public summary, private
       notes, evidence references, coordinate/evidence/support/learning sections, tags, and
       disallowed unsupported claims.
-- [ ] Add a browser model-in-loop script that loads the built extension, initializes Gemma 4 in
+- [x] Add a browser model-in-loop script that loads the built extension, initializes Gemma 4 in
       `agent-sandbox.html`, runs the eval prompts, and writes JSON evidence under `.plans/evidence/`.
-- [ ] Add `bun run validate regen-community-evals` as the required gate.
-- [ ] Keep deterministic seeded evals as supporting coverage, not the final proof.
+- [x] Add `bun run validate regen-community-evals` as the required gate.
+- [x] Keep deterministic seeded evals as supporting coverage, not the final proof.
 
 ## Verification
 
-- [ ] `bun run test:unit:coop-seeded-eval`
-- [ ] `bun run validate coop-seeded-eval`
-- [ ] `cd packages/extension && bun run build`
-- [ ] `COOP_VERIFY_BROWSER=brave node scripts/verify-gemma4-regen-evals.cjs`
-- [ ] `bun run validate regen-community-evals`
+- [x] `bun run test:unit:coop-seeded-eval`
+- [x] `bun run validate coop-seeded-eval`
+- [x] `cd packages/extension && bun run build`
+- [x] `COOP_VERIFY_BROWSER=brave node scripts/verify-gemma4-regen-evals.cjs`
+- [x] `bun run validate regen-community-evals`
 
 ## Handoff Notes
 

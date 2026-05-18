@@ -12,7 +12,7 @@
     },
     "state": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": [],
       "branch": "codex/state/regen-community-evals",
       "ready_when_dependencies_met": true
@@ -31,14 +31,14 @@
     },
     "docs": {
       "owner": "codex",
-      "status": "ready",
+      "status": "done",
       "depends_on": [],
       "branch": "codex/docs/regen-community-evals",
       "ready_when_dependencies_met": true
     },
     "qa_pass_1": {
       "owner": "codex",
-      "status": "blocked",
+      "status": "done",
       "depends_on": ["state", "docs"],
       "branch": "handoff/qa-codex/regen-community-evals",
       "branch_trigger": "handoff/qa-codex/regen-community-evals",
@@ -46,7 +46,7 @@
     },
     "qa_pass_2": {
       "owner": "claude",
-      "status": "blocked",
+      "status": "ready",
       "depends_on": ["qa_pass_1"],
       "branch": "handoff/qa-claude/regen-community-evals",
       "branch_trigger": "handoff/qa-claude/regen-community-evals",
@@ -70,5 +70,5 @@
       "rationale": "The demo is locally grounded while the eval matrix proves broader regenerative-community fit."
     }
   ],
-  "updated_at": "2026-05-17"
+  "updated_at": "2026-05-18"
 }

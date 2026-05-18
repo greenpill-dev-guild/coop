@@ -3,7 +3,7 @@ feature: regen-community-evals
 title: Regen Community Evals QA pass 1
 lane: qa
 agent: codex
-status: blocked
+status: done
 source_branch: feature/hackathon-simplify
 work_branch: qa/codex/regen-community-evals
 skills:
@@ -13,7 +13,7 @@ skills:
 qa_order: 1
 handoff_in: handoff/qa-codex/regen-community-evals
 handoff_out: handoff/qa-claude/regen-community-evals
-updated: 2026-05-17
+updated: 2026-05-18
 ---
 
 # QA Pass 1
@@ -27,12 +27,12 @@ updated: 2026-05-17
 
 ## Tasks
 
-- [ ] Run deterministic seeded eval validation.
-- [ ] Build the extension and run the Gemma 4 browser eval.
-- [ ] Verify `.plans/evidence/*regen-evals*.json` records pass/fail, model, browser, and cases.
-- [ ] Record commands, findings, and residual risks in `../eval/qa-report.md`.
-- [ ] Create `handoff/qa-claude/regen-community-evals` only after the model-in-loop result is honest.
+- [x] Run deterministic seeded eval validation.
+- [x] Build the extension and run the Gemma 4 browser eval.
+- [x] Verify `.plans/evidence/*regen-evals*.json` records pass/fail, model, browser, and cases.
+- [x] Record commands, findings, and residual risks in `../eval/qa-report.md`.
+- [x] Mark QA pass 2 ready only after the model-in-loop result is honest.
 
 ## Verification
 
-- [ ] `bun run validate regen-community-evals`
+- [x] `bun run validate regen-community-evals`

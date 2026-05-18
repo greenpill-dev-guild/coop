@@ -4,7 +4,7 @@
 **Status**: Active
 **Source Branch**: `feature/hackathon-simplify`
 **Created**: `2026-05-17`
-**Last Updated**: `2026-05-17`
+**Last Updated**: `2026-05-18`
 
 ## Summary
 
@@ -73,11 +73,11 @@ Gemma 4 model-in-loop proof in a real Chromium-family browser.
 
 ## Acceptance Criteria
 
-- [ ] New feature pack validates with `bun run plans validate`.
-- [ ] Deterministic seeded eval covers at least 32 cases across the 4x4 matrix.
-- [ ] Every case expects an action brief with public/private/evidence/action sections.
-- [ ] Browser model-in-loop eval initializes Gemma 4 and writes `.plans/evidence/*regen-evals*.json`.
-- [ ] `bun run validate regen-community-evals` fails if Gemma 4 cannot load or any action brief is
+- [x] New feature pack validates with `bun run plans validate`.
+- [x] Deterministic seeded eval covers at least 32 cases across the 4x4 matrix.
+- [x] Every case expects an action brief with public/private/evidence/action sections.
+- [x] Browser model-in-loop eval initializes Gemma 4 and writes `.plans/evidence/*regen-evals*.json`.
+- [x] `bun run validate regen-community-evals` fails if Gemma 4 cannot load or any action brief is
       invalid.
 
 ## Validation Plan

@@ -3,7 +3,7 @@ feature: regen-community-evals
 title: Regen Community Evals QA pass 2
 lane: qa
 agent: claude
-status: blocked
+status: ready
 source_branch: feature/hackathon-simplify
 work_branch: qa/claude/regen-community-evals
 depends_on:
@@ -14,7 +14,7 @@ skills:
   - docs
 qa_order: 2
 handoff_in: handoff/qa-claude/regen-community-evals
-updated: 2026-05-17
+updated: 2026-05-18
 ---
 
 # QA Pass 2

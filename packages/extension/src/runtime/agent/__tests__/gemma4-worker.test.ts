@@ -3,6 +3,7 @@ import {
   buildGemma4FallbackPrompt,
   canUseBrowserCache,
   isUnsupportedChatTemplateError,
+  normalizeGemma4InitConfig,
 } from '../gemma4-worker';
 
 describe('canUseBrowserCache', () => {
@@ -63,5 +64,35 @@ describe('Gemma 4 chat-template fallback', () => {
     expect(prompt).toContain('[audio input attached]');
     expect(prompt).toContain('draft_regen_action_brief');
     expect(prompt).toContain('ASSISTANT:');
+  });
+});
+
+describe('normalizeGemma4InitConfig', () => {
+  it('defaults to remote q4f16 WebGPU loading', () => {
+    expect(normalizeGemma4InitConfig()).toEqual({
+      modelSource: 'remote',
+      localModelPath: null,
+      dtype: 'q4f16',
+      device: 'webgpu',
+      useBrowserCache: undefined,
+    });
+  });
+
+  it('accepts explicit local model loading config', () => {
+    expect(
+      normalizeGemma4InitConfig({
+        modelSource: 'local',
+        localModelPath: ' http://127.0.0.1:8765/models/ ',
+        dtype: 'q4',
+        device: 'wasm',
+        useBrowserCache: false,
+      }),
+    ).toEqual({
+      modelSource: 'local',
+      localModelPath: 'http://127.0.0.1:8765/models/',
+      dtype: 'q4',
+      device: 'wasm',
+      useBrowserCache: false,
+    });
   });
 });
