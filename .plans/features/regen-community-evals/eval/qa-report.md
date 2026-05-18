@@ -8,12 +8,12 @@
   - Model: `onnx-community/gemma-4-E2B-it-ONNX`
   - Source: remote Hugging Face load through Transformers.js browser cache
   - Runtime: `q4f16` on `webgpu`
-  - Evidence: `.plans/evidence/2026-05-18T08-05-47-082Z-gemma4-regen-community-evals.json`
+  - Evidence: `.plans/evidence/2026-05-18T20-11-17-042Z-gemma4-regen-community-evals.json`
 - Commands:
   - Passed: `bun run test:unit:coop-seeded-eval`
   - Passed: `bun run validate coop-seeded-eval`
+  - Passed: `bun run test -- scripts/__tests__/verify-gemma4-regen-evals.test.ts packages/extension/src/runtime/agent/__tests__/gemma4-worker.test.ts`
   - Passed: `cd packages/extension && bun run build`
-  - Passed: `COOP_VERIFY_BROWSER=brave node scripts/verify-gemma4-regen-evals.cjs`
   - Passed: `COOP_VERIFY_BROWSER=brave bun run validate regen-community-evals`
   - Passed: `bun run plans validate`
 - Findings:
@@ -22,12 +22,20 @@
     32 regen community model-in-loop cases serially.
   - The verifier now has a smoke mode for 1-case or 2-case browser checks without weakening the full
     32-case gate.
+  - Full-mode validation now defaults to raw model-output validation: `COOP_REGEN_EVAL_ALLOW_NORMALIZATION=1`
+    is required for non-gating diagnostics that allow cleanup.
+  - The verifier lazily loads Playwright only inside the browser-running path, so unit imports do not trigger
+    Playwright webServer side effects or noisy `ECONNREFUSED localhost:3000` output.
+  - Privacy leak detection now checks each stress/privacy/noise case for the full synthetic private token,
+    gate code fragments like `5521`, phone fragments like `555-0199`, and private email fragments like
+    `private@example.test` in public sections.
   - Browser evidence records WebGPU availability, browser/version, model source, dtype/device, init duration,
-    per-case generation duration, raw output, normalized action brief, validation failures, warnings,
-    normalizations, sampled page/browser events, and browser event counts.
-  - The 2026-05-18 full gate passed 32/32 with zero warnings. Gemma still emitted blank placeholder strings in
-    eight cases; the verifier strips those from the accepted action brief and records 30 explicit normalization
-    entries in evidence instead of silently accepting the raw placeholders.
+    per-case generation duration, raw output, parsed action brief, validation failures, warnings,
+    normalizations, sampled page/browser events, retry counts, and browser event counts.
+  - The final 2026-05-18 full gate passed 32/32 with zero warnings, zero final normalizations, and
+    `allowNormalization: false`.
+  - Three cases used an in-browser retry before final validation: two for empty-string placeholders and one for
+    malformed JSON. The accepted final outputs had zero normalizations and no failures.
   - The verifier now requires canonical cases to include `privateNotes: []` and stress/privacy/noise cases to
     include exactly one non-empty redacted private note.
 
@@ -61,6 +69,6 @@ The served root must contain the model path expected by Transformers.js, for exa
   availability. It is intentionally not a lightweight CI-only gate.
 - Full validation takes roughly ten minutes on this machine because the 32 Gemma cases run serially in the
   browser sandbox.
-- Raw Gemma output can still include blank placeholder strings in otherwise useful arrays. The gate now stores
-  cleaned action briefs plus explicit normalization records; treat any increase in normalization count as a
-  model-output quality signal to review.
+- Raw Gemma output can still produce repairable JSON defects. The full gate now retries inside the browser, but
+  the accepted final action brief must validate without normalization; any non-zero final normalization count
+  fails the gate by default.

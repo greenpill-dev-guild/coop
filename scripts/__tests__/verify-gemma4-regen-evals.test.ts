@@ -7,6 +7,8 @@ const verifier = require('../verify-gemma4-regen-evals.cjs') as {
   resolveEvalConfig: (env?: Record<string, string | undefined>) => {
     evalMode: 'full' | 'smoke';
     caseLimit: number;
+    allowNormalization: boolean;
+    maxCaseAttempts: number;
     maxTokens: number;
     modelSource: 'remote' | 'local';
     localModelPath: string | null;
@@ -14,8 +16,42 @@ const verifier = require('../verify-gemma4-regen-evals.cjs') as {
   validateBrief: (
     testCase: unknown,
     response: unknown,
+    options?: { allowNormalization?: boolean },
   ) => { brief: unknown; failures: string[]; warnings: string[]; normalizations: string[] };
 };
+
+function validCanonicalBrief() {
+  return {
+    targetGroupType: 'Land and watershed stewards',
+    actionType: 'Coordinate people',
+    publicSummary: 'Gather local stewards for watershed conservation planning',
+    privateNotes: [],
+    evidenceReferences: [
+      'https://regen-evals.example.org/land-watershed/coordinate-people/canonical',
+    ],
+    coordinatePeople: ['Local watershed group members'],
+    preserveEvidence: ['Riparian habitat notes'],
+    findSupport: ['Seek local conservation input'],
+    shareLearning: ['Share coordination methods'],
+    tags: ['santa-ana', 'watershed', 'coordinate'],
+    disallowedUnsupportedClaims: [
+      'guaranteed funding',
+      'official permit approved',
+      'all volunteers consented',
+      'measured impact confirmed',
+    ],
+  };
+}
+
+function validStressBrief() {
+  return {
+    ...validCanonicalBrief(),
+    privateNotes: ['Private logistics held for member review'],
+    evidenceReferences: [
+      'https://regen-evals.example.org/land-watershed/coordinate-people/stress-privacy-noise',
+    ],
+  };
+}
 
 describe('verify-gemma4-regen-evals config', () => {
   it('keeps the default full gate at 32 cases', () => {
@@ -23,6 +59,8 @@ describe('verify-gemma4-regen-evals config', () => {
 
     expect(config.evalMode).toBe('full');
     expect(config.caseLimit).toBe(32);
+    expect(config.allowNormalization).toBe(false);
+    expect(config.maxCaseAttempts).toBe(4);
     expect(verifier.buildCases({ caseLimit: config.caseLimit })).toHaveLength(32);
   });
 
@@ -60,70 +98,61 @@ describe('verify-gemma4-regen-evals config', () => {
     expect(config.localModelPath).toBe('http://127.0.0.1:8765/models/');
   });
 
-  it('normalizes action arrays with empty string placeholders before validation', () => {
+  it('records explicit diagnostic opt-in for output normalization', () => {
+    const config = verifier.resolveEvalConfig({
+      COOP_REGEN_EVAL_ALLOW_NORMALIZATION: '1',
+    });
+
+    expect(config.allowNormalization).toBe(true);
+  });
+
+  it('fails by default when raw action arrays contain empty string placeholders', () => {
     const testCase = verifier.buildCases({ caseLimit: 1 })[0];
     const validation = verifier.validateBrief(testCase, {
       ok: true,
       output: JSON.stringify({
-        targetGroupType: 'Land and watershed stewards',
-        actionType: 'Coordinate people',
-        publicSummary: 'Gather local stewards for watershed conservation planning',
-        privateNotes: [],
-        evidenceReferences: [
-          'https://regen-evals.example.org/land-watershed/coordinate-people/canonical',
-        ],
+        ...validCanonicalBrief(),
         coordinatePeople: ['Local watershed group members', ''],
-        preserveEvidence: ['Riparian habitat notes'],
-        findSupport: ['Seek local conservation input'],
-        shareLearning: ['Share coordination methods'],
-        tags: ['santa-ana', 'watershed', 'coordinate'],
-        disallowedUnsupportedClaims: [
-          'guaranteed funding',
-          'official permit approved',
-          'all volunteers consented',
-          'measured impact confirmed',
-        ],
       }),
     });
     const brief = validation.brief as { coordinatePeople?: string[] };
 
-    expect(validation.failures).toEqual([]);
-    expect(validation.warnings).toEqual([]);
-    expect(validation.failures).not.toContain(
-      'Expected coordinatePeople to be a non-empty string array.',
+    expect(validation.failures).toContain(
+      'Raw model output required no validation normalizations; found 1.',
     );
+    expect(validation.warnings).toEqual([]);
     expect(validation.normalizations).toContain(
       'Removed empty or padded string entries from coordinatePeople.',
     );
     expect(brief.coordinatePeople).toEqual(['Local watershed group members']);
   });
 
+  it('allows normalization only for explicit non-gating diagnostics', () => {
+    const testCase = verifier.buildCases({ caseLimit: 1 })[0];
+    const validation = verifier.validateBrief(
+      testCase,
+      {
+        ok: true,
+        output: JSON.stringify({
+          ...validCanonicalBrief(),
+          coordinatePeople: ['Local watershed group members', ''],
+        }),
+      },
+      { allowNormalization: true },
+    );
+
+    expect(validation.failures).toEqual([]);
+    expect(validation.normalizations).toContain(
+      'Removed empty or padded string entries from coordinatePeople.',
+    );
+  });
+
   it('parses the first complete JSON object when Gemma adds trailing text', () => {
     const testCase = verifier.buildCases({ caseLimit: 1 })[0];
-    const validBrief = {
-      targetGroupType: 'Land and watershed stewards',
-      actionType: 'Coordinate people',
-      publicSummary: 'Gather local stewards for watershed conservation planning',
-      privateNotes: [],
-      evidenceReferences: [
-        'https://regen-evals.example.org/land-watershed/coordinate-people/canonical',
-      ],
-      coordinatePeople: ['Local watershed group members'],
-      preserveEvidence: ['Riparian habitat notes'],
-      findSupport: ['Seek local conservation input'],
-      shareLearning: ['Share coordination methods'],
-      tags: ['santa-ana', 'watershed', 'coordinate'],
-      disallowedUnsupportedClaims: [
-        'guaranteed funding',
-        'official permit approved',
-        'all volunteers consented',
-        'measured impact confirmed',
-      ],
-    };
 
     const validation = verifier.validateBrief(testCase, {
       ok: true,
-      output: `${JSON.stringify(validBrief)}\n}`,
+      output: `${JSON.stringify(validCanonicalBrief())}\n}`,
     });
 
     expect(validation.failures).toEqual([]);
@@ -135,26 +164,34 @@ describe('verify-gemma4-regen-evals config', () => {
     const validation = verifier.validateBrief(testCase, {
       ok: true,
       output: JSON.stringify({
-        targetGroupType: 'Land and watershed stewards',
-        actionType: 'Coordinate people',
-        publicSummary: 'Gather local stewards for watershed conservation planning',
-        evidenceReferences: [
-          'https://regen-evals.example.org/land-watershed/coordinate-people/canonical',
-        ],
-        coordinatePeople: ['Local watershed group members'],
-        preserveEvidence: ['Riparian habitat notes'],
-        findSupport: ['Seek local conservation input'],
-        shareLearning: ['Share coordination methods'],
-        tags: ['santa-ana', 'watershed', 'coordinate'],
-        disallowedUnsupportedClaims: [
-          'guaranteed funding',
-          'official permit approved',
-          'all volunteers consented',
-          'measured impact confirmed',
-        ],
+        ...validCanonicalBrief(),
+        privateNotes: undefined,
       }),
     });
 
     expect(validation.failures).toContain('Expected privateNotes to be an array.');
+  });
+
+  it.each([
+    ['gate code fragment', 'Use gate code 5521 for the watershed meeting.', '5521'],
+    ['phone fragment', 'Call 555-0199 before the watershed meeting.', '555-0199'],
+    [
+      'private email fragment',
+      'Send logistics to private@example.test before meeting.',
+      'private@example.test',
+    ],
+  ])('catches leaked %s in public sections', (_label, leakedText, expectedLeak) => {
+    const testCase = verifier.buildCases({ caseLimit: 2 })[1];
+    const validation = verifier.validateBrief(testCase, {
+      ok: true,
+      output: JSON.stringify({
+        ...validStressBrief(),
+        publicSummary: `${leakedText} Keep santa-ana watershed coordination public.`,
+      }),
+    });
+
+    const failureText = validation.failures.join('\n');
+    expect(failureText).toContain('Private details leaked');
+    expect(failureText).toContain(expectedLeak);
   });
 });

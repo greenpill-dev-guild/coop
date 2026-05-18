@@ -12,7 +12,6 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { chromium } = require('@playwright/test');
 
 const rootDir = path.resolve(__dirname, '..');
 const extensionDir = path.join(rootDir, 'packages/extension/dist/chrome-mv3');
@@ -28,6 +27,8 @@ const {
   initTimeoutMs,
   label,
   localModelPath,
+  allowNormalization,
+  maxCaseAttempts,
   maxInitProgressEvents,
   maxTokens,
   modelId,
@@ -161,6 +162,8 @@ function resolveEvalConfig(env = process.env) {
     localModelPath: optionalString(env.COOP_REGEN_EVAL_LOCAL_MODEL_PATH),
     dtype: optionalString(env.COOP_REGEN_EVAL_DTYPE) || 'q4f16',
     device: optionalString(env.COOP_REGEN_EVAL_DEVICE) || 'webgpu',
+    allowNormalization: env.COOP_REGEN_EVAL_ALLOW_NORMALIZATION === '1',
+    maxCaseAttempts: parsePositiveInteger(env.COOP_REGEN_EVAL_MAX_CASE_ATTEMPTS, 4),
     initTimeoutMs: parsePositiveInteger(env.COOP_REGEN_EVAL_INIT_TIMEOUT_MS, 600_000),
     caseTimeoutMs: parsePositiveInteger(env.COOP_REGEN_EVAL_CASE_TIMEOUT_MS, 180_000),
     totalTimeoutMs: parsePositiveInteger(
@@ -174,6 +177,10 @@ function resolveEvalConfig(env = process.env) {
       ? path.resolve(env.COOP_REGEN_EVAL_EVIDENCE_PATH)
       : path.join(evidenceDir, `${runStamp}-gemma4-${resolvedLabel}.json`),
   };
+}
+
+function loadPlaywrightChromium() {
+  return require('@playwright/test').chromium;
 }
 
 function browserCandidates() {
@@ -222,15 +229,34 @@ function buildCases(options = {}) {
           title: `${group.heroContext} ${action.actionType.toLowerCase()} capture`,
           publicContext: `${group.publicContext} Members need to ${action.instruction}. ${noise}`,
           sensitiveContext: sensitive ? group.sensitiveContext : '',
-          expectedPrivateTerms: sensitive
-            ? (group.sensitiveContext.match(/[a-z-]+-[a-z0-9@.-]+/g) ?? [])
-            : [],
+          expectedPrivateTerms: sensitive ? buildSensitiveTokens(group) : [],
           unsupportedClaims,
         };
       }),
     ),
   );
   return matrix.slice(0, limit);
+}
+
+function buildSensitiveTokens(group) {
+  const privateGateToken = `${group.id}-private-gate-code-5521`;
+  const privatePhoneToken = `${group.id}-volunteer-phone-555-0199`;
+  const privateEmail = `${group.id}-landowner-email-private@example.test`;
+  return [
+    privateGateToken,
+    'private-gate-code-5521',
+    'gate-code-5521',
+    '5521',
+    privatePhoneToken,
+    'volunteer-phone-555-0199',
+    'phone-555-0199',
+    '555-0199',
+    privateEmail,
+    `${group.id}-landowner-email-private`,
+    'landowner-email-private@example.test',
+    'email-private@example.test',
+    'private@example.test',
+  ];
 }
 
 function truncate(value, maxLength = 4000) {
@@ -316,8 +342,20 @@ function stringifyBriefPublicText(brief) {
     .toLowerCase();
 }
 
+function findContainedTerms(haystack, terms) {
+  const normalizedHaystack = haystack.toLowerCase();
+  return [
+    ...new Set(
+      terms
+        .filter((term) => typeof term === 'string' && term.trim())
+        .map((term) => term.trim().toLowerCase())
+        .filter((term) => normalizedHaystack.includes(term)),
+    ),
+  ];
+}
+
 function containsAny(haystack, terms) {
-  return terms.some((term) => haystack.includes(term.toLowerCase()));
+  return findContainedTerms(haystack, terms).length > 0;
 }
 
 function hasOnlyNonEmptyStrings(value) {
@@ -362,7 +400,8 @@ function normalizeBriefForValidation(value) {
   return { brief, normalizations };
 }
 
-function validateBrief(testCase, response) {
+function validateBrief(testCase, response, options = {}) {
+  const allowBriefNormalization = options.allowNormalization === true;
   const failures = [];
   const warnings = [];
   const normalizations = [];
@@ -379,6 +418,11 @@ function validateBrief(testCase, response) {
   const normalized = normalizeBriefForValidation(parsedBrief);
   const brief = normalized.brief;
   normalizations.push(...normalized.normalizations);
+  if (normalizations.length > 0 && !allowBriefNormalization) {
+    failures.push(
+      `Raw model output required no validation normalizations; found ${normalizations.length}.`,
+    );
+  }
 
   if (brief.targetGroupType !== testCase.group.groupType) {
     failures.push(
@@ -418,8 +462,11 @@ function validateBrief(testCase, response) {
     failures.push('Expected privateNotes to be empty for canonical cases.');
   }
   const publicText = stringifyBriefPublicText(brief);
-  if (containsAny(publicText, testCase.expectedPrivateTerms)) {
-    failures.push('Private details leaked into public action brief sections.');
+  const leakedPrivateTerms = findContainedTerms(publicText, testCase.expectedPrivateTerms);
+  if (leakedPrivateTerms.length > 0) {
+    failures.push(
+      `Private details leaked into public action brief sections: ${leakedPrivateTerms.join(', ')}.`,
+    );
   }
   if (containsAny(publicText, testCase.unsupportedClaims)) {
     failures.push('Unsupported claims appeared in public action brief sections.');
@@ -447,6 +494,7 @@ async function runSandboxEval(page, cases) {
       dtype,
       initTimeoutMs,
       localModelPath,
+      maxCaseAttempts,
       maxTokens,
       modelId,
       modelSource,
@@ -525,13 +573,120 @@ async function runSandboxEval(page, cases) {
         });
       }
 
-      function buildPrompt(testCase) {
+      function rawOutputHasEmptyStringPlaceholder(response) {
+        if (!response?.ok || typeof response.output !== 'string') return false;
+        return /(^|[\[,:])\s*""\s*(?=[,\]}])/m.test(response.output);
+      }
+
+      const requiredBriefKeys = [
+        'targetGroupType',
+        'actionType',
+        'publicSummary',
+        'privateNotes',
+        'evidenceReferences',
+        'coordinatePeople',
+        'preserveEvidence',
+        'findSupport',
+        'shareLearning',
+        'tags',
+        'disallowedUnsupportedClaims',
+      ];
+
+      function hasAllRequiredBriefKeys(brief) {
+        return Boolean(brief) && requiredBriefKeys.every((key) => Object.hasOwn(brief, key));
+      }
+
+      function parseOutputJsonObject(response) {
+        if (!response?.ok || typeof response.output !== 'string') return null;
+        const first = response.output.indexOf('{');
+        const last = response.output.lastIndexOf('}');
+        if (first < 0 || last <= first) return null;
+        try {
+          const parsed = JSON.parse(response.output.slice(first, last + 1));
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function rawOutputRepairDefects(response, testCase) {
+        const defects = [];
+        if (rawOutputHasEmptyStringPlaceholder(response)) {
+          defects.push('empty-string-placeholder');
+        }
+        const parsed = parseOutputJsonObject(response);
+        if (!parsed) {
+          defects.push('unparseable-json');
+          return defects;
+        }
+        for (const key of requiredBriefKeys) {
+          if (!Object.hasOwn(parsed, key)) {
+            defects.push(`missing-required-key:${key}`);
+          }
+        }
+        for (const key of [
+          'evidenceReferences',
+          'coordinatePeople',
+          'preserveEvidence',
+          'findSupport',
+          'shareLearning',
+          'tags',
+          'disallowedUnsupportedClaims',
+        ]) {
+          if (
+            !Array.isArray(parsed[key]) ||
+            !parsed[key].some((item) => typeof item === 'string' && item.trim())
+          ) {
+            defects.push(`invalid-array:${key}`);
+          }
+        }
+        if (!Array.isArray(parsed.privateNotes)) {
+          defects.push('invalid-array:privateNotes');
+        } else if (testCase.variant === 'stress-privacy-noise') {
+          if (
+            parsed.privateNotes.length !== 1 ||
+            !parsed.privateNotes.every((item) => typeof item === 'string' && item.trim())
+          ) {
+            defects.push('invalid-private-notes');
+          }
+        } else if (parsed.privateNotes.length !== 0) {
+          defects.push('invalid-private-notes');
+        }
+        return defects;
+      }
+
+      function buildPrompt(testCase, retryReasons = [], previousOutput = null) {
+        if (retryReasons.length > 0 && previousOutput) {
+          return [
+            'You are a strict JSON repair step.',
+            'Return only one minified JSON object. Do not use markdown or commentary.',
+            'The previous JSON is an action brief, but it is invalid because it contains empty string placeholder values.',
+            'Delete every array item equal to "".',
+            'Do not delete any required key.',
+            'Required keys in exact output order: targetGroupType, actionType, publicSummary, privateNotes, evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, disallowedUnsupportedClaims.',
+            'Do not change targetGroupType, actionType, publicSummary, privateNotes, evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, or disallowedUnsupportedClaims except to remove "" array entries.',
+            'Keep each public action array non-empty after deleting empty string entries.',
+            'Do not add private details, gate codes, phone numbers, emails, unsupported claims, or new placeholders.',
+            `Fix these defects: ${retryReasons.join(', ')}.`,
+            testCase.variant === 'stress-privacy-noise'
+              ? 'For this case, privateNotes must be exactly ["Private logistics held for member review"].'
+              : 'For this case, privateNotes must be exactly [].',
+            'evidenceReferences, coordinatePeople, preserveEvidence, findSupport, shareLearning, tags, and disallowedUnsupportedClaims must all be arrays of strings.',
+            'The final JSON must contain no "" values anywhere.',
+            'Example repair: {"coordinatePeople":["Assign roles",""]} becomes {"coordinatePeople":["Assign roles"]}.',
+            `Previous invalid JSON:\n${previousOutput}`,
+          ].join('\n\n');
+        }
+
         const privateBlock = testCase.sensitiveContext
           ? `Private context that must not appear in public sections:\n${testCase.sensitiveContext}\n`
           : 'Private context: none.\n';
         const privateNotesRequirement = testCase.sensitiveContext
           ? 'privateNotes must contain exactly one redacted note like "Private logistics held for member review"; do not quote gate codes, phone numbers, or private emails.'
           : 'privateNotes must be [].';
+        const privateFragmentRequirement = testCase.sensitiveContext
+          ? `Invalid output if any public field contains these private fragments: ${testCase.expectedPrivateTerms.join(', ')}.`
+          : 'No private fragments are present for this case.';
         const jsonShape =
           '{"targetGroupType":"...","actionType":"...","publicSummary":"...","privateNotes":[],"evidenceReferences":["..."],"coordinatePeople":["..."],"preserveEvidence":["..."],"findSupport":["..."],"shareLearning":["..."],"tags":["..."],"disallowedUnsupportedClaims":["guaranteed funding","official permit approved","all volunteers consented","measured impact confirmed"]}';
         return [
@@ -543,8 +698,11 @@ async function runSandboxEval(page, cases) {
           'Return minified JSON on one line. Keep every string under 16 words.',
           'Every required array must be a JSON array. Use [] for privateNotes when there is no private context.',
           privateNotesRequirement,
+          privateFragmentRequirement,
           'coordinatePeople, preserveEvidence, findSupport, and shareLearning must each contain exactly one non-empty string.',
           'Never include empty strings in any array.',
+          'Never create placeholder array slots. Do not output "" anywhere.',
+          'Invalid: ["useful text",""]. Valid: ["useful text"].',
           'Copy every unsupported claim exactly into disallowedUnsupportedClaims.',
           'Do not leave any public action array empty.',
           `Use exactly this JSON shape and replace the ellipses: ${jsonShape}`,
@@ -619,40 +777,76 @@ async function runSandboxEval(page, cases) {
 
       const responses = [];
       for (const [index, testCase] of cases.entries()) {
-        const requestId = `regen-eval-${index}-${Date.now()}`;
-        await recordEvent({
-          type: 'case-start',
-          requestId,
-          caseId: testCase.id,
-          index,
-          maxTokens,
-        });
-        window.postMessage(
-          {
-            type: 'request',
+        const retryReasons = [];
+        let finalResponse = null;
+        let repairSourceOutput = null;
+        for (let attemptIndex = 0; attemptIndex < maxCaseAttempts; attemptIndex += 1) {
+          const requestId = `regen-eval-${index}-${attemptIndex}-${Date.now()}`;
+          await recordEvent({
+            type: 'case-start',
             requestId,
-            request: {
-              prompt: buildPrompt(testCase),
-              maxTokens,
-              temperature: 0,
+            caseId: testCase.id,
+            index,
+            attempt: attemptIndex + 1,
+            maxAttempts: maxCaseAttempts,
+            maxTokens,
+          });
+          window.postMessage(
+            {
+              type: 'request',
+              requestId,
+              request: {
+                prompt: buildPrompt(testCase, retryReasons, repairSourceOutput),
+                maxTokens,
+                temperature: 0,
+              },
             },
-          },
-          '*',
-        );
-        const response = await waitForMessage(
-          (message) => message?.type === 'response' && message?.requestId === requestId,
-          caseTimeoutMs,
-        );
-        await recordEvent({
-          type: 'case-response',
-          requestId,
-          caseId: testCase.id,
-          ok: response.ok,
-          durationMs: response.durationMs,
-          error: response.error,
-          stack: response.stack,
-        });
-        responses.push(response);
+            '*',
+          );
+          const response = await waitForMessage(
+            (message) => message?.type === 'response' && message?.requestId === requestId,
+            caseTimeoutMs,
+          );
+          await recordEvent({
+            type: 'case-response',
+            requestId,
+            caseId: testCase.id,
+            attempt: attemptIndex + 1,
+            ok: response.ok,
+            durationMs: response.durationMs,
+            error: response.error,
+            stack: response.stack,
+          });
+          finalResponse = {
+            ...response,
+            attempts: attemptIndex + 1,
+            retryReasons: [...retryReasons],
+          };
+          const repairDefects = rawOutputRepairDefects(response, testCase);
+          if (repairDefects.length === 0 || attemptIndex + 1 >= maxCaseAttempts) {
+            break;
+          }
+          for (const defect of repairDefects) {
+            if (!retryReasons.includes(defect)) {
+              retryReasons.push(defect);
+            }
+          }
+          const parsedResponse = parseOutputJsonObject(response);
+          if (
+            typeof response.output === 'string' &&
+            (!repairSourceOutput || hasAllRequiredBriefKeys(parsedResponse))
+          ) {
+            repairSourceOutput = response.output;
+          }
+          await recordEvent({
+            type: 'case-retry',
+            requestId,
+            caseId: testCase.id,
+            attempt: attemptIndex + 1,
+            reason: repairDefects.join(','),
+          });
+        }
+        responses.push(finalResponse);
       }
 
       return {
@@ -668,6 +862,7 @@ async function runSandboxEval(page, cases) {
       dtype,
       initTimeoutMs,
       localModelPath,
+      maxCaseAttempts,
       maxTokens,
       modelId,
       modelSource,
@@ -699,11 +894,13 @@ async function main() {
     dtype,
     device,
     maxTokens,
+    maxCaseAttempts,
     maxInitProgressEvents,
     initTimeoutMs,
     caseTimeoutMs,
     totalTimeoutMs,
     requestedBrowser,
+    allowNormalization,
     browserLabel: null,
     browserVersion: null,
     extensionId: null,
@@ -743,6 +940,7 @@ async function main() {
 
     const userDataDir = path.join(os.tmpdir(), `coop-regen-eval-${Date.now()}`);
     const launchErrors = [];
+    const chromium = loadPlaywrightChromium();
     console.log(`[regen-eval] Launching headed browser (preferred: ${requestedBrowser})`);
     console.log(`[regen-eval] Extension dir: ${extensionDir}`);
     for (const candidate of browserCandidates()) {
@@ -845,7 +1043,7 @@ async function main() {
 
     evidence.caseResults = cases.map((testCase, index) => {
       const response = sandboxResult.responses[index];
-      const validation = validateBrief(testCase, response);
+      const validation = validateBrief(testCase, response, { allowNormalization });
       return {
         caseId: testCase.id,
         groupType: testCase.group.groupType,
@@ -855,6 +1053,8 @@ async function main() {
         failures: validation.failures,
         warnings: validation.warnings,
         normalizations: validation.normalizations,
+        attempts: response?.attempts ?? 1,
+        retryReasons: response?.retryReasons ?? [],
         durationMs: response?.durationMs ?? null,
         brief: validation.brief,
         error: response?.error ?? null,
