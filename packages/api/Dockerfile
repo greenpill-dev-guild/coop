@@ -8,7 +8,7 @@ COPY packages/api/package.json packages/api/
 COPY packages/app/package.json packages/app/
 COPY packages/extension/package.json packages/extension/
 COPY docs/package.json docs/
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 COPY packages/shared/src/ packages/shared/src/
 RUN bun run --filter @coop/shared build
 COPY packages/api/src/ packages/api/src/
