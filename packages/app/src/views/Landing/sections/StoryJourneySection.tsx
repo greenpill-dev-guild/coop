@@ -123,16 +123,16 @@ export function StoryJourneySection({
               </h1>
               <p className="hero-subtitle">{t('hero.subtitle')}</p>
               <div className="hero-cta-row">
-                {installAction}
                 <a className="button button-primary hero-cta-primary" href="#ritual">
                   {t('hero.curateCta')}
                 </a>
-                <a className="button button-secondary" href="#how-it-works">
+                <a className="button button-secondary hero-cta-secondary" href="#how-it-works">
                   {t('hero.howItWorksCta')}
                 </a>
+                {installAction}
               </div>
               <p className="sr-only">
-                Eight chickens start apart in the meadow and converge as you scroll.
+                Eight chickens drift across the meadow toward a shared coop as you scroll.
               </p>
             </div>
 

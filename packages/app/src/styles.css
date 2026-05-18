@@ -13,14 +13,34 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 body {
   margin: 0;
+  overflow-x: clip;
   background: radial-gradient(circle at top left, rgba(90, 125, 16, 0.14), transparent 28rem),
     radial-gradient(circle at top right, rgba(253, 138, 1, 0.14), transparent 24rem),
     linear-gradient(180deg, #fff8f2 0%, var(--coop-cream) 36%, #fffdfb 100%);
   color: var(--coop-ink);
+  /* Hide scrollbar visually on the landing while keeping scroll behavior. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar,
+html::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+  background: transparent;
+}
+
+* {
+  scrollbar-width: none;
 }
 
 a {
@@ -52,6 +72,19 @@ pre {
 
 .landing-shell {
   overflow: clip;
+  /* The landing page's background art is hardcoded warm cream, so the warm-on-warm
+     dark-mode token flip would invert the text against an unchanged surface.
+     Pin landing tokens to their light values regardless of OS theme. */
+  color-scheme: light;
+  --coop-cream: #fcf5ef;
+  --coop-brown: #4f2e1f;
+  --coop-brown-soft: #6b4a36;
+  --coop-green: #5a7d10;
+  --coop-orange: #fd8a01;
+  --coop-mist: #d8d4d0;
+  --coop-ink: #27140e;
+  --coop-text: #4f2e1f;
+  --coop-text-soft: #6b4a36;
 }
 
 .backdrop {
@@ -98,11 +131,16 @@ pre {
 
 .landing-main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
   color-scheme: light;
 
   --landing-motion-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --landing-motion-emphasis: cubic-bezier(0.2, 0.9, 0.22, 1.14);
+}
+
+.landing-main > * {
+  min-width: 0;
 }
 
 .landing-topbar {
@@ -126,23 +164,25 @@ pre {
   inset: 0;
   z-index: 120;
   display: grid;
-  place-items: end center;
+  place-items: center;
   padding: 1rem;
-  background: rgba(32, 20, 12, 0.46);
+  background: rgba(32, 20, 12, 0.5);
+  cursor: pointer;
 }
 
 .public-install-dialog {
   position: relative;
-  width: min(100%, 42rem);
-  max-height: calc(100vh - 2rem);
+  width: min(100%, 38rem);
+  max-height: min(90vh, calc(100dvh - 2rem));
   margin: 0;
   overflow-y: auto;
-  padding: clamp(1.2rem, 4vw, 2rem);
+  padding: clamp(1.2rem, 3.5vw, 2rem);
   border: 1px solid rgba(79, 46, 31, 0.16);
   border-radius: var(--coop-radius-card);
   background: rgba(255, 250, 244, 0.98);
   box-shadow: 0 24px 80px rgba(32, 20, 12, 0.22);
   color: var(--coop-brown);
+  cursor: default;
 }
 
 .public-install-close {
@@ -301,6 +341,7 @@ pre {
   width: min(1280px, calc(100% - 1.5rem));
   height: 100%;
   margin: 0 auto;
+  overflow: clip;
   contain: layout style;
 }
 
@@ -369,21 +410,39 @@ pre {
   width: 100%;
   min-height: calc(100vh - 4rem);
   display: grid;
-  grid-template-columns: minmax(0, 3.8fr) minmax(16rem, 1.7fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.8rem;
   align-items: center;
   padding-top: 4.25rem;
   position: relative;
 }
 
+@media (min-width: 960px) {
+  .hero-shell {
+    grid-template-columns: minmax(0, 3.8fr) minmax(16rem, 1.7fr);
+  }
+}
+
 .hero-copy {
-  max-width: 40rem;
+  max-width: 42rem;
+  min-width: 0;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.95rem;
   position: relative;
-  z-index: 4;
+  z-index: 12;
   padding: 0;
-  margin-top: clamp(-3.5rem, -7vh, -1.5rem);
+  margin-top: 0;
+}
+
+.hero-panel,
+.hero-shell,
+.hero-cta-row {
+  min-width: 0;
+}
+
+.hero-cta-row .button {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .hero-logo {
@@ -395,30 +454,35 @@ pre {
 .hero-title {
   margin: 0;
   display: grid;
-  gap: 0.08em;
+  gap: 0.04em;
   font-family: "Gill Sans", "Trebuchet MS", sans-serif;
-  font-size: clamp(3.2rem, 6vw, 5.9rem);
-  line-height: 0.92;
-  color: var(--coop-brown);
-  text-shadow: 0 1px 16px rgba(255, 252, 246, 1), 0 0 48px rgba(255, 248, 238, 0.85), 0 0 80px
-    rgba(255, 248, 238, 0.5);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 7vw, 5.4rem);
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--coop-ink, #27140e);
+  max-inline-size: 18ch;
+  min-width: 0;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .hero-title-line {
   display: block;
 }
 
+/* Allow the second line to flow naturally — `nowrap` was causing crowding. */
 .hero-title-line-bottom {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .hero-subtitle {
   margin: 0;
-  font-size: clamp(1.2rem, 1.9vw, 1.45rem);
-  line-height: 1.35;
-  color: rgba(79, 46, 31, 0.9);
-  max-width: 32rem;
-  text-shadow: 0 0 20px rgba(255, 250, 244, 0.92);
+  font-size: clamp(1.05rem, 1.55vw, 1.2rem);
+  line-height: 1.45;
+  color: rgba(44, 26, 18, 0.9);
+  max-width: 36rem;
+  text-wrap: pretty;
 }
 
 .hero-cta-row {
@@ -430,11 +494,24 @@ pre {
 }
 
 .hero-cta-row .button {
-  box-shadow: 0 12px 28px rgba(79, 46, 31, 0.14);
+  box-shadow: 0 10px 22px rgba(79, 46, 31, 0.12);
 }
 
-.hero-cta-row .button-secondary {
-  background: rgba(255, 252, 246, 0.76);
+.hero-cta-row .button-secondary,
+.hero-cta-row .hero-install-cta--secondary {
+  background: rgba(255, 252, 246, 0.86);
+}
+
+.hero-install-cta--secondary {
+  font-size: 0.84rem;
+  padding: 0.6rem 0.95rem;
+  min-height: 2.55rem;
+  opacity: 0.92;
+}
+
+.hero-install-cta--secondary:hover,
+.hero-install-cta--secondary:focus-visible {
+  opacity: 1;
 }
 
 .hero-note {
@@ -688,14 +765,14 @@ pre {
 }
 
 .how-works-shell {
-  width: min(100% - 2rem, 52vw, 48rem);
+  width: min(100% - 2rem, 68vw, 60rem);
   display: grid;
-  gap: 0.8rem;
+  gap: 0.85rem;
   margin: 0;
   background: linear-gradient(145deg, rgba(255, 252, 246, 0.97), rgba(255, 248, 238, 0.95));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 1.4rem 1.6rem;
+  padding: 1.5rem 1.75rem;
   border-radius: var(--coop-radius-card-xl);
   border: 1px solid rgba(79, 46, 31, 0.12);
   box-shadow: 0 20px 48px rgba(79, 46, 31, 0.12);
@@ -877,6 +954,122 @@ pre {
 
 .ritual-section-heading .lede {
   font-size: 0.96rem;
+}
+
+.landing-trust-strip {
+  width: min(68rem, 100%);
+  margin: 0 auto 1.25rem;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-radius: var(--coop-radius-card-xl, 1.25rem);
+  border: 1px solid rgba(79, 46, 31, 0.12);
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.94), rgba(255, 246, 235, 0.9));
+  box-shadow: 0 14px 36px rgba(79, 46, 31, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--coop-brown);
+}
+
+.landing-trust-strip__eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(79, 46, 31, 0.72);
+}
+
+.landing-trust-strip__points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.landing-trust-strip__points::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-trust-strip__points li {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(90, 125, 16, 0.08);
+  border: 1px solid rgba(90, 125, 16, 0.18);
+  color: var(--coop-green, #5a7d10);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.landing-trust-strip__tagline {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: rgba(79, 46, 31, 0.78);
+}
+
+@media (min-width: 720px) {
+  .landing-trust-strip {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 1.4rem;
+    row-gap: 0.35rem;
+    align-items: center;
+    padding: 0.9rem 1.25rem;
+  }
+
+  .landing-trust-strip__eyebrow {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .landing-trust-strip__tagline {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    max-width: 18rem;
+  }
+
+  .landing-trust-strip__points {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .landing-trust-strip__points li {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.68rem;
+  }
+}
+
+@media (min-width: 960px) {
+  .landing-trust-strip__points li {
+    padding: 0.32rem 0.65rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (min-width: 1180px) {
+  .landing-trust-strip__points li {
+    padding: 0.34rem 0.72rem;
+    font-size: 0.74rem;
+  }
 }
 
 .ritual-game-shell {
@@ -1617,22 +1810,24 @@ pre {
 }
 
 .arrival-scroll-spacer {
-  height: 96vh;
+  height: 140vh;
   pointer-events: none;
 }
 
 .why-build-heading-card {
-  position: relative;
-  max-width: 22rem;
+  position: absolute;
+  top: 8%;
+  left: 5%;
+  max-width: min(28rem, 42vw);
   margin: 0;
   padding: 1.25rem 1.4rem;
   border-radius: 1.2rem;
-  background: rgba(255, 252, 246, 0.85);
+  background: rgba(255, 252, 246, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 232, 206, 0.3);
-  box-shadow: 0 12px 32px rgba(79, 46, 31, 0.1);
-  z-index: 4;
+  box-shadow: 0 12px 32px rgba(79, 46, 31, 0.18);
+  z-index: 5;
   pointer-events: auto;
   display: grid;
   gap: 0.45rem;
@@ -1643,22 +1838,26 @@ pre {
 
 .why-build-heading-card h2 {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
   color: var(--coop-brown);
   opacity: 1;
 }
 
 .why-build-heading-card .lede {
   text-align: left;
-  font-size: 0.92rem;
+  font-size: clamp(0.88rem, 1.2vw, 0.98rem);
+  line-height: 1.5;
 }
 
 .why-build-scene-team {
-  position: relative;
+  position: absolute;
+  top: 10%;
+  right: 5%;
   width: fit-content;
-  margin: 0.5rem 0 0 0;
+  max-width: min(22rem, 38vw);
+  margin: 0;
   pointer-events: auto;
-  z-index: 4;
+  z-index: 5;
   opacity: 1;
   visibility: visible;
   display: flex;
@@ -1666,10 +1865,10 @@ pre {
   align-items: center;
   gap: 0.6rem;
   padding: 1rem 1.3rem;
-  background: linear-gradient(135deg, rgba(79, 46, 31, 0.08), rgba(90, 125, 16, 0.04));
-  border: 1px solid rgba(255, 252, 246, 0.15);
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.18), rgba(90, 125, 16, 0.08));
+  border: 1px solid rgba(255, 252, 246, 0.25);
   border-radius: 0.8rem;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
 .scene-team-label {
@@ -2338,11 +2537,19 @@ pre {
 }
 
 .scene-chicken {
-  z-index: 3;
+  z-index: 1;
   width: clamp(5.25rem, 8vw, 7rem);
   display: grid;
   justify-items: center;
   gap: 0.45rem;
+  opacity: 0.88;
+  transition: opacity 220ms var(--landing-motion-soft);
+}
+
+.scene-chicken:hover,
+.scene-chicken:focus-within {
+  opacity: 1;
+  z-index: 11;
 }
 
 .scene-chicken-art {
@@ -2360,18 +2567,20 @@ pre {
   cursor: pointer;
 }
 
-/* Keep labels lightly visible so the story still reads without hover. */
+/* Labels stay hidden by default so they never crowd the hero copy.
+   They reveal on hover/focus, the same as the thought bubbles. */
 .journey-scene-story .scene-chicken-label {
-  opacity: 0.46;
-  transform: translateY(0);
+  opacity: 0;
+  transform: translateY(4px);
   filter: blur(1.5px);
+  pointer-events: none;
   transition: opacity 220ms var(--landing-motion-soft), transform 220ms var(--landing-motion-soft),
     filter 220ms var(--landing-motion-soft);
 }
 
 .journey-scene-story .scene-chicken:hover .scene-chicken-label,
 .journey-scene-story .scene-chicken:focus-within .scene-chicken-label {
-  opacity: 0.88;
+  opacity: 0.92;
   transform: translateY(-2px);
   filter: blur(0);
 }
@@ -2454,18 +2663,8 @@ pre {
   --thought-bubble-tail-small-x: 92%;
 }
 
-/* Show 2 thought bubbles by default — far-right chickens that are well
-   separated and clear of the hero copy. Others reveal on hover. */
-.journey-scene-story .scene-chicken-ideas .thought-bubble {
-  opacity: 1;
-  transform: translateX(calc(-50% + var(--thought-bubble-offset-x))) scale(1);
-}
-
-.journey-scene-story .scene-chicken-signals .thought-bubble {
-  opacity: 1;
-  transform: translateX(calc(-50% + var(--thought-bubble-offset-x))) scale(1);
-}
-
+/* Thought bubbles stay hidden until interaction so they never crowd the
+   hero copy. The brand metaphor reveals on hover or keyboard focus. */
 .scene-chicken:hover .thought-bubble,
 .scene-chicken:focus-within .thought-bubble {
   opacity: 1;
@@ -2506,66 +2705,66 @@ pre {
   fill: #d4c44a;
 }
 
-/* Left-side chickens (6) — staggered across left 45% of scene */
+/* Chickens are pushed well below the hero CTA row so they never crowd the
+   title, subtitle, or buttons. Labels & thought bubbles reveal on hover. */
 .journey-scene-story .scene-chicken-tabs {
   left: 3%;
-  top: 68%;
+  top: 78%;
 }
 
 .journey-scene-story .scene-chicken-notes {
-  left: 16%;
-  top: 60%;
+  left: 18%;
+  top: 72%;
 }
 
 .journey-scene-story .scene-chicken-links {
-  left: 6%;
-  top: 80%;
+  left: 8%;
+  top: 86%;
 }
 
 .journey-scene-story .scene-chicken-drafts {
-  left: 22%;
-  top: 74%;
+  left: 26%;
+  top: 82%;
 }
 
 .journey-scene-story .scene-chicken-bookmarks {
-  left: 32%;
-  top: 66%;
+  left: 36%;
+  top: 76%;
 }
 
 .journey-scene-story .scene-chicken-voice-memos {
-  left: 12%;
-  top: 88%;
+  left: 14%;
+  top: 90%;
 }
 
-/* Right-side chickens (6) — staggered across right 45% of scene */
 .journey-scene-story .scene-chicken-ideas {
-  right: 16%;
-  top: 60%;
+  right: 18%;
+  top: 72%;
 }
 
 .journey-scene-story .scene-chicken-signals {
   right: 3%;
-  top: 68%;
+  top: 78%;
 }
 
 .journey-scene-story .scene-chicken-threads {
-  right: 22%;
-  top: 74%;
+  right: 26%;
+  top: 82%;
 }
 
 .journey-scene-story .scene-chicken-clips {
-  right: 6%;
-  top: 80%;
+  right: 8%;
+  top: 86%;
 }
 
 .journey-scene-story .scene-chicken-photos {
-  right: 32%;
-  top: 66%;
+  right: 36%;
+  top: 76%;
 }
 
 .journey-scene-story .scene-chicken-receipts {
-  right: 12%;
-  top: 88%;
+  right: 14%;
+  top: 90%;
 }
 
 .journey-scene-arrival .scene-chicken-tabs {
@@ -3086,8 +3285,20 @@ pre {
 
 .ritual-transcript-status {
   margin: 0 0 0.8rem;
+  height: 1.35rem;
+  max-height: 1.35rem;
+  line-height: 1.35rem;
   color: var(--coop-brown-soft);
   font-size: 0.9rem;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: opacity 160ms var(--landing-motion-soft, ease);
+}
+
+.ritual-transcript-status.is-active {
+  opacity: 1;
 }
 
 .ritual-card-actions {
@@ -3427,7 +3638,11 @@ pre {
   .hero-copy {
     max-width: 100%;
     margin-top: 0;
-    padding: 0 0.25rem;
+    padding: 0.85rem 0.95rem 1rem;
+    background: linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(255, 250, 244, 0.78));
+    border-radius: 1.1rem;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
   }
 
   .hero-title-line-bottom {
@@ -3435,16 +3650,20 @@ pre {
   }
 
   .hero-cta-row {
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.5rem;
   }
 
   .hero-cta-row .button {
-    flex: 1 1 10rem;
+    flex: 1 1 auto;
+    width: 100%;
   }
 
-  .journey-scene-story .scene-chicken-signals:not(:hover):not(:focus-within) .thought-bubble {
-    opacity: 0;
-    transform: translateX(calc(-50% + var(--thought-bubble-offset-x))) scale(0.85);
+  .hero-install-cta--secondary {
+    font-size: 0.78rem;
+    padding: 0.55rem 0.85rem;
+    min-height: 2.6rem;
   }
 
   .hero-stage {

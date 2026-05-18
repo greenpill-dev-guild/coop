@@ -56,7 +56,7 @@ function detectInstallGuidance(
   if (isMobile && wasInstalled) {
     return {
       title: 'Open Coop',
-      description: 'Launch the installed receiver from this phone.',
+      description: 'Launch the installed field companion from this phone.',
       steps: [],
       primaryLabel: 'Open App',
       action: 'open-app',
@@ -65,8 +65,9 @@ function detectInstallGuidance(
 
   if (!isMobile) {
     return {
-      title: 'Install Coop on your phone',
-      description: 'Scan this code with your phone, then install from Safari or Chrome.',
+      title: 'Open Coop on your phone',
+      description:
+        "Coop's phone companion captures audio, photos, and files in the field. Pair it with your browser coop in seconds.",
       steps: [
         'Scan the QR code with your phone camera.',
         'Open the page in Safari on iPhone or Chrome on Android.',
@@ -80,7 +81,8 @@ function detectInstallGuidance(
   if (installPrompt && platform === 'android') {
     return {
       title: 'Install Coop on this phone',
-      description: 'Chrome can install Coop as a home-screen receiver.',
+      description:
+        "Install Coop's field companion so audio, photos, and files capture straight into your coop.",
       steps: [],
       primaryLabel: 'Install App',
       action: 'native-install',
@@ -92,8 +94,8 @@ function detectInstallGuidance(
     return {
       title: 'Install Coop on this iPhone',
       description: isSafari
-        ? 'Use Safari to add Coop to your Home Screen.'
-        : 'Open this page in Safari, then add Coop to your Home Screen.',
+        ? "Add Coop's field companion to your Home Screen so audio, photos, and files capture straight into your coop."
+        : "Coop's field companion installs from Safari on iPhone. Open this page in Safari and add it to your Home Screen.",
       steps: isSafari
         ? ['Tap Share in Safari.', 'Scroll down and tap Add to Home Screen.']
         : ['Copy or open this page in Safari.', 'Tap Share, then Add to Home Screen.'],
@@ -107,8 +109,8 @@ function detectInstallGuidance(
     return {
       title: 'Install Coop on this phone',
       description: isChrome
-        ? 'Use Chrome browser controls to install Coop.'
-        : 'Open this page in Chrome on Android to install Coop.',
+        ? "Install Coop's field companion so audio, photos, and files capture straight into your coop."
+        : "Coop's field companion installs from Chrome on Android. Open this page in Chrome and use Install app.",
       steps: isChrome
         ? ['Open the Chrome menu.', 'Tap Install app or Add to Home screen.']
         : ['Open this page in Chrome.', 'Use the Chrome menu, then tap Install app.'],
@@ -119,7 +121,8 @@ function detectInstallGuidance(
 
   return {
     title: 'Install Coop on your phone',
-    description: 'Open this page in Safari or Chrome, then use the browser install controls.',
+    description:
+      "Coop's field companion installs from your phone browser. Open this page on your phone to add it.",
     steps: ['Open this page in your phone browser.', 'Use Add to Home Screen or Install app.'],
     primaryLabel: 'Install App',
     action: 'manual-steps',
@@ -207,17 +210,24 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
       return undefined;
     }
 
-    if (!dialog.open && typeof dialog.showModal === 'function') {
-      dialog.showModal();
-    } else if (!dialog.open) {
+    // Use non-modal open so the wrapping overlay catches backdrop clicks and
+    // the dialog is centered by our overlay grid (not the browser top layer).
+    if (!dialog.open) {
       dialog.setAttribute('open', '');
     }
     closeButtonRef.current?.focus();
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setDialogMode(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
-      if (dialog.open && typeof dialog.close === 'function') {
-        dialog.close();
-      } else if (dialog.open) {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (dialog.open) {
         dialog.removeAttribute('open');
       }
     };
@@ -261,7 +271,15 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
       })}
 
       {dialogMode ? (
-        <div className="public-install-overlay" role="presentation">
+        <div
+          className="public-install-overlay"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setDialogMode(null);
+            }
+          }}
+        >
           <dialog
             ref={dialogRef}
             aria-modal="true"
@@ -272,6 +290,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
               event.preventDefault();
               setDialogMode(null);
             }}
+            onClick={(event) => event.stopPropagation()}
           >
             <button
               ref={closeButtonRef}
@@ -284,7 +303,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
               <span aria-hidden="true">x</span>
             </button>
             <div className="public-install-copy">
-              <p className="eyebrow">Phone handoff</p>
+              <p className="eyebrow">Phone field companion</p>
               <h2 id="public-install-title">{guidance.title}</h2>
               <p className="quiet-note">{guidance.description}</p>
             </div>
@@ -314,7 +333,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
             )}
 
             <a className="button button-secondary public-install-url" href={appLaunchUrl}>
-              Open Coop Receiver
+              Open Coop on the phone
             </a>
           </dialog>
         </div>

@@ -1,38 +1,50 @@
 {
   "en": {
     "hero": {
-      "title1": "Chicken or egg? Neither —",
-      "title2": "you need a coop first.",
-      "subtitle": "Turn scattered knowledge into shared opportunity.",
-      "curateCta": "Curate your coop",
+      "title1": "No more",
+      "title2": "chickens loose.",
+      "subtitle": "Browser-first, local-first coordination for community organizers — capture field signal, refine on your device, review together before anything leaves.",
+      "curateCta": "Launch your coop",
       "howItWorksCta": "See how it works",
       "scrollHint": "Scroll down",
       "logoLabel": "Coop landing page"
     },
     "how_works": {
       "heading": "How Coop works",
-      "description": "Coop takes your scattered tabs, meeting notes, and field signals — refines them locally into clear opportunities.",
+      "description": "Browser tabs, field photos, voice memos, and notes land in one inbox. A local agent refines what you captured into clear opportunities. The group reviews before anything becomes shared coop memory.",
       "card1": {
-        "title": "Your data stays yours",
-        "detail": "Everything you capture stays on your device until your group decides what to share."
+        "title": "Capture from anywhere",
+        "detail": "Browser tabs in the extension. Audio, photos, files, and links from the phone field companion."
       },
       "card2": {
-        "title": "One place for everything",
-        "detail": "Tabs, notes, files, and call fragments land together before they scatter."
+        "title": "Refine on your device",
+        "detail": "A local agent reads what you captured — text, images, voice — and surfaces clear opportunities. No cloud round-trip."
       },
       "card3": {
-        "title": "Shared review loop",
-        "detail": "One clear queue for the group instead of hunting across chats, browsers, and memory."
+        "title": "Review before sharing",
+        "detail": "Members read the candidates in the Chickens queue and decide what becomes shared coop memory."
       },
       "card4": {
-        "title": "Proof that lasts",
-        "detail": "Progress and outcomes stay close to the work so updates are easier to revisit and trust."
+        "title": "Share with proof",
+        "detail": "Decisions, evidence, and outcomes stay close to the work, so updates and grant follow-ups stay trustworthy."
       }
     },
+    "trust": {
+      "heading": "Made for community organizing",
+      "tagline": "Runs in your browser. Field signal stays local until you publish.",
+      "points": {
+        "onDevice": "On-device AI",
+        "multimodal": "Multimodal capture",
+        "offline": "Offline-capable",
+        "noCloud": "No cloud round-trip",
+        "openSource": "Open source"
+      },
+      "demoCta": "See the 90-second demo"
+    },
     "ritual": {
-      "heading": "Curate your coop",
-      "description": "Open each card, capture what matters, and walk away with a clean setup packet.",
-      "localBadgeLabel": "All data stays on this device",
+      "heading": "Shape your community coop",
+      "description": "Open each card and name how your community handles knowledge, funding, governance, and evidence today. Walk away with a setup packet you can paste into your first coop.",
+      "localBadgeLabel": "Field signal stays on this device",
       "resetButton": "Reset ritual",
       "progressPartial": "of 4 lenses complete. Open the next card when you are ready.",
       "progressStart": "Open a card to start capturing.",
@@ -48,9 +60,9 @@
       "readyMessage": "This lens is already ready to carry into the packet.",
       "captureMessage": "Capture the signal, then mark this card complete.",
       "coopNameLabel": "Coop name",
-      "coopNamePlaceholder": "Pocket Coop",
-      "purposeLabel": "What opportunity are you organizing around?",
-      "purposePlaceholder": "Turn scattered knowledge into clearer coordination for the group.",
+      "coopNamePlaceholder": "Community Garden Grants",
+      "purposeLabel": "What opportunity is your community organizing around?",
+      "purposePlaceholder": "Coordinate community stewardship, evidence, and shared funding context.",
       "sharedNotesLabel": "Shared notes",
       "sharedNotesPlaceholder": "Paste meeting notes or additional context here.",
       "setupPacketReady": "Your setup packet is ready",
@@ -76,33 +88,25 @@
       "step3": "Publish together"
     },
     "why_build": {
-      "heading": "Why we build",
-      "description": "Scattered knowledge becomes shared action when the right group has a clear place to work from.",
+      "heading": "Why we're building Coop",
+      "description": "Climate adaptation, grant-making, and mutual-aid work happen in the field — across browser tabs, phone notes, voice memos, and the gaps between meetings. We're building Coop so the groups doing that work don't have to surrender their raw context to a platform to coordinate around it.",
       "builtByTeam": "Built by the Coop team"
     },
     "audience": {
       "persona": "Personal",
       "family": "Family",
       "friends": "Friends",
-      "community": "Community",
-      "personaTone": "Personal focus and reflection",
-      "familyTone": "Household memory and support",
-      "friendsTone": "Shared momentum with trusted peers",
-      "communityTone": "Collective coordination and stewardship"
+      "community": "Community"
     },
     "chickens": {
       "tabs": "Tabs",
       "notes": "Notes",
-      "ideas": "Ideas",
       "signals": "Signals",
       "links": "Links",
       "drafts": "Drafts",
       "threads": "Threads",
-      "clips": "Clips",
-      "bookmarks": "Bookmarks",
       "photos": "Photos",
-      "voiceMemos": "Voice Memos",
-      "receipts": "Receipts"
+      "voiceMemos": "Voice Memos"
     },
     "chickenThoughts": {
       "tabs": {
@@ -112,10 +116,6 @@
       "notes": {
         "kicker": "Field note",
         "text": "Member energy is shifting this week."
-      },
-      "ideas": {
-        "kicker": "Loose thread",
-        "text": "Reconnect this after the meeting."
       },
       "signals": {
         "kicker": "Call clip",
@@ -133,25 +133,13 @@
         "kicker": "Thread",
         "text": "Conversation fragments from last week."
       },
-      "clips": {
-        "kicker": "Clip",
-        "text": "Audio moment worth revisiting."
-      },
-      "bookmarks": {
-        "kicker": "Bookmark",
-        "text": "This link keeps coming back up."
-      },
       "photos": {
-        "kicker": "Photo",
-        "text": "Captured in the field last Tuesday."
+        "kicker": "Field photo",
+        "text": "Captured at the garden last Tuesday."
       },
       "voiceMemos": {
         "kicker": "Voice memo",
         "text": "Quick capture from the walk home."
-      },
-      "receipts": {
-        "kicker": "Receipt",
-        "text": "Proof of the contribution last month."
       }
     }
   },
@@ -159,36 +147,48 @@
     "hero": {
       "title1": "Sem mais",
       "title2": "galinhas soltas.",
-      "subtitle": "Transforme conhecimento disperso em oportunidade compartilhada.",
-      "curateCta": "Organizar meu coop",
+      "subtitle": "Coordenação browser-first e local-first para organizadores comunitários — capture sinais de campo, refine no seu dispositivo, revise em conjunto antes que algo saia.",
+      "curateCta": "Lance o seu coop",
       "howItWorksCta": "Ver como funciona",
       "scrollHint": "Rolar para baixo",
       "logoLabel": "Página inicial do Coop"
     },
     "how_works": {
       "heading": "Como o Coop funciona",
-      "description": "Coop pega suas abas dispersas, notas de reuniões e sinais do campo — refina-os localmente em oportunidades claras.",
+      "description": "Abas do navegador, fotos de campo, memos de voz e notas chegam a uma única caixa de entrada. Um agente local refina o que você capturou em oportunidades claras. O grupo revisa antes de qualquer coisa virar memória compartilhada do coop.",
       "card1": {
-        "title": "Seus dados continuam sendo seus",
-        "detail": "Tudo que você captura fica no seu dispositivo até que seu grupo decida o que compartilhar."
+        "title": "Capture de qualquer lugar",
+        "detail": "Abas do navegador na extensão. Áudio, fotos, arquivos e links pelo companheiro de campo no telefone."
       },
       "card2": {
-        "title": "Um lugar para tudo",
-        "detail": "Abas, notas, arquivos e fragmentos de chamadas chegam juntos antes de se dispersarem."
+        "title": "Refine no seu dispositivo",
+        "detail": "Um agente local lê o que você capturou — texto, imagens, voz — e revela oportunidades claras. Sem ida e volta à nuvem."
       },
       "card3": {
-        "title": "Loop de revisão compartilhada",
-        "detail": "Uma fila clara para o grupo em vez de procurar em chats, navegadores e memória."
+        "title": "Revise antes de compartilhar",
+        "detail": "Os membros leem os candidatos na fila Chickens e decidem o que se torna memória compartilhada do coop."
       },
       "card4": {
-        "title": "Prova que dura",
-        "detail": "Progresso e resultados ficam perto do trabalho para que as atualizações sejam mais fáceis de revisar e confiar."
+        "title": "Compartilhe com prova",
+        "detail": "Decisões, evidências e resultados ficam próximos do trabalho, para que atualizações e acompanhamentos de subvenção permaneçam confiáveis."
       }
     },
+    "trust": {
+      "heading": "Feito para a organização comunitária",
+      "tagline": "Roda no seu navegador. O sinal de campo fica local até você publicar.",
+      "points": {
+        "onDevice": "IA no dispositivo",
+        "multimodal": "Captura multimodal",
+        "offline": "Funciona offline",
+        "noCloud": "Sem ida à nuvem",
+        "openSource": "Código aberto"
+      },
+      "demoCta": "Veja a demo de 90 s"
+    },
     "ritual": {
-      "heading": "Organize seu coop",
-      "description": "Abra cada card, capture o que importa e saia com um pacote de configuração limpo.",
-      "localBadgeLabel": "Todos os dados permanecem neste dispositivo",
+      "heading": "Molde o seu coop comunitário",
+      "description": "Abra cada card e nomeie como sua comunidade lida hoje com conhecimento, financiamento, governança e evidências. Saia com um pacote de configuração para colar no seu primeiro coop.",
+      "localBadgeLabel": "O sinal de campo permanece neste dispositivo",
       "resetButton": "Redefinir ritual",
       "progressPartial": "de 4 lentes concluídas. Abra o próximo card quando estiver pronto.",
       "progressStart": "Abra um card para começar a capturar.",
@@ -204,9 +204,9 @@
       "readyMessage": "Esta lente já está pronta para ser incluída no pacote.",
       "captureMessage": "Capture o sinal e marque este card como concluído.",
       "coopNameLabel": "Nome do coop",
-      "coopNamePlaceholder": "Coop de Bolso",
-      "purposeLabel": "Qual oportunidade você está organizando?",
-      "purposePlaceholder": "Transformar conhecimento disperso em uma coordenação mais clara para o grupo.",
+      "coopNamePlaceholder": "Subvenções do Horta Comunitária",
+      "purposeLabel": "Em torno de qual oportunidade sua comunidade está se organizando?",
+      "purposePlaceholder": "Coordene a gestão comunitária, evidências e contexto de financiamento compartilhado.",
       "sharedNotesLabel": "Notas compartilhadas",
       "sharedNotesPlaceholder": "Cole notas de reunião ou contexto adicional aqui.",
       "setupPacketReady": "Seu pacote de configuração está pronto",
@@ -220,7 +220,7 @@
       "notesSrLabel": "notas",
       "notesPlaceholder": "Cole notas ou deixe a transcrição ao vivo preencher isso.",
       "closeCardLabel": "Fechar card",
-      "transcriptPlaceholder": "Use transcrição ao vivo se este navegador a suportá-la, ou digite diretamente no card. Tudo fica salvo neste dispositivo.",
+      "transcriptPlaceholder": "Use transcrição ao vivo se este navegador a suportar, ou digite diretamente no card. Tudo fica salvo neste dispositivo.",
       "closeCardBackdrop": "Fechar plano de fundo do card",
       "completeCheckmark": "Completo"
     },
@@ -232,46 +232,34 @@
       "step3": "Publique juntos"
     },
     "why_build": {
-      "heading": "Por que construímos",
-      "description": "Conhecimento disperso se torna ação compartilhada quando o grupo certo tem um lugar claro para trabalhar.",
+      "heading": "Por que estamos construindo Coop",
+      "description": "Adaptação climática, captação de recursos e ajuda mútua acontecem no campo — entre abas do navegador, notas no telefone, memos de voz e os intervalos entre reuniões. Estamos construindo Coop para que os grupos que fazem esse trabalho não precisem entregar seu contexto bruto a uma plataforma para se coordenar.",
       "builtByTeam": "Construído pelo time Coop"
     },
     "audience": {
       "persona": "Pessoal",
       "family": "Família",
       "friends": "Amigos",
-      "community": "Comunidade",
-      "personaTone": "Foco pessoal e reflexão",
-      "familyTone": "Memória familiar e apoio",
-      "friendsTone": "Momentum compartilhado com pares confiáveis",
-      "communityTone": "Coordenação coletiva e administração"
+      "community": "Comunidade"
     },
     "chickens": {
       "tabs": "Abas",
       "notes": "Notas",
-      "ideas": "Ideias",
       "signals": "Sinais",
       "links": "Links",
       "drafts": "Rascunhos",
       "threads": "Tópicos",
-      "clips": "Clipes",
-      "bookmarks": "Favoritos",
       "photos": "Fotos",
-      "voiceMemos": "Notas de Voz",
-      "receipts": "Recibos"
+      "voiceMemos": "Notas de voz"
     },
     "chickenThoughts": {
       "tabs": {
         "kicker": "Aba do navegador",
-        "text": "Este lead de concessão vale o acompanhamento."
+        "text": "Este lead de subvenção vale o acompanhamento."
       },
       "notes": {
         "kicker": "Nota de campo",
         "text": "A energia dos membros está mudando esta semana."
-      },
-      "ideas": {
-        "kicker": "Fio solto",
-        "text": "Reconecte isto após a reunião."
       },
       "signals": {
         "kicker": "Clipe de chamada",
@@ -289,25 +277,13 @@
         "kicker": "Tópico",
         "text": "Fragmentos de conversa da semana passada."
       },
-      "clips": {
-        "kicker": "Clipe",
-        "text": "Momento de áudio que vale a pena revisitar."
-      },
-      "bookmarks": {
-        "kicker": "Favorito",
-        "text": "Este link continua aparecendo."
-      },
       "photos": {
-        "kicker": "Foto",
-        "text": "Capturada no campo terça-feira passada."
+        "kicker": "Foto de campo",
+        "text": "Capturada na horta terça-feira passada."
       },
       "voiceMemos": {
         "kicker": "Nota de voz",
         "text": "Captura rápida do caminho de volta para casa."
-      },
-      "receipts": {
-        "kicker": "Recibo",
-        "text": "Prova da contribuição do mês passado."
       }
     }
   },
@@ -315,33 +291,48 @@
     "hero": {
       "title1": "Sin más",
       "title2": "gallinas sueltas.",
-      "subtitle": "Convierte conocimiento disperso en oportunidad compartida.",
-      "scrollHint": "Desplazarse hacia abajo"
+      "subtitle": "Coordinación browser-first y local-first para organizadores comunitarios — captura señales del campo, refina en tu dispositivo, revisa en conjunto antes de que algo salga.",
+      "curateCta": "Lanza tu coop",
+      "howItWorksCta": "Ver cómo funciona",
+      "scrollHint": "Desplazarse hacia abajo",
+      "logoLabel": "Página inicial de Coop"
     },
     "how_works": {
       "heading": "Cómo funciona Coop",
-      "description": "Coop toma tus pestañas dispersas, notas de reuniones y señales de campo — las refina localmente en oportunidades claras.",
+      "description": "Pestañas del navegador, fotos del campo, memos de voz y notas llegan a una sola bandeja. Un agente local refina lo que capturaste en oportunidades claras. El grupo revisa antes de que algo se vuelva memoria compartida del coop.",
       "card1": {
-        "title": "Tus datos siguen siendo tuyos",
-        "detail": "Todo lo que capturas permanece en tu dispositivo hasta que tu grupo decida qué compartir."
+        "title": "Captura desde cualquier lugar",
+        "detail": "Pestañas del navegador en la extensión. Audio, fotos, archivos y enlaces desde el compañero de campo del teléfono."
       },
       "card2": {
-        "title": "Un lugar para todo",
-        "detail": "Las pestañas, notas, archivos y fragmentos de llamadas llegan juntos antes de dispersarse."
+        "title": "Refina en tu dispositivo",
+        "detail": "Un agente local lee lo que capturaste — texto, imágenes, voz — y revela oportunidades claras. Sin ida y vuelta a la nube."
       },
       "card3": {
-        "title": "Bucle de revisión compartida",
-        "detail": "Una cola clara para el grupo en lugar de buscar en chats, navegadores y memoria."
+        "title": "Revisa antes de compartir",
+        "detail": "Los miembros leen los candidatos en la cola Chickens y deciden qué se convierte en memoria compartida del coop."
       },
       "card4": {
-        "title": "Prueba que persiste",
-        "detail": "El progreso y los resultados se mantienen cerca del trabajo para que las actualizaciones sean más fáciles de revisar y confiar."
+        "title": "Comparte con prueba",
+        "detail": "Las decisiones, evidencias y resultados se mantienen cerca del trabajo, para que las actualizaciones y los seguimientos de subvenciones sigan siendo confiables."
       }
     },
+    "trust": {
+      "heading": "Hecho para la organización comunitaria",
+      "tagline": "Funciona en tu navegador. La señal de campo permanece local hasta que publicas.",
+      "points": {
+        "onDevice": "IA en el dispositivo",
+        "multimodal": "Captura multimodal",
+        "offline": "Funciona sin conexión",
+        "noCloud": "Sin ida a la nube",
+        "openSource": "Código abierto"
+      },
+      "demoCta": "Mira la demo de 90 s"
+    },
     "ritual": {
-      "heading": "Organiza tu coop",
-      "description": "Abre cada tarjeta, captura lo que importa y sal con un paquete de configuración limpio.",
-      "localBadgeLabel": "Todos los datos permanecen en este dispositivo",
+      "heading": "Da forma a tu coop comunitario",
+      "description": "Abre cada tarjeta y nombra cómo tu comunidad maneja hoy el conocimiento, la financiación, la gobernanza y la evidencia. Sal con un paquete de configuración para pegar en tu primer coop.",
+      "localBadgeLabel": "La señal de campo permanece en este dispositivo",
       "resetButton": "Reiniciar ritual",
       "progressPartial": "de 4 lentes completadas. Abre la siguiente tarjeta cuando estés listo.",
       "progressStart": "Abre una tarjeta para comenzar a capturar.",
@@ -357,9 +348,9 @@
       "readyMessage": "Esta lente ya está lista para ser incluida en el paquete.",
       "captureMessage": "Captura la señal y marca esta tarjeta como completada.",
       "coopNameLabel": "Nombre del coop",
-      "coopNamePlaceholder": "Coop de Bolsillo",
-      "purposeLabel": "¿Qué oportunidad estás organizando?",
-      "purposePlaceholder": "Transformar conocimiento disperso en una coordinación más clara para el grupo.",
+      "coopNamePlaceholder": "Subvenciones del Huerto Comunitario",
+      "purposeLabel": "¿En torno a qué oportunidad se está organizando tu comunidad?",
+      "purposePlaceholder": "Coordina la gestión comunitaria, evidencias y contexto de financiación compartida.",
       "sharedNotesLabel": "Notas compartidas",
       "sharedNotesPlaceholder": "Pega notas de reunión o contexto adicional aquí.",
       "setupPacketReady": "Tu paquete de configuración está listo",
@@ -385,33 +376,25 @@
       "step3": "Publica juntos"
     },
     "why_build": {
-      "heading": "Por qué construimos",
-      "description": "El conocimiento disperso se convierte en acción compartida cuando el grupo adecuado tiene un lugar claro para trabajar.",
+      "heading": "Por qué construimos Coop",
+      "description": "La adaptación climática, las subvenciones y el apoyo mutuo ocurren en el campo — entre pestañas del navegador, notas en el teléfono, memorias de voz y los espacios entre reuniones. Construimos Coop para que los grupos que hacen ese trabajo no tengan que entregar su contexto bruto a una plataforma para coordinarse.",
       "builtByTeam": "Construido por el equipo Coop"
     },
     "audience": {
       "persona": "Personal",
       "family": "Familia",
       "friends": "Amigos",
-      "community": "Comunidad",
-      "personaTone": "Enfoque personal y reflexión",
-      "familyTone": "Memoria familiar y apoyo",
-      "friendsTone": "Impulso compartido con compañeros de confianza",
-      "communityTone": "Coordinación colectiva y administración"
+      "community": "Comunidad"
     },
     "chickens": {
       "tabs": "Pestañas",
       "notes": "Notas",
-      "ideas": "Ideas",
       "signals": "Señales",
       "links": "Enlaces",
       "drafts": "Borradores",
       "threads": "Conversaciones",
-      "clips": "Clips",
-      "bookmarks": "Marcadores",
       "photos": "Fotos",
-      "voiceMemos": "Notas de Voz",
-      "receipts": "Recibos"
+      "voiceMemos": "Notas de voz"
     },
     "chickenThoughts": {
       "tabs": {
@@ -421,10 +404,6 @@
       "notes": {
         "kicker": "Nota de campo",
         "text": "La energía de los miembros está cambiando esta semana."
-      },
-      "ideas": {
-        "kicker": "Hilo suelto",
-        "text": "Reconecta esto después de la reunión."
       },
       "signals": {
         "kicker": "Clip de llamada",
@@ -442,25 +421,13 @@
         "kicker": "Conversación",
         "text": "Fragmentos de conversación de la semana pasada."
       },
-      "clips": {
-        "kicker": "Clip",
-        "text": "Momento de audio que vale la pena revisar."
-      },
-      "bookmarks": {
-        "kicker": "Marcador",
-        "text": "Este enlace sigue apareciendo."
-      },
       "photos": {
-        "kicker": "Foto",
-        "text": "Capturada en el campo el martes pasado."
+        "kicker": "Foto de campo",
+        "text": "Capturada en el huerto el martes pasado."
       },
       "voiceMemos": {
         "kicker": "Nota de voz",
         "text": "Captura rápida del camino a casa."
-      },
-      "receipts": {
-        "kicker": "Recibo",
-        "text": "Prueba de la contribución del mes pasado."
       }
     }
   },
@@ -468,34 +435,48 @@
     "hero": {
       "title1": "不再有",
       "title2": "松散的鸡。",
-      "subtitle": "把分散的知识转化为共享机会。",
+      "subtitle": "为社区组织者打造的浏览器优先、本地优先的协调工具——捕获现场信号，在您的设备上精炼，发布前共同审核。",
+      "curateCta": "启动您的 Coop",
+      "howItWorksCta": "查看运作方式",
       "scrollHint": "向下滚动",
       "logoLabel": "Coop 着陆页"
     },
     "how_works": {
       "heading": "Coop 如何运作",
-      "description": "Coop 收集您分散的标签页、会议笔记和现场信号 — 将它们本地精炼成清晰的机会。",
+      "description": "浏览器标签、现场照片、语音备忘和笔记汇集到同一收件箱。本地代理把您捕获的内容精炼成清晰的机会。在任何内容成为共享的 Coop 记忆之前，群组会先审核。",
       "card1": {
-        "title": "您的数据仍然是您的",
-        "detail": "您捕获的所有内容都保存在您的设备上，直到您的小组决定要分享什么。"
+        "title": "随处捕获",
+        "detail": "扩展中的浏览器标签。手机现场伴侣捕获音频、照片、文件和链接。"
       },
       "card2": {
-        "title": "一个统一的地方",
-        "detail": "标签页、笔记、文件和通话片段聚集在一起，不再分散。"
+        "title": "在您的设备上精炼",
+        "detail": "本地代理读取您捕获的内容——文字、图像、语音——并展现清晰的机会。无需云端往返。"
       },
       "card3": {
-        "title": "共享审查循环",
-        "detail": "为团队提供一个清晰的队列，而不是在聊天、浏览器和记忆中搜索。"
+        "title": "共享前先审核",
+        "detail": "成员在 Chickens 队列中阅读候选内容，决定哪些会成为共享的 coop 记忆。"
       },
       "card4": {
-        "title": "持久的证明",
-        "detail": "进度和成果紧跟工作，使更新更容易审查和信任。"
+        "title": "带着证据共享",
+        "detail": "决策、证据与成果紧跟工作进展，让更新与资助后续保持可信。"
       }
     },
+    "trust": {
+      "heading": "为社区组织而生",
+      "tagline": "在您的浏览器中运行。现场信号在您发布之前保持本地。",
+      "points": {
+        "onDevice": "设备端 AI",
+        "multimodal": "多模态捕获",
+        "offline": "离线可用",
+        "noCloud": "无云端往返",
+        "openSource": "开源"
+      },
+      "demoCta": "观看 90 秒演示"
+    },
     "ritual": {
-      "heading": "策划您的 Coop",
-      "description": "打开每张卡片，捕获重要内容，获得一个清晰的设置包。",
-      "localBadgeLabel": "所有数据保留在此设备上",
+      "heading": "塑造您的社区 Coop",
+      "description": "打开每张卡片，描述您的社区今天如何处理知识、资金、治理和证据。带走一份设置包，可粘贴到您的第一个 coop。",
+      "localBadgeLabel": "现场信号保留在此设备上",
       "resetButton": "重置仪式",
       "progressPartial": "个镜头已完成。准备好时打开下一张卡片。",
       "progressStart": "打开一张卡片开始捕获。",
@@ -511,9 +492,9 @@
       "readyMessage": "此镜头已准备好纳入数据包。",
       "captureMessage": "捕获信号，然后标记此卡片已完成。",
       "coopNameLabel": "Coop 名称",
-      "coopNamePlaceholder": "口袋 Coop",
-      "purposeLabel": "您在组织什么机会？",
-      "purposePlaceholder": "将分散的知识转化为群组更清晰的协调。",
+      "coopNamePlaceholder": "社区菜园资助",
+      "purposeLabel": "您的社区正在围绕哪种机会进行组织？",
+      "purposePlaceholder": "协调社区管理、证据和共享的资助情境。",
       "sharedNotesLabel": "共享笔记",
       "sharedNotesPlaceholder": "在此粘贴会议笔记或额外背景。",
       "setupPacketReady": "您的设置包已准备好",
@@ -533,39 +514,31 @@
     },
     "extension": {
       "heading": "认识扩展程序",
-      "description": "您的浏览器成为您的捕获站。高亮、剪切和保存 — 无需分心。",
+      "description": "您的浏览器成为您的捕获站。高亮、剪切和保存——无需分心。",
       "step1": "快速捕获",
       "step2": "审查和优化",
       "step3": "一起发布"
     },
     "why_build": {
-      "heading": "我们为什么构建",
-      "description": "当合适的小组有一个清晰的工作地方时，分散的知识变成共享的行动。",
+      "heading": "我们为什么在构建 Coop",
+      "description": "气候适应、资助和互助工作发生在现场——在浏览器标签、手机笔记、语音备忘和会议之间的空隙里。我们正在构建 Coop，让做这些工作的群体无需将原始情境交给某个平台才能协作。",
       "builtByTeam": "由 Coop 团队构建"
     },
     "audience": {
       "persona": "个人",
       "family": "家庭",
       "friends": "朋友",
-      "community": "社区",
-      "personaTone": "个人专注和反思",
-      "familyTone": "家庭记忆和支持",
-      "friendsTone": "与信任的同龄人共享动力",
-      "communityTone": "集体协调和管理"
+      "community": "社区"
     },
     "chickens": {
       "tabs": "标签页",
       "notes": "笔记",
-      "ideas": "想法",
       "signals": "信号",
       "links": "链接",
       "drafts": "草稿",
       "threads": "讨论串",
-      "clips": "片段",
-      "bookmarks": "书签",
       "photos": "照片",
-      "voiceMemos": "语音备忘录",
-      "receipts": "收据"
+      "voiceMemos": "语音备忘录"
     },
     "chickenThoughts": {
       "tabs": {
@@ -575,10 +548,6 @@
       "notes": {
         "kicker": "现场笔记",
         "text": "成员的能量这周在转变。"
-      },
-      "ideas": {
-        "kicker": "松散的线索",
-        "text": "会议后重新联系。"
       },
       "signals": {
         "kicker": "通话片段",
@@ -596,25 +565,13 @@
         "kicker": "讨论串",
         "text": "上周的对话片段。"
       },
-      "clips": {
-        "kicker": "片段",
-        "text": "值得重新访问的音频时刻。"
-      },
-      "bookmarks": {
-        "kicker": "书签",
-        "text": "这个链接一直在出现。"
-      },
       "photos": {
-        "kicker": "照片",
-        "text": "上周二在现场拍摄。"
+        "kicker": "现场照片",
+        "text": "上周二在菜园拍摄。"
       },
       "voiceMemos": {
         "kicker": "语音备忘录",
         "text": "从回家的路上快速录制。"
-      },
-      "receipts": {
-        "kicker": "收据",
-        "text": "上月贡献的证明。"
       }
     }
   },
@@ -622,34 +579,48 @@
     "hero": {
       "title1": "Plus de",
       "title2": "poules en fuite.",
-      "subtitle": "Transformez les savoirs dispersés en opportunité partagée.",
+      "subtitle": "Coordination axée navigateur et local-first pour les organisateurs communautaires — capturez le signal de terrain, affinez sur votre appareil, examinez ensemble avant toute publication.",
+      "curateCta": "Lancez votre coop",
+      "howItWorksCta": "Voir comment ça marche",
       "scrollHint": "Faire défiler vers le bas",
       "logoLabel": "Page d'accueil de Coop"
     },
     "how_works": {
       "heading": "Comment fonctionne Coop",
-      "description": "Coop récupère vos onglets dispersés, vos notes de réunion et vos signaux de terrain — les affine localement en opportunités claires.",
+      "description": "Onglets de navigateur, photos de terrain, mémos vocaux et notes arrivent dans une seule boîte. Un agent local affine ce que vous avez capturé en opportunités claires. Le groupe examine avant qu'une chose ne devienne mémoire partagée du coop.",
       "card1": {
-        "title": "Vos données restent les vôtres",
-        "detail": "Tout ce que vous capturez reste sur votre appareil jusqu'à ce que votre groupe décide de partager."
+        "title": "Capturez de partout",
+        "detail": "Onglets du navigateur dans l'extension. Audio, photos, fichiers et liens depuis le compagnon de terrain téléphone."
       },
       "card2": {
-        "title": "Un seul endroit pour tout",
-        "detail": "Les onglets, les notes, les fichiers et les fragments d'appels arrivent ensemble avant de se disperser."
+        "title": "Affinez sur votre appareil",
+        "detail": "Un agent local lit ce que vous avez capturé — texte, images, voix — et fait émerger des opportunités claires. Aucun aller-retour cloud."
       },
       "card3": {
-        "title": "Boucle d'examen partagée",
-        "detail": "Une file d'attente claire pour le groupe au lieu de chercher dans les chats, les navigateurs et la mémoire."
+        "title": "Examinez avant de partager",
+        "detail": "Les membres lisent les candidats dans la file Chickens et décident ce qui devient mémoire partagée du coop."
       },
       "card4": {
-        "title": "Preuve qui persiste",
-        "detail": "Les progrès et les résultats restent près du travail pour que les mises à jour soient plus faciles à examiner et à approuver."
+        "title": "Partagez avec preuve",
+        "detail": "Décisions, preuves et résultats restent proches du travail, pour que les mises à jour et les suivis de subvention restent fiables."
       }
     },
+    "trust": {
+      "heading": "Conçu pour l'organisation communautaire",
+      "tagline": "S'exécute dans votre navigateur. Le signal de terrain reste local jusqu'à publication.",
+      "points": {
+        "onDevice": "IA sur l'appareil",
+        "multimodal": "Capture multimodale",
+        "offline": "Fonctionne hors ligne",
+        "noCloud": "Sans aller-retour cloud",
+        "openSource": "Open source"
+      },
+      "demoCta": "Voir la démo de 90 s"
+    },
     "ritual": {
-      "heading": "Organisez votre coop",
-      "description": "Ouvrez chaque carte, capturez ce qui compte et obtenez un paquet de configuration propre.",
-      "localBadgeLabel": "Toutes les données restent sur cet appareil",
+      "heading": "Façonnez votre coop communautaire",
+      "description": "Ouvrez chaque carte et nommez comment votre communauté gère aujourd'hui le savoir, le financement, la gouvernance et les preuves. Repartez avec un paquet de configuration à coller dans votre premier coop.",
+      "localBadgeLabel": "Le signal de terrain reste sur cet appareil",
       "resetButton": "Réinitialiser le rituel",
       "progressPartial": "lentilles complétées. Ouvrez la carte suivante quand vous êtes prêt.",
       "progressStart": "Ouvrez une carte pour commencer à capturer.",
@@ -665,9 +636,9 @@
       "readyMessage": "Cette lentille est déjà prête à être incluse dans le paquet.",
       "captureMessage": "Capturez le signal et marquez cette carte comme terminée.",
       "coopNameLabel": "Nom du coop",
-      "coopNamePlaceholder": "Coop de poche",
-      "purposeLabel": "Quelle opportunité organisez-vous?",
-      "purposePlaceholder": "Transformer la connaissance dispersée en une coordination plus claire pour le groupe.",
+      "coopNamePlaceholder": "Subventions Jardin Communautaire",
+      "purposeLabel": "Autour de quelle opportunité votre communauté s'organise-t-elle ?",
+      "purposePlaceholder": "Coordonnez la gestion communautaire, les preuves et le contexte de financement partagé.",
       "sharedNotesLabel": "Notes partagées",
       "sharedNotesPlaceholder": "Collez les notes de réunion ou le contexte supplémentaire ici.",
       "setupPacketReady": "Votre paquet de configuration est prêt",
@@ -693,33 +664,25 @@
       "step3": "Publiez ensemble"
     },
     "why_build": {
-      "heading": "Pourquoi nous construisons",
-      "description": "La connaissance dispersée devient une action partagée lorsque le bon groupe a un endroit clair pour travailler.",
+      "heading": "Pourquoi nous construisons Coop",
+      "description": "L'adaptation climatique, la recherche de subventions et l'entraide se font sur le terrain — à travers les onglets du navigateur, les notes téléphoniques, les mémos vocaux et les interstices entre les réunions. Nous construisons Coop pour que les groupes qui font ce travail n'aient pas à céder leur contexte brut à une plateforme pour se coordonner.",
       "builtByTeam": "Construit par l'équipe Coop"
     },
     "audience": {
       "persona": "Personnel",
       "family": "Famille",
       "friends": "Amis",
-      "community": "Communauté",
-      "personaTone": "Focus personnel et réflexion",
-      "familyTone": "Mémoire familiale et soutien",
-      "friendsTone": "Élan partagé avec des pairs de confiance",
-      "communityTone": "Coordination collective et gouvernance"
+      "community": "Communauté"
     },
     "chickens": {
       "tabs": "Onglets",
       "notes": "Notes",
-      "ideas": "Idées",
       "signals": "Signaux",
       "links": "Liens",
       "drafts": "Brouillons",
       "threads": "Discussions",
-      "clips": "Extraits",
-      "bookmarks": "Signets",
       "photos": "Photos",
-      "voiceMemos": "Mémos vocaux",
-      "receipts": "Reçus"
+      "voiceMemos": "Mémos vocaux"
     },
     "chickenThoughts": {
       "tabs": {
@@ -729,10 +692,6 @@
       "notes": {
         "kicker": "Note de terrain",
         "text": "L'énergie des membres change cette semaine."
-      },
-      "ideas": {
-        "kicker": "Fil lâche",
-        "text": "Reconnecter ceci après la réunion."
       },
       "signals": {
         "kicker": "Extrait d'appel",
@@ -750,25 +709,13 @@
         "kicker": "Discussion",
         "text": "Fragments de conversation de la semaine dernière."
       },
-      "clips": {
-        "kicker": "Extrait",
-        "text": "Moment audio qui vaut la peine d'être révisé."
-      },
-      "bookmarks": {
-        "kicker": "Signet",
-        "text": "Ce lien continue à réapparaître."
-      },
       "photos": {
-        "kicker": "Photo",
-        "text": "Capturée sur le terrain mardi dernier."
+        "kicker": "Photo de terrain",
+        "text": "Capturée au jardin mardi dernier."
       },
       "voiceMemos": {
         "kicker": "Mémo vocal",
         "text": "Capture rapide sur le chemin du retour."
-      },
-      "receipts": {
-        "kicker": "Reçu",
-        "text": "Preuve de la contribution du mois dernier."
       }
     }
   }

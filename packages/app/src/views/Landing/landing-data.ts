@@ -24,7 +24,6 @@ export const defaultTranscriptStatus =
 export const journeyChickens: JourneyChicken[] = [
   { id: 'tabs', label: 'tabs', labelKey: 'chickens.tabs', facing: 'right' },
   { id: 'notes', label: 'notes', labelKey: 'chickens.notes', facing: 'right' },
-  { id: 'ideas', label: 'ideas', labelKey: 'chickens.ideas', facing: 'left' },
   { id: 'signals', label: 'signals', labelKey: 'chickens.signals', facing: 'left' },
   { id: 'links', label: 'links', labelKey: 'chickens.links', variant: 'young', facing: 'right' },
   { id: 'drafts', label: 'drafts', labelKey: 'chickens.drafts', variant: 'chick', facing: 'right' },
@@ -34,14 +33,6 @@ export const journeyChickens: JourneyChicken[] = [
     labelKey: 'chickens.threads',
     variant: 'young',
     facing: 'left',
-  },
-  { id: 'clips', label: 'clips', labelKey: 'chickens.clips', variant: 'chick', facing: 'left' },
-  {
-    id: 'bookmarks',
-    label: 'bookmarks',
-    labelKey: 'chickens.bookmarks',
-    facing: 'right',
-    color: 'russet',
   },
   {
     id: 'photos',
@@ -60,25 +51,12 @@ export const journeyChickens: JourneyChicken[] = [
     facing: 'right',
     color: 'plum',
   },
-  {
-    id: 'receipts',
-    label: 'receipts',
-    labelKey: 'chickens.receipts',
-    variant: 'young',
-    facing: 'left',
-    color: 'slate',
-  },
 ];
 
+// The landing page commits to the community framing for the Gemma 4 Good
+// Hackathon submission. Multi-audience preset support stays intact in
+// `@coop/shared/modules/coop/presets.ts` for other surfaces.
 export const audienceOptions: AudienceOption[] = [
-  { id: 'persona', label: 'Personal', accent: 'Ember', tone: 'Personal focus and reflection' },
-  { id: 'family', label: 'Family', accent: 'Meadow', tone: 'Household memory and support' },
-  {
-    id: 'friends',
-    label: 'Friends',
-    accent: 'Marigold',
-    tone: 'Shared momentum with trusted peers',
-  },
   {
     id: 'community',
     label: 'Community',
@@ -118,21 +96,24 @@ export const ritualCardMappings: RitualCardMapping[] = [
 
 export const howItWorksCards: StoryCard[] = [
   {
-    title: 'Your data stays yours',
-    detail: 'Everything you capture stays on your device until your group decides what to share.',
-  },
-  {
-    title: 'One place for everything',
-    detail: 'Tabs, notes, files, and call fragments land together before they scatter.',
-  },
-  {
-    title: 'Shared review loop',
-    detail: 'One clear queue for the group instead of hunting across chats, browsers, and memory.',
-  },
-  {
-    title: 'Proof that lasts',
+    title: 'Capture from anywhere',
     detail:
-      'Progress and outcomes stay close to the work so updates are easier to revisit and trust.',
+      'Browser tabs in the extension. Audio, photos, files, and links from the phone field companion.',
+  },
+  {
+    title: 'Refine on your device',
+    detail:
+      'A local agent reads what you captured — text, images, voice — and surfaces clear opportunities. No cloud round-trip.',
+  },
+  {
+    title: 'Review before sharing',
+    detail:
+      'Members read the candidates in the Chickens queue and decide what becomes shared coop memory.',
+  },
+  {
+    title: 'Share with proof',
+    detail:
+      'Decisions, evidence, and outcomes stay close to the work, so updates and grant follow-ups stay trustworthy.',
   },
 ];
 
@@ -141,7 +122,6 @@ export const teamMembers = ['Afolabi Aiyeloja', 'Luiz Fernando', 'Sofia Villarea
 export const arrivalChickenCommunities: Record<string, string> = {
   tabs: 'Coop',
   notes: 'Greenpill',
-  ideas: 'Greenpill Dev Guild',
   signals: 'ReFi DAO',
   links: 'Green Goods',
 };
@@ -166,13 +146,6 @@ export const storyFlightPaths: Record<
     { x: '6vw', y: '2.5vh', rotate: 4, scale: 0.98 },
     { x: '8vw', y: '5vh', rotate: -2, scale: 0.96 },
     { x: '10vw', y: '4vh', rotate: 0, scale: 0.94 },
-  ],
-  ideas: [
-    { x: '-1vw', y: '1vh', rotate: -6, scale: 1.0 },
-    { x: '-3.5vw', y: '4vh', rotate: 5, scale: 1.01 },
-    { x: '-6vw', y: '2.5vh', rotate: -4, scale: 0.98 },
-    { x: '-8vw', y: '5vh', rotate: 2, scale: 0.96 },
-    { x: '-10vw', y: '4vh', rotate: 0, scale: 0.94 },
   ],
   signals: [
     { x: '-1vw', y: '0vh', rotate: 6, scale: 1.0 },
@@ -202,20 +175,6 @@ export const storyFlightPaths: Record<
     { x: '-10vw', y: '-6vh', rotate: 2, scale: 0.94 },
     { x: '-12vw', y: '-5vh', rotate: 0, scale: 0.92 },
   ],
-  clips: [
-    { x: '0vw', y: '-1vh', rotate: 5, scale: 1.0 },
-    { x: '-2vw', y: '-3vh', rotate: -4, scale: 0.98 },
-    { x: '-4vw', y: '-5vh', rotate: 3, scale: 0.96 },
-    { x: '-6vw', y: '-4vh', rotate: -2, scale: 0.94 },
-    { x: '-7vw', y: '-6vh', rotate: 0, scale: 0.92 },
-  ],
-  bookmarks: [
-    { x: '-1vw', y: '0vh', rotate: -4, scale: 1.0 },
-    { x: '-3vw', y: '2vh', rotate: 3, scale: 1.01 },
-    { x: '-5vw', y: '1vh', rotate: -3, scale: 0.98 },
-    { x: '-7vw', y: '3vh', rotate: 2, scale: 0.96 },
-    { x: '-9vw', y: '2vh', rotate: 0, scale: 0.94 },
-  ],
   photos: [
     { x: '1vw', y: '0vh', rotate: 4, scale: 1.0 },
     { x: '3vw', y: '-2vh', rotate: -3, scale: 0.99 },
@@ -229,13 +188,6 @@ export const storyFlightPaths: Record<
     { x: '-4vw', y: '2vh', rotate: -2, scale: 0.97 },
     { x: '-5vw', y: '0vh', rotate: 2, scale: 0.95 },
     { x: '-6vw', y: '-2vh', rotate: 0, scale: 0.93 },
-  ],
-  receipts: [
-    { x: '0vw', y: '-1vh', rotate: 4, scale: 1.0 },
-    { x: '2vw', y: '1vh', rotate: -3, scale: 0.99 },
-    { x: '4vw', y: '-2vh', rotate: 3, scale: 0.97 },
-    { x: '6vw', y: '0vh', rotate: -2, scale: 0.95 },
-    { x: '8vw', y: '1vh', rotate: 0, scale: 0.93 },
   ],
 };
 
@@ -261,14 +213,6 @@ export const arrivalFlightPaths: Record<
     { x: '17vw', y: '-1vh', rotate: -2, scale: 0.4, opacity: 0.66 },
     { x: '18.5vw', y: '-0.5vh', rotate: 0, scale: 0.32, opacity: 0.44 },
     { x: '19vw', y: '0vh', rotate: 0, scale: 0.06, opacity: 0 },
-  ],
-  ideas: [
-    { x: '-3vw', y: '0vh', rotate: -5, scale: 0.97, opacity: 1 },
-    { x: '-8vw', y: '-1vh', rotate: 4, scale: 0.88, opacity: 1 },
-    { x: '-13vw', y: '-2vh', rotate: -3, scale: 0.68, opacity: 0.92 },
-    { x: '-17vw', y: '-1vh', rotate: 2, scale: 0.4, opacity: 0.66 },
-    { x: '-18.5vw', y: '-0.5vh', rotate: 0, scale: 0.32, opacity: 0.44 },
-    { x: '-19vw', y: '0vh', rotate: 0, scale: 0.06, opacity: 0 },
   ],
   signals: [
     { x: '-5vw', y: '-1vh', rotate: 5, scale: 0.98, opacity: 1 },
@@ -302,22 +246,6 @@ export const arrivalFlightPaths: Record<
     { x: '-17.5vw', y: '-0.5vh', rotate: 0, scale: 0.28, opacity: 0.38 },
     { x: '-18vw', y: '0vh', rotate: 0, scale: 0.05, opacity: 0 },
   ],
-  clips: [
-    { x: '-2vw', y: '1vh', rotate: -3, scale: 0.93, opacity: 1 },
-    { x: '-5vw', y: '0vh', rotate: 3, scale: 0.82, opacity: 1 },
-    { x: '-9vw', y: '-1vh', rotate: -2, scale: 0.58, opacity: 0.88 },
-    { x: '-12vw', y: '0vh', rotate: 1, scale: 0.32, opacity: 0.58 },
-    { x: '-12.8vw', y: '0.5vh', rotate: 0, scale: 0.24, opacity: 0.32 },
-    { x: '-13vw', y: '1vh', rotate: 0, scale: 0.05, opacity: 0 },
-  ],
-  bookmarks: [
-    { x: '4vw', y: '0vh', rotate: -4, scale: 0.96, opacity: 1 },
-    { x: '10vw', y: '-1vh', rotate: 3, scale: 0.87, opacity: 1 },
-    { x: '15vw', y: '-2vh', rotate: -3, scale: 0.66, opacity: 0.92 },
-    { x: '19vw', y: '-1vh', rotate: 2, scale: 0.38, opacity: 0.64 },
-    { x: '20.5vw', y: '-0.5vh', rotate: 0, scale: 0.3, opacity: 0.42 },
-    { x: '21vw', y: '0vh', rotate: 0, scale: 0.06, opacity: 0 },
-  ],
   photos: [
     { x: '-4vw', y: '0vh', rotate: 4, scale: 0.96, opacity: 1 },
     { x: '-9vw', y: '-1vh', rotate: -3, scale: 0.87, opacity: 1 },
@@ -334,29 +262,17 @@ export const arrivalFlightPaths: Record<
     { x: '13.8vw', y: '0.5vh', rotate: 0, scale: 0.22, opacity: 0.3 },
     { x: '14vw', y: '1vh', rotate: 0, scale: 0.05, opacity: 0 },
   ],
-  receipts: [
-    { x: '-3vw', y: '1vh', rotate: -4, scale: 0.94, opacity: 1 },
-    { x: '-8vw', y: '0vh', rotate: 3, scale: 0.84, opacity: 1 },
-    { x: '-13vw', y: '-1vh', rotate: -2, scale: 0.62, opacity: 0.9 },
-    { x: '-17vw', y: '0vh', rotate: 1, scale: 0.35, opacity: 0.6 },
-    { x: '-18.5vw', y: '0.5vh', rotate: 0, scale: 0.26, opacity: 0.36 },
-    { x: '-19vw', y: '1vh', rotate: 0, scale: 0.05, opacity: 0 },
-  ],
 };
 
 export const chickenThoughts: Record<JourneyChicken['id'], { kicker: string; text: string }> = {
   tabs: { kicker: 'Browser tab', text: 'This grant lead is worth the follow-up.' },
   notes: { kicker: 'Field note', text: 'Member energy is shifting this week.' },
-  ideas: { kicker: 'Loose thread', text: 'Reconnect this after the meeting.' },
   signals: { kicker: 'Call clip', text: 'Save the key moment before it drifts.' },
   links: { kicker: 'Saved link', text: 'This keeps coming back up in conversations.' },
   drafts: { kicker: 'Draft', text: 'Half-finished but worth keeping close.' },
   threads: { kicker: 'Thread', text: 'Conversation fragments from last week.' },
-  clips: { kicker: 'Clip', text: 'Audio moment worth revisiting.' },
-  bookmarks: { kicker: 'Bookmark', text: 'This link keeps coming back up.' },
-  photos: { kicker: 'Photo', text: 'Captured in the field last Tuesday.' },
+  photos: { kicker: 'Field photo', text: 'Captured at the garden last Tuesday.' },
   'voice-memos': { kicker: 'Voice memo', text: 'Quick capture from the walk home.' },
-  receipts: { kicker: 'Receipt', text: 'Proof of the contribution last month.' },
 };
 
 export const STAR_COUNT = 24;

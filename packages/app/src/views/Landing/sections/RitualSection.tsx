@@ -6,12 +6,7 @@ import {
 } from '@coop/shared/app';
 import type { CSSProperties, MutableRefObject, RefObject } from 'react';
 import { useI18n } from '../../../hooks/useI18n';
-import {
-  audienceOptions,
-  defaultTranscriptStatus,
-  ritualCardMappings,
-  statusLabel,
-} from '../landing-data';
+import { defaultTranscriptStatus, ritualCardMappings, statusLabel } from '../landing-data';
 import type {
   AudienceId,
   LensProgress,
@@ -41,7 +36,6 @@ export type RitualSectionProps = {
   flashcardTriggerRefs: MutableRefObject<Record<TranscriptKey, HTMLButtonElement | null>>;
   flashcardCloseRefs: MutableRefObject<Record<TranscriptKey, HTMLButtonElement | null>>;
   flashcardNotesRefs: MutableRefObject<Record<TranscriptKey, HTMLTextAreaElement | null>>;
-  setAudience: (id: AudienceId) => void;
   setSharedNotes: (value: string) => void;
   updateField: (key: SetupFieldKey, value: string) => void;
   updateTranscript: (key: TranscriptKey, value: string) => void;
@@ -74,7 +68,6 @@ export function RitualSection({
   flashcardTriggerRefs,
   flashcardCloseRefs,
   flashcardNotesRefs,
-  setAudience,
   setSharedNotes,
   updateField,
   updateTranscript,
@@ -201,14 +194,21 @@ export function RitualSection({
           </button>
         </div>
 
-        {recordingLens === openCardLens.id ||
-        transcripts[openCardLens.id] ||
-        (transcriptStatusCardId === openCardLens.id &&
-          transcriptStatus !== defaultTranscriptStatus) ? (
-          <output aria-live="polite" className="ritual-transcript-status">
-            {transcriptStatus}
-          </output>
-        ) : null}
+        <output
+          aria-live="polite"
+          className={`ritual-transcript-status${
+            recordingLens === openCardLens.id ||
+            transcripts[openCardLens.id] ||
+            (
+              transcriptStatusCardId === openCardLens.id &&
+                transcriptStatus !== defaultTranscriptStatus
+            )
+              ? ' is-active'
+              : ''
+          }`}
+        >
+          {transcriptStatus}
+        </output>
 
         <label className="ritual-field flashcard-notes-field">
           <span className="sr-only">
@@ -262,26 +262,20 @@ export function RitualSection({
         <p className="lede ritual-section-copy">{t('ritual.description')}</p>
       </div>
 
+      <aside className="landing-trust-strip" aria-label={t('trust.heading')}>
+        <p className="landing-trust-strip__eyebrow">{t('trust.heading')}</p>
+        <ul className="landing-trust-strip__points">
+          <li>{t('trust.points.onDevice')}</li>
+          <li>{t('trust.points.multimodal')}</li>
+          <li>{t('trust.points.offline')}</li>
+          <li>{t('trust.points.noCloud')}</li>
+          <li>{t('trust.points.openSource')}</li>
+        </ul>
+        <p className="landing-trust-strip__tagline">{t('trust.tagline')}</p>
+      </aside>
+
       <div className="ritual-game-shell nest-card" data-audience={audience}>
         <div className="ritual-toolbar">
-          <div className="audience-picker">
-            <div className="audience-chip-group">
-              {audienceOptions.map((option) => (
-                <button
-                  aria-pressed={option.id === audience}
-                  className={option.id === audience ? 'audience-chip is-active' : 'audience-chip'}
-                  data-audience-option={option.id}
-                  key={option.id}
-                  onClick={() => setAudience(option.id)}
-                  title={t(`audience.${option.id}Tone`)}
-                  type="button"
-                >
-                  {t(`audience.${option.id}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <span className="ritual-local-badge" aria-label={t('ritual.localBadgeLabel')}>
             <svg
               aria-hidden="true"

@@ -146,15 +146,13 @@ describe('landing page', () => {
   it('renders the simplified landing structure and footer links', () => {
     const { container } = render(<App />);
 
+    expect(screen.getByRole('heading', { name: /no more chickens loose\./i })).toBeInTheDocument();
+    expect(screen.getByText(/^No more$/)).toBeInTheDocument();
+    expect(screen.getByText(/^chickens loose\.$/)).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /chicken or egg\? neither — you need a coop first\./i }),
+      screen.getByText(/browser-first, local-first coordination for community organizers/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/^Chicken or egg\? Neither —$/)).toBeInTheDocument();
-    expect(screen.getByText(/^you need a coop first\.$/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/turn scattered knowledge into shared opportunity/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^curate your coop$/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^launch your coop$/i })).toHaveAttribute(
       'href',
       '#ritual',
     );
@@ -166,11 +164,21 @@ describe('landing page', () => {
     expect(screen.getByText(/quick capture from the walk home/i)).toBeInTheDocument();
     expect(screen.queryByText(/chickenThoughts\.voice-memos/i)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^how coop works$/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /^curate your coop$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /^shape your community coop$/i }),
+    ).toBeInTheDocument();
     expect(container.querySelector('.why-build-heading-card h2')).not.toBeNull();
-    expect(screen.getByText(/your data stays yours/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /capture from anywhere/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /refine on your device/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /review before sharing/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /share with proof/i })).toBeInTheDocument();
     expect(container.querySelectorAll('.how-works-index')).toHaveLength(4);
     expect(container.querySelector('.why-build-heading-card')).not.toBeNull();
+    expect(container.querySelector('.landing-trust-strip')).not.toBeNull();
+    expect(screen.getByText(/^On-device AI$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Multimodal capture$/)).toBeInTheDocument();
+    expect(container.querySelector('.audience-picker')).toBeNull();
+    expect(container.querySelector('.audience-chip-group')).toBeNull();
     expect(screen.queryByText(/^get started$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /reset ritual/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /github/i })).toBeInTheDocument();
@@ -193,13 +201,14 @@ describe('landing page', () => {
 
       fireEvent.click(screen.getByRole('link', { name: /install app/i }));
 
-      expect(
-        await screen.findByRole('dialog', { name: /install coop on your phone/i }),
-      ).toBeVisible();
+      const dialog = await screen.findByRole('dialog', { name: /open coop on your phone/i });
+      expect(dialog).toBeVisible();
       expect(dialogMethods.showModal).toHaveBeenCalledTimes(1);
       expect(screen.getByRole('button', { name: /close install instructions/i })).toHaveFocus();
       expect(screen.getByText(/scan with your phone camera/i)).toBeVisible();
-      expect(screen.getByRole('link', { name: /open coop receiver/i })).toHaveAttribute(
+      expect(dialog.querySelector('.eyebrow')).toHaveTextContent(/phone field companion/i);
+      expect(screen.getByText(/captures audio, photos, and files in the field/i)).toBeVisible();
+      expect(screen.getByRole('link', { name: /open coop on the phone/i })).toHaveAttribute(
         'href',
         expect.stringContaining('/app'),
       );
@@ -265,22 +274,21 @@ describe('landing page', () => {
     expect(
       await screen.findByRole('dialog', { name: /install coop on this phone/i }),
     ).toBeVisible();
-    expect(screen.getByText(/open this page in chrome on android/i)).toBeVisible();
+    expect(screen.getByText(/installs from chrome on android/i)).toBeVisible();
   });
 
-  it('updates the ritual shell audience state when a different audience is selected', () => {
+  it('commits to the community audience on the landing surface', () => {
     const { container } = render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^family$/i }));
 
     expect(container.querySelector('.ritual-game-shell')).toHaveAttribute(
       'data-audience',
-      'family',
+      'community',
     );
-    expect(screen.getByRole('button', { name: /^family$/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(container.querySelector('.audience-picker')).toBeNull();
+    expect(container.querySelector('.audience-chip-group')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^family$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^personal$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^friends$/i })).toBeNull();
   });
 
   it('renders the dev tunnel badge when tunnel state is provided', async () => {
@@ -332,29 +340,29 @@ describe('landing page', () => {
       'coop-landing-ritual-v2',
       JSON.stringify({
         version: 2,
-        audience: 'family',
+        audience: 'community',
         openCardId: null,
         sharedNotes: '',
         setupInput: {
           ...emptySetupInsightsInput,
-          knowledgeCurrent: 'We keep links in chats.',
-          knowledgePain: 'Important context gets buried.',
-          knowledgeImprove: 'Collect family knowledge in one shared place.',
-          capitalCurrent: 'Shared resources move through family group chats.',
-          capitalPain: 'Logistics are hard to retrace later.',
-          capitalImprove: 'Keep resources and asks visible to everyone.',
-          governanceCurrent: 'Logistics live in a few different threads.',
-          governancePain: 'Decisions get repeated.',
+          knowledgeCurrent: 'Notes and findings live across Notion, Drive, and DMs.',
+          knowledgePain: 'New members re-research what the community already knew.',
+          knowledgeImprove: 'Collect community knowledge in one shared place.',
+          capitalCurrent: 'Grant leads surface in DMs and on calls.',
+          capitalPain: 'Funding leads die in inboxes before the group can act.',
+          capitalImprove: 'Keep funding leads visible to everyone.',
+          governanceCurrent: 'Decisions happen on calls; notes are scattered.',
+          governancePain: 'Three meetings later nobody can say what was decided.',
           governanceImprove: 'Use one shared ritual to organize next steps.',
           impactCurrent: 'Milestones are easy to miss without a shared place.',
           impactPain: 'Wins and follow-ups drift apart.',
-          impactImprove: 'Track progress in a packet the family can reuse.',
+          impactImprove: 'Track progress in a packet the community can reuse.',
         },
         transcripts: {
           ...emptyLandingTranscripts,
-          knowledge: 'We keep links in chats.',
-          capital: 'Shared resources move through family group chats.',
-          governance: 'Logistics live in a few different threads.',
+          knowledge: 'Notes and findings live across Notion, Drive, and DMs.',
+          capital: 'Grant leads surface in DMs and on calls.',
+          governance: 'Decisions happen on calls; notes are scattered.',
           impact: 'Milestones are easy to miss without a shared place.',
         },
       }),
@@ -367,11 +375,14 @@ describe('landing page', () => {
     ).toBeVisible();
 
     fireEvent.change(screen.getByLabelText(/coop name/i), {
-      target: { value: 'Pocket Flock' },
+      target: { value: 'Community Garden Grants' },
     });
-    fireEvent.change(screen.getByLabelText(/what opportunity are you organizing around/i), {
-      target: { value: 'Turn scattered notes into momentum.' },
-    });
+    fireEvent.change(
+      screen.getByLabelText(/what opportunity is your community organizing around/i),
+      {
+        target: { value: 'Turn scattered notes into momentum.' },
+      },
+    );
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /copy packet/i }));
@@ -380,13 +391,13 @@ describe('landing page', () => {
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('"coopName": "Pocket Flock"'),
+      expect.stringContaining('"coopName": "Community Garden Grants"'),
     );
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('"purpose": "Turn scattered notes into momentum."'),
     );
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('"audience": "family"'),
+      expect.stringContaining('"audience": "community"'),
     );
   }, 30_000);
 

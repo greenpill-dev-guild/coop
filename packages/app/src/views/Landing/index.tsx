@@ -1,7 +1,6 @@
 import type { SetupInsightsInput } from '@coop/shared/app';
 import { getRitualLenses, synthesizeTranscriptsToPurpose } from '@coop/shared/app';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LanguageSelector } from '../../components/LanguageSelector';
 import type { DevEnvironmentState } from '../../dev-environment';
 import { I18nProvider, useI18n } from '../../hooks/useI18n';
 import { PublicInstallAction } from './PublicInstallAction';
@@ -118,7 +117,9 @@ function LandingPageContent({
   // ── State ───────────────────────────────────────────────────────────
   const [setupInput, setSetupInput] = useState<SetupInsightsInput>(() => initialDraft.setupInput);
   const [transcripts, setTranscripts] = useState<TranscriptMap>(() => initialDraft.transcripts);
-  const [audience, setAudience] = useState<AudienceId>(() => initialDraft.audience);
+  // Landing commits to community framing for the Gemma 4 Good Hackathon submission;
+  // multi-audience preset support remains available to other surfaces via shared presets.
+  const audience: AudienceId = 'community';
   const [openCardId, setOpenCardId] = useState<TranscriptKey | null>(() => initialDraft.openCardId);
   const [sharedNotes, setSharedNotes] = useState(() => initialDraft.sharedNotes);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -199,7 +200,7 @@ function LandingPageContent({
         transcripts,
       } satisfies LandingDraft),
     );
-  }, [audience, openCardId, sharedNotes, setupInput, transcripts]);
+  }, [openCardId, sharedNotes, setupInput, transcripts]);
 
   // ── Hero scroll-hint fade ───────────────────────────────────────────
   useEffect(() => {
@@ -280,9 +281,7 @@ function LandingPageContent({
           const howItWorksCardElements = Array.from(
             howItWorksRef.current?.querySelectorAll<HTMLElement>('.how-works-card') ?? [],
           );
-          const storySignalLabels = Array.from(
-            scope.querySelectorAll<HTMLElement>('.journey-scene-story .scene-chicken-label'),
-          );
+          // Labels stay hidden until hover/focus; GSAP no longer fades them in.
           const whyBuildCard =
             arrivalJourneyRef.current?.querySelector<HTMLDivElement>('.why-build-heading-card') ??
             null;
@@ -372,12 +371,6 @@ function LandingPageContent({
               { scaleX: 1.12, scaleY: 1.08, rotate: -4, opacity: 0.78 },
               0.12,
             )
-            .fromTo(
-              storySignalLabels,
-              { autoAlpha: 0.18, y: 10, filter: 'blur(4px)' },
-              { autoAlpha: 0.88, y: 0, filter: 'blur(0px)', stagger: 0.03 },
-              0.06,
-            )
             .fromTo(heroCopyRef.current, { autoAlpha: 1, y: 0 }, { autoAlpha: 0.12, y: -18 }, 0.42)
             .fromTo(howItWorksRef.current, { y: 28, scale: 0.975 }, { y: 0, scale: 1 }, 0.24)
             .fromTo(howItWorksHeading, { y: 20 }, { y: 0 }, 0.29)
@@ -460,12 +453,12 @@ function LandingPageContent({
           });
 
           arrivalTimeline
-            .set(whyBuildCard, { autoAlpha: 1, y: 0 }, 0)
-            .set(whyBuildTeam, { autoAlpha: 1, y: 0 }, 0)
-            .set(whyBuildTeamMembers, { autoAlpha: 1, scale: 1 }, 0)
-            .to(whyBuildCard, { autoAlpha: 0, y: -20, scale: 0.96 }, 0.32)
-            .to(whyBuildTeam, { autoAlpha: 0, y: -14 }, 0.34)
-            .to(whyBuildTeamMembers, { autoAlpha: 0, y: -10, stagger: 0.02 }, 0.36)
+            // Hold the why-build content hidden until chickens have entered the coop.
+            .set(whyBuildCard, { autoAlpha: 0, y: 24, scale: 0.96 }, 0)
+            .set(whyBuildTeam, { autoAlpha: 0, y: 18 }, 0)
+            .set(whyBuildTeamMembers, { autoAlpha: 0, y: 14, scale: 0.96 }, 0)
+            .set(arrivalInsideFlockRef.current, { autoAlpha: 0 }, 0)
+            .set(insideBirds, { autoAlpha: 0 }, 0)
             .fromTo(
               arrivalGlowLeftRef.current,
               { x: '-10vw', y: '3vh', scale: 0.9 },
@@ -486,37 +479,49 @@ function LandingPageContent({
               arrivalPathRef.current,
               { scaleX: 0.88, rotate: 8, opacity: 0.2 },
               { scaleX: 1.06, rotate: 0, opacity: 0.68 },
-              0.08,
+              0.04,
             )
             .fromTo(
               arrivalCoopParts.body,
               { y: 110, scale: 0.74, autoAlpha: 0.22 },
               { y: 0, scale: 1, autoAlpha: 1 },
-              0.08,
+              0.04,
             )
             .fromTo(
               arrivalCoopParts.roof,
               { y: -86, scaleX: 0.78, autoAlpha: 0 },
               { y: 0, scaleX: 1, autoAlpha: 1 },
-              0.16,
+              0.08,
             )
             .fromTo(
               arrivalCoopParts.frames,
               { y: 18, autoAlpha: 0 },
-              { y: 0, autoAlpha: 1, stagger: 0.04 },
-              0.22,
+              { y: 0, autoAlpha: 1, stagger: 0.02 },
+              0.12,
             )
+            // Inside-flock appears AFTER outdoor chickens have entered the coop.
+            // Chicken flight stagger ends at 0.05 + 7 * 0.012 = 0.134; keyframes scale
+            // shrinks to 0.05 by frame 6 of 6 — they're fully inside by ~0.45.
             .fromTo(
               arrivalInsideFlockRef.current,
               { autoAlpha: 0, y: 18, scale: 0.94 },
-              { autoAlpha: 1, y: 0, scale: 1 },
-              0.54,
+              { autoAlpha: 1, y: 0, scale: 1, duration: 0.06 },
+              0.48,
             )
             .fromTo(
               insideBirds,
               { autoAlpha: 0, y: 18, scale: 0.82 },
-              { autoAlpha: 1, y: 0, scale: 1, stagger: 0.04 },
-              0.58,
+              { autoAlpha: 1, y: 0, scale: 1, stagger: 0.02, duration: 0.06 },
+              0.52,
+            )
+            // Why-build content + team fade in once the coop is fully populated, with
+            // plenty of scroll room left so the user actually reads it before exiting.
+            .to(whyBuildCard, { autoAlpha: 1, y: 0, scale: 1, duration: 0.1 }, 0.6)
+            .to(whyBuildTeam, { autoAlpha: 1, y: 0, duration: 0.1 }, 0.66)
+            .to(
+              whyBuildTeamMembers,
+              { autoAlpha: 1, y: 0, scale: 1, stagger: 0.02, duration: 0.08 },
+              0.68,
             );
           arrivalTimeline
             .fromTo(arrivalNightSkyRef.current, { opacity: 0 }, { opacity: 0.92 }, 0.4)
@@ -548,12 +553,15 @@ function LandingPageContent({
               continue;
             }
 
-            const staggerDelay = 0.05 + i * 0.02;
+            // All outdoor chickens enter the coop in the first 45% of the
+            // timeline; inside silhouettes then appear at 0.48+.
+            const staggerDelay = i * 0.015;
 
             arrivalTimeline.to(
               node,
               {
                 ease: scrubEase,
+                duration: 0.35,
                 keyframes: path.map((frame) => ({
                   x: frame.x,
                   y: frame.y,
@@ -700,7 +708,6 @@ function LandingPageContent({
     speech.resetSpeechState();
     setSetupInput(cloneSetupInput());
     setTranscripts(cloneTranscripts());
-    setAudience('community');
     setOpenCardId(null);
     setSharedNotes('');
     setCopyState('idle');
@@ -713,8 +720,6 @@ function LandingPageContent({
   return (
     <div className="page-shell landing-shell" ref={landingRootRef}>
       <div className="backdrop landing-backdrop" />
-
-      <LanguageSelector />
 
       <header className="landing-topbar">
         <div className="topbar">
@@ -761,7 +766,7 @@ function LandingPageContent({
             <PublicInstallAction mobileOnly>
               {({ label, href, onClick, action }) => (
                 <a
-                  className="button button-primary hero-cta-primary hero-install-cta"
+                  className="button button-secondary hero-install-cta hero-install-cta--secondary"
                   data-install-action={action}
                   data-qa="public-hero-install-action"
                   href={href}
@@ -793,7 +798,6 @@ function LandingPageContent({
           flashcardTriggerRefs={flashcardTriggerRefs}
           flashcardCloseRefs={flashcardCloseRefs}
           flashcardNotesRefs={flashcardNotesRefs}
-          setAudience={setAudience}
           setSharedNotes={setSharedNotes}
           updateField={updateField}
           updateTranscript={updateTranscript}
