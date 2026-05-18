@@ -18,6 +18,10 @@ camera. Pre-stage everything before you hit record.
 5. Pre-stage materials (do NOT pre-load these into the extension yet):
    - Three browser tabs of real grant pages (USDA Urban Agriculture,
      EPA Environmental Justice, NRCS Conservation Stewardship).
+   - One receiver PWA tab or phone view at `/receiver`, ready to show the
+     **Record** and **Take photo** field-capture affordances. Use
+     `https://coop.town/receiver` for the recorded beat unless a local app
+     server is already running.
    - One screenshot PNG of an awkward grant-site PDF (taken with macOS
      `Cmd-Shift-4`, saved to Desktop).
    - One 12-second `.wav` voice memo recorded on phone — script:
@@ -30,19 +34,20 @@ camera. Pre-stage everything before you hit record.
    that specific dry run has been re-proven; the sandbox runs as an opaque
    origin, so persistent cache behavior is not the submission proof point.
 
-## The 75-second take
+## The 88-second take
 
 | t (s) | Action | Voice-over |
 |---|---|---|
 | 0-3 | Open popup on fresh install. Hover over the loose-chickens copy. | *"Ready to round up your loose chickens?"* |
 | 3-7 | Click **Create a Coop**. Type "Community Garden Grants" + brief purpose. Confirm. | *"Coop is for groups working together on opportunities they'd otherwise miss."* |
-| 7-22 | Switch to first grant tab. Click extension icon → **Capture Tab**. Repeat for tabs 2 and 3. | *"I'm capturing three grant pages. Tab metadata stays local; nothing crosses the wire."* |
-| 22-32 | Drag screenshot PNG into the popup (or use the **Screenshot** button on the visible tab if simpler). | *"This grant site is a PDF screenshot — Gemma 4 reads the visual directly."* |
-| 32-44 | Click **Audio**, drop in or record the 12-second voice memo. If native audio proof is not captured, let the local transcript appear and keep the take moving. | *"And a meeting clip — the garden told us they need irrigation by July."* |
-| 44-55 | Open the **Chickens** tab in the sidepanel. Watch the brief appear: title, deadline, eligibility, fit score, why-it-matters. | *"On-device Gemma 4 produced this brief. No cloud round-trip. Local model, local data."* |
-| 55-65 | Click the **Plan next action** affordance. The `draft_application_outline` function call fires; outline sections appear. | *"And one function call — the model picks `draft_application_outline` and proposes sections to write."* |
-| 65-72 | Click **Push to Coop**. Switch to the Coops tab. Show the new artifact in the feed. | *"Push to the coop, members see it in the shared feed."* |
-| 72-78 | Hold on the closing frame: popup visible, Coops feed visible, chickens animation in the corner. | *"Opportunities found, captured, shared by the flock — local-first, multimodal, low-bandwidth."* |
+| 7-13 | Flash the receiver PWA tab or phone view. Show **Record** and **Take photo**, then return to the grant tabs. | *"In the field, members can use the companion receiver PWA for voice notes and photos."* |
+| 13-28 | Switch to first grant tab. Click extension icon → **Capture Tab**. Repeat for tabs 2 and 3. | *"I'm capturing three grant pages. Tab metadata stays local; nothing crosses the wire."* |
+| 28-38 | Drag screenshot PNG into the popup (or use the **Screenshot** button on the visible tab if simpler). | *"This grant site is a PDF screenshot — Gemma 4 reads the visual directly."* |
+| 38-50 | Click **Audio**, drop in or record the 12-second voice memo. If native audio proof is not captured, let the local transcript appear and keep the take moving. | *"And a meeting clip from the receiver path — the garden needs irrigation by July."* |
+| 50-61 | Open the **Chickens** tab in the sidepanel. Watch the brief appear: title, deadline, eligibility, fit score, why-it-matters. | *"On-device Gemma 4 produced this brief. No cloud round-trip. Local model, local data."* |
+| 61-72 | Click the **Plan next action** affordance. The `draft_application_outline` function call fires; outline sections appear. | *"And one function call — the model picks `draft_application_outline` and proposes sections to write."* |
+| 72-82 | Click **Push to Coop**. Switch to the Coops tab. Show the new artifact in the feed. | *"Push to the coop, members see it in the shared feed."* |
+| 82-88 | Hold on the closing frame: popup visible, Coops feed visible, chickens animation in the corner. | *"Opportunities found, captured, shared by the flock — local-first, multimodal, low-bandwidth."* |
 
 ## If something breaks mid-take
 
@@ -53,6 +58,11 @@ camera. Pre-stage everything before you hit record.
   Keep the take. The stable submission path is local Whisper transcription
   feeding transcript text into Gemma 4. Do not claim raw audio modality in
   the video unless the hardware dry run proves it.
+- **Receiver pairing takes too long**:
+  Do not burn the take on QR setup. Keep the quick receiver PWA visual beat,
+  then use the pre-staged screenshot and voice memo through the extension
+  intake path. That still truthfully shows the receiver as the field-capture
+  surface without making pairing latency the demo proof point.
 - **Brief doesn't appear in Chickens within 30s**: Check the agent
   diagnostics in the Roost tab (advanced mode toggle). Likely the worker
   is still warming. Re-shoot once warm.

@@ -31,6 +31,9 @@ Expected proof:
 - Coop name: `Community Garden Grants`.
 - Grant tabs: USDA Urban Agriculture, EPA Environmental Justice, NRCS
   Conservation Stewardship.
+- Receiver PWA beat: open `https://coop.town/receiver` in a Brave tab or
+  on a phone and be ready to show **Record** plus **Take photo** for 3-5
+  seconds. Only show QR pairing if a full dry run is already clean.
 - Screenshot: one awkward PDF-heavy grant page.
 - Voice memo script: `We need irrigation funding for the south plot before
   July. Two gardeners can co-write the application.`
@@ -45,14 +48,15 @@ Follow `.plans/demo-shooting-script.md`. The must-show beats are:
 
 1. Chicken-or-egg hook in the first 7 seconds.
 2. Create `Community Garden Grants`.
-3. Capture three grant tabs.
-4. Attach screenshot for Gemma 4 image input.
-5. Add voice memo. If native audio proof is not clean, rely on the local
+3. Flash the receiver PWA field-capture surface.
+4. Capture three grant tabs.
+5. Attach screenshot for Gemma 4 image input.
+6. Add voice memo. If native audio proof is not clean, rely on the local
    transcript path and do not narrate raw audio as proven.
-6. Chickens brief appears with title, deadline, eligibility, fit, and why it
+7. Chickens brief appears with title, deadline, eligibility, fit, and why it
    matters.
-7. `draft_application_outline` fires.
-8. Push to Coop and show the feed.
+8. `draft_application_outline` fires.
+9. Push to Coop and show the feed.
 
 ## 4. Upload and Repo Update
 
