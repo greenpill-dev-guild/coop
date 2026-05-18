@@ -6,9 +6,9 @@ import {
   connectInviteHandoffProviders,
   connectSyncProviders,
   createBlobRelayTransport,
-  createInviteHandoffRequest,
   createCoopDb,
   createCoopDoc,
+  createInviteHandoffRequest,
   decryptInviteHandoffPayload,
   encodeCoopDoc,
   encryptInviteHandoffPayload,
@@ -16,9 +16,11 @@ import {
   hydrateCoopDoc,
   inviteHandoffRequestSchema,
   inviteHandoffResponseSchema,
+  isRedactedSyncRoomSecret,
   mergeCoopDocUpdates,
   parseInviteCode,
   readCoopState,
+  redactSyncRoomSecrets,
   summarizeSyncTransportHealth,
   validateInvite,
   verifyInviteCodeProof,
@@ -32,6 +34,7 @@ import type {
 } from './messages';
 
 type CoopConfigEntry = CoopSyncConfigResponse['coops'][number];
+type ProviderSyncRoom = NonNullable<CoopConfigEntry['providerSyncRoom']>;
 type InviteHandoffRoom = NonNullable<
   CoopConfigEntry['coop']['invites'][number]['bootstrap']['handoff']
 >;
@@ -42,6 +45,7 @@ type InviteHandoffResponder = {
   disconnect: () => void;
   invite: CoopConfigEntry['coop']['invites'][number];
   coop: CoopConfigEntry['coop'];
+  syncRoom: ProviderSyncRoom;
   roomEpoch: number;
 };
 
@@ -81,8 +85,36 @@ function runtimeNow() {
   return new Date().toISOString();
 }
 
+function resolveProviderSyncRoom(entry: CoopConfigEntry) {
+  return entry.providerSyncRoom ?? entry.coop.syncRoom;
+}
+
+function hasProviderSyncRoomSecret(entry: CoopConfigEntry) {
+  const room = resolveProviderSyncRoom(entry);
+  return (
+    entry.roomSecretAvailable &&
+    !isRedactedSyncRoomSecret(room.roomSecret) &&
+    !isRedactedSyncRoomSecret(room.inviteSigningSecret)
+  );
+}
+
+function redactCoopStateForYjs(coop: CoopConfigEntry['coop']) {
+  if (
+    isRedactedSyncRoomSecret(coop.syncRoom.roomSecret) &&
+    isRedactedSyncRoomSecret(coop.syncRoom.inviteSigningSecret)
+  ) {
+    return coop;
+  }
+
+  return {
+    ...coop,
+    syncRoom: redactSyncRoomSecrets(coop.syncRoom),
+  };
+}
+
 function buildBindingKey(entry: CoopConfigEntry) {
-  return `${entry.coop.profile.id}:${entry.coop.syncRoom.roomId}:${entry.coop.syncRoom.signalingUrls.join('|')}`;
+  const room = resolveProviderSyncRoom(entry);
+  return `${entry.coop.profile.id}:${room.roomId}:${room.signalingUrls.join('|')}`;
 }
 
 function resolveIceExpiresAtMs(config = latestIceConfig) {
@@ -181,6 +213,7 @@ function createInviteHandoffResponder(input: {
   coop: CoopConfigEntry['coop'];
   invite: CoopConfigEntry['coop']['invites'][number];
   handoff: InviteHandoffRoom;
+  syncRoom: ProviderSyncRoom;
   roomEpoch: number;
   websocketSyncUrl?: string;
 }) {
@@ -199,6 +232,7 @@ function createInviteHandoffResponder(input: {
     doc,
     invite: input.invite,
     coop: input.coop,
+    syncRoom: input.syncRoom,
     roomEpoch: input.roomEpoch,
     disconnect() {
       requests.unobserve(handleRequests);
@@ -221,7 +255,7 @@ function createInviteHandoffResponder(input: {
             currentInvite.id !== responder.inviteId ||
             currentInvite.status === 'revoked' ||
             !validateInvite({ invite: currentInvite }) ||
-            !verifyInviteCodeProof(currentInvite, responder.coop.syncRoom.inviteSigningSecret)
+            !verifyInviteCodeProof(currentInvite, responder.syncRoom.inviteSigningSecret)
           ) {
             return;
           }
@@ -241,10 +275,10 @@ function createInviteHandoffResponder(input: {
               inviteId: currentInvite.id,
               recipientMemberId: request.memberId,
               roomEpoch: responder.roomEpoch,
-              roomId: responder.coop.syncRoom.roomId,
-              roomSecret: responder.coop.syncRoom.roomSecret,
-              inviteSigningSecret: responder.coop.syncRoom.inviteSigningSecret,
-              signalingUrls: responder.coop.syncRoom.signalingUrls,
+              roomId: responder.syncRoom.roomId,
+              roomSecret: responder.syncRoom.roomSecret,
+              inviteSigningSecret: responder.syncRoom.inviteSigningSecret,
+              signalingUrls: responder.syncRoom.signalingUrls,
               bootstrapSnapshot: currentInvite.bootstrap.bootstrapState,
               createdAt: runtimeNow(),
             },
@@ -269,6 +303,7 @@ function reconcileInviteHandoffResponders(
   entry: CoopConfigEntry,
   websocketSyncUrl?: string,
 ) {
+  const syncRoom = resolveProviderSyncRoom(entry);
   const desiredInviteIds = new Set(
     entry.coop.invites.filter((invite) => isUsableHandoffInvite(invite)).map((invite) => invite.id),
   );
@@ -288,6 +323,7 @@ function reconcileInviteHandoffResponders(
     if (existing) {
       existing.coop = entry.coop;
       existing.invite = invite;
+      existing.syncRoom = syncRoom;
       existing.roomEpoch = entry.roomEpoch ?? existing.roomEpoch;
       continue;
     }
@@ -298,6 +334,7 @@ function reconcileInviteHandoffResponders(
         coop: entry.coop,
         invite,
         handoff,
+        syncRoom,
         roomEpoch: entry.roomEpoch ?? 1,
         websocketSyncUrl,
       }),
@@ -348,9 +385,15 @@ function scheduleRuntimeHealthReport(
 }
 
 function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
-  const coop = entry.coop;
+  const coop = redactCoopStateForYjs(entry.coop);
+  const providerSyncRoom = resolveProviderSyncRoom(entry);
   const doc = createCoopDoc(coop);
-  const providers = connectSyncProviders(doc, coop.syncRoom, resolveIceServers(), websocketSyncUrl);
+  const providers = connectSyncProviders(
+    doc,
+    providerSyncRoom,
+    resolveIceServers(),
+    websocketSyncUrl,
+  );
   const disposers: (() => void)[] = [];
   const binding: CoopBinding = {
     key: buildBindingKey(entry),
@@ -434,7 +477,11 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   const persistPendingUpdates = async () => {
     let nextState: ReturnType<typeof readCoopState>;
     try {
-      nextState = readCoopState(doc);
+      const remoteState = readCoopState(doc);
+      nextState = redactCoopStateForYjs(remoteState);
+      if (nextState !== remoteState) {
+        writeCoopState(doc, nextState);
+      }
     } catch (error) {
       await reportCoopSyncRuntime({
         lastError: error instanceof Error ? error.message : 'Could not read remote coop state.',
@@ -509,7 +556,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
 
   const runCompaction = async () => {
     try {
-      const state = readCoopState(doc);
+      const state = redactCoopStateForYjs(readCoopState(doc));
       const result = compactCoopArtifacts({ doc, state });
       if (result.archivedIds.length > 0) {
         const compactedState = readCoopState(doc);
@@ -571,7 +618,7 @@ async function refreshBindings() {
     const config = await fetchCoopSyncConfig();
     const nextBindings = new Map(
       config.coops
-        .filter((entry) => entry.roomSecretAvailable)
+        .filter((entry) => hasProviderSyncRoomSecret(entry))
         .map((entry) => [entry.coop.profile.id, buildBindingKey(entry)]),
     );
 
@@ -584,7 +631,7 @@ async function refreshBindings() {
 
     for (const entry of config.coops) {
       const coopId = entry.coop.profile.id;
-      if (!entry.roomSecretAvailable) {
+      if (!hasProviderSyncRoomSecret(entry)) {
         await reportCoopSyncRuntime({
           lastError: `Sync secrets are unavailable for ${entry.coop.profile.name}. Accept a fresh invite handoff.`,
         });
@@ -597,10 +644,11 @@ async function refreshBindings() {
         continue;
       }
 
-      const nextHash = hashJson(entry.coop);
+      const publicCoop = redactCoopStateForYjs(entry.coop);
+      const nextHash = hashJson(publicCoop);
       if (existing.lastHash !== nextHash) {
         existing.lastHash = nextHash;
-        writeCoopState(existing.doc, entry.coop);
+        writeCoopState(existing.doc, publicCoop);
         existing.blobSync?.broadcastManifest();
       }
       reconcileInviteHandoffResponders(existing, entry, config.websocketSyncUrl);

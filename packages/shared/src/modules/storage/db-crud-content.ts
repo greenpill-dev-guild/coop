@@ -11,6 +11,7 @@ import {
   knowledgeSourceContentSchema,
   readablePageExtractSchema,
   reviewDraftSchema,
+  syncRoomConfigSchema,
   tabCandidateSchema,
 } from '../../contracts/schema';
 import { hashText, nowIso } from '../../utils';
@@ -23,7 +24,13 @@ import {
   readCoopState,
   readCoopStateRaw,
   writeCoopState,
+  writeCoopSyncRoom,
 } from '../sync-core';
+import {
+  ensureSyncRoomSecretRecord,
+  isRedactedSyncRoomSecret,
+  redactSyncRoomSecrets,
+} from './db-crud-sync';
 import {
   buildEncryptedLocalPayloadId,
   buildEncryptedLocalPayloadRecord,
@@ -40,15 +47,33 @@ import {
 } from './db-encryption';
 import type { CoopDexie } from './db-schema';
 
+async function redactSyncRoomSecretsForLocalStorage(db: CoopDexie, state: CoopSharedState) {
+  if (
+    isRedactedSyncRoomSecret(state.syncRoom.roomSecret) &&
+    isRedactedSyncRoomSecret(state.syncRoom.inviteSigningSecret)
+  ) {
+    return state;
+  }
+
+  if (!isRedactedSyncRoomSecret(state.syncRoom.roomSecret)) {
+    await ensureSyncRoomSecretRecord(db, state.syncRoom);
+  }
+  return {
+    ...state,
+    syncRoom: redactSyncRoomSecrets(state.syncRoom),
+  };
+}
+
 export async function saveCoopState(db: CoopDexie, state: CoopSharedState) {
+  const storedState = await redactSyncRoomSecretsForLocalStorage(db, state);
   return db.transaction('rw', db.coopDocs, async () => {
-    const existing = await db.coopDocs.get(state.profile.id);
+    const existing = await db.coopDocs.get(storedState.profile.id);
     const doc = hydrateCoopDoc(existing?.encodedState);
 
     try {
-      writeCoopState(doc, state);
+      writeCoopState(doc, storedState);
       await db.coopDocs.put({
-        id: state.profile.id,
+        id: storedState.profile.id,
         encodedState: encodeCoopDoc(doc),
         updatedAt: nowIso(),
       });
@@ -58,17 +83,78 @@ export async function saveCoopState(db: CoopDexie, state: CoopSharedState) {
   });
 }
 
+function getRawCoopId(raw: Record<string, unknown>) {
+  return typeof raw.profile === 'object' &&
+    raw.profile !== null &&
+    'id' in raw.profile &&
+    typeof raw.profile.id === 'string'
+    ? raw.profile.id
+    : undefined;
+}
+
+function getRawSyncRoom(raw: Record<string, unknown>) {
+  return syncRoomConfigSchema.safeParse(raw.syncRoom);
+}
+
+async function ensureSyncRoomSecretFromMergedUpdate(
+  db: CoopDexie,
+  coopId: string,
+  encodedState: Uint8Array,
+) {
+  const existing = await db.coopDocs.get(coopId);
+  const doc = hydrateCoopDoc(existing?.encodedState);
+
+  try {
+    Y.applyUpdate(doc, encodedState);
+    const raw = readCoopStateRaw(doc);
+    const syncRoomResult = getRawSyncRoom(raw);
+    if (getRawCoopId(raw) !== coopId || !syncRoomResult.success) {
+      return;
+    }
+
+    const syncRoom = syncRoomResult.data;
+    if (!isRedactedSyncRoomSecret(syncRoom.roomSecret)) {
+      await ensureSyncRoomSecretRecord(db, syncRoom);
+    }
+  } finally {
+    doc.destroy();
+  }
+}
+
+function redactSyncRoomSecretsFromMergedDoc(doc: Y.Doc, coopId: string) {
+  const raw = readCoopStateRaw(doc);
+  const rawCoopId = getRawCoopId(raw);
+  const syncRoomResult = getRawSyncRoom(raw);
+  if (rawCoopId === coopId && syncRoomResult.success) {
+    const syncRoom = syncRoomResult.data;
+    if (
+      !isRedactedSyncRoomSecret(syncRoom.roomSecret) ||
+      !isRedactedSyncRoomSecret(syncRoom.inviteSigningSecret)
+    ) {
+      writeCoopSyncRoom(doc, redactSyncRoomSecrets(syncRoom));
+    }
+  }
+
+  const parseResult = coopSharedStateSchema.safeParse(raw);
+  return parseResult.success && rawCoopId === coopId
+    ? coopSharedStateSchema.safeParse(readCoopStateRaw(doc))
+    : parseResult;
+}
+
 export async function mergeCoopStateUpdate(
   db: CoopDexie,
   coopId: string,
   encodedState: Uint8Array,
 ) {
+  await ensureSyncRoomSecretFromMergedUpdate(db, coopId, encodedState);
+
   return db.transaction('rw', db.coopDocs, db.knowledgeSources, async () => {
     const existing = await db.coopDocs.get(coopId);
     const doc = hydrateCoopDoc(existing?.encodedState);
 
     try {
       Y.applyUpdate(doc, encodedState);
+      const parseResult = redactSyncRoomSecretsFromMergedDoc(doc, coopId);
 
       // Always persist the merged Y.Doc state — the CRDT merge itself is valid
       // even when the materialized state temporarily violates Zod constraints.
@@ -83,9 +169,6 @@ export async function mergeCoopStateUpdate(
       // partial result with a warning instead of throwing — transient states
       // during concurrent joins may temporarily violate schema invariants
       // but self-heal as sync converges.
-      const raw = readCoopStateRaw(doc);
-      const parseResult = coopSharedStateSchema.safeParse(raw);
-
       if (parseResult.success) {
         if (parseResult.data.profile.id !== coopId) {
           throw new Error(`Persisted coop update target mismatch for ${coopId}.`);
@@ -99,6 +182,7 @@ export async function mergeCoopStateUpdate(
         `mergeCoopStateUpdate: Zod validation failed for coop ${coopId}, persisting raw Y.Doc anyway.`,
         parseResult.error.issues,
       );
+      const raw = readCoopStateRaw(doc);
       const partial = raw as CoopSharedState & { _validationWarning?: string };
       partial._validationWarning = parseResult.error.issues
         .map((i) => `${i.path.join('.')}: ${i.message}`)

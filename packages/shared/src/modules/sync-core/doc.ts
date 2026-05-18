@@ -357,6 +357,13 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
   }, ORIGIN_LOCAL);
 }
 
+export function writeCoopSyncRoom(doc: Y.Doc, room: SyncRoomConfig) {
+  const root = doc.getMap<string>(ROOT_KEY);
+  doc.transact(() => {
+    writeJsonValueIfChanged(root, 'syncRoom', room);
+  }, ORIGIN_LOCAL);
+}
+
 /**
  * Reads the raw (unvalidated) coop state from a Yjs document.
  * Prefers v2 per-field formats for artifacts and members, falls back to legacy.

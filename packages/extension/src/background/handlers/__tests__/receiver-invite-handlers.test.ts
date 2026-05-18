@@ -257,6 +257,10 @@ describe('handleRevokeInvite – Yjs propagation', () => {
 
     expect(result.ok).toBe(true);
     expect(vi.mocked(saveState)).toHaveBeenCalled();
+    const revokedState = vi.mocked(saveState).mock.calls.at(-1)?.[0] as CoopSharedState;
+    expect(revokedState.syncRoom.roomId).not.toBe(savedState.syncRoom.roomId);
+    expect(isRedactedSyncRoomSecret(revokedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(revokedState.syncRoom.inviteSigningSecret)).toBe(true);
     // The handler should have also updated the Yjs doc record
     expect(mockCoopDocsPut).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -355,6 +359,10 @@ describe('canonical invite handlers', () => {
     expect(result.ok).toBe(true);
     const freshInvite = result.data as InviteCode;
     const savedState = vi.mocked(saveState).mock.calls.at(-1)?.[0] as CoopSharedState;
+    expect(savedState.syncRoom.roomId).not.toBe(legacyCoop.syncRoom.roomId);
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.inviteSigningSecret)).toBe(true);
+    expect(freshInvite.bootstrap.roomId).toBe(savedState.syncRoom.roomId);
     expect(
       savedState.invites.filter(
         (invite) => invite.type === 'member' && invite.status !== 'revoked',
@@ -369,9 +377,14 @@ describe('canonical invite handlers', () => {
       savedState.invites.find((invite) => invite.type === 'member' && invite.status !== 'revoked')
         ?.id,
     ).toBe(freshInvite.id);
+    expect(
+      savedState.invites.filter(
+        (invite) => invite.type === 'trusted' && invite.status !== 'revoked',
+      ),
+    ).toHaveLength(0);
   });
 
-  it('revokes all live invites for a type without affecting other invite lanes', async () => {
+  it('revokes all old-room invite lanes when a type revocation rotates the room', async () => {
     const coop = buildTestCoop();
     const creatorId = coop.members[0].id;
     const extraMemberInvite = generateInviteCode({
@@ -397,6 +410,9 @@ describe('canonical invite handlers', () => {
 
     expect(result.ok).toBe(true);
     const savedState = vi.mocked(saveState).mock.calls.at(-1)?.[0] as CoopSharedState;
+    expect(savedState.syncRoom.roomId).not.toBe(legacyCoop.syncRoom.roomId);
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(savedState.syncRoom.inviteSigningSecret)).toBe(true);
     expect(
       savedState.invites.filter(
         (invite) => invite.type === 'member' && invite.status !== 'revoked',
@@ -406,6 +422,6 @@ describe('canonical invite handlers', () => {
       savedState.invites.filter(
         (invite) => invite.type === 'trusted' && invite.status !== 'revoked',
       ),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
 });

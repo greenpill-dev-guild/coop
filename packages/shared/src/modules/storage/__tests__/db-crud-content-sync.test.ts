@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import type { CoopSharedState, Member } from '../../../contracts/schema';
 import { createCoop } from '../../coop/flows';
-import { encodeCoopDoc, hydrateCoopDoc, readCoopState, writeCoopState } from '../../coop/sync';
+import {
+  encodeCoopDoc,
+  hydrateCoopDoc,
+  readCoopState,
+  readCoopStateRaw,
+  writeCoopState,
+} from '../../coop/sync';
 import { mergeCoopStateUpdate, saveCoopState } from '../db-crud-content';
+import { getSyncRoomSecretRecord, isRedactedSyncRoomSecret } from '../db-crud-sync';
 import { CoopDexie } from '../db-schema';
 
 const defaultSetupInsights = {
@@ -88,7 +95,13 @@ describe('saveCoopState atomicity (R4)', () => {
     const doc = hydrateCoopDoc(persistedRecord.encodedState);
     const loaded = readCoopState(doc);
     expect(loaded.profile.name).toBe(state.profile.name);
+    expect(isRedactedSyncRoomSecret(loaded.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(loaded.syncRoom.inviteSigningSecret)).toBe(true);
     doc.destroy();
+
+    const secretRecord = await getSyncRoomSecretRecord(db, state.profile.id);
+    expect(secretRecord?.roomSecret).toBe(state.syncRoom.roomSecret);
+    expect(secretRecord?.inviteSigningSecret).toBe(state.syncRoom.inviteSigningSecret);
   });
 
   it('merges into an existing coop doc rather than replacing it', async () => {
@@ -138,6 +151,33 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     // Merge the remote update
     const merged = await mergeCoopStateUpdate(db, state.profile.id, remoteUpdate);
     expect(merged.members.map((m) => m.id)).toContain('remote-member');
+  });
+
+  it('redacts plaintext sync room secrets from merged peer updates before storing the doc', async () => {
+    const db = freshDb();
+    const state = buildTestState();
+    const remoteDoc = hydrateCoopDoc();
+    writeCoopState(remoteDoc, state);
+    const remoteUpdate = Y.encodeStateAsUpdate(remoteDoc);
+    remoteDoc.destroy();
+
+    const merged = await mergeCoopStateUpdate(db, state.profile.id, remoteUpdate);
+    expect(isRedactedSyncRoomSecret(merged.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(merged.syncRoom.inviteSigningSecret)).toBe(true);
+
+    const secretRecord = await getSyncRoomSecretRecord(db, state.profile.id);
+    expect(secretRecord?.roomSecret).toBe(state.syncRoom.roomSecret);
+    expect(secretRecord?.inviteSigningSecret).toBe(state.syncRoom.inviteSigningSecret);
+
+    const persistedRecord = requireDefined(
+      await db.coopDocs.get(state.profile.id),
+      'Expected persisted coop doc after secret redaction',
+    );
+    const persistedDoc = hydrateCoopDoc(persistedRecord.encodedState);
+    const persistedState = readCoopState(persistedDoc);
+    persistedDoc.destroy();
+    expect(isRedactedSyncRoomSecret(persistedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(persistedState.syncRoom.inviteSigningSecret)).toBe(true);
   });
 });
 
@@ -201,6 +241,17 @@ describe('mergeCoopStateUpdate Zod recovery (R7)', () => {
       requireDefined(finalRecord, 'Expected merged coop doc to remain persisted').encodedState
         .length,
     ).toBeGreaterThan(0);
+    const finalDoc = hydrateCoopDoc(
+      requireDefined(finalRecord, 'Expected final coop doc for redaction check').encodedState,
+    );
+    const finalRaw = readCoopStateRaw(finalDoc);
+    const finalSyncRoom = finalRaw.syncRoom as {
+      roomSecret?: string;
+      inviteSigningSecret?: string;
+    };
+    finalDoc.destroy();
+    expect(isRedactedSyncRoomSecret(finalSyncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(finalSyncRoom.inviteSigningSecret)).toBe(true);
 
     // The result should be defined (not thrown away) and carry a warning
     expect(result).toBeDefined();

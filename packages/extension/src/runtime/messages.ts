@@ -51,6 +51,7 @@ import type {
   SkillRun,
   SoundEvent,
   SoundPreferences,
+  SyncRoomConfig,
   TabCandidate,
   TabRouting,
   UiPreferences,
@@ -241,6 +242,7 @@ export interface ReceiverSyncRuntimeStatus {
 
 export interface CoopSyncConfigEntry {
   coop: CoopSharedState;
+  providerSyncRoom?: SyncRoomConfig;
   roomSecretAvailable: boolean;
   legacySecretMigrated: boolean;
   roomEpoch?: number;

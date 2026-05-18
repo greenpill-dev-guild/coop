@@ -167,8 +167,13 @@ export async function getCoopSyncConfig() {
         syncRoom: redactSyncRoomSecrets(coop.syncRoom),
       });
     }
+    const publicCoop = {
+      ...coop,
+      syncRoom: redactSyncRoomSecrets(hydratedRoom ?? coop.syncRoom),
+    };
     entries.push({
-      coop: hydratedRoom ? { ...coop, syncRoom: hydratedRoom } : coop,
+      coop: publicCoop,
+      providerSyncRoom: hydratedRoom ?? undefined,
       roomSecretAvailable: Boolean(hydratedRoom),
       legacySecretMigrated: Boolean(secretRecord),
       roomEpoch: secretRecord?.roomEpoch,

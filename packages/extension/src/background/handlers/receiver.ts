@@ -9,11 +9,12 @@ import {
   buildReceiverPairingDeepLink,
   createReceiverDraftSeed,
   createReceiverPairingPayload,
+  createSyncRoomConfig,
   deleteReviewDraft,
   encodeCoopDoc,
   encodeReceiverPairingPayload,
-  ensureSyncRoomSecretRecord,
   ensureInviteCodes,
+  ensureSyncRoomSecretRecord,
   generateInviteCode,
   getAuthSession,
   getCurrentInviteForType,
@@ -25,13 +26,13 @@ import {
   nowIso,
   receiverSyncAssetToBlob,
   redactSyncRoomSecrets,
-  regenerateInviteCode,
   resolveDraftTargetCoopIdsForUi,
   revokeInviteCode,
   revokeInviteType,
   saveReceiverCapture,
   saveReviewDraft,
   setActiveReceiverPairing,
+  setSyncRoomSecretRecord,
   toReceiverPairingRecord,
   updateCoopState,
   updateReceiverCapture,
@@ -100,6 +101,46 @@ function redactCoopForSharedState(coop: CoopSharedState) {
   return {
     ...coop,
     syncRoom: redactSyncRoomSecrets(coop.syncRoom),
+  };
+}
+
+function revokeAllLiveInvitesForRoomRotation(coop: CoopSharedState, revokedBy: string) {
+  return (['member', 'trusted'] as const).reduce(
+    (state, inviteType) =>
+      revokeInviteType({
+        state,
+        inviteType,
+        revokedBy,
+      }),
+    coop,
+  );
+}
+
+async function rotateCoopSyncRoomForInviteBoundary(coop: CoopSharedState) {
+  const currentRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
+  const currentRoom = hydrateSyncRoomWithSecret(coop.syncRoom, currentRecord);
+  if (!currentRoom) {
+    throw new Error(
+      'Sync secrets are unavailable on this browser. Rejoin with a fresh invite handoff.',
+    );
+  }
+
+  const nextRoom = createSyncRoomConfig(coop.profile.id, currentRoom.signalingUrls);
+  const now = nowIso();
+  await setSyncRoomSecretRecord(db, {
+    coopId: nextRoom.coopId,
+    roomId: nextRoom.roomId,
+    roomSecret: nextRoom.roomSecret,
+    inviteSigningSecret: nextRoom.inviteSigningSecret,
+    roomEpoch: (currentRecord?.roomEpoch ?? 1) + 1,
+    legacyCompatible: false,
+    migratedAt: currentRecord?.migratedAt ?? now,
+    updatedAt: now,
+  });
+
+  return {
+    ...coop,
+    syncRoom: nextRoom,
   };
 }
 
@@ -285,18 +326,23 @@ export async function handleRegenerateInviteCode(
 
   try {
     const hydratedCoop = await hydrateCoopForInviteManagement(coop);
-    const regenerated = regenerateInviteCode({
-      state: hydratedCoop,
+    const revokedState = revokeAllLiveInvitesForRoomRotation(
+      hydratedCoop,
+      message.payload.createdBy,
+    );
+    const rotatedState = await rotateCoopSyncRoomForInviteBoundary(revokedState);
+    const invite = generateInviteCode({
+      state: rotatedState,
       createdBy: message.payload.createdBy,
-      inviteType: message.payload.inviteType,
+      type: message.payload.inviteType,
     });
-    const sharedState = redactCoopForSharedState(regenerated.state);
+    const sharedState = redactCoopForSharedState(addInviteToState(rotatedState, invite));
     await saveState(sharedState);
     await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
     await refreshBadge();
     return {
       ok: true,
-      data: regenerated.invite,
+      data: invite,
     } satisfies RuntimeActionResponse;
   } catch (err) {
     return {
@@ -315,11 +361,17 @@ export async function handleRevokeInvite(
     return { ok: false, error: 'Coop not found.' } satisfies RuntimeActionResponse;
   }
   try {
-    const nextState = revokeInviteCode({
-      state: coop,
+    const hydratedCoop = await hydrateCoopForInviteManagement(coop);
+    const revokedState = revokeInviteCode({
+      state: hydratedCoop,
       inviteId: message.payload.inviteId,
       revokedBy: message.payload.revokedBy,
     });
+    const fullyRevokedState = revokeAllLiveInvitesForRoomRotation(
+      revokedState,
+      message.payload.revokedBy,
+    );
+    const nextState = await rotateCoopSyncRoomForInviteBoundary(fullyRevokedState);
     const sharedState = redactCoopForSharedState(nextState);
     await saveState(sharedState);
     await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
@@ -343,11 +395,18 @@ export async function handleRevokeInviteType(
   }
 
   try {
-    const nextState = revokeInviteType({
-      state: coop,
+    const hydratedCoop = await hydrateCoopForInviteManagement(coop);
+    const revokedState = revokeInviteType({
+      state: hydratedCoop,
       inviteType: message.payload.inviteType,
       revokedBy: message.payload.revokedBy,
     });
+    const nextState =
+      revokedState === hydratedCoop
+        ? revokedState
+        : await rotateCoopSyncRoomForInviteBoundary(
+            revokeAllLiveInvitesForRoomRotation(revokedState, message.payload.revokedBy),
+          );
     const sharedState = redactCoopForSharedState(nextState);
     await saveState(sharedState);
     await persistInviteStateToYjsDoc(coop.profile.id, sharedState);

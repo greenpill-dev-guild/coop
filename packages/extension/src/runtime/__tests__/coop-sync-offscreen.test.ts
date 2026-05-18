@@ -64,6 +64,10 @@ const sharedMocks = vi.hoisted(() => {
     encryptInviteHandoffPayload: vi.fn(),
     hashJson: vi.fn((value: unknown) => JSON.stringify(value)),
     hydrateCoopDoc: vi.fn(() => createMockHandoffDoc()),
+    isRedactedSyncRoomSecret: vi.fn(
+      (value: string | undefined) =>
+        typeof value === 'string' && value.startsWith('encrypted://local/sync-room-secret/'),
+    ),
     inviteHandoffRequestSchema: {
       parse: vi.fn((value: unknown) => value),
     },
@@ -73,6 +77,19 @@ const sharedMocks = vi.hoisted(() => {
     mergeCoopDocUpdates: vi.fn(() => new Uint8Array([1, 2, 3])),
     parseInviteCode: vi.fn(),
     readCoopState: vi.fn(),
+    redactSyncRoomSecrets: vi.fn(
+      (room: {
+        coopId: string;
+        roomId: string;
+        roomSecret: string;
+        inviteSigningSecret: string;
+        signalingUrls: string[];
+      }) => ({
+        ...room,
+        roomSecret: `encrypted://local/sync-room-secret/${room.coopId}/${room.roomId}`,
+        inviteSigningSecret: `encrypted://local/sync-room-secret/${room.coopId}/${room.roomId}/invite`,
+      }),
+    ),
     summarizeSyncTransportHealth: vi.fn(() => ({
       syncError: false,
       note: 'WebSocket sync connected.',
@@ -111,11 +128,13 @@ vi.mock('@coop/shared', () => {
     encryptInviteHandoffPayload: sharedMocks.encryptInviteHandoffPayload,
     hashJson: sharedMocks.hashJson,
     hydrateCoopDoc: sharedMocks.hydrateCoopDoc,
+    isRedactedSyncRoomSecret: sharedMocks.isRedactedSyncRoomSecret,
     inviteHandoffRequestSchema: sharedMocks.inviteHandoffRequestSchema,
     inviteHandoffResponseSchema: sharedMocks.inviteHandoffResponseSchema,
     mergeCoopDocUpdates: sharedMocks.mergeCoopDocUpdates,
     parseInviteCode: sharedMocks.parseInviteCode,
     readCoopState: sharedMocks.readCoopState,
+    redactSyncRoomSecrets: sharedMocks.redactSyncRoomSecrets,
     summarizeSyncTransportHealth: sharedMocks.summarizeSyncTransportHealth,
     validateInvite: sharedMocks.validateInvite,
     verifyInviteCodeProof: sharedMocks.verifyInviteCodeProof,
@@ -174,6 +193,19 @@ function buildCoop() {
   };
 }
 
+function buildCoopSyncConfigEntry(coop = buildCoop()) {
+  return {
+    coop: {
+      ...coop,
+      syncRoom: sharedMocks.redactSyncRoomSecrets(coop.syncRoom),
+    },
+    providerSyncRoom: coop.syncRoom,
+    roomSecretAvailable: true,
+    legacySecretMigrated: true,
+    roomEpoch: 2,
+  };
+}
+
 describe('coop sync offscreen runtime', () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   let onRuntimeMessage:
@@ -181,7 +213,7 @@ describe('coop sync offscreen runtime', () => {
         message: { type?: string; payload?: { coopId?: string; blobId?: string } },
         sender?: unknown,
         sendResponse?: (response: unknown) => void,
-      ) => boolean | void)
+      ) => boolean | undefined)
     | null;
   let onUnload: ((event: Event) => void) | null;
   let providersDisconnectMock: ReturnType<typeof vi.fn>;
@@ -216,6 +248,23 @@ describe('coop sync offscreen runtime', () => {
     nextTimerId = 1;
 
     const coop = buildCoop();
+    sharedMocks.isRedactedSyncRoomSecret.mockImplementation(
+      (value: string | undefined) =>
+        typeof value === 'string' && value.startsWith('encrypted://local/sync-room-secret/'),
+    );
+    sharedMocks.redactSyncRoomSecrets.mockImplementation(
+      (room: {
+        coopId: string;
+        roomId: string;
+        roomSecret: string;
+        inviteSigningSecret: string;
+        signalingUrls: string[];
+      }) => ({
+        ...room,
+        roomSecret: `encrypted://local/sync-room-secret/${room.coopId}/${room.roomId}`,
+        inviteSigningSecret: `encrypted://local/sync-room-secret/${room.coopId}/${room.roomId}/invite`,
+      }),
+    );
     sharedMocks.buildIceServers.mockReturnValue(['stun:coop.test']);
     sharedMocks.createBlobRelayTransport.mockReturnValue(undefined);
     sharedMocks.createCoopDb.mockReturnValue({});
@@ -312,13 +361,7 @@ describe('coop sync offscreen runtime', () => {
           return {
             ok: true,
             data: {
-              coops: [
-                {
-                  coop,
-                  roomSecretAvailable: true,
-                  legacySecretMigrated: true,
-                },
-              ],
+              coops: [buildCoopSyncConfigEntry(coop)],
               websocketSyncUrl: 'wss://api.coop.test/yws',
               iceConfig: {
                 iceServers: [{ urls: ['turn:turn.coop.test:3478'] }],
@@ -344,7 +387,7 @@ describe('coop sync offscreen runtime', () => {
                   message: { type?: string; payload?: { coopId?: string; blobId?: string } },
                   sender?: unknown,
                   sendResponse?: (response: unknown) => void,
-                ) => boolean | void,
+                ) => boolean | undefined,
               ) => {
                 onRuntimeMessage = listener;
               },
@@ -393,6 +436,23 @@ describe('coop sync offscreen runtime', () => {
     await flushMicrotasks();
 
     expect(sharedMocks.connectSyncProviders).toHaveBeenCalledTimes(1);
+    expect(sharedMocks.createCoopDoc).toHaveBeenCalledWith(
+      expect.objectContaining({
+        syncRoom: expect.objectContaining({
+          roomSecret: expect.stringContaining('encrypted://local/sync-room-secret/'),
+          inviteSigningSecret: expect.stringContaining('encrypted://local/sync-room-secret/'),
+        }),
+      }),
+    );
+    expect(sharedMocks.connectSyncProviders).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        roomSecret: 'room-secret',
+        inviteSigningSecret: 'invite-secret',
+      }),
+      expect.any(Array),
+      'wss://api.coop.test/yws',
+    );
     expect(blobMocks.broadcastManifest).toHaveBeenCalledTimes(1);
 
     const sendResponse = vi.fn();
@@ -512,13 +572,7 @@ describe('coop sync offscreen runtime', () => {
         return {
           ok: true,
           data: {
-            coops: [
-              {
-                coop,
-                roomSecretAvailable: true,
-                legacySecretMigrated: true,
-              },
-            ],
+            coops: [buildCoopSyncConfigEntry(coop)],
             websocketSyncUrl: 'wss://api.coop.test/yws',
             iceConfig: null,
           },
