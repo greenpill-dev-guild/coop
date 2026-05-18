@@ -169,6 +169,7 @@ export function selectSkillIdsForObservation(
 
   const ordered = topologicalSortSkills(filtered);
   const preferredOrderByTrigger: Partial<Record<AgentObservation['trigger'], string[]>> = {
+    'roundup-batch-ready': ['tab-router', 'entity-extractor'],
     'high-confidence-draft': [
       'opportunity-extractor',
       'grant-fit-scorer',

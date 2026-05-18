@@ -309,6 +309,19 @@ describe('agent harness helpers', () => {
       'ecosystem-entity-extractor',
     ]);
 
+    const roundupBatchReady = createAgentObservation({
+      trigger: 'roundup-batch-ready',
+      title: 'Captured tabs ready',
+      summary: 'Route captured extracts before enrichment.',
+      payload: {
+        extractIds: ['extract-1'],
+      },
+    });
+    expect(selectSkillIdsForObservation(roundupBatchReady, manifests)).toEqual([
+      'tab-router',
+      'entity-extractor',
+    ]);
+
     const audioTranscriptReady = createAgentObservation({
       trigger: 'audio-transcript-ready',
       title: 'Voice note transcribed',
