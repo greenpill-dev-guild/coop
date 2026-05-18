@@ -15,6 +15,10 @@ describe('resolveReceiverBridgeMatches', () => {
     ]);
   });
 
+  it('keeps coop.town production builds scoped to the exact receiver origin', () => {
+    expect(resolveReceiverBridgeMatches('https://coop.town')).toEqual(['https://coop.town/*']);
+  });
+
   it('preserves localhost bridges when the configured receiver app is local', () => {
     expect(resolveReceiverBridgeMatches('http://localhost:3001')).toEqual([
       'http://127.0.0.1/*',
@@ -83,6 +87,15 @@ describe('validateStoreReceiverAppUrl', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.url.href).toBe('https://receiver.coop/');
+    }
+  });
+
+  it('accepts https://coop.town as the production receiver origin', () => {
+    const result = validateStoreReceiverAppUrl('https://coop.town');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.url.href).toBe('https://coop.town/');
     }
   });
 });

@@ -22,6 +22,10 @@ const syncRoomSecretRecordSchema = z.object({
 
 export type SyncRoomSecretRecord = z.infer<typeof syncRoomSecretRecordSchema>;
 
+function retiredSyncRoomSecretEntityId(coopId: string, roomId: string) {
+  return `${coopId}/retired/${roomId}`;
+}
+
 export function buildRedactedSyncRoomSecret(coopId: string, roomId: string) {
   return `encrypted://local/sync-room-secret/${coopId}/${roomId}`;
 }
@@ -54,6 +58,22 @@ export async function setSyncRoomSecretRecord(
   return parsed;
 }
 
+export async function setRetiredSyncRoomSecretRecord(
+  db: CoopDexie,
+  value: SyncRoomSecretRecord,
+): Promise<SyncRoomSecretRecord> {
+  const parsed = syncRoomSecretRecordSchema.parse(value);
+  const payload = await buildEncryptedLocalPayloadRecord({
+    db,
+    kind: 'sync-room-secret',
+    entityId: retiredSyncRoomSecretEntityId(parsed.coopId, parsed.roomId),
+    bytes: new TextEncoder().encode(JSON.stringify(parsed)),
+  });
+
+  await db.encryptedLocalPayloads.put(payload);
+  return parsed;
+}
+
 export async function getSyncRoomSecretRecord(
   db: CoopDexie,
   coopId: string,
@@ -68,6 +88,47 @@ export async function getSyncRoomSecretRecord(
     console.warn(`[storage] Failed to decrypt sync room secret payload for ${coopId}.`, error);
     return null;
   }
+}
+
+export async function listRetiredSyncRoomSecretRecords(
+  db: CoopDexie,
+  coopId: string,
+): Promise<SyncRoomSecretRecord[]> {
+  const prefix = retiredSyncRoomSecretEntityId(coopId, '');
+  const records = await db.encryptedLocalPayloads
+    .where('kind')
+    .equals('sync-room-secret')
+    .filter((record) => record.entityId.startsWith(prefix))
+    .toArray();
+  const parsed: SyncRoomSecretRecord[] = [];
+
+  for (const record of records) {
+    try {
+      const bytes = await decryptEncryptedLocalPayloadRecord(db, record);
+      parsed.push(syncRoomSecretRecordSchema.parse(JSON.parse(new TextDecoder().decode(bytes))));
+    } catch (error) {
+      console.warn(
+        `[storage] Failed to decrypt retired sync room secret ${record.entityId}.`,
+        error,
+      );
+    }
+  }
+
+  return parsed;
+}
+
+export function syncRoomSecretRecordToConfig(
+  record: SyncRoomSecretRecord,
+  signalingUrls: string[] = [],
+): SyncRoomConfig {
+  return syncRoomConfigSchema.parse({
+    coopId: record.coopId,
+    roomId: record.roomId,
+    roomSecret: record.roomSecret,
+    inviteSigningSecret: record.inviteSigningSecret,
+    signalingUrls,
+    roomEpoch: record.roomEpoch,
+  });
 }
 
 export async function removeSyncRoomSecretRecord(db: CoopDexie, coopId: string): Promise<void> {
@@ -93,7 +154,7 @@ export async function ensureSyncRoomSecretRecord(
     roomId: room.roomId,
     roomSecret: room.roomSecret,
     inviteSigningSecret: room.inviteSigningSecret,
-    roomEpoch: (existing?.roomEpoch ?? 0) + 1,
+    roomEpoch: room.roomEpoch ?? (existing?.roomEpoch ?? 0) + 1,
     legacyCompatible: true,
     migratedAt: existing?.migratedAt ?? now,
     updatedAt: now,

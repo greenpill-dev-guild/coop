@@ -10,6 +10,7 @@ import {
   encodeCoopDoc,
   hydrateCoopDoc,
   isAuthorizedCoopSyncRoom,
+  mergeCoopDocUpdates,
   readCoopState,
   summarizeSyncTransportHealth,
   toSyncRoomBootstrap,
@@ -64,6 +65,54 @@ describe('shared contracts and sync hydration', () => {
     expect(state.profile.id).toBe(created.state.profile.id);
     expect(state.syncRoom.roomId).toBe(created.state.syncRoom.roomId);
     expect(state.memoryProfile.version).toBe(1);
+  });
+
+  it('merges preferred Yjs state updates for offscreen persistence', () => {
+    const created = createCoop({
+      coopName: 'Merged Sync Coop',
+      purpose: 'Verify that preferred Yjs update payloads merge before persistence.',
+      creatorDisplayName: 'Rae',
+      captureMode: 'manual',
+      seedContribution: 'I am testing merged sync payloads.',
+      setupInsights: {
+        summary: 'A concise but valid setup payload for sync testing.',
+        crossCuttingPainPoints: ['Context drifts'],
+        crossCuttingOpportunities: ['Shared state stays typed'],
+        lenses: [
+          {
+            lens: 'capital-formation',
+            currentState: 'Links are scattered.',
+            painPoints: 'Funding context disappears.',
+            improvements: 'Route leads into shared state.',
+          },
+          {
+            lens: 'impact-reporting',
+            currentState: 'Reporting is rushed.',
+            painPoints: 'Evidence gets dropped.',
+            improvements: 'Collect evidence incrementally.',
+          },
+          {
+            lens: 'governance-coordination',
+            currentState: 'Calls happen weekly.',
+            painPoints: 'Actions slip.',
+            improvements: 'Review actions through the board.',
+          },
+          {
+            lens: 'knowledge-garden-resources',
+            currentState: 'Resources live in tabs.',
+            painPoints: 'Research repeats.',
+            improvements: 'Persist high-signal references.',
+          },
+        ],
+      },
+    });
+
+    const merged = mergeCoopDocUpdates([encodeCoopDoc(created.doc)]);
+    const hydrated = hydrateCoopDoc(merged);
+    const state = readCoopState(hydrated);
+
+    expect(state.profile.id).toBe(created.state.profile.id);
+    expect(state.profile.name).toBe('Merged Sync Coop');
   });
 
   it('round-trips greenGoods state through Yjs encoding', () => {

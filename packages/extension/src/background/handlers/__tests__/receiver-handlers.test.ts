@@ -55,6 +55,14 @@ const dashboardMocks = vi.hoisted(() => ({
   refreshBadge: vi.fn(async () => undefined),
 }));
 
+const receiverRoutingMocks = vi.hoisted(() => ({
+  routeReceiverCaptureToCoops: vi.fn(async () => ({
+    status: 'needs-context',
+    draft: null,
+    routings: [],
+  })),
+}));
+
 vi.mock('@coop/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@coop/shared')>();
   return {
@@ -108,6 +116,10 @@ vi.mock('../agent', () => ({
   emitAgentObservationIfMissing: agentMocks.emitAgentObservationIfMissing,
   requestAgentCycle: agentMocks.requestAgentCycle,
   syncHighConfidenceDraftObservations: agentMocks.syncHighConfidenceDraftObservations,
+}));
+
+vi.mock('../receiver-routing', () => ({
+  routeReceiverCaptureToCoops: receiverRoutingMocks.routeReceiverCaptureToCoops,
 }));
 
 const {

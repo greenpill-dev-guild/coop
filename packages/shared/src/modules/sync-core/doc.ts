@@ -1,10 +1,15 @@
 import * as Y from 'yjs';
 import {
   type CoopSharedState,
+  type Member,
+  type RoomRotationAnnouncement,
   type SyncRoomBootstrap,
   type SyncRoomConfig,
+  type SyncRoomRotationProof,
   artifactSchema,
   coopSharedStateSchema,
+  roomRotationAnnouncementSchema,
+  syncRoomRotationProofSchema,
 } from '../../contracts/schema';
 import {
   buildIceServers,
@@ -13,7 +18,14 @@ import {
   defaultWebsocketSyncUrl,
   parseSignalingUrls,
 } from '../../sync-config';
-import { appendQueryParams, createId, hashText } from '../../utils';
+import {
+  appendQueryParams,
+  createId,
+  hashJson,
+  hashText,
+  nowIso,
+  toDeterministicAddress,
+} from '../../utils';
 
 // --- Minimal varuint framing (avoids lib0 dependency in shared package) ---
 
@@ -168,6 +180,313 @@ export function isAuthorizedCoopSyncRoom(
   return deriveSyncRoomId(room.coopId, room.roomSecret) === room.roomId;
 }
 
+function rotationOrderValue(
+  room: Pick<SyncRoomConfig, 'roomEpoch' | 'rotatedAt' | 'rotatedBy' | 'roomId'>,
+) {
+  return [
+    String(room.roomEpoch ?? 1).padStart(12, '0'),
+    room.rotatedAt ?? '',
+    room.rotatedBy ?? '',
+    room.roomId,
+  ].join('\u0000');
+}
+
+export function compareSyncRoomRotationOrder(
+  candidate: Pick<SyncRoomConfig, 'roomEpoch' | 'rotatedAt' | 'rotatedBy' | 'roomId'>,
+  current: Pick<SyncRoomConfig, 'roomEpoch' | 'rotatedAt' | 'rotatedBy' | 'roomId'>,
+) {
+  return rotationOrderValue(candidate).localeCompare(rotationOrderValue(current));
+}
+
+export function isPreferredSyncRoomRotation(
+  candidate: Pick<SyncRoomConfig, 'roomEpoch' | 'rotatedAt' | 'rotatedBy' | 'roomId'>,
+  current: Pick<SyncRoomConfig, 'roomEpoch' | 'rotatedAt' | 'rotatedBy' | 'roomId'>,
+) {
+  return compareSyncRoomRotationOrder(candidate, current) > 0;
+}
+
+type SyncRoomRotationProofBase = Omit<
+  SyncRoomRotationProof,
+  'challenge' | 'signature' | 'webauthn'
+>;
+
+function normalizeHex(value: string) {
+  return value.toLowerCase() as `0x${string}`;
+}
+
+function hexToBytes(value: string) {
+  const hex = value.startsWith('0x') ? value.slice(2) : value;
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+function concatBytes(...chunks: Uint8Array[]) {
+  const length = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+  const out = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
+function bytesToHex(bytes: Uint8Array) {
+  return `0x${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function base64UrlToBytes(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  const binary =
+    typeof atob === 'function' ? atob(padded) : Buffer.from(padded, 'base64').toString('binary');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function normalizeP256PublicKey(publicKey: string) {
+  const bytes = hexToBytes(publicKey);
+  if (bytes.length === 65 && bytes[0] === 4) return bytes;
+  if (bytes.length === 64) return concatBytes(new Uint8Array([4]), bytes);
+  return null;
+}
+
+async function verifyWebAuthnP256Signature(proof: SyncRoomRotationProof) {
+  if (!globalThis.crypto?.subtle) return false;
+  const publicKeyBytes = normalizeP256PublicKey(proof.signerPasskeyPublicKey);
+  if (!publicKeyBytes) return false;
+
+  let clientData: { type?: string; challenge?: string };
+  try {
+    clientData = JSON.parse(proof.webauthn.clientDataJSON);
+  } catch {
+    return false;
+  }
+  if (clientData.type !== 'webauthn.get' || !clientData.challenge) return false;
+  if (
+    normalizeHex(bytesToHex(base64UrlToBytes(clientData.challenge))) !==
+    normalizeHex(proof.challenge)
+  ) {
+    return false;
+  }
+
+  const authenticatorData = hexToBytes(proof.webauthn.authenticatorData);
+  if (authenticatorData.length < 37) return false;
+  const rpIdHash = new Uint8Array(
+    await globalThis.crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(proof.signerPasskeyRpId),
+    ),
+  );
+  if (bytesToHex(authenticatorData.slice(0, 32)) !== bytesToHex(rpIdHash)) return false;
+
+  const flags = authenticatorData[32] ?? 0;
+  if ((flags & 0x01) !== 0x01) return false;
+  if (proof.webauthn.userVerificationRequired && (flags & 0x04) !== 0x04) return false;
+  if ((flags & 0x08) !== 0x08 && (flags & 0x10) === 0x10) return false;
+
+  const clientDataHash = new Uint8Array(
+    await globalThis.crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(proof.webauthn.clientDataJSON),
+    ),
+  );
+  const payload = concatBytes(authenticatorData, clientDataHash);
+  const rawSignature = hexToBytes(proof.signature);
+  const signature = rawSignature.length === 65 ? rawSignature.slice(0, 64) : rawSignature;
+  if (signature.length !== 64) return false;
+
+  const key = await globalThis.crypto.subtle.importKey(
+    'raw',
+    publicKeyBytes,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['verify'],
+  );
+  return globalThis.crypto.subtle.verify(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    signature,
+    payload,
+  );
+}
+
+export function buildSyncRoomRotationProofBase(input: {
+  coopId: string;
+  previousRoom: Pick<SyncRoomConfig, 'roomId'>;
+  nextRoom: Pick<
+    SyncRoomConfig,
+    'roomId' | 'roomEpoch' | 'previousRoomIds' | 'rotatedAt' | 'rotatedBy'
+  >;
+  signer: {
+    memberId: string;
+    address: string;
+    passkeyCredentialId: string;
+    passkeyPublicKey: string;
+    passkeyRpId: string;
+  };
+  createdAt?: string;
+}): SyncRoomRotationProofBase {
+  return {
+    kind: 'coop-sync-room-rotation-proof-v1',
+    coopId: input.coopId,
+    previousRoomId: input.previousRoom.roomId,
+    roomId: input.nextRoom.roomId,
+    roomEpoch: input.nextRoom.roomEpoch ?? 1,
+    previousRoomIds: input.nextRoom.previousRoomIds ?? [],
+    rotatedAt: input.nextRoom.rotatedAt,
+    rotatedBy: input.nextRoom.rotatedBy,
+    signerMemberId: input.signer.memberId,
+    signerAddress: input.signer.address,
+    signerPasskeyCredentialId: input.signer.passkeyCredentialId,
+    signerPasskeyPublicKey: input.signer.passkeyPublicKey,
+    signerPasskeyRpId: input.signer.passkeyRpId,
+    createdAt: input.createdAt ?? nowIso(),
+  };
+}
+
+export function buildSyncRoomRotationProofChallenge(proof: SyncRoomRotationProofBase) {
+  return hashJson({
+    kind: proof.kind,
+    coopId: proof.coopId,
+    previousRoomId: proof.previousRoomId,
+    roomId: proof.roomId,
+    roomEpoch: proof.roomEpoch,
+    previousRoomIds: proof.previousRoomIds,
+    rotatedAt: proof.rotatedAt,
+    rotatedBy: proof.rotatedBy,
+    signerMemberId: proof.signerMemberId,
+    signerAddress: proof.signerAddress,
+    signerPasskeyCredentialId: proof.signerPasskeyCredentialId,
+    signerPasskeyPublicKey: proof.signerPasskeyPublicKey,
+    signerPasskeyRpId: proof.signerPasskeyRpId,
+    createdAt: proof.createdAt,
+  });
+}
+
+export function finalizeSyncRoomRotationProof(
+  proof: SyncRoomRotationProofBase,
+  signed: {
+    signature: string;
+    webauthn: SyncRoomRotationProof['webauthn'];
+  },
+) {
+  return syncRoomRotationProofSchema.parse({
+    ...proof,
+    challenge: buildSyncRoomRotationProofChallenge(proof),
+    signature: signed.signature,
+    webauthn: signed.webauthn,
+  });
+}
+
+export async function verifySyncRoomRotationProof(input: {
+  proof: unknown;
+  currentRoom: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'roomEpoch'>;
+  targetRoom: Pick<
+    SyncRoomConfig,
+    'coopId' | 'roomId' | 'roomEpoch' | 'previousRoomIds' | 'rotatedAt' | 'rotatedBy'
+  >;
+  members: Member[];
+}) {
+  const result = syncRoomRotationProofSchema.safeParse(input.proof);
+  if (!result.success) return false;
+  const proof = result.data;
+  const signer = input.members.find((member) => member.id === proof.signerMemberId);
+  const currentEpoch = input.currentRoom.roomEpoch ?? 1;
+  if (
+    proof.coopId !== input.currentRoom.coopId ||
+    proof.coopId !== input.targetRoom.coopId ||
+    proof.roomId !== input.targetRoom.roomId ||
+    proof.roomEpoch !== (input.targetRoom.roomEpoch ?? 1) ||
+    proof.roomEpoch <= currentEpoch ||
+    proof.rotatedAt !== input.targetRoom.rotatedAt ||
+    proof.rotatedBy !== input.targetRoom.rotatedBy ||
+    proof.rotatedBy !== proof.signerMemberId ||
+    !proof.previousRoomIds.includes(proof.previousRoomId) ||
+    !proof.previousRoomIds.includes(input.currentRoom.roomId) ||
+    JSON.stringify(proof.previousRoomIds) !==
+      JSON.stringify(input.targetRoom.previousRoomIds ?? []) ||
+    !signer ||
+    signer.address.toLowerCase() !== proof.signerAddress.toLowerCase() ||
+    (signer.passkeyCredentialId &&
+      signer.passkeyCredentialId !== proof.signerPasskeyCredentialId) ||
+    toDeterministicAddress(
+      `passkey:${proof.signerPasskeyCredentialId}:${proof.signerPasskeyPublicKey}`,
+    ).toLowerCase() !== proof.signerAddress.toLowerCase() ||
+    buildSyncRoomRotationProofChallenge(proof) !== proof.challenge
+  ) {
+    return false;
+  }
+
+  try {
+    return await verifyWebAuthnP256Signature(proof);
+  } catch {
+    return false;
+  }
+}
+
+function roomRotationAnnouncementProofPayload(
+  announcement: Omit<RoomRotationAnnouncement, 'proof'>,
+  retiredInviteSigningSecret: string,
+) {
+  return {
+    kind: 'coop-room-rotation-announcement-v1',
+    retiredInviteSigningSecret,
+    announcement,
+  };
+}
+
+export function createRoomRotationAnnouncement(input: {
+  currentRoom: SyncRoomConfig;
+  retiredRoom: Pick<SyncRoomConfig, 'roomId' | 'inviteSigningSecret'>;
+  createdAt?: string;
+}): RoomRotationAnnouncement {
+  const unsigned = {
+    announcementId: `room-rotation:${input.currentRoom.roomId}`,
+    coopId: input.currentRoom.coopId,
+    previousRoomId: input.retiredRoom.roomId,
+    roomId: input.currentRoom.roomId,
+    roomEpoch: input.currentRoom.roomEpoch ?? 1,
+    previousRoomIds: input.currentRoom.previousRoomIds ?? [],
+    signalingUrls: input.currentRoom.signalingUrls,
+    rotatedAt: input.currentRoom.rotatedAt,
+    rotatedBy: input.currentRoom.rotatedBy,
+    rotationProof: input.currentRoom.rotationProof,
+    createdAt: input.createdAt ?? nowIso(),
+  };
+  return roomRotationAnnouncementSchema.parse({
+    ...unsigned,
+    proof: hashJson(
+      roomRotationAnnouncementProofPayload(unsigned, input.retiredRoom.inviteSigningSecret),
+    ),
+  });
+}
+
+export function verifyRoomRotationAnnouncement(
+  value: unknown,
+  retiredRoom: Pick<SyncRoomConfig, 'coopId' | 'roomId' | 'inviteSigningSecret'>,
+) {
+  const announcement = roomRotationAnnouncementSchema.parse(value);
+  if (
+    announcement.coopId !== retiredRoom.coopId ||
+    announcement.previousRoomId !== retiredRoom.roomId ||
+    !announcement.previousRoomIds.includes(retiredRoom.roomId)
+  ) {
+    return null;
+  }
+  const { proof: _proof, ...unsigned } = announcement;
+  const expectedProof = hashJson(
+    roomRotationAnnouncementProofPayload(unsigned, retiredRoom.inviteSigningSecret),
+  );
+  return expectedProof === announcement.proof ? announcement : null;
+}
+
 /**
  * Creates a new sync room configuration with fresh room and invite signing secrets.
  * @param coopId - The coop's unique identifier
@@ -177,6 +496,10 @@ export function isAuthorizedCoopSyncRoom(
 export function createSyncRoomConfig(
   coopId: string,
   signalingUrls = defaultSignalingUrls,
+  metadata?: Pick<
+    SyncRoomConfig,
+    'roomEpoch' | 'previousRoomIds' | 'rotatedAt' | 'rotatedBy' | 'rotationProof'
+  >,
 ): SyncRoomConfig {
   const roomSecret = createId('room-secret');
   const inviteSigningSecret = createId('invite-secret');
@@ -186,6 +509,11 @@ export function createSyncRoomConfig(
     roomId: deriveSyncRoomId(coopId, roomSecret),
     inviteSigningSecret,
     signalingUrls,
+    roomEpoch: metadata?.roomEpoch,
+    previousRoomIds: metadata?.previousRoomIds ?? [],
+    rotatedAt: metadata?.rotatedAt,
+    rotatedBy: metadata?.rotatedBy,
+    rotationProof: metadata?.rotationProof,
   };
 }
 
@@ -219,6 +547,7 @@ export function createBootstrapSyncRoomConfig(
     signalingUrls: input.signalingUrls,
     roomSecret: input.roomSecret ?? `bootstrap:${input.roomId}`,
     inviteSigningSecret: `bootstrap:${inviteId}`,
+    previousRoomIds: [],
   };
 }
 
@@ -496,7 +825,11 @@ export function mergeCoopDocUpdates(updates: Uint8Array[]) {
 
   try {
     for (const update of updates) {
-      Y.applyUpdate(doc, update);
+      try {
+        Y.applyUpdateV2(doc, update);
+      } catch {
+        Y.applyUpdate(doc, update);
+      }
     }
 
     return encodeCoopDoc(doc);

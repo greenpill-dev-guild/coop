@@ -7,6 +7,8 @@ import {
   addInviteToState,
   assertReceiverSyncEnvelope,
   buildReceiverPairingDeepLink,
+  buildSyncRoomRotationProofBase,
+  buildSyncRoomRotationProofChallenge,
   createReceiverDraftSeed,
   createReceiverPairingPayload,
   createSyncRoomConfig,
@@ -15,6 +17,7 @@ import {
   encodeReceiverPairingPayload,
   ensureInviteCodes,
   ensureSyncRoomSecretRecord,
+  finalizeSyncRoomRotationProof,
   generateInviteCode,
   getAuthSession,
   getCurrentInviteForType,
@@ -27,11 +30,13 @@ import {
   receiverSyncAssetToBlob,
   redactSyncRoomSecrets,
   resolveDraftTargetCoopIdsForUi,
+  restorePasskeyAccount,
   revokeInviteCode,
   revokeInviteType,
   saveReceiverCapture,
   saveReviewDraft,
   setActiveReceiverPairing,
+  setRetiredSyncRoomSecretRecord,
   setSyncRoomSecretRecord,
   toReceiverPairingRecord,
   updateCoopState,
@@ -116,7 +121,21 @@ function revokeAllLiveInvitesForRoomRotation(coop: CoopSharedState, revokedBy: s
   );
 }
 
-async function rotateCoopSyncRoomForInviteBoundary(coop: CoopSharedState) {
+async function rotateCoopSyncRoomForInviteBoundary(coop: CoopSharedState, rotatedBy: string) {
+  const authSession = await getAuthSession(db);
+  if (!authSession?.passkey) {
+    throw new Error('A passkey member session is required to rotate sync rooms.');
+  }
+  const signerMember = coop.members.find(
+    (member) =>
+      member.id === rotatedBy &&
+      member.address.toLowerCase() === authSession.primaryAddress.toLowerCase() &&
+      (!member.passkeyCredentialId || member.passkeyCredentialId === authSession.passkey?.id),
+  );
+  if (!signerMember) {
+    throw new Error('Only the authenticated coop member can rotate sync rooms.');
+  }
+
   const currentRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
   const currentRoom = hydrateSyncRoomWithSecret(coop.syncRoom, currentRecord);
   if (!currentRoom) {
@@ -125,14 +144,58 @@ async function rotateCoopSyncRoomForInviteBoundary(coop: CoopSharedState) {
     );
   }
 
-  const nextRoom = createSyncRoomConfig(coop.profile.id, currentRoom.signalingUrls);
   const now = nowIso();
+  const currentEpoch = currentRecord?.roomEpoch ?? currentRoom.roomEpoch ?? 1;
+  const currentSecretRecord = currentRecord ?? {
+    coopId: currentRoom.coopId,
+    roomId: currentRoom.roomId,
+    roomSecret: currentRoom.roomSecret,
+    inviteSigningSecret: currentRoom.inviteSigningSecret,
+    roomEpoch: currentEpoch,
+    legacyCompatible: false,
+    migratedAt: now,
+    updatedAt: now,
+  };
+  await setRetiredSyncRoomSecretRecord(db, currentSecretRecord);
+  const nextRoom = createSyncRoomConfig(coop.profile.id, currentRoom.signalingUrls, {
+    roomEpoch: currentEpoch + 1,
+    previousRoomIds: [currentRoom.roomId, ...(currentRoom.previousRoomIds ?? [])],
+    rotatedAt: now,
+    rotatedBy,
+  });
+  const proofBase = buildSyncRoomRotationProofBase({
+    coopId: coop.profile.id,
+    previousRoom: currentRoom,
+    nextRoom,
+    signer: {
+      memberId: signerMember.id,
+      address: signerMember.address,
+      passkeyCredentialId: authSession.passkey.id,
+      passkeyPublicKey: authSession.passkey.publicKey,
+      passkeyRpId: authSession.passkey.rpId,
+    },
+    createdAt: now,
+  });
+  const signature = (await restorePasskeyAccount(authSession).sign({
+    hash: buildSyncRoomRotationProofChallenge(proofBase) as `0x${string}`,
+  })) as {
+    signature: string;
+    webauthn: ReturnType<typeof finalizeSyncRoomRotationProof>['webauthn'];
+  };
+  const rotationProof = finalizeSyncRoomRotationProof(proofBase, {
+    signature: signature.signature,
+    webauthn: signature.webauthn,
+  });
+  const nextRoomWithProof = {
+    ...nextRoom,
+    rotationProof,
+  };
   await setSyncRoomSecretRecord(db, {
-    coopId: nextRoom.coopId,
-    roomId: nextRoom.roomId,
-    roomSecret: nextRoom.roomSecret,
-    inviteSigningSecret: nextRoom.inviteSigningSecret,
-    roomEpoch: (currentRecord?.roomEpoch ?? 1) + 1,
+    coopId: nextRoomWithProof.coopId,
+    roomId: nextRoomWithProof.roomId,
+    roomSecret: nextRoomWithProof.roomSecret,
+    inviteSigningSecret: nextRoomWithProof.inviteSigningSecret,
+    roomEpoch: nextRoomWithProof.roomEpoch ?? currentEpoch + 1,
     legacyCompatible: false,
     migratedAt: currentRecord?.migratedAt ?? now,
     updatedAt: now,
@@ -140,7 +203,7 @@ async function rotateCoopSyncRoomForInviteBoundary(coop: CoopSharedState) {
 
   return {
     ...coop,
-    syncRoom: nextRoom,
+    syncRoom: nextRoomWithProof,
   };
 }
 
@@ -330,7 +393,10 @@ export async function handleRegenerateInviteCode(
       hydratedCoop,
       message.payload.createdBy,
     );
-    const rotatedState = await rotateCoopSyncRoomForInviteBoundary(revokedState);
+    const rotatedState = await rotateCoopSyncRoomForInviteBoundary(
+      revokedState,
+      message.payload.createdBy,
+    );
     const invite = generateInviteCode({
       state: rotatedState,
       createdBy: message.payload.createdBy,
@@ -371,7 +437,10 @@ export async function handleRevokeInvite(
       revokedState,
       message.payload.revokedBy,
     );
-    const nextState = await rotateCoopSyncRoomForInviteBoundary(fullyRevokedState);
+    const nextState = await rotateCoopSyncRoomForInviteBoundary(
+      fullyRevokedState,
+      message.payload.revokedBy,
+    );
     const sharedState = redactCoopForSharedState(nextState);
     await saveState(sharedState);
     await persistInviteStateToYjsDoc(coop.profile.id, sharedState);
@@ -406,6 +475,7 @@ export async function handleRevokeInviteType(
         ? revokedState
         : await rotateCoopSyncRoomForInviteBoundary(
             revokeAllLiveInvitesForRoomRotation(revokedState, message.payload.revokedBy),
+            message.payload.revokedBy,
           );
     const sharedState = redactCoopForSharedState(nextState);
     await saveState(sharedState);

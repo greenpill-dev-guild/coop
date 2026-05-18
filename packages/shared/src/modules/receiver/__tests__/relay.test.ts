@@ -484,6 +484,7 @@ describe('receiver relay helpers', () => {
 
 describe('connectReceiverSyncRelay reconnection', () => {
   let originalWebSocket: typeof globalThis.WebSocket;
+  let originalWindowWebSocket: typeof window.WebSocket | undefined;
   let mockInstances: MockWebSocket[];
 
   class MockWebSocket {
@@ -540,13 +541,20 @@ describe('connectReceiverSyncRelay reconnection', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockInstances = [];
     originalWebSocket = globalThis.WebSocket;
+    originalWindowWebSocket = typeof window !== 'undefined' ? window.WebSocket : undefined;
     globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    if (typeof window !== 'undefined') {
+      window.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    }
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     globalThis.WebSocket = originalWebSocket;
+    if (typeof window !== 'undefined' && originalWindowWebSocket) {
+      window.WebSocket = originalWindowWebSocket;
+    }
   });
 
   it('returns a non-configured relay when no URLs are available', () => {

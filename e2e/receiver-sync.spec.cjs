@@ -144,21 +144,6 @@ async function launchExtensionProfile(userDataDir) {
   };
 }
 
-async function openFooterTab(page, name) {
-  await page
-    .locator('nav[aria-label="Sidepanel navigation"]')
-    .getByRole('button', { name: new RegExp(`^${name}$`, 'i') })
-    .click();
-}
-
-async function openNestSection(page, title) {
-  const section = page.locator('details.collapsible-card').filter({ hasText: title }).first();
-  const isOpen = await section.evaluate((element) => element.hasAttribute('open'));
-  if (!isOpen) {
-    await section.locator('summary').click();
-  }
-}
-
 async function getDashboard(page) {
   const response = await page.evaluate(async () =>
     chrome.runtime.sendMessage({ type: 'get-dashboard' }),
@@ -392,10 +377,8 @@ test.describe('receiver pairing and sync', () => {
       await creatorProfile.page.waitForLoadState('domcontentloaded');
 
       await setActiveCoop(creatorProfile.page, 'Receiver Coop');
-      await openFooterTab(creatorProfile.page, 'Nest');
-      await openNestSection(creatorProfile.page, 'Receiver Pairings');
       await creatorProfile.page
-        .getByRole('button', { name: /(generate receiver pairing|generate nest code)/i })
+        .getByRole('button', { name: /pair a device/i })
         .click();
       logProgress('generated receiver pairing');
 
@@ -411,6 +394,7 @@ test.describe('receiver pairing and sync', () => {
         )
         .toMatch(/\/pair#payload=/);
       const deepLinkUrl = new URL(deepLink);
+      deepLinkUrl.searchParams.set('presentation', 'pwa');
 
       await creatorProfile.page.close();
 
@@ -420,7 +404,7 @@ test.describe('receiver pairing and sync', () => {
       ).toBeVisible({
         timeout: 15000,
       });
-      await expect(appPage).toHaveURL(/\/pair$/);
+      await expect(appPage).toHaveURL(/\/app\/pair(?:\?presentation=pwa)?$/);
       await appPage.getByRole('button', { name: /(accept pairing|join this coop)/i }).click();
       logProgress('accepted receiver pairing');
       await expect(appPage.locator('input[type="file"]')).toHaveCount(2, {
@@ -435,7 +419,7 @@ test.describe('receiver pairing and sync', () => {
         'receiver surface inspection',
       );
       expect(receiverSurface).toMatchObject({
-        url: expect.stringMatching(/\/receiver$/),
+        url: expect.stringMatching(/\/app\/receiver(?:\?presentation=pwa)?$/),
         fileInputCount: 2,
       });
       await withTimeout(
@@ -457,6 +441,10 @@ test.describe('receiver pairing and sync', () => {
         10000,
         'receiver capture injection',
       );
+      await expect(
+        appPage.locator('[data-qa="last-saved-strip"]').filter({ hasText: 'field-note.txt' }),
+      ).toBeVisible({ timeout: 15000 });
+      await appPage.getByRole('button', { name: /view roost/i }).click();
       await expect(
         appPage.locator('.nest-item-card').filter({ hasText: 'field-note.txt' }).first(),
       ).toBeVisible({ timeout: 15000 });

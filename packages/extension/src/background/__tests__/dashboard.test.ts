@@ -65,6 +65,61 @@ describe('summarizeSyncStatus', () => {
     });
   });
 
+  it('surfaces relay-only websocket sync separately from healthy peer sync', () => {
+    expect(
+      summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: {
+          offline: false,
+          missingPermission: false,
+          syncError: false,
+        },
+        coopSyncRuntime: {
+          mode: 'websocket',
+          websocketConnected: true,
+          directPeerAvailable: false,
+          signalingConnectionCount: 0,
+          peerCount: 0,
+          broadcastPeerCount: 0,
+          activeCoopIds: ['coop-1'],
+          activeBindingKeys: ['coop-1:room-1:wss://signal.coop.test'],
+        },
+      }),
+    ).toEqual({
+      syncState: 'WebSocket relay sync connected. Direct peer sync is unavailable.',
+      syncLabel: 'Relay',
+      syncDetail: 'WebSocket relay sync connected. Direct peer sync is unavailable.',
+      syncTone: 'warning',
+    });
+  });
+
+  it('surfaces missing sync secrets when no coop binding is active', () => {
+    expect(
+      summarizeSyncStatus({
+        coopCount: 1,
+        runtimeHealth: {
+          offline: false,
+          missingPermission: false,
+          syncError: false,
+        },
+        coopSyncRuntime: {
+          mode: 'none',
+          lastError:
+            'Sync secrets are unavailable for Runtime Coop. Waiting for a current member to come online.',
+          activeCoopIds: [],
+          activeBindingKeys: [],
+        },
+      }),
+    ).toEqual({
+      syncState:
+        'Sync secrets are unavailable for Runtime Coop. Waiting for a current member to come online.',
+      syncLabel: 'Needs attention',
+      syncDetail:
+        'Sync secrets are unavailable for Runtime Coop. Waiting for a current member to come online.',
+      syncTone: 'error',
+    });
+  });
+
   it('prioritizes offline state over generic sync messaging', () => {
     expect(
       summarizeSyncStatus({

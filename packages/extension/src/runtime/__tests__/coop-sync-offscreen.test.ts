@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const sharedMocks = vi.hoisted(() => {
   class MockYMap<T> {
-    private readonly values = new Map<string, T>();
+    private readonly items = new Map<string, T>();
     private readonly observers = new Set<() => void>();
 
     set(key: string, value: T) {
-      this.values.set(key, value);
+      this.items.set(key, value);
       for (const observer of this.observers) {
         observer();
       }
@@ -14,15 +14,19 @@ const sharedMocks = vi.hoisted(() => {
     }
 
     get(key: string) {
-      return this.values.get(key);
+      return this.items.get(key);
     }
 
     has(key: string) {
-      return this.values.has(key);
+      return this.items.has(key);
     }
 
     entries() {
-      return this.values.entries();
+      return this.items.entries();
+    }
+
+    values() {
+      return this.items.values();
     }
 
     observe(callback: () => void) {
@@ -52,14 +56,51 @@ const sharedMocks = vi.hoisted(() => {
   return {
     assertInviteHandoffPayloadMatchesInvite: vi.fn(),
     buildIceServers: vi.fn(() => ['stun:coop.test']),
+    buildRedactedSyncRoomSecret: vi.fn(
+      (coopId: string, roomId: string) => `encrypted://local/sync-room-secret/${coopId}/${roomId}`,
+    ),
     compactCoopArtifacts: vi.fn(() => ({ archivedIds: [] as string[], remainingCount: 1 })),
     connectInviteHandoffProviders: vi.fn(),
     connectSyncProviders: vi.fn(),
+    createRoomRotationAnnouncement: vi.fn(
+      ({
+        currentRoom,
+        retiredRoom,
+        createdAt,
+      }: {
+        currentRoom: {
+          coopId: string;
+          roomId: string;
+          roomEpoch?: number;
+          previousRoomIds?: string[];
+          signalingUrls: string[];
+          rotatedAt?: string;
+          rotatedBy?: string;
+        };
+        retiredRoom: { roomId: string };
+        createdAt?: string;
+      }) => ({
+        announcementId: `room-rotation:${currentRoom.roomId}`,
+        coopId: currentRoom.coopId,
+        previousRoomId: retiredRoom.roomId,
+        roomId: currentRoom.roomId,
+        roomEpoch: currentRoom.roomEpoch ?? 1,
+        previousRoomIds: currentRoom.previousRoomIds ?? [],
+        signalingUrls: currentRoom.signalingUrls,
+        rotatedAt: currentRoom.rotatedAt,
+        rotatedBy: currentRoom.rotatedBy,
+        createdAt: createdAt ?? '2026-05-17T00:00:00.000Z',
+        proof: 'rotation-proof',
+      }),
+    ),
     createBlobRelayTransport: vi.fn(() => undefined),
     createInviteHandoffRequest: vi.fn(),
     createCoopDb: vi.fn(() => ({})),
     createCoopDoc: vi.fn(),
     decryptInviteHandoffPayload: vi.fn(),
+    deriveSyncRoomId: vi.fn((coopId: string, roomSecret: string) =>
+      roomSecret === 'room-secret-new' ? 'room-2' : `${coopId}:${roomSecret}`,
+    ),
     encodeCoopDoc: vi.fn(() => new Uint8Array([9, 9, 9])),
     encryptInviteHandoffPayload: vi.fn(),
     hashJson: vi.fn((value: unknown) => JSON.stringify(value)),
@@ -74,6 +115,24 @@ const sharedMocks = vi.hoisted(() => {
     inviteHandoffResponseSchema: {
       parse: vi.fn((value: unknown) => value),
     },
+    isPreferredSyncRoomRotation: vi.fn(
+      (
+        candidate: { roomEpoch?: number; rotatedAt?: string; rotatedBy?: string; roomId: string },
+        current: { roomEpoch?: number; rotatedAt?: string; rotatedBy?: string; roomId: string },
+      ) =>
+        [
+          String(candidate.roomEpoch ?? 1).padStart(12, '0'),
+          candidate.rotatedAt ?? '',
+          candidate.rotatedBy ?? '',
+          candidate.roomId,
+        ].join('\u0000') >
+        [
+          String(current.roomEpoch ?? 1).padStart(12, '0'),
+          current.rotatedAt ?? '',
+          current.rotatedBy ?? '',
+          current.roomId,
+        ].join('\u0000'),
+    ),
     mergeCoopDocUpdates: vi.fn(() => new Uint8Array([1, 2, 3])),
     parseInviteCode: vi.fn(),
     readCoopState: vi.fn(),
@@ -101,7 +160,9 @@ const sharedMocks = vi.hoisted(() => {
     })),
     validateInvite: vi.fn(() => true),
     verifyInviteCodeProof: vi.fn(() => true),
+    verifyRoomRotationAnnouncement: vi.fn((value: unknown) => value),
     writeCoopState: vi.fn(),
+    createMockHandoffDoc,
   };
 });
 
@@ -116,14 +177,17 @@ vi.mock('@coop/shared', () => {
     ORIGIN_LOCAL: 'local',
     assertInviteHandoffPayloadMatchesInvite: sharedMocks.assertInviteHandoffPayloadMatchesInvite,
     buildIceServers: sharedMocks.buildIceServers,
+    buildRedactedSyncRoomSecret: sharedMocks.buildRedactedSyncRoomSecret,
     compactCoopArtifacts: sharedMocks.compactCoopArtifacts,
     connectInviteHandoffProviders: sharedMocks.connectInviteHandoffProviders,
     connectSyncProviders: sharedMocks.connectSyncProviders,
+    createRoomRotationAnnouncement: sharedMocks.createRoomRotationAnnouncement,
     createBlobRelayTransport: sharedMocks.createBlobRelayTransport,
     createInviteHandoffRequest: sharedMocks.createInviteHandoffRequest,
     createCoopDb: sharedMocks.createCoopDb,
     createCoopDoc: sharedMocks.createCoopDoc,
     decryptInviteHandoffPayload: sharedMocks.decryptInviteHandoffPayload,
+    deriveSyncRoomId: sharedMocks.deriveSyncRoomId,
     encodeCoopDoc: sharedMocks.encodeCoopDoc,
     encryptInviteHandoffPayload: sharedMocks.encryptInviteHandoffPayload,
     hashJson: sharedMocks.hashJson,
@@ -131,6 +195,7 @@ vi.mock('@coop/shared', () => {
     isRedactedSyncRoomSecret: sharedMocks.isRedactedSyncRoomSecret,
     inviteHandoffRequestSchema: sharedMocks.inviteHandoffRequestSchema,
     inviteHandoffResponseSchema: sharedMocks.inviteHandoffResponseSchema,
+    isPreferredSyncRoomRotation: sharedMocks.isPreferredSyncRoomRotation,
     mergeCoopDocUpdates: sharedMocks.mergeCoopDocUpdates,
     parseInviteCode: sharedMocks.parseInviteCode,
     readCoopState: sharedMocks.readCoopState,
@@ -138,6 +203,7 @@ vi.mock('@coop/shared', () => {
     summarizeSyncTransportHealth: sharedMocks.summarizeSyncTransportHealth,
     validateInvite: sharedMocks.validateInvite,
     verifyInviteCodeProof: sharedMocks.verifyInviteCodeProof,
+    verifyRoomRotationAnnouncement: sharedMocks.verifyRoomRotationAnnouncement,
     writeCoopState: sharedMocks.writeCoopState,
   };
 });
@@ -163,6 +229,17 @@ function buildCoop() {
       inviteSigningSecret: 'invite-secret',
       signalingUrls: ['wss://signal.coop.test'],
     },
+    members: [
+      {
+        id: 'member-creator',
+        displayName: 'June',
+        role: 'creator',
+        authMode: 'passkey',
+        address: '0x1111111111111111111111111111111111111111',
+        joinedAt: '2026-05-17T00:00:00.000Z',
+        identityWarning: 'Test member.',
+      },
+    ],
     invites: [
       {
         id: 'invite-1',
@@ -221,7 +298,7 @@ describe('coop sync offscreen runtime', () => {
   let scheduledTimeouts: Map<number, () => void>;
   let nextTimerId: number;
 
-  async function flushMicrotasks(iterations = 8) {
+  async function flushMicrotasks(iterations = 32) {
     for (let index = 0; index < iterations; index += 1) {
       await Promise.resolve();
     }
@@ -247,7 +324,14 @@ describe('coop sync offscreen runtime', () => {
     scheduledTimeouts = new Map();
     nextTimerId = 1;
 
-    const coop = buildCoop();
+    const coop = {
+      ...buildCoop(),
+      syncRoom: {
+        ...buildCoop().syncRoom,
+        roomEpoch: 2,
+        previousRoomIds: ['room-old'],
+      },
+    };
     sharedMocks.isRedactedSyncRoomSecret.mockImplementation(
       (value: string | undefined) =>
         typeof value === 'string' && value.startsWith('encrypted://local/sync-room-secret/'),
@@ -297,6 +381,9 @@ describe('coop sync offscreen runtime', () => {
       signalingUrls: ['wss://signal.coop.test'],
       createdAt: '2026-05-17T00:00:00.000Z',
     });
+    sharedMocks.deriveSyncRoomId.mockImplementation((coopId: string, roomSecret: string) =>
+      roomSecret === 'room-secret-new' ? 'room-2' : `${coopId}:${roomSecret}`,
+    );
     sharedMocks.encryptInviteHandoffPayload.mockImplementation(
       async ({
         request,
@@ -329,10 +416,11 @@ describe('coop sync offscreen runtime', () => {
       websocketConnected: true,
     });
     sharedMocks.writeCoopState.mockReturnValue(undefined);
-    sharedMocks.createCoopDoc.mockReturnValue({
+    sharedMocks.createCoopDoc.mockImplementation(() => ({
+      ...sharedMocks.createMockHandoffDoc(),
       on: vi.fn(),
       off: docOffMock,
-    });
+    }));
     sharedMocks.connectSyncProviders.mockReturnValue({
       webrtc: {
         on: vi.fn(),
@@ -486,7 +574,7 @@ describe('coop sync offscreen runtime', () => {
       type: 'persist-coop-state',
       payload: {
         coopId: 'coop-1',
-        docUpdate: new Uint8Array([9, 9, 9]),
+        docUpdate: [9, 9, 9],
       },
     });
   });
@@ -541,6 +629,436 @@ describe('coop sync offscreen runtime', () => {
     expect(JSON.parse(responses.get('handoff-request-1') ?? '{}')).toMatchObject({
       requestId: 'handoff-request-1',
       encryptedPayloadBase64: 'encrypted-payload',
+    });
+  });
+
+  it('responds to room rotation handoff requests from retired steady rooms', async () => {
+    const coop = {
+      ...buildCoop(),
+      syncRoom: {
+        ...buildCoop().syncRoom,
+        roomEpoch: 2,
+        previousRoomIds: ['room-old'],
+      },
+    };
+    const retiredRoom = {
+      coopId: 'coop-1',
+      roomId: 'room-old',
+      roomSecret: 'room-secret-old',
+      inviteSigningSecret: 'invite-secret-old',
+      signalingUrls: ['wss://signal.coop.test'],
+      roomEpoch: 1,
+    };
+    sendMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-coop-sync-config') {
+        return {
+          ok: true,
+          data: {
+            coops: [
+              {
+                ...buildCoopSyncConfigEntry(coop),
+                retiredProviderSyncRooms: [retiredRoom],
+              },
+            ],
+            websocketSyncUrl: 'wss://api.coop.test/yws',
+            iceConfig: null,
+          },
+        };
+      }
+      return { ok: true };
+    });
+
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+
+    const retiredCall = sharedMocks.connectSyncProviders.mock.calls.find(
+      ([, room]) => room.roomId === 'room-old',
+    );
+    expect(retiredCall).toBeDefined();
+    const retiredDoc = retiredCall?.[0] as {
+      getMap: (name: string) => Map<string, string>;
+    };
+    const announcements = retiredDoc.getMap('room-rotation-announcements');
+    const requests = retiredDoc.getMap('room-rotation-handoff-requests');
+    const responses = retiredDoc.getMap('room-rotation-handoff-responses');
+    expect(JSON.parse(announcements.get('room-rotation:room-1') ?? '{}')).toMatchObject({
+      coopId: 'coop-1',
+      previousRoomId: 'room-old',
+      roomId: 'room-1',
+      roomEpoch: 2,
+      previousRoomIds: ['room-old'],
+    });
+
+    requests.set(
+      'rotation-request-1',
+      JSON.stringify({
+        requestId: 'rotation-request-1',
+        coopId: 'coop-1',
+        inviteId: 'room-rotation:room-1',
+        memberId: 'member-creator',
+        memberDisplayName: 'June',
+        publicKeyJwk: {},
+        createdAt: '2026-05-17T00:00:00.000Z',
+      }),
+    );
+    await flushMicrotasks();
+
+    expect(sharedMocks.encryptInviteHandoffPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          roomId: 'room-1',
+          roomSecret: 'room-secret',
+          inviteSigningSecret: 'invite-secret',
+        }),
+      }),
+    );
+    expect(JSON.parse(responses.get('rotation-request-1') ?? '{}')).toMatchObject({
+      requestId: 'rotation-request-1',
+      encryptedPayloadBase64: 'encrypted-payload',
+    });
+  });
+
+  it('discovers a rotated room id from old-room announcements before requesting handoff', async () => {
+    const oldCoop = {
+      ...buildCoop(),
+      syncRoom: {
+        ...buildCoop().syncRoom,
+        roomEpoch: 1,
+        previousRoomIds: [],
+      },
+    };
+    sharedMocks.createInviteHandoffRequest.mockImplementationOnce(async (input) => ({
+      request: {
+        requestId: 'rotation-request-old-member',
+        coopId: input.coopId,
+        inviteId: input.inviteId,
+        memberId: input.memberId,
+        memberDisplayName: input.memberDisplayName,
+        publicKeyJwk: {},
+        createdAt: '2026-05-17T01:00:02.000Z',
+      },
+      keyPair: {
+        privateKey: {},
+      },
+    }));
+    sharedMocks.decryptInviteHandoffPayload.mockResolvedValueOnce({
+      requestId: 'rotation-request-old-member',
+      coopId: 'coop-1',
+      inviteId: 'room-rotation:room-2',
+      recipientMemberId: 'member-creator',
+      roomEpoch: 2,
+      roomId: 'room-2',
+      roomSecret: 'room-secret-new',
+      inviteSigningSecret: 'invite-secret-new',
+      signalingUrls: ['wss://signal.coop.test'],
+      createdAt: '2026-05-17T01:00:03.000Z',
+    });
+    sendMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-coop-sync-config') {
+        return {
+          ok: true,
+          data: {
+            coops: [
+              {
+                ...buildCoopSyncConfigEntry(oldCoop),
+                localMemberId: 'member-creator',
+                localMemberDisplayName: 'June',
+              },
+            ],
+            websocketSyncUrl: 'wss://api.coop.test/yws',
+            iceConfig: null,
+          },
+        };
+      }
+      return { ok: true };
+    });
+
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+
+    const oldRoomCall = sharedMocks.connectSyncProviders.mock.calls.find(
+      ([, room]) => room.roomId === 'room-1',
+    );
+    const oldRoomDoc = oldRoomCall?.[0] as {
+      getMap: (name: string) => Map<string, string>;
+    };
+    const announcements = oldRoomDoc.getMap('room-rotation-announcements');
+    announcements.set(
+      'room-rotation:room-2',
+      JSON.stringify({
+        announcementId: 'room-rotation:room-2',
+        coopId: 'coop-1',
+        previousRoomId: 'room-1',
+        roomId: 'room-2',
+        roomEpoch: 2,
+        previousRoomIds: ['room-1'],
+        signalingUrls: ['wss://signal.coop.test'],
+        rotatedAt: '2026-05-17T01:00:00.000Z',
+        rotatedBy: 'member-creator',
+        createdAt: '2026-05-17T01:00:01.000Z',
+        proof: 'rotation-proof',
+      }),
+    );
+    await flushMicrotasks();
+
+    expect(
+      sendMessageMock.mock.calls.some(
+        ([message]) => message.type === 'persist-coop-room-rotation-announcement',
+      ),
+    ).toBe(false);
+    expect(
+      sendMessageMock.mock.calls.some(([message]) => message.type === 'persist-coop-room-handoff'),
+    ).toBe(false);
+
+    await flushMicrotasks();
+    const handoffDoc = sharedMocks.connectSyncProviders.mock.calls
+      .filter(([, room]) => room.roomId === 'room-1')
+      .map(([doc]) => doc as { getMap: (name: string) => Map<string, string> })
+      .find((doc) =>
+        doc.getMap('room-rotation-handoff-requests').has('rotation-request-old-member'),
+      );
+    expect(handoffDoc).toBeDefined();
+    const requests = handoffDoc?.getMap('room-rotation-handoff-requests');
+    const responses = handoffDoc?.getMap('room-rotation-handoff-responses');
+    expect(JSON.parse(requests?.get('rotation-request-old-member') ?? '{}')).toMatchObject({
+      inviteId: 'room-rotation:room-2',
+      memberId: 'member-creator',
+    });
+
+    responses?.set(
+      'rotation-request-old-member',
+      JSON.stringify({
+        requestId: 'rotation-request-old-member',
+        coopId: 'coop-1',
+        inviteId: 'room-rotation:room-2',
+        memberId: 'member-creator',
+        roomId: 'room-2',
+        signalingUrls: ['wss://signal.coop.test'],
+        encryptedPayloadBase64: 'encrypted-payload',
+        createdAt: '2026-05-17T01:00:04.000Z',
+      }),
+    );
+    await flushMicrotasks();
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'persist-coop-room-handoff',
+      payload: {
+        coopId: 'coop-1',
+        syncRoom: {
+          coopId: 'coop-1',
+          roomId: 'room-2',
+          roomSecret: 'room-secret-new',
+          inviteSigningSecret: 'invite-secret-new',
+          signalingUrls: ['wss://signal.coop.test'],
+          roomEpoch: 2,
+          previousRoomIds: ['room-1'],
+          rotatedAt: '2026-05-17T01:00:00.000Z',
+          rotatedBy: 'member-creator',
+        },
+        roomEpoch: 2,
+      },
+    });
+  });
+
+  it('does not persist a retired-room announcement while already on a current room', async () => {
+    const coop = {
+      ...buildCoop(),
+      syncRoom: {
+        ...buildCoop().syncRoom,
+        roomId: 'room-a2',
+        roomSecret: 'room-secret-a2',
+        inviteSigningSecret: 'invite-secret-a2',
+        roomEpoch: 2,
+        previousRoomIds: ['room-old'],
+        rotatedAt: '2026-05-17T01:00:00.000Z',
+        rotatedBy: 'member-a',
+      },
+    };
+    const retiredRoom = {
+      coopId: 'coop-1',
+      roomId: 'room-old',
+      roomSecret: 'room-secret-old',
+      inviteSigningSecret: 'invite-secret-old',
+      signalingUrls: ['wss://signal.coop.test'],
+      roomEpoch: 1,
+    };
+    sendMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-coop-sync-config') {
+        return {
+          ok: true,
+          data: {
+            coops: [
+              {
+                ...buildCoopSyncConfigEntry(coop),
+                retiredProviderSyncRooms: [retiredRoom],
+              },
+            ],
+            websocketSyncUrl: 'wss://api.coop.test/yws',
+            iceConfig: null,
+          },
+        };
+      }
+      return { ok: true };
+    });
+
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+
+    const retiredCall = sharedMocks.connectSyncProviders.mock.calls.find(
+      ([, room]) => room.roomId === 'room-old',
+    );
+    const retiredDoc = retiredCall?.[0] as {
+      getMap: (name: string) => Map<string, string>;
+    };
+    const announcements = retiredDoc.getMap('room-rotation-announcements');
+    announcements.set(
+      'room-rotation:room-c3',
+      JSON.stringify({
+        announcementId: 'room-rotation:room-c3',
+        coopId: 'coop-1',
+        previousRoomId: 'room-old',
+        roomId: 'room-c3',
+        roomEpoch: 3,
+        previousRoomIds: ['room-old'],
+        signalingUrls: ['wss://signal.coop.test'],
+        rotatedAt: '2026-05-17T01:00:02.000Z',
+        rotatedBy: 'stale-old-room-writer',
+        createdAt: '2026-05-17T01:00:02.000Z',
+        proof: 'rotation-proof',
+      }),
+    );
+    await flushMicrotasks();
+
+    expect(
+      sendMessageMock.mock.calls.some(
+        ([message]) => message.type === 'persist-coop-room-rotation-announcement',
+      ),
+    ).toBe(false);
+    expect(
+      sendMessageMock.mock.calls.some(([message]) => message.type === 'persist-coop-room-handoff'),
+    ).toBe(false);
+  });
+
+  it('requests and persists a room rotation handoff when only a retired room secret is available', async () => {
+    const targetRoom = {
+      coopId: 'coop-1',
+      roomId: 'room-2',
+      roomSecret: 'encrypted://local/sync-room-secret/coop-1/room-2',
+      inviteSigningSecret: 'encrypted://local/sync-room-secret/coop-1/room-2/invite',
+      signalingUrls: ['wss://signal.coop.test'],
+      roomEpoch: 2,
+      previousRoomIds: ['room-old'],
+    };
+    const retiredRoom = {
+      coopId: 'coop-1',
+      roomId: 'room-old',
+      roomSecret: 'room-secret-old',
+      inviteSigningSecret: 'invite-secret-old',
+      signalingUrls: ['wss://signal.coop.test'],
+      roomEpoch: 1,
+    };
+    const coop = {
+      ...buildCoop(),
+      syncRoom: targetRoom,
+    };
+    sharedMocks.createInviteHandoffRequest.mockImplementationOnce(async (input) => ({
+      request: {
+        requestId: 'rotation-request-joiner',
+        coopId: input.coopId,
+        inviteId: input.inviteId,
+        memberId: input.memberId,
+        memberDisplayName: input.memberDisplayName,
+        publicKeyJwk: {},
+        createdAt: '2026-05-17T00:00:00.000Z',
+      },
+      keyPair: {
+        privateKey: {},
+      },
+    }));
+    sharedMocks.decryptInviteHandoffPayload.mockResolvedValueOnce({
+      requestId: 'rotation-request-joiner',
+      coopId: 'coop-1',
+      inviteId: 'room-rotation:room-2',
+      recipientMemberId: 'member-creator',
+      roomEpoch: 2,
+      roomId: 'room-2',
+      roomSecret: 'room-secret-new',
+      inviteSigningSecret: 'invite-secret-new',
+      signalingUrls: ['wss://signal.coop.test'],
+      createdAt: '2026-05-17T00:00:00.000Z',
+    });
+    sendMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-coop-sync-config') {
+        return {
+          ok: true,
+          data: {
+            coops: [
+              {
+                coop,
+                providerSyncRoom: undefined,
+                retiredProviderSyncRooms: [retiredRoom],
+                roomSecretAvailable: false,
+                legacySecretMigrated: true,
+                roomEpoch: 1,
+                localMemberId: 'member-creator',
+                localMemberDisplayName: 'June',
+              },
+            ],
+            websocketSyncUrl: 'wss://api.coop.test/yws',
+            iceConfig: null,
+          },
+        };
+      }
+      return { ok: true };
+    });
+
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+
+    const retiredCall = sharedMocks.connectSyncProviders.mock.calls.find(
+      ([, room]) => room.roomId === 'room-old',
+    );
+    expect(retiredCall).toBeDefined();
+    const retiredDoc = retiredCall?.[0] as {
+      getMap: (name: string) => Map<string, string>;
+    };
+    const requests = retiredDoc.getMap('room-rotation-handoff-requests');
+    const responses = retiredDoc.getMap('room-rotation-handoff-responses');
+    expect(JSON.parse(requests.get('rotation-request-joiner') ?? '{}')).toMatchObject({
+      inviteId: 'room-rotation:room-2',
+      memberId: 'member-creator',
+    });
+
+    responses.set(
+      'rotation-request-joiner',
+      JSON.stringify({
+        requestId: 'rotation-request-joiner',
+        coopId: 'coop-1',
+        inviteId: 'room-rotation:room-2',
+        memberId: 'member-creator',
+        roomId: 'room-2',
+        signalingUrls: ['wss://signal.coop.test'],
+        encryptedPayloadBase64: 'encrypted-payload',
+        createdAt: '2026-05-17T00:00:00.000Z',
+      }),
+    );
+    await flushMicrotasks();
+
+    expect(sendMessageMock).toHaveBeenCalledWith({
+      type: 'persist-coop-room-handoff',
+      payload: {
+        coopId: 'coop-1',
+        syncRoom: {
+          coopId: 'coop-1',
+          roomId: 'room-2',
+          roomSecret: 'room-secret-new',
+          inviteSigningSecret: 'invite-secret-new',
+          signalingUrls: ['wss://signal.coop.test'],
+          roomEpoch: 2,
+          previousRoomIds: ['room-old'],
+        },
+        roomEpoch: 2,
+      },
     });
   });
 
@@ -609,5 +1127,35 @@ describe('coop sync offscreen runtime', () => {
     expect(
       sendMessageMock.mock.calls.filter(([message]) => message.type === 'persist-coop-state'),
     ).toHaveLength(2);
+  });
+
+  it('keeps malformed remote updates pending for retry instead of dropping them', async () => {
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+    scheduledTimeouts.clear();
+    sharedMocks.readCoopState.mockImplementation(() => {
+      throw new Error('Remote coop state is malformed.');
+    });
+    const doc = sharedMocks.createCoopDoc.mock.results[0]?.value as {
+      on: ReturnType<typeof vi.fn>;
+    };
+    const onUpdate = doc.on.mock.calls.find(([event]) => event === 'update')?.[1] as (
+      update: Uint8Array,
+      origin: string,
+    ) => void;
+
+    onUpdate(new Uint8Array([7, 8, 9]), 'remote');
+    await runScheduledTimeouts();
+
+    const runtimeReports = sendMessageMock.mock.calls.filter(
+      ([message]) => message.type === 'report-coop-sync-runtime',
+    );
+    expect(runtimeReports.at(-1)?.[0]).toMatchObject({
+      payload: {
+        lastError: 'Remote coop state is malformed.',
+        pendingUpdateCount: 1,
+      },
+    });
+    expect(scheduledTimeouts.size).toBeGreaterThan(0);
   });
 });

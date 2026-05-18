@@ -1,9 +1,12 @@
 import {
   ensureSyncRoomSecretRecord,
   fetchServerMintedIceConfig,
+  getAuthSession,
   hydrateSyncRoomWithSecret,
   isRedactedSyncRoomSecret,
+  listRetiredSyncRoomSecretRecords,
   redactSyncRoomSecrets,
+  syncRoomSecretRecordToConfig,
 } from '@coop/shared';
 import type { CoopSyncRuntimeStatus, ReceiverSyncRuntimeStatus } from '../runtime/messages';
 import { configuredReceiverAppUrl, configuredWebsocketSyncUrl } from './context-config';
@@ -148,15 +151,35 @@ export async function reportCoopSyncRuntime(patch: Partial<CoopSyncRuntimeStatus
 }
 
 export async function getCoopSyncConfig() {
-  const [coops, iceConfig] = await Promise.all([
+  const [coops, iceConfig, authSession] = await Promise.all([
     getCoops(),
     fetchServerMintedIceConfig({ websocketSyncUrl: configuredWebsocketSyncUrl }),
+    getAuthSession(db),
   ]);
 
   const entries = [];
   for (const coop of coops) {
     const secretRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
     const hydratedRoom = hydrateSyncRoomWithSecret(coop.syncRoom, secretRecord);
+    const retiredRecords = await listRetiredSyncRoomSecretRecords(db, coop.profile.id);
+    const retiredProviderSyncRooms = retiredRecords.map((record) =>
+      syncRoomSecretRecordToConfig(record, coop.syncRoom.signalingUrls),
+    );
+    if (secretRecord && secretRecord.roomId !== coop.syncRoom.roomId) {
+      retiredProviderSyncRooms.push(
+        syncRoomSecretRecordToConfig(secretRecord, coop.syncRoom.signalingUrls),
+      );
+    }
+    const dedupedRetiredRooms = [
+      ...new Map(retiredProviderSyncRooms.map((room) => [room.roomId, room])).values(),
+    ].filter((room) => room.roomId !== hydratedRoom?.roomId);
+    const localMember = authSession
+      ? coop.members.find(
+          (member) =>
+            member.address.toLowerCase() === authSession.primaryAddress.toLowerCase() ||
+            (authSession.passkey?.id && member.passkeyCredentialId === authSession.passkey.id),
+        )
+      : undefined;
     if (
       secretRecord &&
       (!isRedactedSyncRoomSecret(coop.syncRoom.roomSecret) ||
@@ -174,9 +197,12 @@ export async function getCoopSyncConfig() {
     entries.push({
       coop: publicCoop,
       providerSyncRoom: hydratedRoom ?? undefined,
+      retiredProviderSyncRooms: dedupedRetiredRooms,
       roomSecretAvailable: Boolean(hydratedRoom),
       legacySecretMigrated: Boolean(secretRecord),
       roomEpoch: secretRecord?.roomEpoch,
+      localMemberId: localMember?.id,
+      localMemberDisplayName: localMember?.displayName,
     });
   }
 

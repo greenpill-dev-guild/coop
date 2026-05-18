@@ -59,6 +59,7 @@ import {
   configuredSignalingUrls,
   configuredWebsocketSyncUrl,
   db,
+  getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getRuntimeHealth,
@@ -150,9 +151,10 @@ export function extensionIconPaths(state: RuntimeSummary['iconState']) {
 export function summarizeSyncStatus(input: {
   coopCount: number;
   runtimeHealth: Awaited<ReturnType<typeof getRuntimeHealth>>;
+  coopSyncRuntime?: Awaited<ReturnType<typeof getCoopSyncRuntime>>;
   pendingOutboxCount?: number;
 }): Pick<RuntimeSummary, 'syncState' | 'syncLabel' | 'syncDetail' | 'syncTone'> {
-  const { coopCount, runtimeHealth, pendingOutboxCount = 0 } = input;
+  const { coopCount, runtimeHealth, coopSyncRuntime, pendingOutboxCount = 0 } = input;
 
   if (runtimeHealth.missingPermission) {
     return {
@@ -214,6 +216,56 @@ export function summarizeSyncStatus(input: {
       syncState: syncDetail,
       syncLabel: 'Needs attention',
       syncDetail,
+      syncTone: 'error',
+    };
+  }
+
+  if (coopSyncRuntime?.mode === 'websocket' && !coopSyncRuntime.directPeerAvailable) {
+    const detail = 'WebSocket relay sync connected. Direct peer sync is unavailable.';
+    return {
+      syncState: detail,
+      syncLabel: 'Relay',
+      syncDetail: detail,
+      syncTone: 'warning',
+    };
+  }
+
+  if (coopCount > 0 && coopSyncRuntime?.lastError) {
+    const detail = coopSyncRuntime.lastError;
+    return {
+      syncState: detail,
+      syncLabel: 'Needs attention',
+      syncDetail: detail,
+      syncTone: 'error',
+    };
+  }
+
+  if (coopCount > 0 && coopSyncRuntime?.mode === 'none') {
+    const detail = 'Shared coop sync is not connected.';
+    return {
+      syncState: detail,
+      syncLabel: 'Local',
+      syncDetail: detail,
+      syncTone: 'warning',
+    };
+  }
+
+  if (coopSyncRuntime?.mode === 'indexeddb-only') {
+    const detail = 'Shared sync is currently limited to this browser profile.';
+    return {
+      syncState: detail,
+      syncLabel: 'Local',
+      syncDetail: detail,
+      syncTone: 'warning',
+    };
+  }
+
+  if (coopSyncRuntime?.mode === 'degraded') {
+    const detail = coopSyncRuntime.lastError ?? 'Shared sync is degraded.';
+    return {
+      syncState: detail,
+      syncLabel: 'Needs attention',
+      syncDetail: detail,
       syncTone: 'error',
     };
   }
@@ -528,6 +580,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     coops,
     captureMode,
     runtimeHealth,
+    coopSyncRuntime,
     authSession,
     lastCapture,
     prefs,
@@ -541,6 +594,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     getCoops(),
     getLocalSetting<RuntimeSummary['captureMode']>(stateKeys.captureMode, 'manual'),
     getRuntimeHealth(),
+    getCoopSyncRuntime(),
     getAuthSession(db),
     db.captureRuns.orderBy('capturedAt').last(),
     hydrateUiPreferences(),
@@ -608,6 +662,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
   const syncSummary = summarizeSyncStatus({
     coopCount: coops.length,
     runtimeHealth,
+    coopSyncRuntime,
     pendingOutboxCount: outboxCount,
   });
 

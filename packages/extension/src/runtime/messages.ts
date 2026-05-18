@@ -243,9 +243,12 @@ export interface ReceiverSyncRuntimeStatus {
 export interface CoopSyncConfigEntry {
   coop: CoopSharedState;
   providerSyncRoom?: SyncRoomConfig;
+  retiredProviderSyncRooms?: SyncRoomConfig[];
   roomSecretAvailable: boolean;
   legacySecretMigrated: boolean;
   roomEpoch?: number;
+  localMemberId?: string;
+  localMemberDisplayName?: string;
 }
 
 export interface CoopSyncConfigResponse {
@@ -615,7 +618,11 @@ export type RuntimeRequest =
   | { type: 'set-anchor-mode'; payload: { enabled: boolean } }
   | { type: 'set-capture-mode'; payload: { captureMode: CaptureMode } }
   | { type: 'set-active-coop'; payload: { coopId: string } }
-  | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: Uint8Array } }
+  | { type: 'persist-coop-state'; payload: { coopId: string; docUpdate: number[] | Uint8Array } }
+  | {
+      type: 'persist-coop-room-handoff';
+      payload: { coopId: string; syncRoom: SyncRoomConfig; roomEpoch?: number };
+    }
   | { type: 'report-sync-health'; payload: { syncError: boolean; note?: string } }
   | {
       type: 'report-coop-sync-runtime';

@@ -42,6 +42,7 @@ import {
   reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
+  saveState,
   setLocalSetting,
   setRuntimeHealth,
   stateKeys,
@@ -53,8 +54,8 @@ import {
 import { listReceiverPairings, selectActiveReceiverPairingsForSync } from '@coop/shared';
 import { filterVisibleReceiverPairings } from '../runtime/receiver';
 import { consumePendingSidepanelIntent, setPendingSidepanelIntent } from './context';
+import { persistCoopRoomHandoff } from './coop-room-handoff';
 import { getDashboard, refreshBadge } from './dashboard';
-import { queueFollowUp } from './handlers/follow-up';
 import {
   handleApproveAction,
   handleExecuteAction,
@@ -109,6 +110,7 @@ import {
   handleSetAnchorMode,
   handleUpdateCoopDetails,
 } from './handlers/coop';
+import { queueFollowUp } from './handlers/follow-up';
 import {
   handleAddKnowledgeSource,
   handleGetKnowledgeStats,
@@ -205,6 +207,10 @@ async function getReceiverSyncConfig() {
       activeContext.activeMemberId,
     ),
   };
+}
+
+function decodeRuntimeBytes(bytes: Uint8Array | number[]) {
+  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 }
 
 async function handleRunAutoresearchCycle(
@@ -481,7 +487,7 @@ export const handlerRegistry: HandlerRecord = {
       const merged = await mergeCoopStateUpdate(
         db,
         message.payload.coopId,
-        message.payload.docUpdate,
+        decodeRuntimeBytes(message.payload.docUpdate),
       );
       await refreshBadge();
       // Transient Zod validation warnings are not fatal — the CRDT merge
@@ -495,6 +501,10 @@ export const handlerRegistry: HandlerRecord = {
       console.warn('persist-coop-state failed:', error);
       return { ok: false, error: 'Invalid coop state' };
     }
+  },
+
+  'persist-coop-room-handoff': async (message) => {
+    return persistCoopRoomHandoff(message, { db, getCoops, saveState, refreshBadge });
   },
 
   'report-sync-health': async (message) => {

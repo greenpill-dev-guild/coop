@@ -6,6 +6,7 @@ import {
   createSyncRoomConfig,
   encodeCoopDoc,
   hydrateCoopDoc,
+  mergeCoopDocUpdates,
   readCoopState,
   readCoopStateRaw,
   writeCoopState,
@@ -159,6 +160,28 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     expect(merged.members.map((m) => m.id)).toContain('remote-member');
   });
 
+  it('applies merged offscreen sync payloads encoded with the preferred Yjs state format', async () => {
+    const db = freshDb();
+    const state = buildTestState();
+    await saveCoopState(db, state);
+
+    const remoteDoc = hydrateCoopDoc(
+      requireDefined(
+        await db.coopDocs.get(state.profile.id),
+        'Expected stored coop doc before merging offscreen payload',
+      ).encodedState,
+    );
+    const remoteState = readCoopState(remoteDoc);
+    remoteState.members.push(makeMember({ id: 'offscreen-member', displayName: 'Offscreen Peer' }));
+    writeCoopState(remoteDoc, remoteState);
+    const offscreenPayload = mergeCoopDocUpdates([Y.encodeStateAsUpdate(remoteDoc)]);
+    remoteDoc.destroy();
+
+    const merged = await mergeCoopStateUpdate(db, state.profile.id, offscreenPayload);
+
+    expect(merged.members.map((m) => m.id)).toContain('offscreen-member');
+  });
+
   it('redacts plaintext sync room secrets from merged peer updates before storing the doc', async () => {
     const db = freshDb();
     const state = buildTestState();
@@ -191,14 +214,20 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     const state = buildTestState();
     await saveCoopState(db, state);
 
-    const rotatedRoom = createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls);
     const now = new Date().toISOString();
+    const rotatedRoom = {
+      ...createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls),
+      roomEpoch: 2,
+      previousRoomIds: [state.syncRoom.roomId],
+      rotatedAt: now,
+      rotatedBy: state.members[0]?.id,
+    };
     await setSyncRoomSecretRecord(db, {
       coopId: rotatedRoom.coopId,
       roomId: rotatedRoom.roomId,
       roomSecret: rotatedRoom.roomSecret,
       inviteSigningSecret: rotatedRoom.inviteSigningSecret,
-      roomEpoch: 2,
+      roomEpoch: rotatedRoom.roomEpoch,
       legacyCompatible: false,
       migratedAt: now,
       updatedAt: now,
@@ -220,6 +249,10 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     expect(secretRecord?.roomSecret).toBe(rotatedRoom.roomSecret);
     expect(secretRecord?.inviteSigningSecret).toBe(rotatedRoom.inviteSigningSecret);
     expect(merged.syncRoom.roomId).toBe(rotatedRoom.roomId);
+    expect(merged.syncRoom.roomEpoch).toBe(2);
+    expect(merged.syncRoom.previousRoomIds).toEqual([state.syncRoom.roomId]);
+    expect(merged.syncRoom.rotatedAt).toBe(now);
+    expect(merged.syncRoom.rotatedBy).toBe(state.members[0]?.id);
     expect(isRedactedSyncRoomSecret(merged.syncRoom.roomSecret)).toBe(true);
     expect(isRedactedSyncRoomSecret(merged.syncRoom.inviteSigningSecret)).toBe(true);
 
@@ -231,8 +264,119 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     const persistedState = readCoopState(persistedDoc);
     persistedDoc.destroy();
     expect(persistedState.syncRoom.roomId).toBe(rotatedRoom.roomId);
+    expect(persistedState.syncRoom.roomEpoch).toBe(2);
+    expect(persistedState.syncRoom.previousRoomIds).toEqual([state.syncRoom.roomId]);
+    expect(persistedState.syncRoom.rotatedAt).toBe(now);
+    expect(persistedState.syncRoom.rotatedBy).toBe(state.members[0]?.id);
     expect(isRedactedSyncRoomSecret(persistedState.syncRoom.roomSecret)).toBe(true);
     expect(isRedactedSyncRoomSecret(persistedState.syncRoom.inviteSigningSecret)).toBe(true);
+  });
+
+  it('accepts newer redacted room metadata instead of pinning a stale local room record', async () => {
+    const db = freshDb();
+    const state = buildTestState();
+    await saveCoopState(db, state);
+
+    const staleRecord = await getSyncRoomSecretRecord(db, state.profile.id);
+    expect(staleRecord?.roomId).toBe(state.syncRoom.roomId);
+
+    const newerRoom = createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls);
+    const existingRecord = await db.coopDocs.get(state.profile.id);
+    const remoteDoc = hydrateCoopDoc(existingRecord?.encodedState);
+    writeCoopState(remoteDoc, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets({
+        ...newerRoom,
+        roomEpoch: 2,
+        previousRoomIds: [state.syncRoom.roomId],
+        rotatedAt: new Date().toISOString(),
+        rotatedBy: state.members[0]?.id,
+      }),
+    });
+    const remoteUpdate = Y.encodeStateAsUpdate(remoteDoc);
+    remoteDoc.destroy();
+
+    const merged = await mergeCoopStateUpdate(db, state.profile.id, remoteUpdate);
+
+    expect(merged.syncRoom.roomId).toBe(newerRoom.roomId);
+    expect(isRedactedSyncRoomSecret(merged.syncRoom.roomSecret)).toBe(true);
+    const secretRecord = await getSyncRoomSecretRecord(db, state.profile.id);
+    expect(secretRecord?.roomId).toBe(state.syncRoom.roomId);
+  });
+
+  it('converges equal-epoch room rotations with deterministic ordering', async () => {
+    const state = buildTestState();
+    const previousRoomId = state.syncRoom.roomId;
+    const roomA = {
+      ...createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls),
+      roomEpoch: 2,
+      previousRoomIds: [previousRoomId],
+      rotatedAt: '2026-05-17T01:00:00.000Z',
+      rotatedBy: 'member-a',
+    };
+    const roomB = {
+      ...createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls),
+      roomEpoch: 2,
+      previousRoomIds: [previousRoomId],
+      rotatedAt: '2026-05-17T01:00:01.000Z',
+      rotatedBy: 'member-b',
+    };
+
+    const dbA = freshDb();
+    await saveCoopState(dbA, state);
+    await setSyncRoomSecretRecord(dbA, {
+      coopId: roomA.coopId,
+      roomId: roomA.roomId,
+      roomSecret: roomA.roomSecret,
+      inviteSigningSecret: roomA.inviteSigningSecret,
+      roomEpoch: 2,
+      legacyCompatible: false,
+      migratedAt: roomA.rotatedAt,
+      updatedAt: roomA.rotatedAt,
+    });
+    await saveCoopState(dbA, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets(roomA),
+    });
+    const docB = hydrateCoopDoc((await dbA.coopDocs.get(state.profile.id))?.encodedState);
+    writeCoopState(docB, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets(roomB),
+    });
+    const updateB = Y.encodeStateAsUpdate(docB);
+    docB.destroy();
+
+    const mergedA = await mergeCoopStateUpdate(dbA, state.profile.id, updateB);
+    expect(mergedA.syncRoom.roomId).toBe(roomB.roomId);
+    expect((await getSyncRoomSecretRecord(dbA, state.profile.id))?.roomId).toBe(roomA.roomId);
+
+    const dbB = freshDb();
+    await saveCoopState(dbB, state);
+    await setSyncRoomSecretRecord(dbB, {
+      coopId: roomB.coopId,
+      roomId: roomB.roomId,
+      roomSecret: roomB.roomSecret,
+      inviteSigningSecret: roomB.inviteSigningSecret,
+      roomEpoch: 2,
+      legacyCompatible: false,
+      migratedAt: roomB.rotatedAt,
+      updatedAt: roomB.rotatedAt,
+    });
+    await saveCoopState(dbB, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets(roomB),
+    });
+    const docA = hydrateCoopDoc((await dbB.coopDocs.get(state.profile.id))?.encodedState);
+    writeCoopState(docA, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets(roomA),
+    });
+    const updateA = Y.encodeStateAsUpdate(docA);
+    docA.destroy();
+
+    const mergedB = await mergeCoopStateUpdate(dbB, state.profile.id, updateA);
+    expect(mergedB.syncRoom.roomId).toBe(roomB.roomId);
+    expect((await getSyncRoomSecretRecord(dbB, state.profile.id))?.roomId).toBe(roomB.roomId);
   });
 });
 

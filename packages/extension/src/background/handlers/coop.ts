@@ -365,6 +365,7 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
     );
   }
   queueFollowUp('coop', 'refresh-badge', refreshBadge());
+  queueFollowUp('coop', 'sync-bindings', ensureCoopSyncOffscreenDocument());
   return {
     ok: true,
     data: latestState,
@@ -433,6 +434,8 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
         roomSecret: handoff.roomSecret,
         inviteSigningSecret: handoff.inviteSigningSecret,
         signalingUrls: handoff.signalingUrls,
+        roomEpoch: handoff.roomEpoch,
+        previousRoomIds: [],
       };
       await setSyncRoomSecretRecord(db, {
         coopId: syncRoom.coopId,

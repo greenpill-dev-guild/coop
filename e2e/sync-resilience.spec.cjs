@@ -210,6 +210,40 @@ async function getDashboard(popupPage) {
   return response?.ok ? response.data : null;
 }
 
+async function getCoopSyncRuntime(popupPage) {
+  const response = await popupPage.evaluate(async () => {
+    return chrome.runtime.sendMessage({ type: 'get-coop-sync-runtime' });
+  });
+
+  return response?.ok ? response.data : null;
+}
+
+async function expectReadySingleProfileSync(popupPage) {
+  await expect
+    .poll(
+      async () => {
+        const [dashboard, runtime] = await Promise.all([
+          getDashboard(popupPage),
+          getCoopSyncRuntime(popupPage),
+        ]);
+        const summary = dashboard?.summary;
+        if (!summary) return 'missing-dashboard';
+        if (summary.syncDetail === degradedSyncNote) return 'still-degraded';
+        if (summary.syncTone === 'error') return `error:${summary.syncDetail}`;
+        if (!runtime || runtime.mode === 'none') return 'runtime-not-ready';
+        return 'ready';
+      },
+      { timeout: 30_000 },
+    )
+    .toBe('ready');
+
+  await expect(
+    popupPage.getByRole('button', { name: /Status: (Idle|Local|Relay)/ }),
+  ).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 test.describe('sync resilience', () => {
   test.describe.configure({ timeout: 120_000 });
 
@@ -229,9 +263,7 @@ test.describe('sync resilience', () => {
 
     try {
       await seedSyncCoop(profile.popupPage, `Sync Resilience ${Date.now()}`);
-      await expect(profile.popupPage.getByText('Idle', { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
+      await expectReadySingleProfileSync(profile.popupPage);
 
       await reportSyncHealth(profile.popupPage, {
         syncError: true,
@@ -263,12 +295,7 @@ test.describe('sync resilience', () => {
       await reopenedPopup.reload();
       await reopenedPopup.waitForLoadState('domcontentloaded');
 
-      await expect(reopenedPopup.getByText('Idle', { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
-      await expect
-        .poll(async () => (await getDashboard(reopenedPopup))?.summary?.syncLabel)
-        .toBe('Healthy');
+      await expectReadySingleProfileSync(reopenedPopup);
     } finally {
       await closeContextSafely(profile.context);
     }

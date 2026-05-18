@@ -4,6 +4,7 @@ import {
   encodeCoopDoc,
   generateInviteCode,
   isRedactedSyncRoomSecret,
+  setWebAuthnCredentialGetFnOverride,
 } from '@coop/shared';
 import type { CoopSharedState, InviteCode } from '@coop/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  setWebAuthnCredentialGetFnOverride(null);
   Reflect.deleteProperty(globalThis, 'chrome');
 });
 
@@ -146,6 +148,54 @@ function mockPersistedDocRecord(coop: CoopSharedState) {
   });
 }
 
+function bufferFromUtf8(value: string) {
+  return new TextEncoder().encode(value).buffer;
+}
+
+function base64Url(bytes: Uint8Array) {
+  return Buffer.from(bytes)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function installRotationAuth(coop: CoopSharedState) {
+  const member = coop.members[0];
+  localSettings.set('auth-session', {
+    authMode: 'passkey',
+    displayName: member.displayName,
+    primaryAddress: member.address,
+    createdAt: '2026-05-17T00:00:00.000Z',
+    identityWarning: 'Test passkey session.',
+    passkey: {
+      id: member.passkeyCredentialId ?? 'passkey-1',
+      publicKey: '0x04'.padEnd(132, '1'),
+      rpId: 'coop.local',
+    },
+  });
+  setWebAuthnCredentialGetFnOverride(async (options) => {
+    const challenge = new Uint8Array(options?.publicKey?.challenge as ArrayBuffer);
+    const clientDataJSON = JSON.stringify({
+      type: 'webauthn.get',
+      challenge: base64Url(challenge),
+      origin: 'https://coop.local',
+    });
+    return {
+      id: member.passkeyCredentialId ?? 'passkey-1',
+      type: 'public-key',
+      rawId: new Uint8Array([1]).buffer,
+      response: {
+        authenticatorData: new Uint8Array(37).fill(1).buffer,
+        clientDataJSON: bufferFromUtf8(clientDataJSON),
+        signature: new Uint8Array([0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02]).buffer,
+        userHandle: null,
+      },
+      getClientExtensionResults: () => ({}),
+    } as unknown as PublicKeyCredential;
+  });
+}
+
 beforeEach(() => {
   encryptedPayloads.clear();
   localSettings.clear();
@@ -228,6 +278,7 @@ describe('handleRevokeInvite – Yjs propagation', () => {
   it('persists state and writes to the Yjs doc record after revoking an invite', async () => {
     const coop = buildTestCoop();
     const creatorId = coop.members[0].id;
+    installRotationAuth(coop);
 
     // First create a real invite so the coop state has it
     vi.mocked(getCoops).mockResolvedValue([coop]);
@@ -335,6 +386,7 @@ describe('canonical invite handlers', () => {
   it('regenerates a type by revoking all live invites and returning one fresh current code', async () => {
     const coop = buildTestCoop();
     const creatorId = coop.members[0].id;
+    installRotationAuth(coop);
     const extraMemberInvite = generateInviteCode({
       state: coop,
       createdBy: creatorId,
@@ -387,6 +439,7 @@ describe('canonical invite handlers', () => {
   it('revokes all old-room invite lanes when a type revocation rotates the room', async () => {
     const coop = buildTestCoop();
     const creatorId = coop.members[0].id;
+    installRotationAuth(coop);
     const extraMemberInvite = generateInviteCode({
       state: coop,
       createdBy: creatorId,

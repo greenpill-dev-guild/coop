@@ -278,8 +278,12 @@ export function connectReceiverSyncRelay(input: {
     input.onCapture ? topics.captureTopic : null,
     input.onAck ? topics.ackTopic : null,
   ].flatMap((value) => (value ? [value] : []));
+  const WebSocketRuntime =
+    typeof window !== 'undefined' && typeof window.WebSocket !== 'undefined'
+      ? window.WebSocket
+      : globalThis.WebSocket;
 
-  if (typeof WebSocket === 'undefined' || urls.length === 0 || subscribedTopics.length === 0) {
+  if (!WebSocketRuntime || urls.length === 0 || subscribedTopics.length === 0) {
     return {
       configured: false,
       connected: false,
@@ -313,7 +317,7 @@ export function connectReceiverSyncRelay(input: {
   };
 
   const flushQueue = () => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+    if (!socket || socket.readyState !== WebSocketRuntime.OPEN) {
       return;
     }
 
@@ -372,7 +376,7 @@ export function connectReceiverSyncRelay(input: {
     currentUrl = urls[currentUrlIndex];
 
     try {
-      socket = new WebSocket(currentUrl);
+      socket = new WebSocketRuntime(currentUrl);
     } catch (error) {
       reportRelayError(input.onError, error, 'Receiver relay connection failed.');
       scheduleReconnect();
@@ -440,6 +444,15 @@ export function connectReceiverSyncRelay(input: {
     socket.addEventListener('close', handleSocketClosed);
     socket.addEventListener('error', () => {
       reportRelayError(input.onError, new Error('Receiver relay socket error.'), '');
+    });
+    socket.onerror = (event) => {
+      reportRelayError(input.onError, event, 'Receiver relay socket error.');
+    };
+    const nodeSocket = socket as WebSocket & {
+      on?: (event: 'error', listener: (error: unknown) => void) => void;
+    };
+    nodeSocket.on?.('error', (error) => {
+      reportRelayError(input.onError, error, 'Receiver relay socket error.');
     });
   };
 

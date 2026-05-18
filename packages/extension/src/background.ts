@@ -70,6 +70,7 @@ import {
 } from './background/context';
 
 import { handleAlarmEvent } from './background/alarm-dispatch';
+import { persistCoopRoomHandoff } from './background/coop-room-handoff';
 import { dispatchRegistryMessage } from './background/handler-registry';
 import { queueFollowUp } from './background/handlers/follow-up';
 // ---- Operator ----
@@ -215,6 +216,10 @@ async function getReceiverSyncConfig() {
       activeContext.activeMemberId,
     ),
   };
+}
+
+function decodeRuntimeBytes(bytes: Uint8Array | number[]) {
+  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 }
 
 async function runLocalDataMaintenance() {
@@ -625,7 +630,7 @@ export function startBackground() {
             const merged = await mergeCoopStateUpdate(
               db,
               message.payload.coopId,
-              message.payload.docUpdate,
+              decodeRuntimeBytes(message.payload.docUpdate),
             );
             await refreshBadge();
             // Transient Zod validation warnings are not fatal — the CRDT merge
@@ -642,6 +647,12 @@ export function startBackground() {
               error: 'Invalid coop state',
             } satisfies RuntimeActionResponse);
           }
+          return;
+        }
+        case 'persist-coop-room-handoff': {
+          sendResponse(
+            await persistCoopRoomHandoff(message, { db, getCoops, saveState, refreshBadge }),
+          );
           return;
         }
         case 'report-sync-health':

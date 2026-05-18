@@ -22,6 +22,7 @@ import { mirrorSourcesFromYDocToDexie } from '../knowledge-source/sync-sources';
 import {
   encodeCoopDoc,
   hydrateCoopDoc,
+  isPreferredSyncRoomRotation,
   readCoopState,
   readCoopStateRaw,
   writeCoopState,
@@ -103,16 +104,65 @@ type SyncRoomMergeGuard = {
   protectedSyncRoom?: SyncRoomConfig;
 };
 
+function applyCoopStateUpdate(doc: Y.Doc, encodedState: Uint8Array) {
+  try {
+    Y.applyUpdateV2(doc, encodedState);
+  } catch {
+    Y.applyUpdate(doc, encodedState);
+  }
+}
+
+function roomEpoch(room: Pick<SyncRoomConfig, 'roomEpoch'> | SyncRoomSecretRecord) {
+  return room.roomEpoch ?? 1;
+}
+
+function hasSharedPreviousRoom(left: SyncRoomConfig, right: SyncRoomConfig) {
+  const rightPrevious = new Set(right.previousRoomIds ?? []);
+  return (left.previousRoomIds ?? []).some((roomId) => rightPrevious.has(roomId));
+}
+
+function isAcceptableRedactedRotation(
+  syncRoom: SyncRoomConfig,
+  localSecretRecord: SyncRoomSecretRecord,
+  existingSyncRoom?: SyncRoomConfig,
+) {
+  if (
+    !isRedactedSyncRoomSecret(syncRoom.roomSecret) ||
+    !isRedactedSyncRoomSecret(syncRoom.inviteSigningSecret)
+  ) {
+    return false;
+  }
+  if (
+    roomEpoch(syncRoom) > roomEpoch(localSecretRecord) &&
+    (syncRoom.previousRoomIds ?? []).includes(localSecretRecord.roomId)
+  ) {
+    return true;
+  }
+  if (!existingSyncRoom || existingSyncRoom.roomId !== localSecretRecord.roomId) {
+    return false;
+  }
+  return (
+    roomEpoch(syncRoom) === roomEpoch(existingSyncRoom) &&
+    hasSharedPreviousRoom(syncRoom, existingSyncRoom) &&
+    isPreferredSyncRoomRotation(syncRoom, existingSyncRoom)
+  );
+}
+
 function buildProtectedSyncRoom(
   record: SyncRoomSecretRecord,
-  fallback: Pick<SyncRoomConfig, 'signalingUrls'>,
+  fallback: SyncRoomConfig,
 ): SyncRoomConfig {
+  const matchingFallback = fallback.roomId === record.roomId ? fallback : undefined;
   return {
     coopId: record.coopId,
     roomId: record.roomId,
     roomSecret: record.roomSecret,
     inviteSigningSecret: record.inviteSigningSecret,
     signalingUrls: fallback.signalingUrls,
+    roomEpoch: Math.max(record.roomEpoch, matchingFallback?.roomEpoch ?? 1),
+    previousRoomIds: matchingFallback?.previousRoomIds ?? [],
+    rotatedAt: matchingFallback?.rotatedAt,
+    rotatedBy: matchingFallback?.rotatedBy,
   };
 }
 
@@ -129,7 +179,7 @@ async function prepareSyncRoomMergeGuard(
 
   try {
     const existingSyncRoom = getRawSyncRoom(readCoopStateRaw(doc));
-    Y.applyUpdate(doc, encodedState);
+    applyCoopStateUpdate(doc, encodedState);
     const raw = readCoopStateRaw(doc);
     const syncRoomResult = getRawSyncRoom(raw);
     if (getRawCoopId(raw) !== coopId || !syncRoomResult.success) {
@@ -138,11 +188,12 @@ async function prepareSyncRoomMergeGuard(
 
     const syncRoom = syncRoomResult.data;
     if (localSecretRecord && syncRoom.roomId !== localSecretRecord.roomId) {
+      const existingRoom = existingSyncRoom.success ? existingSyncRoom.data : undefined;
+      if (isAcceptableRedactedRotation(syncRoom, localSecretRecord, existingRoom)) {
+        return {};
+      }
       return {
-        protectedSyncRoom: buildProtectedSyncRoom(
-          localSecretRecord,
-          existingSyncRoom.success ? existingSyncRoom.data : syncRoom,
-        ),
+        protectedSyncRoom: buildProtectedSyncRoom(localSecretRecord, existingRoom ?? syncRoom),
       };
     }
 
@@ -186,7 +237,7 @@ export async function mergeCoopStateUpdate(
     const doc = hydrateCoopDoc(existing?.encodedState);
 
     try {
-      Y.applyUpdate(doc, encodedState);
+      applyCoopStateUpdate(doc, encodedState);
       const parseResult = redactSyncRoomSecretsFromMergedDoc(doc, coopId, syncRoomGuard);
 
       // Always persist the merged Y.Doc state — the CRDT merge itself is valid

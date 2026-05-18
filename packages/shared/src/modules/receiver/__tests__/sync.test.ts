@@ -341,7 +341,7 @@ describe('connectReceiverSyncProviders', () => {
     }
 
     const doc = new Y.Doc();
-    const result = connectReceiverSyncProviders(doc, 'test-room-sync');
+    const result = connectReceiverSyncProviders(doc, 'test-room-sync', [], undefined, undefined, '');
 
     expect(result.roomId).toBe('test-room-sync');
     expect(result.indexeddb).toBeDefined();
@@ -357,7 +357,7 @@ describe('connectReceiverSyncProviders', () => {
     }
 
     const doc = new Y.Doc();
-    const result = connectReceiverSyncProviders(doc, 'room-no-urls');
+    const result = connectReceiverSyncProviders(doc, 'room-no-urls', [], undefined, undefined, '');
 
     expect(result.roomId).toBe('room-no-urls');
     expect(result.webrtc).toBeUndefined();
@@ -371,10 +371,14 @@ describe('connectReceiverSyncProviders', () => {
     }
 
     const doc = new Y.Doc();
-    const result = connectReceiverSyncProviders(doc, 'room-bad-urls', [
-      'not-a-url',
-      'ftp://bad-protocol.com',
-    ]);
+    const result = connectReceiverSyncProviders(
+      doc,
+      'room-bad-urls',
+      ['not-a-url', 'ftp://bad-protocol.com'],
+      undefined,
+      undefined,
+      '',
+    );
 
     expect(result.webrtc).toBeUndefined();
 
@@ -403,9 +407,14 @@ describe('connectReceiverSyncProviders', () => {
 
     try {
       const doc = new Y.Doc();
-      const result = connectReceiverSyncProviders(doc, 'room-no-rtc', [
-        'wss://signaling.example.com',
-      ]);
+      const result = connectReceiverSyncProviders(
+        doc,
+        'room-no-rtc',
+        ['wss://signaling.example.com'],
+        undefined,
+        undefined,
+        '',
+      );
 
       expect(result.roomId).toBe('room-no-rtc');
       expect(result.indexeddb).toBeDefined();
