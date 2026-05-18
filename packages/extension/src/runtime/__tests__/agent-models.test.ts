@@ -1,6 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { webLlmComplete, webLlmPrewarm, webLlmStatus, transformersPipeline } = vi.hoisted(() => ({
+const {
+  gemma4Complete,
+  gemma4Prewarm,
+  gemma4Status,
+  webLlmComplete,
+  webLlmPrewarm,
+  webLlmStatus,
+  transformersPipeline,
+} = vi.hoisted(() => ({
+  gemma4Complete: vi.fn(),
+  gemma4Prewarm: vi.fn(),
+  gemma4Status: {
+    ready: false,
+    initProgress: 0,
+    initMessage: '',
+    error: undefined,
+    model: 'onnx-community/gemma-4-E2B-it-ONNX',
+  },
   webLlmComplete: vi.fn(),
   webLlmPrewarm: vi.fn(),
   webLlmStatus: {
@@ -22,6 +39,26 @@ vi.mock('../agent/webllm-bridge', () => ({
     }
     teardown() {}
   },
+}));
+
+vi.mock('../agent/gemma4-bridge', () => ({
+  AgentGemma4Bridge: class {
+    complete = gemma4Complete;
+    prewarm = gemma4Prewarm;
+    async initialize() {
+      gemma4Status.ready = true;
+      return { model: gemma4Status.model, durationMs: 0 };
+    }
+    get status() {
+      return gemma4Status;
+    }
+    teardown() {
+      gemma4Status.ready = false;
+    }
+  },
+  buildGemma4ToolForSkill: vi.fn(() => undefined),
+  getDefaultGemma4ModelId: vi.fn(() => gemma4Status.model),
+  getGemma4ToolNameForSkill: vi.fn(() => undefined),
 }));
 
 vi.mock('@huggingface/transformers', () => ({
@@ -147,6 +184,12 @@ describe('agent model provider fallback', () => {
   beforeEach(() => {
     webLlmComplete.mockReset();
     webLlmPrewarm.mockReset();
+    gemma4Complete.mockReset();
+    gemma4Prewarm.mockReset();
+    gemma4Status.ready = false;
+    gemma4Status.error = undefined;
+    gemma4Status.initProgress = 0;
+    gemma4Status.initMessage = '';
     transformersPipeline.mockReset();
     webLlmStatus.ready = false;
     webLlmStatus.error = undefined;
@@ -411,6 +454,21 @@ describe('agent model provider fallback', () => {
 
     expect(result.provider).toBe('heuristic');
     expect(result.output).toEqual({ routings: [] });
+  });
+
+  it('uses heuristic tab routing on Gemma cold start while warming the sandbox', async () => {
+    const result = await completeSkillOutput({
+      preferredProvider: 'gemma4',
+      schemaRef: 'tab-router-output',
+      system: 'Return JSON only.',
+      prompt: 'Route this extract.',
+      heuristicContext: 'Funding roundup for Coop Town Test.',
+    });
+
+    expect(result.provider).toBe('heuristic');
+    expect(result.output).toEqual({ routings: [] });
+    expect(gemma4Prewarm).toHaveBeenCalledTimes(1);
+    expect(gemma4Complete).not.toHaveBeenCalled();
   });
 
   it('uses heuristic capital briefs on WebLLM cold start while warming the engine', async () => {

@@ -45,6 +45,14 @@ const WEBLLM_COLD_START_FALLBACK_SCHEMAS = new Set<SkillOutputSchemaRef>([
   'review-digest-output',
   'memory-insight-output',
 ]);
+const GEMMA4_COLD_START_FALLBACK_SCHEMAS = new Set<SkillOutputSchemaRef>([
+  'tab-router-output',
+  'opportunity-extractor-output',
+  'grant-fit-scorer-output',
+  'theme-clusterer-output',
+  'review-digest-output',
+  'grant-action-planner-output',
+]);
 
 type TextGenerationPipeline = (
   messages: Array<{ role: string; content: string }>,
@@ -740,6 +748,17 @@ export async function completeSkillOutput<T>(input: {
     throwIfAborted(input.signal);
     if (!webLlmBridge.status.ready) {
       webLlmBridge.prewarm();
+      return fallback();
+    }
+  }
+
+  if (
+    input.preferredProvider === 'gemma4' &&
+    GEMMA4_COLD_START_FALLBACK_SCHEMAS.has(input.schemaRef)
+  ) {
+    throwIfAborted(input.signal);
+    if (!gemma4Bridge.status.ready) {
+      gemma4Bridge.prewarm();
       return fallback();
     }
   }
