@@ -285,13 +285,6 @@ function LandingPageContent({
           const whyBuildCard =
             arrivalJourneyRef.current?.querySelector<HTMLDivElement>('.why-build-heading-card') ??
             null;
-          const whyBuildTeam =
-            arrivalJourneyRef.current?.querySelector<HTMLDivElement>('.why-build-scene-team') ??
-            null;
-          const whyBuildTeamMembers = Array.from(
-            whyBuildTeam?.querySelectorAll<HTMLElement>('.team-members-grid .scene-team-member') ??
-              [],
-          );
 
           const arrivalCoopParts = {
             roof: arrivalCoopRef.current?.querySelector('.coop-roof') ?? null,
@@ -455,8 +448,6 @@ function LandingPageContent({
           arrivalTimeline
             // Hold the why-build content hidden until chickens have entered the coop.
             .set(whyBuildCard, { autoAlpha: 0, y: 24, scale: 0.96 }, 0)
-            .set(whyBuildTeam, { autoAlpha: 0, y: 18 }, 0)
-            .set(whyBuildTeamMembers, { autoAlpha: 0, y: 14, scale: 0.96 }, 0)
             .set(arrivalInsideFlockRef.current, { autoAlpha: 0 }, 0)
             .set(insideBirds, { autoAlpha: 0 }, 0)
             .fromTo(
@@ -514,15 +505,9 @@ function LandingPageContent({
               { autoAlpha: 1, y: 0, scale: 1, stagger: 0.02, duration: 0.06 },
               0.52,
             )
-            // Why-build content + team fade in once the coop is fully populated, with
+            // Why-build content fades in once the coop is fully populated, with
             // plenty of scroll room left so the user actually reads it before exiting.
-            .to(whyBuildCard, { autoAlpha: 1, y: 0, scale: 1, duration: 0.1 }, 0.6)
-            .to(whyBuildTeam, { autoAlpha: 1, y: 0, duration: 0.1 }, 0.66)
-            .to(
-              whyBuildTeamMembers,
-              { autoAlpha: 1, y: 0, scale: 1, stagger: 0.02, duration: 0.08 },
-              0.68,
-            );
+            .to(whyBuildCard, { autoAlpha: 1, y: 0, scale: 1, duration: 0.1 }, 0.6);
           arrivalTimeline
             .fromTo(arrivalNightSkyRef.current, { opacity: 0 }, { opacity: 0.92 }, 0.4)
             .fromTo(arrivalStarsRef.current, { opacity: 0 }, { opacity: 0.78 }, 0.5)

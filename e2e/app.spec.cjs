@@ -250,20 +250,26 @@ function buildBoardSnapshotFixture() {
   };
 }
 
-test('landing page renders the refreshed narrative', async ({ page }) => {
+test('landing page renders the refreshed narrative', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Hover-driven narrative checks run only on the desktop project.');
+
   await page.goto('/landing');
 
   await expect(page.getByRole('heading', { name: /no more chickens loose/i })).toBeVisible();
   await expect(page.locator('.hero-title-line')).toHaveCount(2);
-  await expect(page.getByText(/turning knowledge into opportunity/i)).toBeVisible();
+  await expect(
+    page.getByText(/browser-first, local-first coordination for community organizers/i),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: /^how coop works$/i })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /^curate your coop$/i })).toBeVisible();
-  await expect(page.locator('.why-build-heading-card h2')).toHaveText(/why we build/i);
-  await expect(page.getByText(/your data stays yours/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^shape your community coop$/i })).toBeVisible();
+  await expect(page.locator('.why-build-heading-card h2')).toHaveText(/why we're building coop/i);
+  await expect(page.getByText(/capture from anywhere/i)).toBeVisible();
+  await expect(page.getByText(/^On-device AI$/)).toBeVisible();
   await expect(page.getByRole('button', { name: /reset ritual/i })).toBeVisible();
   await expect(page.locator('.thought-bubble').first()).toBeVisible();
   await expect(page.locator('.how-works-index')).toHaveCount(4);
 
+  await page.locator('.journey-scene-story .scene-chicken').first().hover();
   await expect
     .poll(async () => {
       return page
@@ -282,9 +288,7 @@ test('landing page renders the refreshed narrative', async ({ page }) => {
   expect(logoBox.x).toBeLessThan(140);
 
   await page.locator('#why-build').scrollIntoViewIfNeeded();
-  await expect(
-    page.locator('#why-build .scene-team-name').filter({ hasText: 'Afolabi Aiyeloja' }).first(),
-  ).toHaveText('Afolabi Aiyeloja');
+  await expect(page.locator('#why-build .why-build-heading-card')).toBeVisible();
   await expect(page.locator('.footer-copy')).toContainText('Greenpill Dev Guild');
 
   await page.getByRole('button', { name: /collective intelligence/i }).click();
@@ -314,7 +318,9 @@ test('landing page stays legible on mobile', async ({ page, isMobile }) => {
   await page.goto('/landing');
 
   await expect(page.getByRole('heading', { name: /no more chickens loose/i })).toBeVisible();
-  await expect(page.getByText(/turning knowledge into opportunity/i)).toBeVisible();
+  await expect(
+    page.getByText(/browser-first, local-first coordination for community organizers/i),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: /collective intelligence/i })).toBeVisible();
 });
 

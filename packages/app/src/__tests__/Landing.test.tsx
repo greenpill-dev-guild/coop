@@ -203,7 +203,8 @@ describe('landing page', () => {
 
       const dialog = await screen.findByRole('dialog', { name: /open coop on your phone/i });
       expect(dialog).toBeVisible();
-      expect(dialogMethods.showModal).toHaveBeenCalledTimes(1);
+      expect(dialog).toHaveAttribute('open');
+      expect(dialogMethods.showModal).not.toHaveBeenCalled();
       expect(screen.getByRole('button', { name: /close install instructions/i })).toHaveFocus();
       expect(screen.getByText(/scan with your phone camera/i)).toBeVisible();
       expect(dialog.querySelector('.eyebrow')).toHaveTextContent(/phone field companion/i);

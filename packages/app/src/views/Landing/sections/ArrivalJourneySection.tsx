@@ -1,14 +1,7 @@
 import type { MutableRefObject, RefObject } from 'react';
 import { useI18n } from '../../../hooks/useI18n';
 import { ChickenSprite, CoopIllustration } from '../landing-animations';
-import {
-  STAR_COUNT,
-  arrivalChickenCommunities,
-  initialsForName,
-  journeyChickens,
-  starStyle,
-  teamMembers,
-} from '../landing-data';
+import { STAR_COUNT, arrivalChickenCommunities, journeyChickens, starStyle } from '../landing-data';
 
 export type ArrivalJourneySectionProps = {
   arrivalJourneyRef: RefObject<HTMLElement | null>;
@@ -122,18 +115,6 @@ export function ArrivalJourneySection({
           <div className="why-build-heading-card">
             <h2>{t('why_build.heading')}</h2>
             <p className="lede">{t('why_build.description')}</p>
-          </div>
-
-          <div className="why-build-scene-team" aria-label={t('why_build.builtByTeam')}>
-            <span className="scene-team-label">{t('why_build.builtByTeam')}</span>
-            <div className="team-members-grid">
-              {teamMembers.map((member) => (
-                <div className="scene-team-member" key={member}>
-                  <span className="team-avatar">{initialsForName(member)}</span>
-                  <span className="scene-team-name">{member}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
