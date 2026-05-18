@@ -13,8 +13,9 @@ COPY packages/shared/src/ packages/shared/src/
 RUN bun run --filter @coop/shared build
 COPY packages/api/src/ packages/api/src/
 COPY packages/api/config.ts packages/api/
+RUN bun build packages/api/src/index.ts --target=bun --outfile=packages/api/dist/index.js
 WORKDIR /app/packages/api
 EXPOSE 8080
 ENV HOST=0.0.0.0
 ENV PORT=8080
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "dist/index.js"]
