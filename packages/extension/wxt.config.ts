@@ -307,7 +307,8 @@ export default defineConfig({
       },
     },
     content_security_policy: {
-      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+      extension_pages:
+        "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https://* wss://*",
       // The Gemma 4 sandbox iframe runs onnxruntime-web, whose Embind glue
       // calls `new Function()` on the inference hot path. The default
       // extension_pages CSP forbids that, so the inference host lives in a

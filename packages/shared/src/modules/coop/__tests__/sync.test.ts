@@ -67,6 +67,62 @@ describe('shared contracts and sync hydration', () => {
     expect(state.memoryProfile.version).toBe(1);
   });
 
+  it('hydrates older synced docs that are missing memory profile state', () => {
+    const created = createCoop({
+      coopName: 'Legacy Sync Coop',
+      purpose: 'Verify sync tolerates older docs without memory profiles.',
+      creatorDisplayName: 'Rae',
+      captureMode: 'manual',
+      seedContribution: 'I am testing legacy sync hydration.',
+      setupInsights: {
+        summary: 'A concise but valid setup payload for sync testing.',
+        crossCuttingPainPoints: ['Context drifts'],
+        crossCuttingOpportunities: ['Shared state stays typed'],
+        lenses: [
+          {
+            lens: 'capital-formation',
+            currentState: 'Links are scattered.',
+            painPoints: 'Funding context disappears.',
+            improvements: 'Route leads into shared state.',
+          },
+          {
+            lens: 'impact-reporting',
+            currentState: 'Reporting is rushed.',
+            painPoints: 'Evidence gets dropped.',
+            improvements: 'Collect evidence incrementally.',
+          },
+          {
+            lens: 'governance-coordination',
+            currentState: 'Calls happen weekly.',
+            painPoints: 'Actions slip.',
+            improvements: 'Review actions through the board.',
+          },
+          {
+            lens: 'knowledge-garden-resources',
+            currentState: 'Resources live in tabs.',
+            painPoints: 'Research repeats.',
+            improvements: 'Persist high-signal references.',
+          },
+        ],
+      },
+    });
+    const doc = createCoopDoc(created.state);
+    doc.getMap<string>('coop').delete('memoryProfile');
+
+    const state = readCoopState(doc);
+
+    expect(state.profile.id).toBe(created.state.profile.id);
+    expect(state.memoryProfile).toMatchObject({
+      version: 1,
+      topDomains: [],
+      topTags: [],
+      archiveSignals: {
+        archivedTagCounts: {},
+        archivedDomainCounts: {},
+      },
+    });
+  });
+
   it('merges preferred Yjs state updates for offscreen persistence', () => {
     const created = createCoop({
       coopName: 'Merged Sync Coop',

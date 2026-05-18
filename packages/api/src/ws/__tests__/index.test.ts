@@ -13,6 +13,8 @@ const wsIndexMocks = vi.hoisted(() => {
     onMessage: vi.fn(),
     onClose: vi.fn(),
     onError: vi.fn(),
+    applySnapshot: vi.fn(),
+    encodeSnapshot: vi.fn(() => Uint8Array.from([4, 5, 6])),
   };
   const state = {
     signalingUpgradeHandlers: null as null | Record<string, (...args: unknown[]) => unknown>,
@@ -68,13 +70,18 @@ function createMockApp() {
       get: vi.fn((path: string, handler: (context: unknown) => Response | Promise<Response>) => {
         routes.set(path, handler);
       }),
+      post: vi.fn((path: string, handler: (context: unknown) => Response | Promise<Response>) => {
+        routes.set(`POST ${path}`, handler);
+      }),
     },
   };
 }
 
-function createMockContext(url: string) {
+function createMockContext(url: string, body?: unknown) {
   const parsedUrl = new URL(url);
-  const room = parsedUrl.pathname.split('/').at(-1) ?? '';
+  const parts = parsedUrl.pathname.split('/');
+  const roomIndex = parts.indexOf('yws') + 1;
+  const room = roomIndex > 0 ? (parts[roomIndex] ?? '') : (parts.at(-1) ?? '');
 
   return {
     req: {
@@ -82,8 +89,14 @@ function createMockContext(url: string) {
       path: parsedUrl.pathname,
       header: (name: string) => (name.toLowerCase() === 'upgrade' ? 'websocket' : undefined),
       param: (name: string) => (name === 'room' ? room : undefined),
+      json: vi.fn(async () => body),
     },
     text: (body: string, status = 200) => new Response(body, { status }),
+    json: (payload: unknown, status = 200) =>
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      }),
   };
 }
 
@@ -163,5 +176,33 @@ describe('mountWebSocket', () => {
     expect(targetWs).toBe(ws);
     expect(message).toBeInstanceOf(Uint8Array);
     expect(Array.from(message as Uint8Array)).toEqual([1, 2, 3]);
+  });
+
+  it('authorizes snapshot relay reads and writes for yjs rooms', async () => {
+    wsIndexMocks.authorizeSyncRequest.mockReturnValue({
+      scope: 'coop',
+      roomId: 'room-1',
+    });
+
+    const { app, routes } = createMockApp();
+    mountWebSocket(app as never);
+
+    const readResponse = await routes.get('/yws/:room/snapshot')?.(
+      createMockContext('http://localhost/yws/room-1/snapshot?roomId=room-1'),
+    );
+    expect(readResponse?.status).toBe(200);
+    expect(await readResponse?.json()).toEqual({ update: [4, 5, 6] });
+    expect(wsIndexMocks.yjsHandlers.encodeSnapshot).toHaveBeenCalledWith('room-1');
+
+    const writeResponse = await routes.get('POST /yws/:room/snapshot')?.(
+      createMockContext('http://localhost/yws/room-1/snapshot?roomId=room-1', {
+        update: [7, 8, 9],
+      }),
+    );
+    expect(writeResponse?.status).toBe(200);
+    expect(wsIndexMocks.yjsHandlers.applySnapshot).toHaveBeenCalledWith(
+      'room-1',
+      Uint8Array.from([7, 8, 9]),
+    );
   });
 });

@@ -44,6 +44,8 @@ export {
   deriveSyncRoomId,
   deriveInviteHandoffRoomId,
   encodeCoopDoc,
+  encodeCoopDocSnapshot,
+  applyCoopDocSnapshot,
   encodeRelayFrame,
   finalizeSyncRoomRotationProof,
   hydrateCoopDoc,

@@ -238,6 +238,16 @@ export function createYjsSyncHandlers(options?: YjsSyncHandlerOptions) {
       return rooms.get(roomName);
     },
 
+    applySnapshot(roomName: string, update: Uint8Array): void {
+      const room = getOrCreateRoom(roomName);
+      Y.applyUpdate(room.doc, update);
+    },
+
+    encodeSnapshot(roomName: string): Uint8Array {
+      const room = getOrCreateRoom(roomName);
+      return Y.encodeStateAsUpdate(room.doc);
+    },
+
     onOpen(roomName: string, ws: WSContext): void {
       const room = getOrCreateRoom(roomName);
       const key = rawKey(ws);

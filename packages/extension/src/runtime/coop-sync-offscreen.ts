@@ -1,5 +1,6 @@
 import {
   ORIGIN_LOCAL,
+  applyCoopDocSnapshot,
   assertInviteHandoffPayloadMatchesInvite,
   buildIceServers,
   buildRedactedSyncRoomSecret,
@@ -14,6 +15,7 @@ import {
   decryptInviteHandoffPayload,
   deriveSyncRoomId,
   encodeCoopDoc,
+  encodeCoopDocSnapshot,
   encryptInviteHandoffPayload,
   hashJson,
   hydrateCoopDoc,
@@ -69,6 +71,8 @@ type CoopBinding = {
   key: string;
   coopId: string;
   doc: ReturnType<typeof createCoopDoc>;
+  providerSyncRoom: ProviderSyncRoom;
+  websocketSyncUrl?: string;
   disconnect: () => void;
   lastHash: string;
   pendingUpdates: Uint8Array[];
@@ -100,6 +104,7 @@ const bindings = new Map<string, CoopBinding>();
 const pendingRotationHandoffRequests = new Set<string>();
 const db = createCoopDb('coop-extension');
 let refreshPromise: Promise<void> | null = null;
+let pendingForcedRefresh = false;
 let latestIceConfig: CoopSyncConfigResponse['iceConfig'] = null;
 let latestWebsocketSyncUrl: string | undefined;
 
@@ -137,6 +142,81 @@ function redactCoopStateForYjs(coop: CoopConfigEntry['coop']) {
 function buildBindingKey(entry: CoopConfigEntry) {
   const room = resolveProviderSyncRoom(entry);
   return `${entry.coop.profile.id}:${room.roomId}:${room.signalingUrls.join('|')}`;
+}
+
+function buildSnapshotRelayUrl(websocketSyncUrl: string | undefined, room: ProviderSyncRoom) {
+  if (!websocketSyncUrl) return null;
+  try {
+    const url = new URL(websocketSyncUrl);
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+    url.pathname = `${url.pathname.replace(/\/$/, '')}/${encodeURIComponent(room.roomId)}/snapshot`;
+    url.search = '';
+    url.searchParams.set('syncScope', 'coop');
+    url.searchParams.set('coopId', room.coopId);
+    url.searchParams.set('roomId', room.roomId);
+    url.searchParams.set('roomSecret', room.roomSecret);
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function pushSnapshotRelay(
+  binding: CoopBinding,
+  room: ProviderSyncRoom,
+  websocketSyncUrl?: string,
+  options: { required?: boolean } = {},
+) {
+  const url = buildSnapshotRelayUrl(websocketSyncUrl, room);
+  if (!url) return;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ update: Array.from(encodeCoopDocSnapshot(binding.doc)) }),
+    });
+    if (!response.ok) {
+      throw new Error(`Snapshot relay push failed with ${response.status}.`);
+    }
+  } catch (error) {
+    void reportCoopSyncRuntime({
+      lastError: error instanceof Error ? error.message : 'Snapshot relay push failed.',
+    });
+    if (options.required) {
+      throw error;
+    }
+  }
+}
+
+async function pullSnapshotRelay(
+  binding: CoopBinding,
+  room: ProviderSyncRoom,
+  websocketSyncUrl?: string,
+  options: { required?: boolean } = {},
+) {
+  const url = buildSnapshotRelayUrl(websocketSyncUrl, room);
+  if (!url) return;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Snapshot relay pull failed with ${response.status}.`);
+    }
+    const payload = (await response.json()) as { update?: unknown };
+    if (
+      !Array.isArray(payload.update) ||
+      payload.update.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
+    ) {
+      throw new Error('Snapshot relay returned an invalid Yjs update.');
+    }
+    applyCoopDocSnapshot(binding.doc, new Uint8Array(payload.update), 'snapshot-relay');
+  } catch (error) {
+    void reportCoopSyncRuntime({
+      lastError: error instanceof Error ? error.message : 'Snapshot relay pull failed.',
+    });
+    if (options.required) {
+      throw error;
+    }
+  }
 }
 
 function resolveIceExpiresAtMs(config = latestIceConfig) {
@@ -617,6 +697,8 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
     key: buildBindingKey(entry),
     coopId: coop.profile.id,
     doc,
+    providerSyncRoom,
+    websocketSyncUrl,
     lastHash: hashJson(coop),
     pendingUpdates: [],
     iceExpiresAtMs: resolveIceExpiresAtMs(),
@@ -849,6 +931,8 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   binding.compactionTimer = window.setTimeout(() => {
     void runCompaction();
   }, compactionIntervalMs);
+  void pullSnapshotRelay(binding, providerSyncRoom, websocketSyncUrl);
+  void pushSnapshotRelay(binding, providerSyncRoom, websocketSyncUrl);
   scheduleRuntimeHealthReport(binding, providers, 2500);
   void reportCoopSyncRuntime({
     lastBindingCreatedAt: runtimeNow(),
@@ -859,8 +943,18 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   return binding;
 }
 
-async function refreshBindings() {
-  if (refreshPromise) return refreshPromise;
+async function refreshBindings(options: { force?: boolean } = {}) {
+  if (refreshPromise) {
+    if (options.force) {
+      pendingForcedRefresh = true;
+      await refreshPromise;
+      return refreshBindings({ force: true });
+    }
+    return refreshPromise;
+  }
+
+  const force = options.force === true || pendingForcedRefresh;
+  pendingForcedRefresh = false;
 
   refreshPromise = (async () => {
     const config = await fetchCoopSyncConfig();
@@ -899,10 +993,14 @@ async function refreshBindings() {
 
       const publicCoop = redactCoopStateForYjs(entry.coop);
       const nextHash = hashJson(publicCoop);
-      if (existing.lastHash !== nextHash) {
+      existing.providerSyncRoom = resolveProviderSyncRoom(entry);
+      existing.websocketSyncUrl = config.websocketSyncUrl;
+      void pullSnapshotRelay(existing, existing.providerSyncRoom, existing.websocketSyncUrl);
+      if (force || existing.lastHash !== nextHash) {
         existing.lastHash = nextHash;
         writeCoopState(existing.doc, publicCoop);
         existing.blobSync?.broadcastManifest();
+        void pushSnapshotRelay(existing, existing.providerSyncRoom, existing.websocketSyncUrl);
       }
       reconcileInviteHandoffResponders(existing, entry, config.websocketSyncUrl);
       reconcileRoomRotationHandoffResponders(existing, entry, config.websocketSyncUrl);
@@ -924,6 +1022,20 @@ async function refreshBindings() {
 
 async function requestBlobFromPeers(coopId: string, blobId: string) {
   return bindings.get(coopId)?.blobSync?.requestBlob(blobId) ?? null;
+}
+
+async function syncSnapshotRelay(coopId: string) {
+  await refreshBindings({ force: true });
+  const binding = bindings.get(coopId);
+  if (!binding) {
+    throw new Error('Coop sync binding is not active.');
+  }
+  await pullSnapshotRelay(binding, binding.providerSyncRoom, binding.websocketSyncUrl, {
+    required: true,
+  });
+  await pushSnapshotRelay(binding, binding.providerSyncRoom, binding.websocketSyncUrl, {
+    required: true,
+  });
 }
 
 async function requestInviteHandoff(input: {
@@ -1161,9 +1273,11 @@ chrome.runtime.onMessage.addListener(
       payload?: {
         coopId?: string;
         blobId?: string;
+        force?: boolean;
         inviteCode?: string;
         memberId?: string;
         memberDisplayName?: string;
+        reason?: string;
         timeoutMs?: number;
       };
     },
@@ -1171,8 +1285,26 @@ chrome.runtime.onMessage.addListener(
     sendResponse,
   ) => {
     if (message.type === 'refresh-coop-sync-bindings') {
-      void refreshBindings();
+      void refreshBindings({ force: message.payload?.force === true });
       return;
+    }
+    if (message.type === 'sync-coop-snapshot-relay-offscreen') {
+      const { coopId } = message.payload ?? {};
+      if (!coopId) {
+        sendResponse({ ok: false, error: 'Missing coopId.' });
+        return;
+      }
+      void syncSnapshotRelay(coopId)
+        .then(() => {
+          sendResponse({ ok: true });
+        })
+        .catch((error) => {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'Snapshot relay sync failed.',
+          });
+        });
+      return true;
     }
     if (message.type === 'resolve-coop-blob-from-peers') {
       const { coopId, blobId } = message.payload ?? {};

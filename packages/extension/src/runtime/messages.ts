@@ -629,6 +629,7 @@ export type RuntimeRequest =
       payload: Partial<CoopSyncRuntimeStatus>;
     }
   | { type: 'refresh-coop-sync-bindings'; payload?: { reason?: string; force?: boolean } }
+  | { type: 'sync-coop-snapshot-relay'; payload: { coopId: string } }
   | {
       type: 'resolve-onchain-state';
       payload: { coopSeed: string };

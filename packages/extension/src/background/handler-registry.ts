@@ -5,6 +5,8 @@ import {
   buildAgentLogExport,
   buildAgentManifest,
   clearSensitiveLocalData,
+  createCoopDoc,
+  encodeCoopDocSnapshot,
   getAuthSession,
   getPrivacyIdentitiesForCoop,
   getPrivacyIdentity,
@@ -213,6 +215,64 @@ function decodeRuntimeBytes(bytes: Uint8Array | number[]) {
   return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 }
 
+function buildCoopSnapshotRelayUrl(
+  websocketSyncUrl: string | undefined,
+  room: { coopId: string; roomId: string; roomSecret: string },
+) {
+  if (!websocketSyncUrl) return null;
+  try {
+    const url = new URL(websocketSyncUrl);
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+    url.pathname = `${url.pathname.replace(/\/$/, '')}/${encodeURIComponent(room.roomId)}/snapshot`;
+    url.search = '';
+    url.searchParams.set('syncScope', 'coop');
+    url.searchParams.set('coopId', room.coopId);
+    url.searchParams.set('roomId', room.roomId);
+    url.searchParams.set('roomSecret', room.roomSecret);
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function syncCoopSnapshotRelay(coopId: string) {
+  const config = await getCoopSyncConfig();
+  const entry = config.coops.find((candidate) => candidate.coop.profile.id === coopId);
+  const room = entry?.providerSyncRoom;
+  const url = room ? buildCoopSnapshotRelayUrl(config.websocketSyncUrl, room) : null;
+  if (!entry || !room || !url) {
+    throw new Error('Coop relay sync is not available.');
+  }
+
+  const doc = createCoopDoc(entry.coop);
+  try {
+    const push = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ update: Array.from(encodeCoopDocSnapshot(doc)) }),
+    });
+    if (!push.ok) {
+      throw new Error(`Coop relay push failed with ${push.status}.`);
+    }
+  } finally {
+    doc.destroy();
+  }
+
+  const pull = await fetch(url);
+  if (!pull.ok) {
+    throw new Error(`Coop relay pull failed with ${pull.status}.`);
+  }
+  const payload = (await pull.json()) as { update?: unknown };
+  if (
+    !Array.isArray(payload.update) ||
+    payload.update.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
+  ) {
+    throw new Error('Coop relay returned an invalid state update.');
+  }
+  await mergeCoopStateUpdate(db, coopId, new Uint8Array(payload.update));
+  await refreshBadge();
+}
+
 async function handleRunAutoresearchCycle(
   message: Extract<RegistryRequest, { type: 'run-autoresearch-cycle' }>,
 ) {
@@ -334,6 +394,23 @@ export const handlerRegistry: HandlerRecord = {
   'refresh-coop-sync-bindings': async () => ({
     ok: true,
   }),
+
+  'sync-coop-snapshot-relay': async (message) => {
+    try {
+      await syncCoopSnapshotRelay(message.payload.coopId);
+      await ensureCoopSyncOffscreenDocument();
+      chrome.runtime.sendMessage({
+        type: 'refresh-coop-sync-bindings',
+        payload: { reason: 'snapshot-relay', force: true },
+      });
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Relay failed.',
+      };
+    }
+  },
 
   'request-invite-handoff': async () => ({
     ok: false,

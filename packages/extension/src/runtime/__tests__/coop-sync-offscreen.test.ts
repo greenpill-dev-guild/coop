@@ -54,6 +54,7 @@ const sharedMocks = vi.hoisted(() => {
   }
 
   return {
+    applyCoopDocSnapshot: vi.fn(),
     assertInviteHandoffPayloadMatchesInvite: vi.fn(),
     buildIceServers: vi.fn(() => ['stun:coop.test']),
     buildRedactedSyncRoomSecret: vi.fn(
@@ -102,6 +103,7 @@ const sharedMocks = vi.hoisted(() => {
       roomSecret === 'room-secret-new' ? 'room-2' : `${coopId}:${roomSecret}`,
     ),
     encodeCoopDoc: vi.fn(() => new Uint8Array([9, 9, 9])),
+    encodeCoopDocSnapshot: vi.fn(() => new Uint8Array([8, 8, 8])),
     encryptInviteHandoffPayload: vi.fn(),
     hashJson: vi.fn((value: unknown) => JSON.stringify(value)),
     hydrateCoopDoc: vi.fn(() => createMockHandoffDoc()),
@@ -175,6 +177,7 @@ const blobMocks = vi.hoisted(() => ({
 vi.mock('@coop/shared', () => {
   return {
     ORIGIN_LOCAL: 'local',
+    applyCoopDocSnapshot: sharedMocks.applyCoopDocSnapshot,
     assertInviteHandoffPayloadMatchesInvite: sharedMocks.assertInviteHandoffPayloadMatchesInvite,
     buildIceServers: sharedMocks.buildIceServers,
     buildRedactedSyncRoomSecret: sharedMocks.buildRedactedSyncRoomSecret,
@@ -189,6 +192,7 @@ vi.mock('@coop/shared', () => {
     decryptInviteHandoffPayload: sharedMocks.decryptInviteHandoffPayload,
     deriveSyncRoomId: sharedMocks.deriveSyncRoomId,
     encodeCoopDoc: sharedMocks.encodeCoopDoc,
+    encodeCoopDocSnapshot: sharedMocks.encodeCoopDocSnapshot,
     encryptInviteHandoffPayload: sharedMocks.encryptInviteHandoffPayload,
     hashJson: sharedMocks.hashJson,
     hydrateCoopDoc: sharedMocks.hydrateCoopDoc,
@@ -287,7 +291,10 @@ describe('coop sync offscreen runtime', () => {
   let sendMessageMock: ReturnType<typeof vi.fn>;
   let onRuntimeMessage:
     | ((
-        message: { type?: string; payload?: { coopId?: string; blobId?: string } },
+        message: {
+          type?: string;
+          payload?: { coopId?: string; blobId?: string; force?: boolean; reason?: string };
+        },
         sender?: unknown,
         sendResponse?: (response: unknown) => void,
       ) => boolean | undefined)
@@ -404,6 +411,7 @@ describe('coop sync offscreen runtime', () => {
     sharedMocks.validateInvite.mockReturnValue(true);
     sharedMocks.verifyInviteCodeProof.mockReturnValue(true);
     sharedMocks.encodeCoopDoc.mockReturnValue(new Uint8Array([9, 9, 9]));
+    sharedMocks.encodeCoopDocSnapshot.mockReturnValue(new Uint8Array([8, 8, 8]));
     sharedMocks.hashJson.mockImplementation((value: unknown) => JSON.stringify(value));
     sharedMocks.mergeCoopDocUpdates.mockReturnValue(new Uint8Array([1, 2, 3]));
     sharedMocks.summarizeSyncTransportHealth.mockReturnValue({
@@ -472,7 +480,10 @@ describe('coop sync offscreen runtime', () => {
             addListener: vi.fn(
               (
                 listener: (
-                  message: { type?: string; payload?: { coopId?: string; blobId?: string } },
+                  message: {
+                    type?: string;
+                    payload?: { coopId?: string; blobId?: string; force?: boolean; reason?: string };
+                  },
                   sender?: unknown,
                   sendResponse?: (response: unknown) => void,
                 ) => boolean | undefined,
@@ -510,6 +521,12 @@ describe('coop sync offscreen runtime', () => {
     }) as typeof window.clearTimeout);
     vi.spyOn(window, 'setInterval').mockImplementation(
       (() => 1) as unknown as typeof window.setInterval,
+    );
+    vi.spyOn(window, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ update: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
   });
 
@@ -590,6 +607,46 @@ describe('coop sync offscreen runtime', () => {
 
     expect(providersDisconnectMock).toHaveBeenCalledTimes(1);
     expect(sharedMocks.connectSyncProviders).toHaveBeenCalledTimes(2);
+  });
+
+  it('force-writes local coop state into an existing binding on save refresh', async () => {
+    const coop = buildCoop();
+    sendMessageMock.mockImplementation(async (message: { type: string }) => {
+      if (message.type === 'get-coop-sync-config') {
+        return {
+          ok: true,
+          data: {
+            coops: [buildCoopSyncConfigEntry(coop)],
+            websocketSyncUrl: 'wss://api.coop.test/yws',
+            iceConfig: {
+              iceServers: [{ urls: ['turn:turn.coop.test:3478'] }],
+              expiresAt: new Date(Date.now() + 300_000).toISOString(),
+              degraded: false,
+            },
+          },
+        };
+      }
+      return { ok: true };
+    });
+
+    await import('../coop-sync-offscreen');
+    await flushMicrotasks();
+    scheduledTimeouts.clear();
+    sharedMocks.writeCoopState.mockClear();
+
+    onRuntimeMessage?.({
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'save-state', force: true },
+    });
+    await flushMicrotasks();
+
+    expect(sharedMocks.writeCoopState).toHaveBeenCalledTimes(1);
+    expect(sharedMocks.writeCoopState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        profile: expect.objectContaining({ id: 'coop-1' }),
+      }),
+    );
   });
 
   it('responds to invite handoff requests with encrypted steady-room secrets', async () => {

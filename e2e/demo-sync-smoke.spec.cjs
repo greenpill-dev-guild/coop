@@ -200,6 +200,10 @@ async function waitForCoopSyncRuntime(page, predicate, timeoutMs, label) {
   throw new Error(`Timed out waiting for ${label}. Last runtime: ${JSON.stringify(lastRuntime)}`);
 }
 
+function hasPeerOrRelaySync(runtime, coopId) {
+  return runtime.activeCoopIds.includes(coopId) && ['webrtc', 'websocket'].includes(runtime.mode);
+}
+
 async function seedAuthSession(page, identity) {
   await sendRuntimeMessage(page, {
     type: 'set-auth-session',
@@ -344,6 +348,17 @@ async function refreshCoopSync(page, reason) {
   });
 }
 
+async function syncCoopSnapshotRelay(page, coopId) {
+  await sendRuntimeMessage(
+    page,
+    {
+      type: 'sync-coop-snapshot-relay',
+      payload: { coopId },
+    },
+    20_000,
+  );
+}
+
 test.describe('Kaggle demo sync smoke', () => {
   test.describe.configure({ timeout: 240_000 });
 
@@ -437,6 +452,31 @@ test.describe('Kaggle demo sync smoke', () => {
       );
       logProgress('profile B coop sync binding active');
 
+      const readyRuntimeA = await waitForCoopSyncRuntime(
+        profileA.page,
+        (runtime) => hasPeerOrRelaySync(runtime, coop.profile.id),
+        30_000,
+        'profile A peer or relay sync before publish',
+      );
+      const readyRuntimeB = await waitForCoopSyncRuntime(
+        profileB.page,
+        (runtime) => hasPeerOrRelaySync(runtime, coop.profile.id),
+        30_000,
+        'profile B peer or relay sync before publish',
+      );
+      logProgress('both profiles have peer or relay sync before publish', {
+        profileA: {
+          mode: readyRuntimeA.mode,
+          peerCount: readyRuntimeA.peerCount,
+          websocketConnected: readyRuntimeA.websocketConnected,
+        },
+        profileB: {
+          mode: readyRuntimeB.mode,
+          peerCount: readyRuntimeB.peerCount,
+          websocketConnected: readyRuntimeB.websocketConnected,
+        },
+      });
+
       const profileATitle = `Profile A shared memory ${Date.now()}`;
       const profileAArtifact = await publishDemoArtifact(profileA.page, {
         coopId: coop.profile.id,
@@ -452,10 +492,18 @@ test.describe('Kaggle demo sync smoke', () => {
         suggestedNextStep: 'Profile B should see this artifact in shared coop memory.',
       });
       await refreshCoopSync(profileA.page, 'demo-smoke-profile-a-published-artifact');
+      await syncCoopSnapshotRelay(profileA.page, coop.profile.id);
+      await syncCoopSnapshotRelay(profileB.page, coop.profile.id);
       logProgress('profile A published shared artifact', {
         artifactId: profileAArtifact.id,
         title: profileAArtifact.title,
       });
+      await waitForArtifact(
+        profileA.page,
+        coop.profile.id,
+        profileATitle,
+        'profile A artifact visible locally in profile A',
+      );
       const profileAArtifactFromB = await waitForArtifact(
         profileB.page,
         coop.profile.id,
@@ -481,10 +529,18 @@ test.describe('Kaggle demo sync smoke', () => {
         suggestedNextStep: 'Profile A should see this artifact in shared coop memory.',
       });
       await refreshCoopSync(profileB.page, 'demo-smoke-profile-b-published-artifact');
+      await syncCoopSnapshotRelay(profileB.page, coop.profile.id);
+      await syncCoopSnapshotRelay(profileA.page, coop.profile.id);
       logProgress('profile B published shared artifact', {
         artifactId: profileBArtifact.id,
         title: profileBArtifact.title,
       });
+      await waitForArtifact(
+        profileB.page,
+        coop.profile.id,
+        profileBTitle,
+        'profile B artifact visible locally in profile B',
+      );
       const profileBArtifactFromA = await waitForArtifact(
         profileA.page,
         coop.profile.id,
@@ -497,17 +553,13 @@ test.describe('Kaggle demo sync smoke', () => {
 
       const runtimeA = await waitForCoopSyncRuntime(
         profileA.page,
-        (runtime) =>
-          runtime.activeCoopIds.includes(coop.profile.id) &&
-          ['webrtc', 'websocket'].includes(runtime.mode),
+        (runtime) => hasPeerOrRelaySync(runtime, coop.profile.id),
         30_000,
         'profile A peer or relay sync health',
       );
       const runtimeB = await waitForCoopSyncRuntime(
         profileB.page,
-        (runtime) =>
-          runtime.activeCoopIds.includes(coop.profile.id) &&
-          ['webrtc', 'websocket'].includes(runtime.mode),
+        (runtime) => hasPeerOrRelaySync(runtime, coop.profile.id),
         30_000,
         'profile B peer or relay sync health',
       );

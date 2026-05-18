@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import {
   type CoopSharedState,
+  type CoopMemoryProfile,
   type Member,
   type RoomRotationAnnouncement,
   type SyncRoomBootstrap,
@@ -647,6 +648,22 @@ function readV2MapItems(v2Map: Y.Map<Y.Map<string>>): unknown[] {
   return items;
 }
 
+function buildFallbackMemoryProfile(): CoopMemoryProfile {
+  return {
+    version: 1,
+    updatedAt: nowIso(),
+    topDomains: [],
+    topTags: [],
+    categoryStats: [],
+    ritualLensWeights: [],
+    exemplarArtifactIds: [],
+    archiveSignals: {
+      archivedTagCounts: {},
+      archivedDomainCounts: {},
+    },
+  };
+}
+
 /**
  * Writes a complete coop shared state into a Yjs document, updating legacy, v1, and v2 artifact formats.
  * @param doc - The Yjs document to write into
@@ -760,6 +777,9 @@ export function readCoopStateRaw(doc: Y.Doc): Record<string, unknown> {
       if (key === 'archiveReceipts') return ['archiveReceipts', archiveReceipts];
       if (key === 'memberAccounts') return ['memberAccounts', memberAccounts];
       const value = root.get(key);
+      if (key === 'memoryProfile' && value === undefined) {
+        return ['memoryProfile', buildFallbackMemoryProfile()];
+      }
       return [key, value ? JSON.parse(value) : undefined];
     }),
   );
@@ -809,6 +829,14 @@ export function createCoopDoc(state: CoopSharedState) {
  */
 export function encodeCoopDoc(doc: Y.Doc) {
   return Y.encodeStateAsUpdateV2(doc);
+}
+
+export function encodeCoopDocSnapshot(doc: Y.Doc) {
+  return Y.encodeStateAsUpdate(doc);
+}
+
+export function applyCoopDocSnapshot(doc: Y.Doc, update: Uint8Array, origin?: unknown) {
+  Y.applyUpdate(doc, update, origin);
 }
 
 /**

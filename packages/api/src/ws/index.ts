@@ -39,6 +39,35 @@ export function mountWebSocket(app: Hono): void {
     persistDir: process.env.YJS_PERSIST_DIR || undefined,
   });
 
+  app.get('/yws/:room/snapshot', (c) => {
+    const room = c.req.param('room') as string;
+    const auth = authorizeSyncRequest(new URL(c.req.url), room);
+    if (!auth) {
+      return c.json({ error: 'Unauthorized sync room.' }, 401);
+    }
+    return c.json({ update: Array.from(yjsHandlers.encodeSnapshot(room)) });
+  });
+
+  app.post('/yws/:room/snapshot', async (c) => {
+    const room = c.req.param('room') as string;
+    const auth = authorizeSyncRequest(new URL(c.req.url), room);
+    if (!auth) {
+      return c.json({ error: 'Unauthorized sync room.' }, 401);
+    }
+
+    const payload = (await c.req.json().catch(() => null)) as { update?: unknown } | null;
+    if (
+      !payload ||
+      !Array.isArray(payload.update) ||
+      payload.update.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
+    ) {
+      return c.json({ error: 'Invalid Yjs update.' }, 400);
+    }
+
+    yjsHandlers.applySnapshot(room, new Uint8Array(payload.update));
+    return c.json({ ok: true });
+  });
+
   app.get('/yws/:room', (c) => {
     if (c.req.header('upgrade')?.toLowerCase() !== 'websocket') {
       return c.text('WebSocket upgrade required.', 426);

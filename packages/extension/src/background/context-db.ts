@@ -111,7 +111,7 @@ export async function saveState(state: CoopSharedState) {
   try {
     chrome.runtime.sendMessage({
       type: 'refresh-coop-sync-bindings',
-      payload: { reason: 'save-state' },
+      payload: { reason: 'save-state', force: true },
     });
   } catch {
     // Offscreen sync may not be awake yet; its heartbeat will catch up.
