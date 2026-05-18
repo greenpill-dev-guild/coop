@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine
+FROM oven/bun:1.3.10-alpine
 WORKDIR /app
 # Build context must be the repo root so the lockfile is available.
 # Deploy with: fly deploy -c packages/api/fly.toml from repo root
