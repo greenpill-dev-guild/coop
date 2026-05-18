@@ -31,7 +31,9 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: Deploy
-        run: flyctl deploy . -c packages/api/fly.toml --dockerfile packages/api/Dockerfile --remote-only
+        run: |
+          cp packages/api/fly.toml fly.api.toml
+          flyctl deploy . -c fly.api.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
