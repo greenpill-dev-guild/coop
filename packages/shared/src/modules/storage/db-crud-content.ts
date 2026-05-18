@@ -4,6 +4,7 @@ import type {
   KnowledgeSourceContent,
   ReadablePageExtract,
   ReviewDraft,
+  SyncRoomConfig,
   TabCandidate,
 } from '../../contracts/schema';
 import {
@@ -28,6 +29,7 @@ import {
 } from '../sync-core';
 import {
   ensureSyncRoomSecretRecord,
+  getSyncRoomSecretRecord,
   isRedactedSyncRoomSecret,
   redactSyncRoomSecrets,
 } from './db-crud-sync';
@@ -96,36 +98,65 @@ function getRawSyncRoom(raw: Record<string, unknown>) {
   return syncRoomConfigSchema.safeParse(raw.syncRoom);
 }
 
-async function ensureSyncRoomSecretFromMergedUpdate(
-  db: CoopDexie,
-  coopId: string,
-  encodedState: Uint8Array,
-) {
-  const existing = await db.coopDocs.get(coopId);
+function buildProtectedSyncRoom(
+  record: NonNullable<Awaited<ReturnType<typeof getSyncRoomSecretRecord>>>,
+  fallback: Pick<SyncRoomConfig, 'signalingUrls'>,
+): SyncRoomConfig {
+  return {
+    coopId: record.coopId,
+    roomId: record.roomId,
+    roomSecret: record.roomSecret,
+    inviteSigningSecret: record.inviteSigningSecret,
+    signalingUrls: fallback.signalingUrls,
+  };
+}
+
+async function prepareSyncRoomMergeGuard(db: CoopDexie, coopId: string, encodedState: Uint8Array) {
+  const [existing, localSecretRecord] = await Promise.all([
+    db.coopDocs.get(coopId),
+    getSyncRoomSecretRecord(db, coopId),
+  ]);
   const doc = hydrateCoopDoc(existing?.encodedState);
 
   try {
+    const existingSyncRoom = getRawSyncRoom(readCoopStateRaw(doc));
     Y.applyUpdate(doc, encodedState);
     const raw = readCoopStateRaw(doc);
     const syncRoomResult = getRawSyncRoom(raw);
     if (getRawCoopId(raw) !== coopId || !syncRoomResult.success) {
-      return;
+      return {};
     }
 
     const syncRoom = syncRoomResult.data;
+    if (localSecretRecord && syncRoom.roomId !== localSecretRecord.roomId) {
+      return {
+        protectedSyncRoom: buildProtectedSyncRoom(
+          localSecretRecord,
+          existingSyncRoom.success ? existingSyncRoom.data : syncRoom,
+        ),
+      };
+    }
+
     if (!isRedactedSyncRoomSecret(syncRoom.roomSecret)) {
       await ensureSyncRoomSecretRecord(db, syncRoom);
     }
+    return {};
   } finally {
     doc.destroy();
   }
 }
 
-function redactSyncRoomSecretsFromMergedDoc(doc: Y.Doc, coopId: string) {
+function redactSyncRoomSecretsFromMergedDoc(
+  doc: Y.Doc,
+  coopId: string,
+  guard: { protectedSyncRoom?: SyncRoomConfig },
+) {
   const raw = readCoopStateRaw(doc);
   const rawCoopId = getRawCoopId(raw);
   const syncRoomResult = getRawSyncRoom(raw);
-  if (rawCoopId === coopId && syncRoomResult.success) {
+  if (guard.protectedSyncRoom) {
+    writeCoopSyncRoom(doc, redactSyncRoomSecrets(guard.protectedSyncRoom));
+  } else if (rawCoopId === coopId && syncRoomResult.success) {
     const syncRoom = syncRoomResult.data;
     if (
       !isRedactedSyncRoomSecret(syncRoom.roomSecret) ||
@@ -135,10 +166,7 @@ function redactSyncRoomSecretsFromMergedDoc(doc: Y.Doc, coopId: string) {
     }
   }
 
-  const parseResult = coopSharedStateSchema.safeParse(raw);
-  return parseResult.success && rawCoopId === coopId
-    ? coopSharedStateSchema.safeParse(readCoopStateRaw(doc))
-    : parseResult;
+  return coopSharedStateSchema.safeParse(readCoopStateRaw(doc));
 }
 
 export async function mergeCoopStateUpdate(
@@ -146,7 +174,7 @@ export async function mergeCoopStateUpdate(
   coopId: string,
   encodedState: Uint8Array,
 ) {
-  await ensureSyncRoomSecretFromMergedUpdate(db, coopId, encodedState);
+  const syncRoomGuard = await prepareSyncRoomMergeGuard(db, coopId, encodedState);
 
   return db.transaction('rw', db.coopDocs, db.knowledgeSources, async () => {
     const existing = await db.coopDocs.get(coopId);
@@ -154,7 +182,7 @@ export async function mergeCoopStateUpdate(
 
     try {
       Y.applyUpdate(doc, encodedState);
-      const parseResult = redactSyncRoomSecretsFromMergedDoc(doc, coopId);
+      const parseResult = redactSyncRoomSecretsFromMergedDoc(doc, coopId, syncRoomGuard);
 
       // Always persist the merged Y.Doc state — the CRDT merge itself is valid
       // even when the materialized state temporarily violates Zod constraints.

@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import type { CoopSharedState, Member } from '../../../contracts/schema';
 import { createCoop } from '../../coop/flows';
 import {
+  createSyncRoomConfig,
   encodeCoopDoc,
   hydrateCoopDoc,
   readCoopState,
@@ -10,7 +11,12 @@ import {
   writeCoopState,
 } from '../../coop/sync';
 import { mergeCoopStateUpdate, saveCoopState } from '../db-crud-content';
-import { getSyncRoomSecretRecord, isRedactedSyncRoomSecret } from '../db-crud-sync';
+import {
+  getSyncRoomSecretRecord,
+  isRedactedSyncRoomSecret,
+  redactSyncRoomSecrets,
+  setSyncRoomSecretRecord,
+} from '../db-crud-sync';
 import { CoopDexie } from '../db-schema';
 
 const defaultSetupInsights = {
@@ -176,6 +182,55 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
     const persistedDoc = hydrateCoopDoc(persistedRecord.encodedState);
     const persistedState = readCoopState(persistedDoc);
     persistedDoc.destroy();
+    expect(isRedactedSyncRoomSecret(persistedState.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(persistedState.syncRoom.inviteSigningSecret)).toBe(true);
+  });
+
+  it('does not roll back the local sync room when a stale peer update carries an older plaintext room', async () => {
+    const db = freshDb();
+    const state = buildTestState();
+    await saveCoopState(db, state);
+
+    const rotatedRoom = createSyncRoomConfig(state.profile.id, state.syncRoom.signalingUrls);
+    const now = new Date().toISOString();
+    await setSyncRoomSecretRecord(db, {
+      coopId: rotatedRoom.coopId,
+      roomId: rotatedRoom.roomId,
+      roomSecret: rotatedRoom.roomSecret,
+      inviteSigningSecret: rotatedRoom.inviteSigningSecret,
+      roomEpoch: 2,
+      legacyCompatible: false,
+      migratedAt: now,
+      updatedAt: now,
+    });
+    await saveCoopState(db, {
+      ...state,
+      syncRoom: redactSyncRoomSecrets(rotatedRoom),
+    });
+
+    const staleDoc = hydrateCoopDoc();
+    writeCoopState(staleDoc, state);
+    const staleUpdate = Y.encodeStateAsUpdate(staleDoc);
+    staleDoc.destroy();
+
+    const merged = await mergeCoopStateUpdate(db, state.profile.id, staleUpdate);
+
+    const secretRecord = await getSyncRoomSecretRecord(db, state.profile.id);
+    expect(secretRecord?.roomId).toBe(rotatedRoom.roomId);
+    expect(secretRecord?.roomSecret).toBe(rotatedRoom.roomSecret);
+    expect(secretRecord?.inviteSigningSecret).toBe(rotatedRoom.inviteSigningSecret);
+    expect(merged.syncRoom.roomId).toBe(rotatedRoom.roomId);
+    expect(isRedactedSyncRoomSecret(merged.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(merged.syncRoom.inviteSigningSecret)).toBe(true);
+
+    const persistedRecord = requireDefined(
+      await db.coopDocs.get(state.profile.id),
+      'Expected persisted coop doc after stale room merge',
+    );
+    const persistedDoc = hydrateCoopDoc(persistedRecord.encodedState);
+    const persistedState = readCoopState(persistedDoc);
+    persistedDoc.destroy();
+    expect(persistedState.syncRoom.roomId).toBe(rotatedRoom.roomId);
     expect(isRedactedSyncRoomSecret(persistedState.syncRoom.roomSecret)).toBe(true);
     expect(isRedactedSyncRoomSecret(persistedState.syncRoom.inviteSigningSecret)).toBe(true);
   });
