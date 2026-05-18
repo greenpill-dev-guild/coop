@@ -8,7 +8,7 @@
   - Model: `onnx-community/gemma-4-E2B-it-ONNX`
   - Source: remote Hugging Face load through Transformers.js browser cache
   - Runtime: `q4f16` on `webgpu`
-  - Evidence: `.plans/evidence/2026-05-18T20-11-17-042Z-gemma4-regen-community-evals.json`
+  - Evidence: `.plans/evidence/2026-05-18T20-51-02-753Z-gemma4-regen-community-evals.json`
 - Commands:
   - Passed: `bun run test:unit:coop-seeded-eval`
   - Passed: `bun run validate coop-seeded-eval`
@@ -59,9 +59,18 @@ The served root must contain the model path expected by Transformers.js, for exa
 
 - Status: Ready for review after QA pass 1.
 - Commands:
-  - Pending.
+  - Passed: `bun run test:unit:coop-seeded-eval`
+  - Passed: `bun run validate coop-seeded-eval`
+  - Passed: `bun run test -- scripts/__tests__/verify-gemma4-regen-evals.test.ts packages/extension/src/runtime/agent/__tests__/gemma4-worker.test.ts`
+  - Passed: `cd packages/extension && bun run build`
+  - Passed: `COOP_VERIFY_BROWSER=brave bun run validate regen-community-evals`
+  - Passed: `bun run plans validate`
 - Findings:
-  - Pending.
+  - Reviewer rerun confirmed the strict full Brave/Gemma gate on 2026-05-18 with 32/32 cases,
+    `allowNormalization: false`, zero final normalizations, zero warnings, and zero failures.
+  - One transient Brave context closure occurred during review before the successful rerun. A one-case smoke
+    check passed immediately afterward, and the subsequent full gate passed. Treat this as an environmental
+    browser/WebGPU risk rather than a model-output validation failure.
 
 ## Residual Risk
 
