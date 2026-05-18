@@ -115,6 +115,9 @@ export function ArrivalJourneySection({
           <div className="why-build-heading-card">
             <h2>{t('why_build.heading')}</h2>
             <p className="lede">{t('why_build.description')}</p>
+            <a className="button button-primary why-build-cta" href="#ritual">
+              {t('why_build.ctaLabel')}
+            </a>
           </div>
         </div>
       </div>

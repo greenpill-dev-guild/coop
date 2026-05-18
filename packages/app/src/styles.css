@@ -153,10 +153,21 @@ pre {
 }
 
 .landing-install-action {
-  min-height: 2.55rem;
-  padding: 0.62rem 1rem;
-  font-size: 0.82rem;
-  box-shadow: 0 10px 28px rgba(79, 46, 31, 0.16);
+  min-height: 48px;
+  padding: 0.75rem 1.15rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: 14px;
+  background: var(--coop-brown);
+  color: white;
+  box-shadow: 0 10px 28px rgba(79, 46, 31, 0.18);
+}
+
+.landing-install-action:hover,
+.landing-install-action:focus-visible {
+  background: #3a2114;
+  color: white;
+  transform: translateY(-1px);
 }
 
 .public-install-overlay {
@@ -1814,6 +1825,15 @@ pre {
   pointer-events: none;
 }
 
+/* GSAP scroll-driven animation only runs on desktop (window.innerWidth > 1024).
+   On mobile/tablet the panels are dead scroll-room weighting nothing visually,
+   so collapse the whole arrival panels stack to remove the white gap. */
+@media (max-width: 1024px) {
+  .arrival-journey .journey-panels {
+    display: none;
+  }
+}
+
 .why-build-heading-card {
   position: absolute;
   top: 8%;
@@ -2028,6 +2048,24 @@ pre {
 
 .footer-copy {
   font-size: 0.9rem;
+}
+
+.landing-footer-brand {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.landing-footer-credibility {
+  font-size: 0.78rem;
+  color: rgba(255, 240, 220, 0.55);
+}
+
+.why-build-cta {
+  margin-top: 0.6rem;
+  justify-self: start;
+  min-height: 2.55rem;
+  padding: 0.62rem 1.05rem;
+  font-size: 0.92rem;
 }
 
 .footer-links-row {
@@ -3754,7 +3792,7 @@ pre {
   }
 
   .arrival-scroll-spacer {
-    height: 82vh;
+    height: 0;
   }
 
   .scene-moon {

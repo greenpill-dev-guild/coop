@@ -818,8 +818,13 @@ function LandingPageContent({
 
       <footer className="landing-footer" id="resources">
         <div className="landing-footer-inner">
-          <span className="footer-copy">&copy; {new Date().getFullYear()} Greenpill Dev Guild</span>
-          <nav className="footer-links-row">
+          <div className="landing-footer-brand">
+            <span className="footer-copy">
+              &copy; {new Date().getFullYear()} Greenpill Dev Guild
+            </span>
+            <span className="landing-footer-credibility">{t('footer.credibility')}</span>
+          </div>
+          <nav className="footer-links-row" aria-label={t('footer.linksLabel')}>
             <a
               href="https://github.com/greenpill-dev-guild/coop"
               target="_blank"

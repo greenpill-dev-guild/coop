@@ -90,7 +90,12 @@
     "why_build": {
       "heading": "Why we're building Coop",
       "description": "Climate adaptation, grant-making, and mutual-aid work happen in the field — across browser tabs, phone notes, voice memos, and the gaps between meetings. We're building Coop so the groups doing that work don't have to surrender their raw context to a platform to coordinate around it.",
-      "builtByTeam": "Built by the Coop team"
+      "builtByTeam": "Built by the Coop team",
+      "ctaLabel": "Start shaping your coop"
+    },
+    "footer": {
+      "credibility": "Open source · Built for the Gemma 4 Good Hackathon",
+      "linksLabel": "Resources"
     },
     "audience": {
       "persona": "Personal",
@@ -234,7 +239,12 @@
     "why_build": {
       "heading": "Por que estamos construindo Coop",
       "description": "Adaptação climática, captação de recursos e ajuda mútua acontecem no campo — entre abas do navegador, notas no telefone, memos de voz e os intervalos entre reuniões. Estamos construindo Coop para que os grupos que fazem esse trabalho não precisem entregar seu contexto bruto a uma plataforma para se coordenar.",
-      "builtByTeam": "Construído pelo time Coop"
+      "builtByTeam": "Construído pelo time Coop",
+      "ctaLabel": "Comece a moldar seu coop"
+    },
+    "footer": {
+      "credibility": "Código aberto · Feito para o Gemma 4 Good Hackathon",
+      "linksLabel": "Recursos"
     },
     "audience": {
       "persona": "Pessoal",
@@ -378,7 +388,12 @@
     "why_build": {
       "heading": "Por qué construimos Coop",
       "description": "La adaptación climática, las subvenciones y el apoyo mutuo ocurren en el campo — entre pestañas del navegador, notas en el teléfono, memorias de voz y los espacios entre reuniones. Construimos Coop para que los grupos que hacen ese trabajo no tengan que entregar su contexto bruto a una plataforma para coordinarse.",
-      "builtByTeam": "Construido por el equipo Coop"
+      "builtByTeam": "Construido por el equipo Coop",
+      "ctaLabel": "Empieza a dar forma a tu coop"
+    },
+    "footer": {
+      "credibility": "Código abierto · Hecho para el Gemma 4 Good Hackathon",
+      "linksLabel": "Recursos"
     },
     "audience": {
       "persona": "Personal",
@@ -522,7 +537,12 @@
     "why_build": {
       "heading": "我们为什么在构建 Coop",
       "description": "气候适应、资助和互助工作发生在现场——在浏览器标签、手机笔记、语音备忘和会议之间的空隙里。我们正在构建 Coop，让做这些工作的群体无需将原始情境交给某个平台才能协作。",
-      "builtByTeam": "由 Coop 团队构建"
+      "builtByTeam": "由 Coop 团队构建",
+      "ctaLabel": "开始塑造你的 Coop"
+    },
+    "footer": {
+      "credibility": "开源 · 为 Gemma 4 Good 黑客松而生",
+      "linksLabel": "资源"
     },
     "audience": {
       "persona": "个人",
@@ -666,7 +686,12 @@
     "why_build": {
       "heading": "Pourquoi nous construisons Coop",
       "description": "L'adaptation climatique, la recherche de subventions et l'entraide se font sur le terrain — à travers les onglets du navigateur, les notes téléphoniques, les mémos vocaux et les interstices entre les réunions. Nous construisons Coop pour que les groupes qui font ce travail n'aient pas à céder leur contexte brut à une plateforme pour se coordonner.",
-      "builtByTeam": "Construit par l'équipe Coop"
+      "builtByTeam": "Construit par l'équipe Coop",
+      "ctaLabel": "Commencez à façonner votre coop"
+    },
+    "footer": {
+      "credibility": "Open source · Conçu pour le Gemma 4 Good Hackathon",
+      "linksLabel": "Ressources"
     },
     "audience": {
       "persona": "Personnel",
