@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
 COPY packages/api/package.json packages/api/
+COPY docs/package.json docs/
 RUN bun install --frozen-lockfile
 COPY packages/shared/src/ packages/shared/src/
 RUN bun run --filter @coop/shared build
