@@ -6,6 +6,9 @@
 # This file adds complementary install-time hardening.
 
 [install]
+# Only resolve package versions published at least 3 days ago.
+minimumReleaseAge = 259200
+
 # In CI, set BUN_FROZEN_LOCKFILE=1 to enforce lockfile integrity.
 # Locally we keep this off so `bun install` can update the lockfile
 # after intentional dependency changes.

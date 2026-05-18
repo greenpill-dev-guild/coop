@@ -341,7 +341,14 @@ describe('connectReceiverSyncProviders', () => {
     }
 
     const doc = new Y.Doc();
-    const result = connectReceiverSyncProviders(doc, 'test-room-sync', [], undefined, undefined, '');
+    const result = connectReceiverSyncProviders(
+      doc,
+      'test-room-sync',
+      [],
+      undefined,
+      undefined,
+      '',
+    );
 
     expect(result.roomId).toBe('test-room-sync');
     expect(result.indexeddb).toBeDefined();

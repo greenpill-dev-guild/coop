@@ -237,9 +237,7 @@ async function expectReadySingleProfileSync(popupPage) {
     )
     .toBe('ready');
 
-  await expect(
-    popupPage.getByRole('button', { name: /Status: (Idle|Local|Relay)/ }),
-  ).toBeVisible({
+  await expect(popupPage.getByRole('button', { name: /Status: (Idle|Local|Relay)/ })).toBeVisible({
     timeout: 30_000,
   });
 }

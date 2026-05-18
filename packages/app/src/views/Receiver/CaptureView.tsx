@@ -155,9 +155,7 @@ export function CaptureView({
             <span>Attach file</span>
           </button>
         </div>
-        <p className="quiet-note receiver-hatch-link-note">
-          Shared links save here first.
-        </p>
+        <p className="quiet-note receiver-hatch-link-note">Shared links save here first.</p>
         <div
           className={[
             'receiver-last-saved-strip',

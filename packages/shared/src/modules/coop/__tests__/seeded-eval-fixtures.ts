@@ -297,7 +297,7 @@ function setupInsightsForGroup(group: GroupFixture) {
       .join(', ')} signals into privacy-preserving community action briefs.`,
     crossCuttingPainPoints: [
       `${group.groupType} lose context when captures stay scattered across tabs, notes, photos, and chats.`,
-      `Members need public summaries without exposing private logistics or unsupported claims.`,
+      'Members need public summaries without exposing private logistics or unsupported claims.',
     ],
     crossCuttingOpportunities: [
       `Route ${group.heroContext} and related group evidence into a shared review loop.`,

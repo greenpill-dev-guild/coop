@@ -482,7 +482,12 @@ describe('coop sync offscreen runtime', () => {
                 listener: (
                   message: {
                     type?: string;
-                    payload?: { coopId?: string; blobId?: string; force?: boolean; reason?: string };
+                    payload?: {
+                      coopId?: string;
+                      blobId?: string;
+                      force?: boolean;
+                      reason?: string;
+                    };
                   },
                   sender?: unknown,
                   sendResponse?: (response: unknown) => void,

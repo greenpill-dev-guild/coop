@@ -377,9 +377,7 @@ test.describe('receiver pairing and sync', () => {
       await creatorProfile.page.waitForLoadState('domcontentloaded');
 
       await setActiveCoop(creatorProfile.page, 'Receiver Coop');
-      await creatorProfile.page
-        .getByRole('button', { name: /pair a device/i })
-        .click();
+      await creatorProfile.page.getByRole('button', { name: /pair a device/i }).click();
       logProgress('generated receiver pairing');
 
       let deepLink = null;

@@ -279,6 +279,11 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
               setDialogMode(null);
             }
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setDialogMode(null);
+            }
+          }}
         >
           <dialog
             ref={dialogRef}
@@ -291,6 +296,7 @@ export function PublicInstallAction({ children, mobileOnly = false }: PublicInst
               setDialogMode(null);
             }}
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
             <button
               ref={closeButtonRef}

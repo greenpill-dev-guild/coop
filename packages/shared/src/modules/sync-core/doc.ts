@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import {
-  type CoopSharedState,
   type CoopMemoryProfile,
+  type CoopSharedState,
   type Member,
   type RoomRotationAnnouncement,
   type SyncRoomBootstrap,
