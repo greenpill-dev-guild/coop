@@ -12,6 +12,7 @@ beforeEach(() => {
   Object.assign(globalThis, {
     chrome: {
       alarms: { clear: vi.fn(), create: vi.fn() },
+      runtime: { sendMessage: vi.fn() },
     },
   });
 });
@@ -52,6 +53,27 @@ vi.mock('@coop/shared', async (importOriginal) => {
       .fn()
       .mockResolvedValue('0x2222222222222222222222222222222222222222'),
     saveLocalMemberSignerBinding: vi.fn().mockResolvedValue(undefined),
+    ensureSyncRoomSecretRecord: vi.fn(
+      async (
+        _db: unknown,
+        room: {
+          coopId: string;
+          roomId: string;
+          roomSecret: string;
+          inviteSigningSecret: string;
+        },
+      ) => ({
+        coopId: room.coopId,
+        roomId: room.roomId,
+        roomSecret: room.roomSecret,
+        inviteSigningSecret: room.inviteSigningSecret,
+        roomEpoch: 1,
+        legacyCompatible: true,
+        migratedAt: '2026-03-01T00:00:00.000Z',
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      }),
+    ),
+    setSyncRoomSecretRecord: vi.fn(async (_db: unknown, record: unknown) => record),
   };
 });
 
@@ -79,6 +101,7 @@ vi.mock('../../context', () => ({
   configuredOnchainMode: 'live',
   notifyExtensionEvent: vi.fn(),
   ensureReceiverSyncOffscreenDocument: vi.fn(),
+  ensureCoopSyncOffscreenDocument: vi.fn(),
 }));
 
 vi.mock('../../dashboard', () => ({
@@ -177,6 +200,12 @@ describe('coop handlers', () => {
     expect(result.ok).toBe(true);
     expect(result.soundEvent).toBeDefined();
     expect(vi.mocked(saveState)).toHaveBeenCalled();
+    expect(vi.mocked(shared.ensureSyncRoomSecretRecord)).toHaveBeenCalled();
+    const savedState = vi.mocked(saveState).mock.calls[0]?.[0];
+    expect(savedState?.syncRoom.roomSecret).toMatch(/^encrypted:\/\/local\/sync-room-secret\//);
+    expect(savedState?.syncRoom.inviteSigningSecret).toMatch(
+      /^encrypted:\/\/local\/sync-room-secret\//,
+    );
     expect(vi.mocked(setLocalSetting)).toHaveBeenCalledWith('active-coop-id', expect.any(String));
     expect(vi.mocked(ensureOnboardingBurst)).toHaveBeenCalledWith({
       coopId: expect.any(String),
@@ -629,6 +658,78 @@ describe('coop handlers', () => {
       ok: false,
       error: expect.stringContaining('passkey session'),
     });
+  });
+
+  it('completes external invite joins through encrypted handoff before saving', async () => {
+    const sourceState = makeCoopState({
+      profile: { id: 'coop-handoff', name: 'Handoff Coop' },
+      syncRoom: shared.createSyncRoomConfig('coop-handoff'),
+    });
+    const invite = shared.generateInviteCode({
+      state: sourceState,
+      createdBy: sourceState.members[0].id,
+      type: 'member',
+    });
+    vi.mocked(getCoops).mockResolvedValueOnce([]);
+    const sendMessage = chrome.runtime.sendMessage as unknown as ReturnType<typeof vi.fn>;
+    sendMessage.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        coopId: sourceState.profile.id,
+        inviteId: invite.id,
+        recipientMemberId: 'member-kai',
+        roomEpoch: 2,
+        roomId: sourceState.syncRoom.roomId,
+        roomSecret: sourceState.syncRoom.roomSecret,
+        inviteSigningSecret: sourceState.syncRoom.inviteSigningSecret,
+        signalingUrls: sourceState.syncRoom.signalingUrls,
+      },
+    });
+
+    const joinResult = await handleJoinCoop({
+      type: 'join-coop',
+      payload: {
+        inviteCode: invite.code,
+        displayName: 'Kai',
+        seedContribution: 'I bring handoff validation.',
+        member: {
+          id: 'member-kai',
+          displayName: 'Kai',
+          role: 'member',
+          authMode: 'passkey',
+          address: '0x3333333333333333333333333333333333333333',
+          joinedAt: '2026-03-01T00:00:00.000Z',
+          identityWarning: '',
+          passkeyCredentialId: 'credential-kai',
+        },
+      },
+    });
+
+    expect(joinResult.ok).toBe(true);
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: 'request-invite-handoff',
+      payload: {
+        inviteCode: invite.code,
+        memberId: 'member-kai',
+        memberDisplayName: 'Kai',
+      },
+    });
+    expect(vi.mocked(shared.setSyncRoomSecretRecord)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        coopId: sourceState.profile.id,
+        roomId: sourceState.syncRoom.roomId,
+        roomSecret: sourceState.syncRoom.roomSecret,
+        inviteSigningSecret: sourceState.syncRoom.inviteSigningSecret,
+        roomEpoch: 2,
+        legacyCompatible: false,
+      }),
+    );
+    const savedState = vi.mocked(saveState).mock.calls.at(-1)?.[0];
+    expect(savedState?.syncRoom.roomSecret).toMatch(/^encrypted:\/\/local\/sync-room-secret\//);
+    expect(savedState?.syncRoom.inviteSigningSecret).toMatch(
+      /^encrypted:\/\/local\/sync-room-secret\//,
+    );
   });
 
   it('predicts account and emits safe-add-owner-requested for trusted join without Safe mutation', async () => {

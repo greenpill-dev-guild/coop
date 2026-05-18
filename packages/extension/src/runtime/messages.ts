@@ -243,6 +243,7 @@ export interface CoopSyncConfigEntry {
   coop: CoopSharedState;
   roomSecretAvailable: boolean;
   legacySecretMigrated: boolean;
+  roomEpoch?: number;
 }
 
 export interface CoopSyncConfigResponse {
@@ -494,6 +495,15 @@ export type RuntimeRequest =
         displayName: string;
         seedContribution: string;
         member?: Member;
+      };
+    }
+  | {
+      type: 'request-invite-handoff';
+      payload: {
+        inviteCode: string;
+        memberId: string;
+        memberDisplayName: string;
+        timeoutMs?: number;
       };
     }
   | {

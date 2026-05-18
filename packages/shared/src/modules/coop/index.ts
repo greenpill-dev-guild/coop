@@ -2,6 +2,7 @@ export * from './board';
 export * from './capture-exclusions';
 export * from './flows';
 export * from './inference';
+export * from './invite-handoff';
 export * from './memory-profile';
 export * from './pipeline';
 export * from './presets';

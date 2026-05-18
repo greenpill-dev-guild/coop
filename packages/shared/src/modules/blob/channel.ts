@@ -45,9 +45,9 @@ export interface BlobRelayTransport {
 }
 
 export function createBlobSyncChannel(input: {
-  webrtcProvider: {
+  webrtcProvider?: {
     room: { webrtcConns: Map<string, { peer: RTCPeerConnection }> } | null;
-  };
+  } | null;
   db: CoopDexie;
   coopId: string;
   onBlobReceived?: (blobId: string) => void;
@@ -466,7 +466,7 @@ export function createBlobSyncChannel(input: {
 
   // --- Initialize: set up channels for existing peers ---
 
-  const room = input.webrtcProvider.room;
+  const room = input.webrtcProvider?.room;
   if (room) {
     for (const [peerId, conn] of room.webrtcConns) {
       setupPeerChannel(peerId, conn.peer);

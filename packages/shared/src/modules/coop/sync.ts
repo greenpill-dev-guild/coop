@@ -2,7 +2,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { type SignalingConn, WebrtcProvider } from 'y-webrtc';
 import { WebsocketProvider } from 'y-websocket';
 import type * as Y from 'yjs';
-import type { CoopSharedState, SyncRoomConfig } from '../../contracts/schema';
+import type { CoopSharedState, InviteHandoffRoom, SyncRoomConfig } from '../../contracts/schema';
 import {
   type BlobRelayMessage,
   type BlobRelayTransport,
@@ -14,6 +14,7 @@ import {
   buildAuthenticatedSignalingUrls,
   buildCoopSyncAuthParams,
   buildInviteHandoffAuthParams,
+  appendSyncAuthToUrl,
   decodeRelayFrame,
   defaultIceServers,
   defaultWebsocketSyncUrl,
@@ -120,6 +121,72 @@ export function connectSyncProviders(
       websocket?.destroy();
       webrtc?.destroy();
       indexeddb.destroy();
+    },
+  };
+}
+
+export function buildAuthenticatedInviteHandoffSignalingUrls(
+  room: Pick<InviteHandoffRoom, 'inviteId' | 'roomId' | 'roomSecret'>,
+  signalingUrls: string[],
+) {
+  const params = buildInviteHandoffAuthParams(room);
+  return signalingUrls.map((url) => appendSyncAuthToUrl(url, params));
+}
+
+export function connectInviteHandoffProviders(
+  doc: Y.Doc,
+  room: InviteHandoffRoom,
+  iceServers?: RTCIceServer[],
+  websocketSyncUrl?: string,
+) {
+  if (typeof window === 'undefined') {
+    return {
+      roomId: room.roomId,
+      webrtc: undefined,
+      websocket: undefined,
+      disconnect() {},
+    };
+  }
+
+  let webrtc: WebrtcProvider | undefined;
+  const authenticatedSignalingUrls = buildAuthenticatedInviteHandoffSignalingUrls(
+    room,
+    room.signalingUrls,
+  );
+
+  try {
+    webrtc = new WebrtcProvider(room.roomId, doc, {
+      signaling: authenticatedSignalingUrls,
+      password: room.roomSecret,
+      maxConns: 8,
+      peerOpts: { config: { iceServers: iceServers ?? defaultIceServers } },
+    });
+  } catch (error) {
+    void error;
+    webrtc = undefined;
+  }
+
+  let websocket: WebsocketProvider | undefined;
+  const resolvedWsUrl = websocketSyncUrl ?? defaultWebsocketSyncUrl;
+  if (resolvedWsUrl) {
+    try {
+      websocket = new WebsocketProvider(resolvedWsUrl, room.roomId, doc, {
+        connect: true,
+        params: buildInviteHandoffAuthParams(room),
+      });
+    } catch (error) {
+      void error;
+      websocket = undefined;
+    }
+  }
+
+  return {
+    roomId: room.roomId,
+    webrtc,
+    websocket,
+    disconnect() {
+      websocket?.destroy();
+      webrtc?.destroy();
     },
   };
 }

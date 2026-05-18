@@ -171,6 +171,7 @@ export async function getCoopSyncConfig() {
       coop: hydratedRoom ? { ...coop, syncRoom: hydratedRoom } : coop,
       roomSecretAvailable: Boolean(hydratedRoom),
       legacySecretMigrated: Boolean(secretRecord),
+      roomEpoch: secretRecord?.roomEpoch,
     });
   }
 

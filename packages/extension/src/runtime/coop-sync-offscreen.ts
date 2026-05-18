@@ -1,16 +1,27 @@
 import {
   ORIGIN_LOCAL,
+  assertInviteHandoffPayloadMatchesInvite,
   buildIceServers,
   compactCoopArtifacts,
+  connectInviteHandoffProviders,
   connectSyncProviders,
   createBlobRelayTransport,
+  createInviteHandoffRequest,
   createCoopDb,
   createCoopDoc,
+  decryptInviteHandoffPayload,
   encodeCoopDoc,
+  encryptInviteHandoffPayload,
   hashJson,
+  hydrateCoopDoc,
+  inviteHandoffRequestSchema,
+  inviteHandoffResponseSchema,
   mergeCoopDocUpdates,
+  parseInviteCode,
   readCoopState,
   summarizeSyncTransportHealth,
+  validateInvite,
+  verifyInviteCodeProof,
   writeCoopState,
 } from '@coop/shared';
 import { createBlobSyncChannel } from '@coop/shared/blob-channel';
@@ -21,6 +32,18 @@ import type {
 } from './messages';
 
 type CoopConfigEntry = CoopSyncConfigResponse['coops'][number];
+type InviteHandoffRoom = NonNullable<
+  CoopConfigEntry['coop']['invites'][number]['bootstrap']['handoff']
+>;
+
+type InviteHandoffResponder = {
+  inviteId: string;
+  doc: ReturnType<typeof hydrateCoopDoc>;
+  disconnect: () => void;
+  invite: CoopConfigEntry['coop']['invites'][number];
+  coop: CoopConfigEntry['coop'];
+  roomEpoch: number;
+};
 
 type CoopBinding = {
   key: string;
@@ -34,17 +57,25 @@ type CoopBinding = {
   compactionTimer?: number;
   iceExpiresAtMs?: number;
   blobSync?: ReturnType<typeof createBlobSyncChannel>;
+  handoffResponders: Map<string, InviteHandoffResponder>;
+  persistRetryCount: number;
 };
 
 const heartbeatIntervalMs = 30_000;
 const compactionIntervalMs = 10 * 60_000;
 const remotePersistDebounceMs = 280;
+const remotePersistRetryBaseMs = 1_500;
+const remotePersistRetryMaxMs = 15_000;
 const docSizeWarningBytes = 1024 * 1024;
 const iceRefreshSkewMs = 60_000;
+const inviteHandoffRequestTimeoutMs = 12_000;
+const handoffRequestsMapKey = 'invite-handoff-requests';
+const handoffResponsesMapKey = 'invite-handoff-responses';
 const bindings = new Map<string, CoopBinding>();
 const db = createCoopDb('coop-extension');
 let refreshPromise: Promise<void> | null = null;
 let latestIceConfig: CoopSyncConfigResponse['iceConfig'] = null;
+let latestWebsocketSyncUrl: string | undefined;
 
 function runtimeNow() {
   return new Date().toISOString();
@@ -98,6 +129,7 @@ async function fetchCoopSyncConfig() {
   }
 
   latestIceConfig = response.data.iceConfig;
+  latestWebsocketSyncUrl = response.data.websocketSyncUrl;
   return response.data;
 }
 
@@ -120,6 +152,157 @@ function resolveMode(
   if (health.websocketConnected) return 'websocket';
   if (health.syncError) return 'degraded';
   return 'indexeddb-only';
+}
+
+function buildSyncRoomFromHandoffPayload(
+  payload: Awaited<ReturnType<typeof decryptInviteHandoffPayload>>,
+) {
+  return {
+    coopId: payload.coopId,
+    roomId: payload.roomId,
+    roomSecret: payload.roomSecret,
+    inviteSigningSecret: payload.inviteSigningSecret,
+    signalingUrls: payload.signalingUrls,
+  };
+}
+
+function isUsableHandoffInvite(invite: CoopConfigEntry['coop']['invites'][number]) {
+  return Boolean(
+    invite.bootstrap.handoff && invite.status !== 'revoked' && validateInvite({ invite }),
+  );
+}
+
+function disconnectHandoffResponder(responder: InviteHandoffResponder) {
+  responder.disconnect();
+  responder.doc.destroy();
+}
+
+function createInviteHandoffResponder(input: {
+  coop: CoopConfigEntry['coop'];
+  invite: CoopConfigEntry['coop']['invites'][number];
+  handoff: InviteHandoffRoom;
+  roomEpoch: number;
+  websocketSyncUrl?: string;
+}) {
+  const doc = hydrateCoopDoc();
+  const providers = connectInviteHandoffProviders(
+    doc,
+    input.handoff,
+    resolveIceServers(),
+    input.websocketSyncUrl,
+  );
+  const requests = doc.getMap<string>(handoffRequestsMapKey);
+  const responses = doc.getMap<string>(handoffResponsesMapKey);
+
+  const responder: InviteHandoffResponder = {
+    inviteId: input.invite.id,
+    doc,
+    invite: input.invite,
+    coop: input.coop,
+    roomEpoch: input.roomEpoch,
+    disconnect() {
+      requests.unobserve(handleRequests);
+      providers.disconnect();
+    },
+  };
+
+  const handleRequests = () => {
+    for (const [requestId, rawRequest] of requests.entries()) {
+      if (responses.has(requestId)) continue;
+
+      void (async () => {
+        try {
+          const request = inviteHandoffRequestSchema.parse(JSON.parse(rawRequest));
+          const currentInvite = responder.coop.invites.find(
+            (candidate) => candidate.id === request.inviteId,
+          );
+          if (
+            !currentInvite ||
+            currentInvite.id !== responder.inviteId ||
+            currentInvite.status === 'revoked' ||
+            !validateInvite({ invite: currentInvite }) ||
+            !verifyInviteCodeProof(currentInvite, responder.coop.syncRoom.inviteSigningSecret)
+          ) {
+            return;
+          }
+          if (
+            request.coopId !== responder.coop.profile.id ||
+            request.memberId.length === 0 ||
+            request.inviteId !== currentInvite.id
+          ) {
+            return;
+          }
+
+          const response = await encryptInviteHandoffPayload({
+            request,
+            payload: {
+              requestId: request.requestId,
+              coopId: responder.coop.profile.id,
+              inviteId: currentInvite.id,
+              recipientMemberId: request.memberId,
+              roomEpoch: responder.roomEpoch,
+              roomId: responder.coop.syncRoom.roomId,
+              roomSecret: responder.coop.syncRoom.roomSecret,
+              inviteSigningSecret: responder.coop.syncRoom.inviteSigningSecret,
+              signalingUrls: responder.coop.syncRoom.signalingUrls,
+              bootstrapSnapshot: currentInvite.bootstrap.bootstrapState,
+              createdAt: runtimeNow(),
+            },
+          });
+          responses.set(request.requestId, JSON.stringify(response));
+        } catch (error) {
+          void reportCoopSyncRuntime({
+            lastError: error instanceof Error ? error.message : 'Invite handoff response failed.',
+          });
+        }
+      })();
+    }
+  };
+
+  requests.observe(handleRequests);
+  handleRequests();
+  return responder;
+}
+
+function reconcileInviteHandoffResponders(
+  binding: CoopBinding,
+  entry: CoopConfigEntry,
+  websocketSyncUrl?: string,
+) {
+  const desiredInviteIds = new Set(
+    entry.coop.invites.filter((invite) => isUsableHandoffInvite(invite)).map((invite) => invite.id),
+  );
+
+  for (const [inviteId, responder] of binding.handoffResponders.entries()) {
+    if (!desiredInviteIds.has(inviteId)) {
+      disconnectHandoffResponder(responder);
+      binding.handoffResponders.delete(inviteId);
+    }
+  }
+
+  for (const invite of entry.coop.invites) {
+    const handoff = invite.bootstrap.handoff;
+    if (!handoff || !desiredInviteIds.has(invite.id)) continue;
+
+    const existing = binding.handoffResponders.get(invite.id);
+    if (existing) {
+      existing.coop = entry.coop;
+      existing.invite = invite;
+      existing.roomEpoch = entry.roomEpoch ?? existing.roomEpoch;
+      continue;
+    }
+
+    binding.handoffResponders.set(
+      invite.id,
+      createInviteHandoffResponder({
+        coop: entry.coop,
+        invite,
+        handoff,
+        roomEpoch: entry.roomEpoch ?? 1,
+        websocketSyncUrl,
+      }),
+    );
+  }
 }
 
 function scheduleRuntimeHealthReport(
@@ -155,7 +338,9 @@ function scheduleRuntimeHealthReport(
       lastError:
         encoded.byteLength > docSizeWarningBytes
           ? `Coop sync doc is ${encoded.byteLength} bytes; compaction should run soon.`
-          : health.note,
+          : health.syncError
+            ? health.note
+            : undefined,
       activeCoopIds: [...bindings.values()].map((candidate) => candidate.coopId),
       activeBindingKeys: [...bindings.values()].map((candidate) => candidate.key),
     });
@@ -174,12 +359,18 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
     lastHash: hashJson(coop),
     pendingUpdates: [],
     iceExpiresAtMs: resolveIceExpiresAtMs(),
+    handoffResponders: new Map(),
+    persistRetryCount: 0,
     disconnect() {
       if (binding.timer) window.clearTimeout(binding.timer);
       if (binding.healthTimer) window.clearTimeout(binding.healthTimer);
       if (binding.compactionTimer) window.clearTimeout(binding.compactionTimer);
       for (const dispose of disposers) dispose();
       binding.blobSync?.destroy();
+      for (const responder of binding.handoffResponders.values()) {
+        disconnectHandoffResponder(responder);
+      }
+      binding.handoffResponders.clear();
       doc.off('update', onDocUpdate);
       providers.disconnect();
       void reportCoopSyncRuntime({
@@ -214,10 +405,11 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   }
 
   const setupBlobSync = () => {
-    if (binding.blobSync || !providers.webrtc) return;
+    if (binding.blobSync) return;
     const relay = providers.websocket ? createBlobRelayTransport(providers.websocket) : undefined;
+    if (!providers.webrtc && !relay) return;
     binding.blobSync = createBlobSyncChannel({
-      webrtcProvider: providers.webrtc,
+      webrtcProvider: providers.webrtc ?? { room: null },
       db,
       coopId: coop.profile.id,
       relay: relay ?? undefined,
@@ -227,6 +419,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   };
 
   setupBlobSync();
+  reconcileInviteHandoffResponders(binding, entry, websocketSyncUrl);
   if (providers.websocket) {
     const onWsConnect = ({ status }: { status: string }) => {
       if (status === 'connected') {
@@ -257,26 +450,44 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
       return;
     }
 
-    const persist = (await chrome.runtime.sendMessage({
-      type: 'persist-coop-state',
-      payload: {
-        coopId: coop.profile.id,
-        docUpdate,
-      },
-    })) as RuntimeActionResponse;
+    let persist: RuntimeActionResponse;
+    try {
+      persist = (await chrome.runtime.sendMessage({
+        type: 'persist-coop-state',
+        payload: {
+          coopId: coop.profile.id,
+          docUpdate,
+        },
+      })) as RuntimeActionResponse;
+    } catch (error) {
+      persist = {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not persist synced coop state.',
+      };
+    }
 
     if (!persist.ok) {
       await reportCoopSyncRuntime({
         lastError: persist.error ?? 'Could not persist synced coop state.',
       });
+      const retryDelay = Math.min(
+        remotePersistRetryBaseMs * 2 ** binding.persistRetryCount,
+        remotePersistRetryMaxMs,
+      );
+      binding.persistRetryCount += 1;
+      binding.timer = window.setTimeout(() => {
+        void persistPendingUpdates();
+      }, retryDelay);
       return;
     }
 
     binding.lastHash = remoteHash;
     binding.pendingUpdates = [];
+    binding.persistRetryCount = 0;
     await reportCoopSyncRuntime({
       lastPersistAt: runtimeNow(),
       pendingUpdateCount: 0,
+      lastError: undefined,
     });
     scheduleRuntimeHealthReport(binding, providers);
   };
@@ -322,6 +533,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
       const runtimePatch: Partial<CoopSyncRuntimeStatus> = {
         lastCompactionAt: runtimeNow(),
         docBytes: encodeCoopDoc(doc).byteLength,
+        lastError: undefined,
       };
       if (result.archivedIds.length > 0) {
         runtimePatch.lastPersistAt = runtimeNow();
@@ -345,6 +557,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
   scheduleRuntimeHealthReport(binding, providers, 2500);
   void reportCoopSyncRuntime({
     lastBindingCreatedAt: runtimeNow(),
+    lastError: undefined,
     activeCoopIds: [...bindings.values(), binding].map((candidate) => candidate.coopId),
     activeBindingKeys: [...bindings.values(), binding].map((candidate) => candidate.key),
   });
@@ -390,6 +603,7 @@ async function refreshBindings() {
         writeCoopState(existing.doc, entry.coop);
         existing.blobSync?.broadcastManifest();
       }
+      reconcileInviteHandoffResponders(existing, entry, config.websocketSyncUrl);
     }
 
     await reportAggregateHealth();
@@ -410,9 +624,115 @@ async function requestBlobFromPeers(coopId: string, blobId: string) {
   return bindings.get(coopId)?.blobSync?.requestBlob(blobId) ?? null;
 }
 
+async function requestInviteHandoff(input: {
+  inviteCode: string;
+  memberId: string;
+  memberDisplayName: string;
+  timeoutMs?: number;
+}) {
+  const invite = parseInviteCode(input.inviteCode);
+  const handoff = invite.bootstrap.handoff;
+  if (!handoff) {
+    throw new Error('Invite is missing handoff metadata.');
+  }
+
+  const config = await fetchCoopSyncConfig();
+  const { request, keyPair } = await createInviteHandoffRequest({
+    coopId: invite.bootstrap.coopId,
+    inviteId: invite.id,
+    memberId: input.memberId,
+    memberDisplayName: input.memberDisplayName,
+  });
+  const doc = hydrateCoopDoc();
+  const providers = connectInviteHandoffProviders(
+    doc,
+    handoff,
+    resolveIceServers(),
+    config.websocketSyncUrl ?? latestWebsocketSyncUrl,
+  );
+  const requests = doc.getMap<string>(handoffRequestsMapKey);
+  const responses = doc.getMap<string>(handoffResponsesMapKey);
+
+  try {
+    const timeoutMs = input.timeoutMs ?? inviteHandoffRequestTimeoutMs;
+    const payload = await new Promise<Awaited<ReturnType<typeof decryptInviteHandoffPayload>>>(
+      (resolve, reject) => {
+        let settled = false;
+        const cleanup = () => {
+          responses.unobserve(handleResponses);
+          window.clearTimeout(timer);
+        };
+        const settle = (
+          fn: typeof resolve | typeof reject,
+          value: Awaited<ReturnType<typeof decryptInviteHandoffPayload>> | Error,
+        ) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          fn(value as never);
+        };
+        const handleResponses = () => {
+          const raw = responses.get(request.requestId);
+          if (!raw) return;
+          void (async () => {
+            try {
+              const response = inviteHandoffResponseSchema.parse(JSON.parse(raw));
+              if (
+                response.requestId !== request.requestId ||
+                response.coopId !== invite.bootstrap.coopId ||
+                response.inviteId !== invite.id ||
+                response.memberId !== input.memberId
+              ) {
+                return;
+              }
+              const decrypted = await decryptInviteHandoffPayload({
+                response,
+                privateKey: keyPair.privateKey,
+              });
+              settle(
+                resolve,
+                assertInviteHandoffPayloadMatchesInvite({ invite, payload: decrypted }),
+              );
+            } catch (error) {
+              settle(
+                reject,
+                error instanceof Error ? error : new Error('Invite handoff response failed.'),
+              );
+            }
+          })();
+        };
+        const timer = window.setTimeout(() => {
+          settle(
+            reject,
+            new Error('Invite handoff timed out. Ask an existing member to come online.'),
+          );
+        }, timeoutMs);
+
+        responses.observe(handleResponses);
+        requests.set(request.requestId, JSON.stringify(request));
+        handleResponses();
+      },
+    );
+    return payload;
+  } finally {
+    providers.disconnect();
+    doc.destroy();
+  }
+}
+
 chrome.runtime.onMessage.addListener(
   (
-    message: { type?: string; payload?: { coopId?: string; blobId?: string } },
+    message: {
+      type?: string;
+      payload?: {
+        coopId?: string;
+        blobId?: string;
+        inviteCode?: string;
+        memberId?: string;
+        memberDisplayName?: string;
+        timeoutMs?: number;
+      };
+    },
     _sender,
     sendResponse,
   ) => {
@@ -437,6 +757,30 @@ chrome.runtime.onMessage.addListener(
           sendResponse({
             ok: false,
             error: error instanceof Error ? error.message : 'Peer blob request failed.',
+          });
+        });
+      return true;
+    }
+    if (message.type === 'request-invite-handoff') {
+      const { inviteCode, memberId, memberDisplayName, timeoutMs } = message.payload ?? {};
+      if (!inviteCode || !memberId || !memberDisplayName) {
+        sendResponse({ ok: false, error: 'Missing invite handoff request details.' });
+        return;
+      }
+      void requestInviteHandoff({ inviteCode, memberId, memberDisplayName, timeoutMs })
+        .then((payload) => {
+          sendResponse({
+            ok: true,
+            data: {
+              ...payload,
+              syncRoom: buildSyncRoomFromHandoffPayload(payload),
+            },
+          });
+        })
+        .catch((error) => {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'Invite handoff failed.',
           });
         });
       return true;

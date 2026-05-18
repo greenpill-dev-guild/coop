@@ -21,7 +21,7 @@ function readNonEmpty(params: URLSearchParams, key: string) {
 
 function inferScope(params: URLSearchParams) {
   const explicit = readNonEmpty(params, 'syncScope');
-  if (explicit === 'coop' || explicit === 'receiver') {
+  if (explicit === 'coop' || explicit === 'receiver' || explicit === 'invite') {
     return explicit;
   }
   if (readNonEmpty(params, 'memberId') && readNonEmpty(params, 'pairSecret')) {

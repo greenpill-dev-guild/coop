@@ -9,8 +9,11 @@ import {
   createStateFromInviteBootstrap,
   createUnavailableOnchainState,
   deployCoopSafe,
+  deriveSyncRoomId,
   describeOnchainModeSummary,
+  ensureSyncRoomSecretRecord,
   getAuthSession,
+  hydrateSyncRoomWithSecret,
   initializeCoopPrivacy,
   initializeMemberPrivacy,
   joinCoop,
@@ -19,8 +22,10 @@ import {
   nowIso,
   parseInviteCode,
   predictMemberAccountAddress,
+  redactSyncRoomSecrets,
   saveLocalMemberSignerBinding,
   setAnchorCapability,
+  setSyncRoomSecretRecord,
   updateCoopDetails,
   verifyInviteCodeProof,
 } from '@coop/shared';
@@ -30,6 +35,7 @@ import {
   configuredChain,
   configuredOnchainMode,
   db,
+  ensureCoopSyncOffscreenDocument,
   getCoops,
   notifyExtensionEvent,
   saveState,
@@ -39,6 +45,45 @@ import {
 import { refreshBadge } from '../dashboard';
 import { getOperatorState, logPrivilegedAction } from '../operator';
 import { emitAgentObservationIfMissing, ensureOnboardingBurst, requestAgentCycle } from './agent';
+
+async function saveSyncRoomSecretAndRedact(state: CoopSharedState) {
+  await ensureSyncRoomSecretRecord(db, state.syncRoom);
+  return {
+    ...state,
+    syncRoom: redactSyncRoomSecrets(state.syncRoom),
+  } satisfies CoopSharedState;
+}
+
+async function hydrateLocalSyncRoom(coop: CoopSharedState) {
+  const secretRecord = await ensureSyncRoomSecretRecord(db, coop.syncRoom);
+  return hydrateSyncRoomWithSecret(coop.syncRoom, secretRecord);
+}
+
+async function requestInviteHandoff(input: {
+  inviteCode: string;
+  memberId: string;
+  memberDisplayName: string;
+}) {
+  await ensureCoopSyncOffscreenDocument();
+  const response = (await chrome.runtime.sendMessage({
+    type: 'request-invite-handoff',
+    payload: input,
+  })) as RuntimeActionResponse<{
+    coopId: string;
+    inviteId: string;
+    recipientMemberId: string;
+    roomEpoch: number;
+    roomId: string;
+    roomSecret: string;
+    inviteSigningSecret: string;
+    signalingUrls: string[];
+  }>;
+
+  if (!response.ok || !response.data) {
+    throw new Error(response.error ?? 'Invite handoff failed.');
+  }
+  return response.data;
+}
 
 export async function handleSetAnchorMode(
   message: Extract<RuntimeRequest, { type: 'set-anchor-mode' }>,
@@ -221,7 +266,7 @@ export async function handleCreateCoop(message: Extract<RuntimeRequest, { type: 
 
   const existingCoops = await getCoops();
   const created = createCoop(message.payload);
-  let latestState = created.state;
+  let latestState = await saveSyncRoomSecretAndRedact(created.state);
 
   await saveState(latestState);
   await setLocalSetting(stateKeys.activeCoopId, latestState.profile.id);
@@ -326,8 +371,19 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
   const invite = parseInviteCode(message.payload.inviteCode);
   const coops = await getCoops();
   const existingCoop = coops.find((item) => item.profile.id === invite.bootstrap.coopId);
-  if (existingCoop && !verifyInviteCodeProof(invite, existingCoop.syncRoom.inviteSigningSecret)) {
-    return { ok: false, error: 'Invite verification failed.' } satisfies RuntimeActionResponse;
+  let hydratedExistingCoop: CoopSharedState | null = null;
+  if (existingCoop) {
+    const hydratedRoom = await hydrateLocalSyncRoom(existingCoop);
+    if (!hydratedRoom) {
+      return {
+        ok: false,
+        error: 'Sync secrets are unavailable on this browser. Rejoin with a fresh invite handoff.',
+      } satisfies RuntimeActionResponse;
+    }
+    hydratedExistingCoop = { ...existingCoop, syncRoom: hydratedRoom };
+    if (!verifyInviteCodeProof(invite, hydratedRoom.inviteSigningSecret)) {
+      return { ok: false, error: 'Invite verification failed.' } satisfies RuntimeActionResponse;
+    }
   }
 
   const authSession = await getAuthSession(db);
@@ -338,7 +394,7 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
     } satisfies RuntimeActionResponse;
   }
 
-  const coop = existingCoop ?? createStateFromInviteBootstrap(invite);
+  const coop = hydratedExistingCoop ?? createStateFromInviteBootstrap(invite);
 
   const joined = joinCoop({
     state: coop,
@@ -349,6 +405,60 @@ export async function handleJoinCoop(message: Extract<RuntimeRequest, { type: 'j
   });
   let latestState = joined.state;
   const joinedMember = joined.member;
+
+  if (!hydratedExistingCoop) {
+    try {
+      const handoff = await requestInviteHandoff({
+        inviteCode: message.payload.inviteCode,
+        memberId: joinedMember.id,
+        memberDisplayName: joinedMember.displayName,
+      });
+      if (
+        handoff.coopId !== invite.bootstrap.coopId ||
+        handoff.inviteId !== invite.id ||
+        handoff.recipientMemberId !== joinedMember.id ||
+        handoff.roomId !== invite.bootstrap.roomId ||
+        deriveSyncRoomId(handoff.coopId, handoff.roomSecret) !== handoff.roomId
+      ) {
+        throw new Error('Invite handoff response did not match the signed invite.');
+      }
+      const syncRoom = {
+        coopId: handoff.coopId,
+        roomId: handoff.roomId,
+        roomSecret: handoff.roomSecret,
+        inviteSigningSecret: handoff.inviteSigningSecret,
+        signalingUrls: handoff.signalingUrls,
+      };
+      await setSyncRoomSecretRecord(db, {
+        coopId: syncRoom.coopId,
+        roomId: syncRoom.roomId,
+        roomSecret: syncRoom.roomSecret,
+        inviteSigningSecret: syncRoom.inviteSigningSecret,
+        roomEpoch: handoff.roomEpoch,
+        legacyCompatible: false,
+        migratedAt: nowIso(),
+        updatedAt: nowIso(),
+      });
+      latestState = {
+        ...latestState,
+        syncRoom: redactSyncRoomSecrets(syncRoom),
+      };
+    } catch (handoffError) {
+      return {
+        ok: false,
+        error:
+          handoffError instanceof Error
+            ? handoffError.message
+            : 'Invite handoff failed. Ask an existing member to come online.',
+      } satisfies RuntimeActionResponse;
+    }
+  } else {
+    latestState = {
+      ...latestState,
+      syncRoom: redactSyncRoomSecrets(hydratedExistingCoop.syncRoom),
+    };
+  }
+
   await setLocalSetting(stateKeys.activeCoopId, latestState.profile.id);
 
   // Initialize privacy identity for the new member

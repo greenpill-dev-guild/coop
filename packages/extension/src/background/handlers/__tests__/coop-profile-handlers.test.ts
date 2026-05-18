@@ -6,7 +6,9 @@ import { makeCoopState } from '../../../__tests__/fixtures';
 const sharedMocks = vi.hoisted(() => ({
   createLocalMemberSignerBinding: vi.fn(),
   createStateFromInviteBootstrap: vi.fn(),
+  ensureSyncRoomSecretRecord: vi.fn(),
   getAuthSession: vi.fn(),
+  hydrateSyncRoomWithSecret: vi.fn(),
   initializeMemberPrivacy: vi.fn(),
   joinCoop: vi.fn(),
   leaveCoop: vi.fn(),
@@ -39,7 +41,9 @@ vi.mock('@coop/shared', async (importOriginal) => {
     ...actual,
     createLocalMemberSignerBinding: sharedMocks.createLocalMemberSignerBinding,
     createStateFromInviteBootstrap: sharedMocks.createStateFromInviteBootstrap,
+    ensureSyncRoomSecretRecord: sharedMocks.ensureSyncRoomSecretRecord,
     getAuthSession: sharedMocks.getAuthSession,
+    hydrateSyncRoomWithSecret: sharedMocks.hydrateSyncRoomWithSecret,
     initializeMemberPrivacy: sharedMocks.initializeMemberPrivacy,
     joinCoop: sharedMocks.joinCoop,
     leaveCoop: sharedMocks.leaveCoop,
@@ -147,6 +151,25 @@ describe('coop profile and membership handlers', () => {
       },
     });
     sharedMocks.verifyInviteCodeProof.mockReturnValue(true);
+    sharedMocks.ensureSyncRoomSecretRecord.mockImplementation(async (_db, room) => ({
+      coopId: room.coopId,
+      roomId: room.roomId,
+      roomSecret: room.roomSecret,
+      inviteSigningSecret: room.inviteSigningSecret,
+      roomEpoch: 1,
+      legacyCompatible: true,
+      migratedAt: '2026-03-20T00:00:00.000Z',
+      updatedAt: '2026-03-20T00:00:00.000Z',
+    }));
+    sharedMocks.hydrateSyncRoomWithSecret.mockImplementation((room, record) =>
+      record
+        ? {
+            ...room,
+            roomSecret: record.roomSecret,
+            inviteSigningSecret: record.inviteSigningSecret,
+          }
+        : room,
+    );
     sharedMocks.createStateFromInviteBootstrap.mockReturnValue(coop);
     sharedMocks.joinCoop.mockReturnValue({
       state: joinedState,

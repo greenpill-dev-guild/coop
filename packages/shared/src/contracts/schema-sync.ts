@@ -43,8 +43,23 @@ export const inviteHandoffResponseSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+export const inviteHandoffPayloadSchema = z.object({
+  requestId: z.string().min(1),
+  coopId: z.string().min(1),
+  inviteId: z.string().min(1),
+  recipientMemberId: z.string().min(1),
+  roomEpoch: z.number().int().nonnegative().default(1),
+  roomId: z.string().min(1),
+  roomSecret: z.string().min(1),
+  inviteSigningSecret: z.string().min(1),
+  signalingUrls: z.array(z.string().url()).default([]),
+  bootstrapSnapshot: z.unknown().optional(),
+  createdAt: z.string().datetime(),
+});
+
 export type SyncRoomBootstrap = z.infer<typeof syncRoomBootstrapSchema>;
 export type SyncRoomConfig = z.infer<typeof syncRoomConfigSchema>;
 export type InviteHandoffRoom = z.infer<typeof inviteHandoffRoomSchema>;
 export type InviteHandoffRequest = z.infer<typeof inviteHandoffRequestSchema>;
 export type InviteHandoffResponse = z.infer<typeof inviteHandoffResponseSchema>;
+export type InviteHandoffPayload = z.infer<typeof inviteHandoffPayloadSchema>;

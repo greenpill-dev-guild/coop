@@ -324,6 +324,11 @@ export const handlerRegistry: HandlerRecord = {
     ok: true,
   }),
 
+  'request-invite-handoff': async () => ({
+    ok: false,
+    error: 'Invite handoff requests are handled by the offscreen sync runtime.',
+  }),
+
   // ---- Data management ----
   'clear-sensitive-local-data': async () => {
     await clearSensitiveLocalData(db);
