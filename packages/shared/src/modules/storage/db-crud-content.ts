@@ -28,6 +28,7 @@ import {
   writeCoopSyncRoom,
 } from '../sync-core';
 import {
+  type SyncRoomSecretRecord,
   ensureSyncRoomSecretRecord,
   getSyncRoomSecretRecord,
   isRedactedSyncRoomSecret,
@@ -98,8 +99,12 @@ function getRawSyncRoom(raw: Record<string, unknown>) {
   return syncRoomConfigSchema.safeParse(raw.syncRoom);
 }
 
+type SyncRoomMergeGuard = {
+  protectedSyncRoom?: SyncRoomConfig;
+};
+
 function buildProtectedSyncRoom(
-  record: NonNullable<Awaited<ReturnType<typeof getSyncRoomSecretRecord>>>,
+  record: SyncRoomSecretRecord,
   fallback: Pick<SyncRoomConfig, 'signalingUrls'>,
 ): SyncRoomConfig {
   return {
@@ -111,7 +116,11 @@ function buildProtectedSyncRoom(
   };
 }
 
-async function prepareSyncRoomMergeGuard(db: CoopDexie, coopId: string, encodedState: Uint8Array) {
+async function prepareSyncRoomMergeGuard(
+  db: CoopDexie,
+  coopId: string,
+  encodedState: Uint8Array,
+): Promise<SyncRoomMergeGuard> {
   const [existing, localSecretRecord] = await Promise.all([
     db.coopDocs.get(coopId),
     getSyncRoomSecretRecord(db, coopId),
@@ -146,11 +155,7 @@ async function prepareSyncRoomMergeGuard(db: CoopDexie, coopId: string, encodedS
   }
 }
 
-function redactSyncRoomSecretsFromMergedDoc(
-  doc: Y.Doc,
-  coopId: string,
-  guard: { protectedSyncRoom?: SyncRoomConfig },
-) {
+function redactSyncRoomSecretsFromMergedDoc(doc: Y.Doc, coopId: string, guard: SyncRoomMergeGuard) {
   const raw = readCoopStateRaw(doc);
   const rawCoopId = getRawCoopId(raw);
   const syncRoomResult = getRawSyncRoom(raw);
