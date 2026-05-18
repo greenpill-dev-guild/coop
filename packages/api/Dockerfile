@@ -2,11 +2,15 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 # Build context must be the repo root so the lockfile is available.
 # Deploy with: fly deploy -c packages/api/fly.toml from repo root
-COPY packages/api/package.json ./
-COPY bun.lock ./
-RUN bun install --production --frozen-lockfile
-COPY packages/api/src/ src/
-COPY packages/api/config.ts ./
+COPY package.json bun.lock bunfig.toml tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/tsconfig.json packages/shared/
+COPY packages/api/package.json packages/api/
+RUN bun install --frozen-lockfile
+COPY packages/shared/src/ packages/shared/src/
+RUN bun run --filter @coop/shared build
+COPY packages/api/src/ packages/api/src/
+COPY packages/api/config.ts packages/api/
+WORKDIR /app/packages/api
 EXPOSE 8080
 ENV HOST=0.0.0.0
 ENV PORT=8080
