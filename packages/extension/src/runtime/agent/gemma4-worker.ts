@@ -50,6 +50,67 @@ export function canUseBrowserCache(globalScope: object = globalThis) {
   }
 }
 
+export function isUnsupportedChatTemplateError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Unknown ArrayValue filter: trim');
+}
+
+// transformers.js currently cannot render some upstream Gemma 4 chat templates
+// because they use Jinja filters that the JS template engine does not support.
+// Keep a plain prompt fallback so browser-local inference can still run.
+export function buildGemma4FallbackPrompt(
+  // biome-ignore lint/suspicious/noExplicitAny: chat content is heterogeneous
+  messages: any[],
+  tools?: Gemma4Tool[],
+) {
+  const renderedMessages = messages
+    .map((message) => {
+      const role = typeof message?.role === 'string' ? message.role.toUpperCase() : 'USER';
+      const content = Array.isArray(message?.content)
+        ? message.content
+            // biome-ignore lint/suspicious/noExplicitAny: chat content is heterogeneous
+            .map((part: any) => {
+              if (part?.type === 'text' && typeof part.text === 'string') return part.text;
+              if (part?.type === 'image') return '[image input attached]';
+              if (part?.type === 'audio') return '[audio input attached]';
+              return '';
+            })
+            .filter(Boolean)
+            .join('\n')
+        : String(message?.content ?? '');
+      return `${role}:\n${content}`;
+    })
+    .join('\n\n');
+  const toolHint =
+    tools && tools.length > 0
+      ? `\n\nAVAILABLE JSON FUNCTIONS:\n${tools
+          .map((tool) => JSON.stringify(tool.function))
+          .join('\n')}`
+      : '';
+  return `${renderedMessages}${toolHint}\n\nASSISTANT:`;
+}
+
+function applyGemma4ChatTemplate(
+  // biome-ignore lint/suspicious/noExplicitAny: processor is runtime-loaded
+  runtimeProcessor: any,
+  // biome-ignore lint/suspicious/noExplicitAny: chat content is heterogeneous
+  messages: any[],
+  tools?: Gemma4Tool[],
+) {
+  try {
+    return runtimeProcessor.apply_chat_template(messages, {
+      add_generation_prompt: true,
+      tokenize: false,
+      tools,
+    });
+  } catch (error) {
+    if (!isUnsupportedChatTemplateError(error)) {
+      throw error;
+    }
+    return buildGemma4FallbackPrompt(messages, tools);
+  }
+}
+
 // MV3's default `extension_pages` CSP forbids `new Function()`, which
 // onnxruntime-web's Embind glue uses on the inference hot path. The host
 // therefore runs inside a sandboxed iframe page declared in the manifest,
@@ -167,11 +228,7 @@ async function handleRequest(
     }
     messages.push({ role: 'user', content: userContent });
 
-    const promptText = processor.apply_chat_template(messages, {
-      add_generation_prompt: true,
-      tokenize: false,
-      tools: request.tools,
-    });
+    const promptText = applyGemma4ChatTemplate(processor, messages, request.tools);
 
     const inputs =
       image && audio

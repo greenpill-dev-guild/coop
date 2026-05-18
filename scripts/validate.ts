@@ -377,6 +377,30 @@ const suites: Record<string, Suite> = {
       { label: 'unit:agent-scenarios', command: ['bun', 'run', 'test:unit:agent-scenarios'] },
     ],
   },
+  'unit:coop-seeded-eval': {
+    description:
+      'Seeded regen community eval for deterministic 4x4 group/action routing, draft thresholding, and action-brief shape.',
+    steps: [
+      { label: 'unit:coop-seeded-eval', command: ['bun', 'run', 'test:unit:coop-seeded-eval'] },
+    ],
+  },
+  'coop-seeded-eval': {
+    description:
+      'Seeded regen community validation: full-matrix group/action routing and deterministic action-brief rubric.',
+    includes: ['unit:coop-seeded-eval'],
+  },
+  'gemma4:regen-evals': {
+    description:
+      'Browser model-in-loop Gemma 4 eval for 32+ regen community action briefs in the built extension sandbox.',
+    steps: [
+      { label: 'gemma4:regen-evals', command: ['node', 'scripts/verify-gemma4-regen-evals.cjs'] },
+    ],
+  },
+  'regen-community-evals': {
+    description:
+      'Completion gate for regen community evals: seeded deterministic matrix, extension build, and required Gemma 4 browser proof.',
+    includes: ['unit:coop-seeded-eval', 'build:extension', 'gemma4:regen-evals'],
+  },
   'local-inference': {
     description: 'Local inference validation: lint, targeted inference unit tests, build.',
     includes: ['lint', 'unit:local-inference', 'build'],

@@ -310,7 +310,7 @@ export default defineConfig({
       // Store ship would pair this with a pre-compiled onnxruntime-web
       // build that doesn't need `new Function()`.
       sandbox:
-        "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'",
+        "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; object-src 'self'",
     },
     sandbox: {
       pages: ['agent-sandbox.html'],
