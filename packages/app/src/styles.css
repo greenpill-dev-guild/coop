@@ -2055,11 +2055,6 @@ pre {
   gap: 0.2rem;
 }
 
-.landing-footer-credibility {
-  font-size: 0.78rem;
-  color: rgba(255, 240, 220, 0.55);
-}
-
 .why-build-cta {
   margin-top: 0.6rem;
   justify-self: start;

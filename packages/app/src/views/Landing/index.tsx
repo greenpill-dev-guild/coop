@@ -822,7 +822,6 @@ function LandingPageContent({
             <span className="footer-copy">
               &copy; {new Date().getFullYear()} Greenpill Dev Guild
             </span>
-            <span className="landing-footer-credibility">{t('footer.credibility')}</span>
           </div>
           <nav className="footer-links-row" aria-label={t('footer.linksLabel')}>
             <a
