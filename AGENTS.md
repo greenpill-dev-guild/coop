@@ -25,6 +25,8 @@ bun run validate list        # List all available validation suites
 bun run validate:store-readiness        # Chrome Web Store readiness gate
 bun run validate:production-readiness   # Mock-first release readiness gate
 bun run validate:production-live-readiness # Opt-in live rails gate
+bun run check:design-md       # Lint DesignMD guidance files
+bun run check:design-tokens   # Enforce Coop CSS token usage
 ```
 
 **CRITICAL**: Always `bun run test`, never `bun test`. Bun's built-in runner ignores vitest config.
@@ -133,6 +135,12 @@ Not every change needs a full build. Choose the lightest tier that covers your c
 ### UI Component Reuse
 
 Before creating new UI elements, check `packages/extension/src/views/shared/` and `packages/extension/src/global.css`. Existing: Tooltip, NotificationBanner, ThemePicker, icon buttons (`.popup-icon-button`), cards (`.panel-card`, `.draft-card`), badges (`.badge`, `.state-pill`), skeleton loaders (`.skeleton`), design tokens (`shared/src/styles/tokens.css`).
+
+### Design System Guardrails
+
+Before UI or CSS changes, load root `DESIGN.md`, the relevant surface dialect (`packages/app/DESIGN.pwa.md`, `packages/app/DESIGN.browser.md`, or `docs/DESIGN.md`), and `packages/shared/src/styles/tokens.css`. Extension UI inherits the root Coop design file in this pass; do not invent an extension-specific dialect.
+
+Run `bun run check:design-md` and `bun run check:design-tokens` for UI/CSS changes before the relevant app or extension build. Use existing `--coop-*` tokens for palette, radius, z-index, spacing, typography, and shadow values; add a new token only when a repeated raw value has no existing token and the design intent is stable.
 
 ### Onchain Integration
 

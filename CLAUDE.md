@@ -23,6 +23,8 @@ bun run validate list        # List all available validation suites
 bun run validate:store-readiness        # Chrome Web Store readiness gate
 bun run validate:production-readiness   # Mock-first release readiness gate
 bun run validate:production-live-readiness # Opt-in live rails gate
+bun run check:design-md       # Lint DesignMD guidance files
+bun run check:design-tokens   # Enforce Coop CSS token usage
 ```
 
 > **`bun test` vs `bun run test`**: `bun test` uses bun's built-in runner (ignores vitest config). `bun run test` runs the package.json script (vitest with proper environment). Always use `bun run test`.
@@ -146,6 +148,8 @@ Use `typecheck` or `quick` during iteration. Use `smoke` or higher before commit
 - Separate mechanical fixes from human judgment callouts. Always call out dependencies, migrations or persisted-state changes, auth/session/permit/policy changes, public contract changes, runtime or toolchain boundary changes, and ownership-blurred diffs.
 - Prefer explicit behavior over hidden magic: avoid silent fallbacks, bare catch-alls, and recovery that hides intent unless it is clearly deliberate and tested.
 - Large mixed diffs are a workflow smell. If a change cannot be explained cleanly, mixes unrelated concerns, or crosses multiple ownership surfaces without need, split it or route it through migration/review accordingly.
+
+**Design System Guardrails**: Before UI or CSS changes, load root `DESIGN.md`, the relevant surface dialect (`packages/app/DESIGN.pwa.md`, `packages/app/DESIGN.browser.md`, or `docs/DESIGN.md`), and `packages/shared/src/styles/tokens.css`. Extension UI inherits the root Coop design file in this pass; do not invent an extension-specific dialect. Run `bun run check:design-md` and `bun run check:design-tokens` before the relevant app or extension build. Use existing `--coop-*` tokens for palette, radius, z-index, spacing, typography, and shadow values; add a new token only when a repeated raw value has no existing token and the design intent is stable.
 
 **UI Component Reuse**: Before creating new UI elements, check `packages/extension/src/views/shared/` for existing components and `packages/extension/src/global.css` for existing CSS classes. Reusable patterns already available:
 

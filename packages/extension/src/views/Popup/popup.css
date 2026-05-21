@@ -922,11 +922,11 @@ button:focus-visible,
   background: var(--coop-brown);
   color: var(--coop-cream);
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--coop-radius-xs);
   font-size: 0.68rem;
   line-height: 1.35;
   pointer-events: none;
-  z-index: 10;
+  z-index: var(--coop-z-dropdown);
   max-width: 180px;
   opacity: 0;
   animation: yard-tooltip-in 120ms ease forwards;

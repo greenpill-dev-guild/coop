@@ -1336,7 +1336,7 @@ button.sidepanel-header__brand {
   gap: 0.3rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--coop-radius-button);
   background: var(--coop-surface-elevated);
   box-shadow: 0 1px 3px rgba(79, 46, 31, 0.06);
   animation: coop-rise 400ms ease both;
@@ -2366,7 +2366,7 @@ button.sidepanel-header__brand {
 .confidence-tooltip__breakdown {
   display: block;
   position: absolute;
-  z-index: 10;
+  z-index: var(--coop-z-dropdown);
   padding: 4px 8px;
   font-size: 0.6875rem;
   white-space: nowrap;
@@ -2481,7 +2481,7 @@ button.sidepanel-header__brand {
   width: 4.5rem;
   height: 0.42rem;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--coop-radius-pill);
   background: rgba(47, 90, 37, 0.1);
 }
 
