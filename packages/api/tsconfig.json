@@ -7,6 +7,11 @@
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@coop/shared": ["packages/shared/src/index.ts"],
+      "@coop/shared/*": ["packages/shared/src/*"]
+    },
     "outDir": "dist",
     "rootDir": "..",
     "types": ["bun"]

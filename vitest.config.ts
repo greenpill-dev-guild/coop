@@ -5,6 +5,11 @@ import { defineConfig } from 'vitest/config';
 const sharedRootEntry = path.resolve(__dirname, 'packages/shared/src/index.ts');
 const sharedAppEntry = path.resolve(__dirname, 'packages/shared/src/app-entry.ts');
 const sharedSyncConfig = path.resolve(__dirname, 'packages/shared/src/sync-config.ts');
+const sharedBlobChannel = path.resolve(__dirname, 'packages/shared/src/modules/blob/channel.ts');
+const sharedTestingFixtures = path.resolve(
+  __dirname,
+  'packages/shared/src/__tests__/fixtures/index.ts',
+);
 const coverageEnabled = process.argv.includes('--coverage');
 const defaultTestTimeoutMs = 20_000;
 
@@ -13,11 +18,13 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@coop\/shared\/app$/, replacement: sharedAppEntry },
+      { find: /^@coop\/shared\/blob-channel$/, replacement: sharedBlobChannel },
       {
         find: /^@coop\/shared\/contracts$/,
         replacement: path.resolve(__dirname, 'packages/shared/src/contracts/index.ts'),
       },
       { find: /^@coop\/shared\/sync-config$/, replacement: sharedSyncConfig },
+      { find: /^@coop\/shared\/testing$/, replacement: sharedTestingFixtures },
       { find: /^@coop\/shared$/, replacement: sharedRootEntry },
       { find: /^@coop\/api$/, replacement: path.resolve(__dirname, 'packages/api/config.ts') },
     ],

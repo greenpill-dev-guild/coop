@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const sharedRootEntry = path.resolve(__dirname, 'packages/shared/src/index.ts');
+const sharedBlobChannel = path.resolve(__dirname, 'packages/shared/src/modules/blob/channel.ts');
+const sharedTestingFixtures = path.resolve(
+  __dirname,
+  'packages/shared/src/__tests__/fixtures/index.ts',
+);
 const coverageEnabled = process.argv.includes('--coverage');
 
 export default defineConfig({
@@ -13,6 +18,8 @@ export default defineConfig({
         find: /^@coop\/shared\/contracts$/,
         replacement: path.resolve(__dirname, 'packages/shared/src/contracts/index.ts'),
       },
+      { find: /^@coop\/shared\/blob-channel$/, replacement: sharedBlobChannel },
+      { find: /^@coop\/shared\/testing$/, replacement: sharedTestingFixtures },
       { find: /^@coop\/shared$/, replacement: sharedRootEntry },
       { find: /^@coop\/api$/, replacement: path.resolve(__dirname, 'packages/api/config.ts') },
     ],

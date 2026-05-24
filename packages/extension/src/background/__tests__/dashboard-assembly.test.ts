@@ -45,6 +45,7 @@ const sharedMocks = vi.hoisted(() => ({
 }));
 
 const contextMocks = vi.hoisted(() => ({
+  getCoopSyncRuntime: vi.fn(),
   getCoops: vi.fn(),
   getLocalSetting: vi.fn(),
   getRuntimeHealth: vi.fn(),
@@ -134,6 +135,7 @@ vi.mock('../context', () => ({
       })),
     },
   },
+  getCoopSyncRuntime: contextMocks.getCoopSyncRuntime,
   getCoops: contextMocks.getCoops,
   getLocalSetting: contextMocks.getLocalSetting,
   getRuntimeHealth: contextMocks.getRuntimeHealth,
@@ -299,6 +301,12 @@ describe('dashboard assembly', () => {
       offline: false,
       missingPermission: false,
       syncError: false,
+    });
+    contextMocks.getCoopSyncRuntime.mockResolvedValue({
+      activeCoopIds: ['coop-1'],
+      activeBindingKeys: ['coop-1:main'],
+      mode: 'webrtc',
+      directPeerAvailable: true,
     });
     contextMocks.hydrateUiPreferences.mockResolvedValue({
       agentCadenceMinutes: 16,

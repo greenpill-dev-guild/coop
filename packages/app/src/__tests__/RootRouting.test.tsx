@@ -119,7 +119,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /chicken or egg\? neither — you need a coop first\./i,
+        name: /no more chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -142,7 +142,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /chicken or egg\? neither — you need a coop first\./i,
+        name: /no more chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -165,7 +165,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /chicken or egg\? neither — you need a coop first\./i,
+        name: /no more chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -222,7 +222,7 @@ describe('root routing bootstrap', () => {
     expect(screen.queryByRole('heading', { name: /^Hatch$/i })).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', {
-        name: /chicken or egg\? neither — you need a coop first\./i,
+        name: /no more chickens loose\./i,
       }),
     ).toBeVisible();
   });
