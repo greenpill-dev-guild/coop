@@ -1,0 +1,80 @@
+{
+  "$schema": "status-schema",
+  "feature": "ai-native-dev-workflow",
+  "title": "AI-Native Developer Workflow",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["state"],
+      "branch": "claude/ui/ai-native-dev-workflow",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/state/ai-native-dev-workflow",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/ai-native-dev-workflow"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/ai-native-dev-workflow"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": ["state", "ui"],
+      "branch": "codex/docs/ai-native-dev-workflow",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui", "state", "docs"],
+      "branch": "handoff/qa-codex/ai-native-dev-workflow",
+      "branch_trigger": "handoff/qa-codex/ai-native-dev-workflow",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/ai-native-dev-workflow",
+      "branch_trigger": "handoff/qa-claude/ai-native-dev-workflow",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Use Coop's existing feature-pack structure instead of a cross-repo mega-plan",
+      "rationale": "Coop already treats .plans/features plus status.json as execution truth."
+    },
+    {
+      "id": "D2",
+      "choice": "Keep API and contracts out of scope for week one",
+      "rationale": "The first slice is operating-system proof, not runtime behavior."
+    },
+    {
+      "id": "D3",
+      "choice": "Use the existing agent-control-plane and judgment-cues work as local precedents",
+      "rationale": "The new workflow should compound existing run-ledger and human-judgment patterns instead of creating a second review system."
+    },
+    {
+      "id": "D4",
+      "choice": "Treat the scaffold-hardening pass as the first completed measured lane",
+      "rationale": "The hub now has real ledger, scorecard, adversarial review, closeout, and rule-feedback evidence without pretending week-six adoption is complete."
+    }
+  ],
+  "updated_at": "2026-05-24"
+}

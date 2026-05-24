@@ -164,7 +164,7 @@ describe('receiver app routes', () => {
       coopDisplayName: 'River Coop',
       memberId: 'member-1',
       memberDisplayName: 'Mina',
-      signalingUrls: ['ws://127.0.0.1:4444'],
+      signalingUrls: ['ws://127.0.0.1:3103'],
     });
     const pairingCode = encodeReceiverPairingPayload(payload);
 

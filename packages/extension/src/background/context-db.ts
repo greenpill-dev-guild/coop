@@ -14,6 +14,7 @@ import {
 export const stateKeys = {
   activeCoopId: 'active-coop-id',
   agentOnboarding: 'agent-onboarding',
+  agentRuntimeDiagnostics: 'agent-runtime-diagnostics',
   captureMode: 'capture-mode',
   notificationIntentRegistry: 'notification-intent-registry',
   notificationRegistry: 'notification-registry',

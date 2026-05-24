@@ -307,7 +307,7 @@ export async function runCaptureForTabs(
 }
 
 export async function seedCoopFromStoredRoundup(coop: CoopSharedState) {
-  const extracts = await listPageExtracts(db);
+  const extracts = await listPageExtracts(db, 500);
   if (extracts.length === 0) {
     return 0;
   }

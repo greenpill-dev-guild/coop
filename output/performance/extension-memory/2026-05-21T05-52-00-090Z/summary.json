@@ -1,0 +1,140 @@
+{
+  "profile": "idle",
+  "sampleCount": 15,
+  "peakWorkerHeapMb": 0,
+  "finalWorkerHeapMb": 0,
+  "workerHeapSlopeMbPerMinute": 0,
+  "peakProcessRssMb": 909.765625,
+  "finalProcessRssMb": 898.90625,
+  "processRssSlopeMbPerMinute": -13.979248533934893,
+  "budgets": {
+    "idleSlopeUnder1MbPerMinute": true,
+    "idleHasZeroSyncBindings": true,
+    "localInferenceOffHasNoModelRuntime": true
+  },
+  "latestDiagnostics": {
+    "timestamp": "2026-05-21T05:53:26.975Z",
+    "extensionVersion": "0.1.0",
+    "uiPreferences": {
+      "captureMode": "manual",
+      "agentCadenceMinutes": 64,
+      "localInferenceOptIn": true,
+      "heartbeatEnabled": true,
+      "captureOnClose": false
+    },
+    "alarms": [
+      {
+        "name": "agent-proactive-cycle",
+        "scheduledTime": 1779346576393.543,
+        "periodInMinutes": 64
+      },
+      {
+        "name": "archive-status-poll",
+        "scheduledTime": 1779364336393.75,
+        "periodInMinutes": 360
+      },
+      {
+        "name": "agent-heartbeat",
+        "scheduledTime": 1779343036393.813,
+        "periodInMinutes": 5
+      },
+      {
+        "name": "knowledge-lint",
+        "scheduledTime": 1779947536393.89,
+        "periodInMinutes": 10080
+      }
+    ],
+    "offscreen": {
+      "supported": true,
+      "present": false
+    },
+    "receiverSync": {
+      "activePairingIds": [],
+      "activeBindingKeys": [],
+      "transport": "none",
+      "bindingCount": 0,
+      "providerCount": 0,
+      "timerCount": 0,
+      "lastDisconnectReason": "no-active-work"
+    },
+    "coopSync": {
+      "activeCoopIds": [],
+      "activeBindingKeys": [],
+      "mode": "none",
+      "bindingCount": 0,
+      "providerCount": 0,
+      "timerCount": 0,
+      "lastDisconnectReason": "no-active-work"
+    },
+    "agent": {
+      "running": false,
+      "modelStatus": {
+        "transformers": {
+          "ready": false,
+          "initializing": false,
+          "model": "onnx-community/Qwen2.5-0.5B-Instruct"
+        },
+        "webllm": {
+          "ready": false,
+          "initialized": false,
+          "workerActive": false
+        },
+        "gemma4": {
+          "ready": false,
+          "initialized": false,
+          "iframeActive": false
+        }
+      },
+      "pendingObservationCount": 0
+    },
+    "storage": {
+      "tableCounts": {
+        "tabCandidates": 0,
+        "pageExtracts": 0,
+        "reviewDrafts": 0,
+        "coopDocs": 0,
+        "captureRuns": 0,
+        "settings": 6,
+        "identities": 0,
+        "receiverPairings": 0,
+        "receiverCaptures": 0,
+        "receiverBlobs": 0,
+        "actionBundles": 0,
+        "actionLogEntries": 0,
+        "replayIds": 0,
+        "executionPermits": 0,
+        "permitLogEntries": 0,
+        "agentObservations": 0,
+        "agentPlans": 0,
+        "skillRuns": 0,
+        "sessionCapabilities": 0,
+        "sessionCapabilityLogEntries": 0,
+        "encryptedSessionMaterials": 0,
+        "knowledgeSkills": 0,
+        "coopKnowledgeSkillOverrides": 0,
+        "agentLogs": 0,
+        "privacyIdentities": 0,
+        "stealthKeyPairs": 0,
+        "agentMemories": 0,
+        "tabRoutings": 0,
+        "localMemberSignerBindings": 0,
+        "encryptedLocalPayloads": 0,
+        "coopBlobs": 0,
+        "syncOutbox": 0,
+        "knowledgeSources": 0,
+        "graphSnapshots": 0,
+        "skillVariants": 0,
+        "experimentRecords": 0,
+        "autoresearchConfigs": 0,
+        "agentBenchmarkRecords": 0,
+        "agentTraceRecords": 0,
+        "reviewItemFeedbacks": 0,
+        "knowledgeSourceContents": 0
+      },
+      "graphSnapshots": {
+        "count": 0
+      }
+    },
+    "recentEvents": []
+  }
+}

@@ -180,7 +180,7 @@ Do not duplicate these. Import or apply existing classes.
 | `wss://api.coop.town/yws` | Fly.io Yjs document sync | WebSocket fallback for peer sync |
 | `https://coop.town` | Vercel PWA (landing + receiver) | Proxied through Cloudflare |
 | `https://docs.coop.town` | Vercel docs | Proxied through Cloudflare |
-| `wss://dev-api.coop.town` | Cloudflare tunnel → localhost:4444 | Only up during `bun dev` |
+| `wss://dev-api.coop.town` | Cloudflare tunnel -> localhost:3103 | Only up during `bun dev` |
 | `https://local.coop.town` | Cloudflare tunnel → localhost:3001 | Only up during `bun dev` |
 
 ## Environment

@@ -137,7 +137,7 @@ async function seedReceiverCaptures(db: CoopDexie, { includeFailed }: { includeF
       coopDisplayName: 'QA Coop',
       memberId: 'qa-member',
       memberDisplayName: 'QA Member',
-      signalingUrls: ['ws://127.0.0.1:4444'],
+      signalingUrls: ['ws://127.0.0.1:3103'],
       issuedAt: '2026-03-12T17:55:00.000Z',
       expiresAt: '2030-03-19T17:55:00.000Z',
     }),

@@ -1,0 +1,94 @@
+{
+  "$schema": "status-schema",
+  "feature": "agent-control-plane",
+  "title": "Agent Control Plane",
+  "stage": "backlog",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": ["state"],
+      "branch": "claude/ui/agent-control-plane",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "codex/state/agent-control-plane",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/agent-control-plane"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/agent-control-plane"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/agent-control-plane"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui", "state"],
+      "branch": "handoff/qa-codex/agent-control-plane",
+      "branch_trigger": "handoff/qa-codex/agent-control-plane",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/agent-control-plane",
+      "branch_trigger": "handoff/qa-claude/agent-control-plane",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Create a separate backlog feature hub for the agent control plane",
+      "rationale": "Kill switch, observability, and runtime durability cut across existing agent/session plans and need one future owner without starting implementation now."
+    },
+    {
+      "id": "D2",
+      "choice": "Keep existing scoped spending and session lifecycle ownership in their current hubs",
+      "rationale": "agent-evolution and session-key-phase-2 already own those slices; this hub should reference them instead of duplicating their work."
+    },
+    {
+      "id": "D3",
+      "choice": "Limit initial queue visibility to backlog UI and state lanes",
+      "rationale": "The plan should be discoverable in the hub while avoiding accidental implementation before the work is intentionally promoted."
+    },
+    {
+      "id": "D4",
+      "choice": "Sequence implementation as run ledger, kill switch semantics, runtime durability proof, then advanced UI",
+      "rationale": "Operator controls need real state and policy primitives before UI can safely expose pause, revoke, retry, or explanation workflows."
+    },
+    {
+      "id": "D5",
+      "choice": "Use a dual principal model for v1 runs",
+      "rationale": "Each run should record who requested it and which acting scope executed it, so authority remains legible across local runtime, delegated session, and coop-authorized work."
+    },
+    {
+      "id": "D6",
+      "choice": "Make observability metadata-first and local-only by default",
+      "rationale": "Run ledgers must improve operability without leaking source bodies, secrets, or private context into shared/operator views."
+    },
+    {
+      "id": "D7",
+      "choice": "Promote a docs lane only after state and UI semantics stabilize",
+      "rationale": "A durable operator reference should describe actual stop/revoke behavior, not speculative controls."
+    }
+  ],
+  "updated_at": "2026-05-21"
+}

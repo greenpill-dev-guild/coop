@@ -305,8 +305,9 @@ describe('dashboard assembly', () => {
     contextMocks.getCoopSyncRuntime.mockResolvedValue({
       activeCoopIds: ['coop-1'],
       activeBindingKeys: ['coop-1:main'],
-      mode: 'webrtc',
+      mode: 'websocket',
       directPeerAvailable: true,
+      lastError: null,
     });
     contextMocks.hydrateUiPreferences.mockResolvedValue({
       agentCadenceMinutes: 16,

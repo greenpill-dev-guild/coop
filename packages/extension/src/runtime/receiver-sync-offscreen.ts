@@ -23,6 +23,7 @@ type ReceiverBinding = {
   doc: ReturnType<typeof createReceiverSyncDoc>;
   relay?: ReturnType<typeof connectReceiverSyncRelay>;
   transport: NonNullable<ReceiverSyncRuntimeStatus['transport']>;
+  providerCount: number;
   disconnect: () => void;
   processingIds: Set<string>;
   reportedIssues: Set<string>;
@@ -33,6 +34,7 @@ type ReceiverBinding = {
 const heartbeatIntervalMs = 10_000;
 const bindings = new Map<string, ReceiverBinding>();
 let refreshPromise: Promise<void> | null = null;
+let heartbeatTimer: number | null = null;
 
 function runtimeNow() {
   return new Date().toISOString();
@@ -55,6 +57,54 @@ async function reportReceiverSyncRuntime(patch: Partial<ReceiverSyncRuntimeStatu
   } catch {
     // Ignore reporting failures so the sync runtime stays best-effort.
   }
+}
+
+function estimateReceiverDocBytes() {
+  return [...bindings.values()].reduce((total, binding) => {
+    try {
+      const bytes = new TextEncoder().encode(
+        JSON.stringify(listReceiverSyncEnvelopes(binding.doc)),
+      );
+      return total + bytes.length;
+    } catch {
+      return total;
+    }
+  }, 0);
+}
+
+function buildRuntimeStats(): Partial<ReceiverSyncRuntimeStatus> {
+  return {
+    bindingCount: bindings.size,
+    providerCount: [...bindings.values()].reduce(
+      (total, binding) => total + binding.providerCount,
+      0,
+    ),
+    timerCount:
+      [...bindings.values()].filter((binding) => typeof binding.timer === 'number').length +
+      (heartbeatTimer == null ? 0 : 1),
+    pendingQueueCount: [...bindings.values()].reduce(
+      (total, binding) => total + binding.processingIds.size,
+      0,
+    ),
+    docBytes: estimateReceiverDocBytes(),
+  };
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer != null) {
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+}
+
+function syncHeartbeat() {
+  if (bindings.size === 0) {
+    stopHeartbeat();
+    return;
+  }
+  heartbeatTimer ??= window.setInterval(() => {
+    void refreshBindings();
+  }, heartbeatIntervalMs);
 }
 
 function buildBindingKey(pairing: ReceiverSyncConfigResponse['pairings'][number]) {
@@ -130,6 +180,7 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
     key: buildBindingKey(pairing),
     doc,
     transport: relayTransport,
+    providerCount: Number(Boolean(providers.webrtc)) + Number(Boolean(providers.websocket)),
     processingIds: new Set(),
     reportedIssues: new Set(),
     disconnect() {
@@ -141,9 +192,11 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
       providers.disconnect();
       void reportReceiverSyncRuntime({
         lastBindingDisconnectedAt: runtimeNow(),
+        lastDisconnectReason: 'binding-refresh',
         activeBindingKeys: [...bindings.values()]
           .filter((candidate) => candidate.key !== binding.key)
           .map((candidate) => candidate.key),
+        ...buildRuntimeStats(),
       });
     },
   };
@@ -274,12 +327,17 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
     webrtcEnabled: Boolean(providers.webrtc),
     relayConfigured: binding.relay.configured,
   });
+  binding.providerCount =
+    Number(Boolean(providers.webrtc)) +
+    Number(Boolean(providers.websocket)) +
+    Number(binding.relay.configured);
 
   void reportReceiverSyncRuntime({
     lastBindingCreatedAt: runtimeNow(),
     transport: binding.transport,
     hasWebSocket: typeof WebSocket !== 'undefined',
     hasRtcPeerConnection: hasRtcPeerConnection(),
+    ...buildRuntimeStats(),
   });
 
   const processQueue = async () => {
@@ -287,6 +345,7 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
     void reportReceiverSyncRuntime({
       lastRefreshedAt: runtimeNow(),
       lastEnvelopeCount: envelopes.length,
+      ...buildRuntimeStats(),
     });
 
     for (const issue of listReceiverSyncEnvelopeIssues(doc)) {
@@ -308,6 +367,7 @@ function createBinding(pairing: ReceiverSyncConfigResponse['pairings'][number]) 
   const onDocUpdate = () => {
     void reportReceiverSyncRuntime({
       lastDocUpdateAt: runtimeNow(),
+      ...buildRuntimeStats(),
     });
     scheduleProcessQueue(binding, processQueue, 180);
   };
@@ -323,6 +383,7 @@ async function refreshBindings() {
   }
 
   refreshPromise = (async () => {
+    const startedAt = performance.now();
     const pairings = await fetchReceiverSyncConfig();
     const nextBindings = new Map(
       pairings.map((pairing) => [pairing.pairingId, buildBindingKey(pairing)]),
@@ -343,12 +404,15 @@ async function refreshBindings() {
     }
     await reportReceiverSyncRuntime({
       lastRefreshedAt: runtimeNow(),
+      lastRefreshDurationMs: Math.round(performance.now() - startedAt),
       activePairingIds: pairings.map((pairing) => pairing.pairingId),
       activeBindingKeys: [...bindings.values()].map((binding) => binding.key),
       hasWebSocket: typeof WebSocket !== 'undefined',
       hasRtcPeerConnection: hasRtcPeerConnection(),
       transport: [...bindings.values()][0]?.transport ?? 'none',
+      ...buildRuntimeStats(),
     });
+    syncHeartbeat();
   })().finally(() => {
     refreshPromise = null;
   });
@@ -380,17 +444,9 @@ void reportReceiverSyncRuntime({
   hasRtcPeerConnection: hasRtcPeerConnection(),
 });
 void refreshBindings();
-// Recover any pending agent-cycle request that was queued before the offscreen
-// document finished booting and registered its runtime message listener.
-void runAgentCycle({ reason: 'offscreen-ready' });
-
-// Heartbeat fallback: refresh bindings periodically in case message-driven
-// wake misses an event. 10s is a ~7x improvement over the previous 1.5s poll.
-window.setInterval(() => {
-  void refreshBindings();
-}, heartbeatIntervalMs);
 
 window.addEventListener('unload', () => {
+  stopHeartbeat();
   for (const binding of bindings.values()) {
     binding.disconnect();
   }

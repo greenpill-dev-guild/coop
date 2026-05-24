@@ -236,7 +236,7 @@ function buildBoardSnapshotFixture() {
         roomSecret: 'room-secret-board-e2e',
         roomId: 'room-board-e2e',
         inviteSigningSecret: 'invite-secret-board-e2e',
-        signalingUrls: ['ws://127.0.0.1:4444'],
+        signalingUrls: ['ws://127.0.0.1:3103'],
       },
       onchainState: {
         chainId: 11155111,

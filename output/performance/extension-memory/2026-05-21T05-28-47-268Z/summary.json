@@ -1,0 +1,13 @@
+{
+  "profile": "idle",
+  "sampleCount": 15,
+  "peakWorkerHeapMb": 0,
+  "finalWorkerHeapMb": 0,
+  "workerHeapSlopeMbPerMinute": 0,
+  "budgets": {
+    "idleSlopeUnder1MbPerMinute": true,
+    "idleHasZeroSyncBindings": true,
+    "localInferenceOffHasNoModelRuntime": true
+  },
+  "latestDiagnostics": null
+}

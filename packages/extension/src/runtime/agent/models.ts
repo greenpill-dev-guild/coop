@@ -170,6 +170,38 @@ export function getGemma4ModelId() {
   return getDefaultGemma4ModelId();
 }
 
+export function getAgentModelDiagnostics() {
+  const webllm = webLlmBridge.status;
+  const gemma4 = gemma4Bridge.status;
+  return {
+    transformers: {
+      ready: transformersPipelineReady,
+      initializing: Boolean(transformersPipelinePromise) && !transformersPipelineReady,
+      model: TRANSFORMERS_MODEL_ID,
+    },
+    webllm: {
+      ready: webllm.ready,
+      initialized: webllm.initialized,
+      workerActive: webllm.workerActive,
+      idleDeadlineAt: webllm.idleDeadlineAt,
+      model: webllm.model,
+      error: webllm.error,
+    },
+    gemma4: {
+      ready: gemma4.ready,
+      initialized: gemma4.initialized,
+      iframeActive: gemma4.iframeActive,
+      idleDeadlineAt: gemma4.idleDeadlineAt,
+      model: gemma4.model,
+      error: gemma4.error,
+    },
+  };
+}
+
+export function teardownAgentModelRuntimes() {
+  teardownAgentModels();
+}
+
 export function extractJsonBlock(raw: string) {
   const trimmed = raw.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]+?)```/i);

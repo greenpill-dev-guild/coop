@@ -36,8 +36,8 @@ const onnxWasmModulePath = fs.existsSync(transformersBundledWasmModulePath)
   ? transformersBundledWasmModulePath
   : path.join(onnxRuntimeWebDistDir, 'ort-wasm-simd-threaded.jsep.mjs');
 const receiverBridgeMatches = resolveReceiverBridgeMatches(process.env.VITE_COOP_RECEIVER_APP_URL);
-const localDevStartUrl = `http://127.0.0.1:${process.env.COOP_DEV_APP_PORT ?? '3001'}`;
-const extensionDevServerPort = Number(process.env.COOP_DEV_EXTENSION_PORT ?? '3020');
+const localDevStartUrl = `http://127.0.0.1:${process.env.COOP_DEV_APP_PORT ?? '3101'}`;
+const extensionDevServerPort = Number(process.env.COOP_DEV_EXTENSION_PORT ?? '3104');
 const buildSourceMaps = process.env.COOP_EXTENSION_SOURCEMAP === '1';
 const extensionHtmlEntries = [
   'catalog.html',

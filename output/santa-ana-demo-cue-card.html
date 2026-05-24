@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Santa Ana Watershed Demo Run Sheet</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f1e6;
+        --panel: #fffaf0;
+        --panel-2: #f0e3cf;
+        --ink: #20231b;
+        --muted: #5a604f;
+        --line: #d4c4a7;
+        --green: #245943;
+        --blue: #244f68;
+        --amber: #b77a20;
+        --red: #8f3f2f;
+        --white: #fffdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.32;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      a {
+        color: var(--blue);
+        overflow-wrap: anywhere;
+      }
+
+      .page {
+        width: min(1740px, calc(100vw - 28px));
+        margin: 0 auto;
+        padding: 14px 0 18px;
+      }
+
+      .top {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .title-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(26px, 3vw, 44px);
+        line-height: 1;
+      }
+
+      h2 {
+        font-size: 24px;
+      }
+
+      h3 {
+        font-size: 18px;
+      }
+
+      .mode {
+        padding: 9px 12px;
+        border-radius: 8px;
+        background: var(--green);
+        color: var(--white);
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .strip div {
+        min-height: 48px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .strip strong {
+        display: block;
+        color: var(--green);
+        font-size: 13px;
+        text-transform: uppercase;
+      }
+
+      .role-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .role-card {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .role-card strong {
+        display: block;
+        color: var(--green);
+        font-size: 15px;
+        text-transform: uppercase;
+      }
+
+      .role-card span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(500px, 0.95fr) minmax(620px, 1.05fr);
+        gap: 12px;
+        align-items: start;
+      }
+
+      .column {
+        display: grid;
+        gap: 10px;
+      }
+
+      .panel,
+      .step,
+      .copy-card,
+      .tab-group {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .panel {
+        padding: 12px;
+      }
+
+      .panel-head {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .flow {
+        display: grid;
+        gap: 8px;
+        counter-reset: flow;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .step::before {
+        counter-increment: flow;
+        content: counter(flow);
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--white);
+        font-weight: 900;
+      }
+
+      .step.primary {
+        border-color: var(--green);
+        background: #e8f0e4;
+      }
+
+      .step p {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .callout {
+        margin-top: 6px;
+        padding: 8px 10px;
+        border-left: 4px solid var(--amber);
+        border-radius: 4px;
+        background: #fff4df;
+        color: #332411;
+        font-size: 16px;
+        font-weight: 650;
+      }
+
+      .copy-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .copy-card,
+      .tab-group {
+        padding: 10px;
+      }
+
+      .card-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 7px;
+      }
+
+      .copy-text {
+        padding: 9px 10px;
+        border: 1px solid #e2d5be;
+        border-radius: 8px;
+        background: var(--white);
+        color: #2b2e26;
+        font-size: 16px;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .btn {
+        min-height: 34px;
+        padding: 7px 10px;
+        border: 1px solid #193e2f;
+        border-radius: 8px;
+        background: var(--green);
+        color: var(--white);
+        cursor: pointer;
+        font-weight: 850;
+      }
+
+      .btn.secondary {
+        border-color: #a26b1d;
+        background: #c98723;
+      }
+
+      .btn.ghost {
+        border-color: var(--line);
+        background: var(--white);
+        color: var(--ink);
+      }
+
+      .btn:hover,
+      .btn:focus-visible {
+        filter: brightness(0.93);
+      }
+
+      .tabs {
+        display: grid;
+        gap: 8px;
+      }
+
+      .tab-line {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 7px;
+        align-items: center;
+        padding: 8px;
+        border: 1px solid #e2d5be;
+        border-radius: 8px;
+        background: var(--white);
+      }
+
+      .tab-line strong {
+        display: block;
+        color: var(--ink);
+        font-size: 15px;
+      }
+
+      .tab-line span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .mini-note {
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--panel-2);
+        color: #38301f;
+        font-weight: 750;
+      }
+
+      .dont {
+        border-left: 5px solid var(--red);
+        background: #fff0e7;
+      }
+
+      .script-list {
+        display: grid;
+        gap: 7px;
+      }
+
+      .speaker-panel {
+        order: -1;
+      }
+
+      .script-line {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 8px;
+        padding: 9px 10px;
+        border: 1px solid #e2d5be;
+        border-radius: 8px;
+        background: var(--white);
+      }
+
+      .script-line strong {
+        color: var(--green);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .script-line span {
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      .dont ul {
+        display: grid;
+        gap: 5px;
+        margin: 8px 0 0;
+        padding-left: 18px;
+        color: #382418;
+        font-size: 16px;
+      }
+
+      .toast {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 30;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--ink);
+        color: var(--white);
+        font-weight: 900;
+        opacity: 0;
+        transform: translateY(10px);
+        transition:
+          opacity 140ms ease,
+          transform 140ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 1180px) {
+        .page {
+          width: min(100vw - 20px, 900px);
+        }
+
+        .title-row,
+        .grid,
+        .strip,
+        .role-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .title-row {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="top">
+        <div class="title-row">
+          <h1>Santa Ana Two-User Demo</h1>
+          <div class="mode">Organizer creates → contributor joins → Coop synthesizes</div>
+        </div>
+        <nav class="strip" aria-label="Demo sequence">
+          <div><strong>1</strong>Create Coop</div>
+          <div><strong>2</strong>Invite / Join</div>
+          <div><strong>3</strong>Organizer Tabs</div>
+          <div><strong>4</strong>Contributor Tabs</div>
+          <div><strong>5</strong>Synthesize</div>
+          <div><strong>6</strong>Publish + Verify</div>
+        </nav>
+        <section class="role-grid" aria-label="Demo roles">
+          <div class="role-card">
+            <strong>Watershed Organizer</strong>
+            <span>Creates the coop, handles coordination context, opens planning/governance/support tabs, decides what is safe to share.</span>
+          </div>
+          <div class="role-card">
+            <strong>Restoration Contributor</strong>
+            <span>Joins by member invite, brings watershed/restoration evidence tabs, reviews the shared brief from the second browser.</span>
+          </div>
+        </section>
+      </header>
+
+      <section class="grid">
+        <div class="column">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Do These Steps</h2>
+            </div>
+            <div class="flow">
+              <article class="step primary">
+                <div>
+                  <h3>Watershed Organizer: create the coop</h3>
+                  <p>Landing page quick flash, then extension → Create a Coop.</p>
+                  <div class="callout">Paste coop name + purpose from the copy board.</div>
+                </div>
+              </article>
+
+              <article class="step primary">
+                <div>
+                  <h3>Watershed Organizer: copy member invite</h3>
+                  <p>Open Nest / invites or invite hub. Copy the Member invite.</p>
+                  <div class="callout">Use member invite, not trusted invite, for the second profile.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Restoration Contributor: join the coop</h3>
+                  <p>Second browser/profile → extension → Join Coop → paste invite.</p>
+                  <div class="callout">Show both browsers now belong to the same coop.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Open the prepared tabs</h3>
+                  <p>Organizer gets planning/governance/support context. Contributor gets field/restoration evidence context.</p>
+                  <div class="callout">Use the role-specific Open all buttons on the right before recording if needed.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Capture / roundup tabs</h3>
+                  <p>Capture the tabs into Coop. Keep the story local and review-first.</p>
+                  <div class="callout">Raw tabs and notes are not public yet.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Watershed Organizer: synthesize</h3>
+                  <p>Trigger synthesis, open Chickens, review the action brief.</p>
+                  <div class="callout">Look for: Coordinate People, Preserve Evidence, Find Support, Share Learning.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Publish safe brief</h3>
+                  <p>Publish only the reviewed public update to the coop.</p>
+                  <div class="callout">Do not publish private logistics, volunteer details, or unverified claims.</div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Restoration Contributor: verify shared memory</h3>
+                  <p>Switch to second browser and show the feed/shared memory updated.</p>
+                  <div class="callout">Close on: two users, one coop, reviewed shared memory.</div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel speaker-panel">
+            <div class="panel-head">
+              <h2>Speaker Script</h2>
+              <button class="btn" data-copy="#speaker-script-copy">Copy script</button>
+            </div>
+            <div id="speaker-script-copy" hidden>
+Most community work does not start in a clean project management tool. It starts in scattered tabs, local notes, screenshots, field context, and conversations between people who each know part of the picture.
+
+For this demo, the shared place is a Santa Ana Watershed coop. The goal is not to replace local conservation groups. The goal is to help members prepare better coordination with them.
+
+First, the watershed organizer creates the coop. That gives the work a boundary: a purpose, a memory space, and a place where reviewed knowledge can eventually be shared.
+
+Then a restoration contributor joins by member invite. That matters because Coop is not just a solo AI notebook. Different members can bring different local context into the same shared coordination space.
+
+The organizer brings planning, governance, and support-path tabs. The contributor brings watershed, habitat, and restoration evidence. Each person rounds up their own browser context from their own profile.
+
+Now Coop turns that messy context into a private action brief. The important part is the review boundary: raw tabs, exact site details, volunteer logistics, and uncertain claims do not automatically become public.
+
+The brief gives the group a practical structure: who to coordinate with, what evidence to preserve, what support paths exist, and what learning could safely be shared back to the coop.
+
+Once the organizer reviews it, they publish only the safe version: public context, partner categories, next steps, and reusable learning.
+
+Then we switch to the contributor browser and show the shared memory update. That is the loop: two members, separate context, one coop, reviewed synthesis, and shared action memory the group controls.
+            </div>
+            <div class="script-list">
+              <div class="script-line">
+                <strong>Why</strong>
+                <span>Most community work starts in scattered tabs, notes, screenshots, field context, and conversations between people who each know part of the picture.</span>
+              </div>
+              <div class="script-line">
+                <strong>Frame</strong>
+                <span>For this demo, the shared place is a Santa Ana Watershed coop. Coop helps members prepare better coordination with existing local groups.</span>
+              </div>
+              <div class="script-line">
+                <strong>Create</strong>
+                <span>The watershed organizer creates the coop, giving the work a purpose, a memory space, and a boundary for reviewed knowledge.</span>
+              </div>
+              <div class="script-line">
+                <strong>Invite</strong>
+                <span>A restoration contributor joins by member invite, because this is not a solo AI notebook. Different members bring different local context.</span>
+              </div>
+              <div class="script-line">
+                <strong>Roles</strong>
+                <span>The organizer brings planning, governance, and support-path tabs. The contributor brings watershed, habitat, and restoration evidence.</span>
+              </div>
+              <div class="script-line">
+                <strong>Capture</strong>
+                <span>Each person rounds up their own browser context from their own profile into the same coop.</span>
+              </div>
+              <div class="script-line">
+                <strong>Synth</strong>
+                <span>Coop turns the messy context into a private action brief before anything is shared.</span>
+              </div>
+              <div class="script-line">
+                <strong>Review</strong>
+                <span>The review boundary matters: raw tabs, exact site details, volunteer logistics, and uncertain claims do not automatically become public.</span>
+              </div>
+              <div class="script-line">
+                <strong>Brief</strong>
+                <span>The brief shows who to coordinate with, what evidence to preserve, what support paths exist, and what learning can safely be shared.</span>
+              </div>
+              <div class="script-line">
+                <strong>Publish</strong>
+                <span>After review, the organizer publishes only the safe version: public context, partner categories, next steps, and reusable learning.</span>
+              </div>
+              <div class="script-line">
+                <strong>Verify</strong>
+                <span>On the contributor browser, the shared memory updates. Two members, separate context, one coop, reviewed synthesis, shared action memory.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel dont">
+            <h2>Do Not Say</h2>
+            <ul>
+              <li>Do not say Coop auto-publishes community knowledge.</li>
+              <li>Do not say Coop replaces conservation districts.</li>
+              <li>Do not make the story only about grants.</li>
+              <li>Do not claim perfect privacy forever.</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="column">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Copy Board</h2>
+              <div class="button-row">
+                <button class="btn ghost" data-copy="#all-copy">Copy all prompts</button>
+              </div>
+            </div>
+
+            <div id="all-copy" hidden>
+Santa Ana Watershed Stewardship Coop
+
+Coordinate local watershed restoration signals, partner outreach, field evidence, and safe shared learning for the Santa Ana River Watershed.
+
+I am preparing for a conversation with my local conservation district about Santa Ana Watershed restoration. I want to understand who is already working on habitat restoration, where community volunteers could help, and what evidence we should gather before sharing anything publicly.
+
+I can help review restoration partners, support paths, and what should be safe to share back with the coop after the organizer reviews the private details.
+
+Synthesize these Santa Ana Watershed tabs and notes into a private action brief with four sections: Coordinate People, Preserve Evidence, Find Support, Share Learning. Keep exact site details, volunteer names, and private logistics out of shared memory until I choose what to publish.
+
+Create a safe coop update from this brief. Share only public context, partner categories, next steps, reusable learning, and tags. Do not publish private logistics, exact volunteer details, or unverified claims.
+            </div>
+
+            <div class="copy-grid">
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Coop name</h3>
+                  <button class="btn" data-copy="#coop-name">Copy</button>
+                </div>
+                <div class="copy-text" id="coop-name">Santa Ana Watershed Stewardship Coop</div>
+              </article>
+
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Coop purpose</h3>
+                  <button class="btn" data-copy="#coop-purpose">Copy</button>
+                </div>
+                <div class="copy-text" id="coop-purpose">Coordinate local watershed restoration signals, partner outreach, field evidence, and safe shared learning for the Santa Ana River Watershed.</div>
+              </article>
+
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Watershed organizer seed note</h3>
+                  <button class="btn" data-copy="#organizer-note">Copy</button>
+                </div>
+                <div class="copy-text" id="organizer-note">I am preparing for a conversation with my local conservation district about Santa Ana Watershed restoration. I want to understand who is already working on habitat restoration, where community volunteers could help, and what evidence we should gather before sharing anything publicly.</div>
+              </article>
+
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Restoration contributor seed note</h3>
+                  <button class="btn" data-copy="#contributor-note">Copy</button>
+                </div>
+                <div class="copy-text" id="contributor-note">I can help review restoration partners, support paths, and what should be safe to share back with the coop after the organizer reviews the private details.</div>
+              </article>
+
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Synthesis prompt</h3>
+                  <button class="btn" data-copy="#synthesis-prompt">Copy</button>
+                </div>
+                <div class="copy-text" id="synthesis-prompt">Synthesize these Santa Ana Watershed tabs and notes into a private action brief with four sections: Coordinate People, Preserve Evidence, Find Support, Share Learning. Keep exact site details, volunteer names, and private logistics out of shared memory until I choose what to publish.</div>
+              </article>
+
+              <article class="copy-card">
+                <div class="card-head">
+                  <h3>Safe publish prompt</h3>
+                  <button class="btn" data-copy="#publish-prompt">Copy</button>
+                </div>
+                <div class="copy-text" id="publish-prompt">Create a safe coop update from this brief. Share only public context, partner categories, next steps, reusable learning, and tags. Do not publish private logistics, exact volunteer details, or unverified claims.</div>
+              </article>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="card-head">
+              <div>
+                <h2>Watershed Organizer Tabs</h2>
+                <p class="mini-note">Browser 1: coordination lead, planning/governance/support context, synthesis trigger</p>
+              </div>
+              <button class="btn secondary" data-open-group="user-a">Open organizer tabs</button>
+            </div>
+            <div class="tabs" id="user-a-tabs">
+              <div class="tab-line" data-url="https://coop.town">
+                <div>
+                  <strong>Coop landing/site</strong>
+                  <span>https://coop.town</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://sawpa.gov/owow/">
+                <div>
+                  <strong>Planning: SAWPA One Water One Watershed</strong>
+                  <span>Regional watershed planning backbone · https://sawpa.gov/owow/</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://sawatershed.org/governance/">
+                <div>
+                  <strong>Governance: Santa Ana Watershed Association</strong>
+                  <span>Who coordinates the watershed network · https://sawatershed.org/governance/</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://wildlife.ca.gov/Organization/WRGB">
+                <div>
+                  <strong>Support path: CDFW Watershed Restoration</strong>
+                  <span>Potential support path, not the whole story · https://wildlife.ca.gov/Organization/WRGB</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="tab-group">
+            <div class="card-head">
+              <div>
+                <h2>Restoration Contributor Tabs</h2>
+                <p class="mini-note">Browser 2: joined member, watershed/restoration evidence, shared-memory verifier</p>
+              </div>
+              <button class="btn secondary" data-open-group="user-b">Open contributor tabs</button>
+            </div>
+            <div class="tabs" id="user-b-tabs">
+              <div class="tab-line" data-url="https://coop.town">
+                <div>
+                  <strong>Coop join flow</strong>
+                  <span>Use extension popup or sidepanel Join Coop</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://www.rcrcd.org/aquatics-research-propagation-and-restoration">
+                <div>
+                  <strong>Restoration evidence: RCRCD Aquatics</strong>
+                  <span>Practical restoration and propagation work · https://www.rcrcd.org/aquatics-research-propagation-and-restoration</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://www.iewaterkeeper.org/watershed/">
+                <div>
+                  <strong>Watershed context: Inland Empire Waterkeeper</strong>
+                  <span>Community watershed overview · https://www.iewaterkeeper.org/watershed/</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+              <div class="tab-line" data-url="https://www.iercd.org/habitat-operations">
+                <div>
+                  <strong>Habitat evidence: Inland Empire RCD</strong>
+                  <span>Habitat operations and native species work · https://www.iercd.org/habitat-operations</span>
+                </div>
+                <button class="btn ghost" data-open-url>Open</button>
+                <button class="btn" data-copy-url>Copy</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+
+    <script>
+      const toast = document.querySelector("#toast");
+      let toastTimer = 0;
+
+      function cleanText(text) {
+        return text
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join("\n\n");
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 1100);
+      }
+
+      async function copyText(text) {
+        const value = cleanText(text);
+        try {
+          await navigator.clipboard.writeText(value);
+          showToast("Copied");
+        } catch {
+          const textarea = document.createElement("textarea");
+          textarea.value = value;
+          textarea.setAttribute("readonly", "");
+          textarea.style.position = "fixed";
+          textarea.style.left = "-9999px";
+          document.body.append(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          textarea.remove();
+          showToast("Copied");
+        }
+      }
+
+      function openUrl(url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      document.querySelectorAll("[data-copy]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = document.querySelector(button.dataset.copy);
+          if (!target) {
+            showToast("Missing text");
+            return;
+          }
+          void copyText(target.textContent || "");
+        });
+      });
+
+      document.querySelectorAll("[data-copy-url]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const row = button.closest("[data-url]");
+          void copyText(row?.dataset.url || "");
+        });
+      });
+
+      document.querySelectorAll("[data-open-url]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const row = button.closest("[data-url]");
+          if (row?.dataset.url) openUrl(row.dataset.url);
+        });
+      });
+
+      document.querySelectorAll("[data-open-group]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const group = button.dataset.openGroup === "user-a" ? "#user-a-tabs" : "#user-b-tabs";
+          document.querySelectorAll(`${group} [data-url]`).forEach((row, index) => {
+            window.setTimeout(() => openUrl(row.dataset.url), index * 90);
+          });
+          showToast("Opening tabs");
+        });
+      });
+    </script>
+  </body>
+</html>

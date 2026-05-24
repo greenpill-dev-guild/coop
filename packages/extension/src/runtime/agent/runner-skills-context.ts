@@ -76,7 +76,7 @@ export async function emitObservationIfMissing(observation: AgentObservation) {
 }
 
 export async function findExistingDraftForRouting(extractId: string, coopId?: string) {
-  const drafts = (await listReviewDrafts(db)).filter((draft) => draft.extractId === extractId);
+  const drafts = (await listReviewDrafts(db, 200)).filter((draft) => draft.extractId === extractId);
   if (coopId) {
     return drafts.find((draft) => draft.suggestedTargetCoopIds.includes(coopId)) ?? drafts[0];
   }
@@ -325,7 +325,7 @@ export async function buildSkillContext(
     coop
       ? queryMemoriesForSkill(db, { coopId: coop.profile.id, memberId }, observation.trigger)
       : Promise.resolve([]),
-    (await listReviewDrafts(db))
+    (await listReviewDrafts(db, 200))
       .filter((candidate) => !coop || candidate.suggestedTargetCoopIds.includes(coop.profile.id))
       .slice(0, 12),
     coop

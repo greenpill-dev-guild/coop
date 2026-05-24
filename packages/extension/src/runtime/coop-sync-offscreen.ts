@@ -76,6 +76,7 @@ type CoopBinding = {
   disconnect: () => void;
   lastHash: string;
   pendingUpdates: Uint8Array[];
+  providerCount: number;
   timer?: number;
   healthTimer?: number;
   compactionTimer?: number;
@@ -107,6 +108,7 @@ let refreshPromise: Promise<void> | null = null;
 let pendingForcedRefresh = false;
 let latestIceConfig: CoopSyncConfigResponse['iceConfig'] = null;
 let latestWebsocketSyncUrl: string | undefined;
+let heartbeatTimer: number | null = null;
 
 function runtimeNow() {
   return new Date().toISOString();
@@ -240,12 +242,55 @@ async function reportCoopSyncRuntime(patch: Partial<CoopSyncRuntimeStatus>) {
   }
 }
 
+function buildRuntimeStats(): Partial<CoopSyncRuntimeStatus> {
+  const activeBindings = [...bindings.values()];
+  return {
+    bindingCount: activeBindings.length,
+    providerCount: activeBindings.reduce((total, binding) => total + binding.providerCount, 0),
+    timerCount:
+      activeBindings.reduce((total, binding) => {
+        return (
+          total +
+          Number(typeof binding.timer === 'number') +
+          Number(typeof binding.healthTimer === 'number') +
+          Number(typeof binding.compactionTimer === 'number')
+        );
+      }, 0) + (heartbeatTimer == null ? 0 : 1),
+    docBytes: activeBindings.reduce(
+      (total, binding) => total + encodeCoopDoc(binding.doc).byteLength,
+      0,
+    ),
+    pendingUpdateCount: activeBindings.reduce(
+      (total, binding) => total + binding.pendingUpdates.length,
+      0,
+    ),
+  };
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer != null) {
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+}
+
+function syncHeartbeat() {
+  if (bindings.size === 0) {
+    stopHeartbeat();
+    return;
+  }
+  heartbeatTimer ??= window.setInterval(() => {
+    void refreshBindings();
+  }, heartbeatIntervalMs);
+}
+
 async function reportAggregateHealth() {
   const activeBindings = [...bindings.values()];
   const patch: Partial<CoopSyncRuntimeStatus> = {
     lastRefreshedAt: runtimeNow(),
     activeCoopIds: activeBindings.map((binding) => binding.coopId),
     activeBindingKeys: activeBindings.map((binding) => binding.key),
+    ...buildRuntimeStats(),
   };
   if (!activeBindings[0]) {
     patch.mode = 'none';
@@ -678,6 +723,7 @@ function scheduleRuntimeHealthReport(
             : undefined,
       activeCoopIds: [...bindings.values()].map((candidate) => candidate.coopId),
       activeBindingKeys: [...bindings.values()].map((candidate) => candidate.key),
+      ...buildRuntimeStats(),
     });
   }, delay);
 }
@@ -701,6 +747,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
     websocketSyncUrl,
     lastHash: hashJson(coop),
     pendingUpdates: [],
+    providerCount: Number(Boolean(providers.webrtc)) + Number(Boolean(providers.websocket)),
     iceExpiresAtMs: resolveIceExpiresAtMs(),
     handoffResponders: new Map(),
     rotationHandoffResponders: new Map(),
@@ -723,12 +770,14 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
       providers.disconnect();
       void reportCoopSyncRuntime({
         lastBindingDisconnectedAt: runtimeNow(),
+        lastDisconnectReason: 'binding-refresh',
         activeCoopIds: [...bindings.values()]
           .filter((candidate) => candidate.coopId !== coop.profile.id)
           .map((candidate) => candidate.coopId),
         activeBindingKeys: [...bindings.values()]
           .filter((candidate) => candidate.key !== binding.key)
           .map((candidate) => candidate.key),
+        ...buildRuntimeStats(),
       });
     },
   };
@@ -875,6 +924,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
     void reportCoopSyncRuntime({
       lastDocUpdateAt: runtimeNow(),
       pendingUpdateCount: binding.pendingUpdates.length,
+      ...buildRuntimeStats(),
     });
     if (binding.timer) {
       window.clearTimeout(binding.timer);
@@ -939,6 +989,7 @@ function createBinding(entry: CoopConfigEntry, websocketSyncUrl?: string) {
     lastError: undefined,
     activeCoopIds: [...bindings.values(), binding].map((candidate) => candidate.coopId),
     activeBindingKeys: [...bindings.values(), binding].map((candidate) => candidate.key),
+    ...buildRuntimeStats(),
   });
   return binding;
 }
@@ -957,6 +1008,7 @@ async function refreshBindings(options: { force?: boolean } = {}) {
   pendingForcedRefresh = false;
 
   refreshPromise = (async () => {
+    const startedAt = performance.now();
     const config = await fetchCoopSyncConfig();
     const nextBindings = new Map(
       config.coops
@@ -1007,6 +1059,11 @@ async function refreshBindings(options: { force?: boolean } = {}) {
     }
 
     await reportAggregateHealth();
+    await reportCoopSyncRuntime({
+      lastRefreshDurationMs: Math.round(performance.now() - startedAt),
+      ...buildRuntimeStats(),
+    });
+    syncHeartbeat();
   })()
     .catch(async (error) => {
       await reportCoopSyncRuntime({
@@ -1362,11 +1419,8 @@ void reportCoopSyncRuntime({
 });
 void refreshBindings();
 
-window.setInterval(() => {
-  void refreshBindings();
-}, heartbeatIntervalMs);
-
 window.addEventListener('unload', () => {
+  stopHeartbeat();
   for (const binding of bindings.values()) {
     binding.disconnect();
   }

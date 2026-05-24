@@ -48,6 +48,7 @@ import {
   ensureDbReady,
   ensureDefaults,
   ensureReceiverSyncOffscreenDocument,
+  ensureSyncOffscreenDocumentForActiveWork,
   getCoopSyncConfig,
   getCoopSyncRuntime,
   getCoops,
@@ -68,6 +69,13 @@ import {
   updateTabCache,
   warmTabCache,
 } from './background/context';
+import { getPerformanceDiagnostics } from './background/performance-diagnostics';
+
+type PerformanceDiagnosticsHook = () => ReturnType<typeof getPerformanceDiagnostics>;
+
+(
+  globalThis as typeof globalThis & { __coopPerformanceDiagnostics?: PerformanceDiagnosticsHook }
+).__coopPerformanceDiagnostics = getPerformanceDiagnostics;
 
 import { handleAlarmEvent } from './background/alarm-dispatch';
 import { persistCoopRoomHandoff } from './background/coop-room-handoff';
@@ -290,7 +298,7 @@ export function startBackground() {
     await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
     await chrome.alarms.create(alarmNames.agentHeartbeat, { periodInMinutes: 5 });
     await chrome.alarms.create(alarmNames.knowledgeLint, { periodInMinutes: 10080 });
-    await ensureReceiverSyncOffscreenDocument();
+    await ensureSyncOffscreenDocumentForActiveWork();
     await syncAgentObservations();
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
     await refreshBadge();
@@ -307,7 +315,7 @@ export function startBackground() {
     await chrome.alarms.create(alarmNames.archiveStatusPoll, { periodInMinutes: 360 });
     await chrome.alarms.create(alarmNames.agentHeartbeat, { periodInMinutes: 5 });
     await chrome.alarms.create(alarmNames.knowledgeLint, { periodInMinutes: 10080 });
-    await ensureReceiverSyncOffscreenDocument();
+    await ensureSyncOffscreenDocumentForActiveWork();
     await syncAgentObservations();
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
     await refreshBadge();
@@ -424,6 +432,12 @@ export function startBackground() {
             data: await getDashboard(),
           } satisfies RuntimeActionResponse<DashboardResponse>);
           return;
+        case 'get-performance-diagnostics':
+          sendResponse({
+            ok: true,
+            data: await getPerformanceDiagnostics(),
+          } satisfies RuntimeActionResponse);
+          return;
         case 'get-sidepanel-state':
           sendResponse({
             ok: true,
@@ -448,7 +462,6 @@ export function startBackground() {
           } satisfies RuntimeActionResponse);
           return;
         case 'get-receiver-sync-config':
-          await ensureReceiverSyncOffscreenDocument();
           sendResponse({
             ok: true,
             data: await getReceiverSyncConfig(),
@@ -461,7 +474,6 @@ export function startBackground() {
           } satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>);
           return;
         case 'get-coop-sync-config':
-          await ensureCoopSyncOffscreenDocument();
           sendResponse({
             ok: true,
             data: await getCoopSyncConfig(),
@@ -676,13 +688,19 @@ export function startBackground() {
           } satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>);
           return;
         case 'set-local-inference-opt-in':
-          sendResponse({
-            ok: true,
-            data: await saveResolvedUiPreferences({
+          {
+            const data = await saveResolvedUiPreferences({
               ...uiPreferences,
               localInferenceOptIn: message.payload.enabled,
-            }),
-          });
+            });
+            if (!message.payload.enabled) {
+              chrome.runtime.sendMessage({ type: 'teardown-agent-models' }).catch(() => undefined);
+            }
+            sendResponse({
+              ok: true,
+              data,
+            });
+          }
           return;
         case 'queue-green-goods-work-approval':
           sendResponse(await handleQueueGreenGoodsWorkApproval(message));

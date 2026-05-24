@@ -35,12 +35,14 @@ import {
   db,
   ensureCoopSyncOffscreenDocument,
   ensureReceiverSyncOffscreenDocument,
+  type getAgentRuntimeDiagnostics,
   getCoopSyncConfig,
   getCoopSyncRuntime,
   getCoops,
   getLocalSetting,
   getReceiverSyncRuntime,
   hydrateUiPreferences,
+  reportAgentRuntimeDiagnostics,
   reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
   saveResolvedUiPreferences,
@@ -153,6 +155,7 @@ import {
   handleRotateSessionCapability,
 } from './handlers/session';
 import { getActiveReviewContextForSession } from './operator';
+import { getPerformanceDiagnostics } from './performance-diagnostics';
 import { getPopupSidepanelState, togglePopupSidepanel } from './sidepanel';
 
 // ---------------------------------------------------------------------------
@@ -339,6 +342,12 @@ export const handlerRegistry: HandlerRecord = {
     } satisfies RuntimeActionResponse<DashboardResponse>;
   },
 
+  'get-performance-diagnostics': async () =>
+    ({
+      ok: true,
+      data: await getPerformanceDiagnostics(),
+    }) satisfies RuntimeActionResponse,
+
   // ---- Sidepanel ----
   'get-sidepanel-state': async (message) => ({
     ok: true,
@@ -363,7 +372,6 @@ export const handlerRegistry: HandlerRecord = {
 
   // ---- Receiver sync ----
   'get-receiver-sync-config': async () => {
-    await ensureReceiverSyncOffscreenDocument();
     return {
       ok: true,
       data: await getReceiverSyncConfig(),
@@ -378,7 +386,6 @@ export const handlerRegistry: HandlerRecord = {
 
   // ---- Coop sync ----
   'get-coop-sync-config': async () => {
-    await ensureCoopSyncOffscreenDocument();
     return {
       ok: true,
       data: await getCoopSyncConfig(),
@@ -605,13 +612,25 @@ export const handlerRegistry: HandlerRecord = {
       data: await reportReceiverSyncRuntime(message.payload),
     }) satisfies RuntimeActionResponse<ReceiverSyncRuntimeStatus>,
 
-  'set-local-inference-opt-in': async (message) => ({
-    ok: true,
-    data: await saveResolvedUiPreferences({
+  'report-agent-runtime-diagnostics': async (message) =>
+    ({
+      ok: true,
+      data: await reportAgentRuntimeDiagnostics(message.payload),
+    }) satisfies RuntimeActionResponse<Awaited<ReturnType<typeof getAgentRuntimeDiagnostics>>>,
+
+  'set-local-inference-opt-in': async (message) => {
+    const data = await saveResolvedUiPreferences({
       ...uiPreferences,
       localInferenceOptIn: message.payload.enabled,
-    }),
-  }),
+    });
+    if (!message.payload.enabled) {
+      chrome.runtime.sendMessage({ type: 'teardown-agent-models' }).catch(() => undefined);
+    }
+    return {
+      ok: true,
+      data,
+    };
+  },
 
   // ---- Green Goods ----
   'queue-green-goods-work-approval': async (message) => handleQueueGreenGoodsWorkApproval(message),

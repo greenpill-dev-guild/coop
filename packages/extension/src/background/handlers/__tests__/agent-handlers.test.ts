@@ -155,6 +155,7 @@ vi.mock('../../context', () => ({
   setAgentOnboardingState: vi.fn(),
   agentOnboardingKey: vi.fn((coopId: string, memberId: string) => `${coopId}:${memberId}`),
   alarmNames: { onboardingFollowUpPrefix: 'onboarding-followup:' },
+  stateKeys: { captureMode: 'capture-mode' },
 }));
 
 // --- Mocks for operator ---

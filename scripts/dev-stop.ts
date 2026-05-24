@@ -7,10 +7,10 @@ import { loadRootEnv, repoRoot } from './load-root-env';
 
 loadRootEnv();
 
-const DEFAULT_APP_PORT = 3001;
-const DEFAULT_API_PORT = 4444;
-const DEFAULT_DOCS_PORT = 3003;
-const DEFAULT_EXTENSION_PORT = 3020;
+const DEFAULT_APP_PORT = 3101;
+const DEFAULT_API_PORT = 3103;
+const DEFAULT_DOCS_PORT = 3102;
+const DEFAULT_EXTENSION_PORT = 3104;
 const DEV_STATE_PATH = path.join(repoRoot, 'packages/app/public/__coop_dev__/state.json');
 
 function parsePort(raw: string | undefined, fallback: number) {
@@ -119,11 +119,21 @@ async function main() {
   const patternPids = [
     ...listPatternPids(`${repoRoot}/packages/extension/node_modules/.bin/wxt`),
     ...listPatternPids('cloudflared tunnel run coop-api'),
-    ...listPatternPids('cloudflared tunnel --url http://127.0.0.1:3001'),
-    ...listPatternPids('cloudflared tunnel --url http://127.0.0.1:4444'),
+    ...listPatternPids('cloudflared tunnel --url http://127.0.0.1:3101'),
+    ...listPatternPids('cloudflared tunnel --url http://127.0.0.1:3103'),
   ];
 
-  const targets = [...new Set([...trackedPids, ...portPids, ...patternPids])];
+  const knownTargets = new Set([...trackedPids, ...patternPids]);
+  const unknownPortPids = [...new Set(portPids)].filter((pid) => !knownTargets.has(pid));
+  if (unknownPortPids.length > 0) {
+    console.warn(
+      `[dev:stop] Refusing to stop untracked port listener PID(s): ${unknownPortPids.join(
+        ', ',
+      )}. Stop them manually or use dev-surfaces status to inspect ownership.`,
+    );
+  }
+
+  const targets = [...knownTargets];
   if (targets.length === 0) {
     try {
       fs.rmSync(DEV_STATE_PATH, { force: true });

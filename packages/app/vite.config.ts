@@ -43,13 +43,13 @@ export default defineConfig({
     target: 'es2022',
   },
   server: {
-    port: 3001,
+    port: 3101,
     host: '0.0.0.0',
     strictPort: true,
     allowedHosts: ['local.coop.town'],
   },
   preview: {
-    port: 3001,
+    port: 3101,
     host: '0.0.0.0',
     strictPort: true,
   },

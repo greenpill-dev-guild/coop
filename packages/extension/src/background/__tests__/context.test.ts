@@ -40,6 +40,8 @@ const sharedMocks = vi.hoisted(() => ({
   getSoundPreferences: vi.fn(),
   getTrustedNodeArchiveConfig: vi.fn(),
   getUiPreferences: vi.fn(),
+  listAgentObservationsByStatus: vi.fn(async (): Promise<unknown[]> => []),
+  listReceiverPairings: vi.fn(async (): Promise<unknown[]> => []),
   mergeCoopArchiveConfig: vi.fn(
     (config: Record<string, unknown>, secrets: Record<string, unknown>) => ({
       ...config,
@@ -50,6 +52,7 @@ const sharedMocks = vi.hoisted(() => ({
   setSoundPreferences: vi.fn(async () => undefined),
   setTrustedNodeArchiveConfig: vi.fn(async () => undefined),
   setUiPreferences: vi.fn(async () => undefined),
+  selectActiveReceiverPairingsForSync: vi.fn((pairings: unknown[]) => pairings),
 }));
 
 const configMocks = vi.hoisted(() => ({
@@ -81,10 +84,13 @@ vi.mock('@coop/shared', async (importOriginal) => {
     getSoundPreferences: sharedMocks.getSoundPreferences,
     getTrustedNodeArchiveConfig: sharedMocks.getTrustedNodeArchiveConfig,
     getUiPreferences: sharedMocks.getUiPreferences,
+    listAgentObservationsByStatus: sharedMocks.listAgentObservationsByStatus,
+    listReceiverPairings: sharedMocks.listReceiverPairings,
     mergeCoopArchiveConfig: sharedMocks.mergeCoopArchiveConfig,
     setSoundPreferences: sharedMocks.setSoundPreferences,
     setTrustedNodeArchiveConfig: sharedMocks.setTrustedNodeArchiveConfig,
     setUiPreferences: sharedMocks.setUiPreferences,
+    selectActiveReceiverPairingsForSync: sharedMocks.selectActiveReceiverPairingsForSync,
   };
 });
 
@@ -129,6 +135,9 @@ describe('background context helpers', () => {
     sharedMocks.getCoopArchiveSecrets.mockResolvedValue({
       secret: 'coop-secret',
     });
+    sharedMocks.listAgentObservationsByStatus.mockResolvedValue([]);
+    sharedMocks.listReceiverPairings.mockResolvedValue([]);
+    sharedMocks.selectActiveReceiverPairingsForSync.mockImplementation((pairings) => pairings);
 
     Object.defineProperty(globalThis, 'navigator', {
       configurable: true,
@@ -311,6 +320,20 @@ describe('background context helpers', () => {
       reasons: ['WEB_RTC'],
       justification: 'Keep receiver and coop sync alive while the sidepanel is closed.',
     });
+  });
+
+  it('does not create the sync offscreen document when there is no active work', async () => {
+    await expect(context.ensureSyncOffscreenDocumentForActiveWork()).resolves.toBe(false);
+
+    expect(chrome.offscreen.createDocument).not.toHaveBeenCalled();
+  });
+
+  it('creates the sync offscreen document when active sync work exists', async () => {
+    sharedMocks.listReceiverPairings.mockResolvedValue([{ pairingId: 'pairing-1' }]);
+
+    await expect(context.ensureSyncOffscreenDocumentForActiveWork()).resolves.toBe(true);
+
+    expect(chrome.offscreen.hasDocument).toHaveBeenCalled();
   });
 
   it('prefers coop-specific archive config when local secrets exist and falls back otherwise', async () => {

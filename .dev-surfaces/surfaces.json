@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "project": {
+    "id": "coop",
+    "name": "Coop",
+    "root": "/Users/afo/Code/greenpill/coop"
+  },
+  "surfaces": [
+    {
+      "id": "app",
+      "name": "app / receiver PWA",
+      "kind": "ui",
+      "ports": [3101],
+      "command": ["bun", "run", "dev:app"],
+      "dependsOn": ["api"],
+      "urls": ["http://127.0.0.1:3101/", "http://127.0.0.1:3101/receiver"],
+      "health": [
+        {
+          "type": "http",
+          "url": "http://127.0.0.1:3101/"
+        }
+      ]
+    },
+    {
+      "id": "docs",
+      "name": "docs",
+      "kind": "docs",
+      "ports": [3102],
+      "command": ["bun", "run", "dev:docs"],
+      "urls": ["http://127.0.0.1:3102/"]
+    },
+    {
+      "id": "api",
+      "name": "API / signaling",
+      "kind": "api",
+      "ports": [3103],
+      "command": ["bun", "run", "dev:api"],
+      "urls": ["ws://127.0.0.1:3103"]
+    },
+    {
+      "id": "extension",
+      "name": "extension dev server, if bound",
+      "kind": "support-ui",
+      "ports": [3104],
+      "command": ["bun", "run", "dev:extension"],
+      "dependsOn": ["app", "api"],
+      "env": {
+        "COOP_DEV_APP_PORT": "3101",
+        "COOP_DEV_API_PORT": "3103",
+        "COOP_DEV_EXTENSION_PORT": "3104",
+        "VITE_COOP_RECEIVER_APP_URL": "http://127.0.0.1:3101",
+        "VITE_COOP_SIGNALING_URLS": "ws://127.0.0.1:3103"
+      },
+      "urls": [],
+      "autostart": false
+    }
+  ]
+}

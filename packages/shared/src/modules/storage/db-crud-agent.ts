@@ -318,8 +318,10 @@ export async function getAgentMemory(db: CoopDexie, memoryId: string) {
   return hydrateAgentMemoryRecord(db, await db.agentMemories.get(memoryId));
 }
 
-export async function listAgentMemories(db: CoopDexie) {
-  const memories = await db.agentMemories.orderBy('createdAt').reverse().toArray();
+export async function listAgentMemories(db: CoopDexie, limit?: number) {
+  const query = db.agentMemories.orderBy('createdAt').reverse();
+  const memories =
+    typeof limit === 'number' ? await query.limit(limit).toArray() : await query.toArray();
   const hydrated = await Promise.all(
     memories.map((memory) => hydrateAgentMemoryRecord(db, memory)),
   );

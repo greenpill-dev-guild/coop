@@ -590,7 +590,7 @@ export async function buildSummary(): Promise<{ summary: RuntimeSummary; drafts:
     observations,
     reviewItemFeedbacks,
   ] = await Promise.all([
-    listReviewDrafts(db),
+    listReviewDrafts(db, 250),
     getCoops(),
     getLocalSetting<RuntimeSummary['captureMode']>(stateKeys.captureMode, 'manual'),
     getRuntimeHealth(),
@@ -769,7 +769,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     reviewItemFeedbacks,
   ] = await Promise.all([
     getCoops(),
-    listReviewDrafts(db),
+    listReviewDrafts(db, 250),
     listTabCandidates(db, 200),
     listTabRoutings(db, { status: ['routed', 'drafted', 'published'], limit: 500 }),
     buildSummary(),

@@ -12,9 +12,9 @@ import { loadRootEnv, repoRoot } from './load-root-env';
 loadRootEnv();
 
 const LOCAL_HOST = '127.0.0.1';
-const DEFAULT_APP_PORT = 3001;
-const DEFAULT_API_PORT = 4444;
-const DEFAULT_DOCS_PORT = 3003;
+const DEFAULT_APP_PORT = 3101;
+const DEFAULT_API_PORT = 3103;
+const DEFAULT_DOCS_PORT = 3102;
 const EXTENSION_OUTPUT_DIR = resolveExtensionBuildDir(repoRoot);
 const EXTENSION_CHROME_DATA = path.join(repoRoot, 'packages/extension/.wxt/chrome-data');
 const DEV_STATE_DIR = path.join(repoRoot, 'packages/app/public/__coop_dev__');

@@ -28,11 +28,13 @@ import {
   alarmNames,
   db,
   getAgentOnboardingState,
+  getLocalSetting,
   notifyExtensionEvent,
   setAgentOnboardingState,
+  stateKeys,
 } from '../context';
 import { getTrustedNodeContext } from '../operator';
-import { getAgentAutoRunSkillIds } from './agent-cycle-helpers';
+import { drainAgentCycles, getAgentAutoRunSkillIds } from './agent-cycle-helpers';
 
 function summarizePromotionBenchmarkEvidence(
   record: Awaited<
@@ -93,7 +95,7 @@ async function getAgentDashboard(): Promise<AgentDashboardResponse> {
     listAgentPlans(db, 80),
     listSkillRuns(db, 120),
     getAgentAutoRunSkillIds(),
-    listReviewDrafts(db),
+    listReviewDrafts(db, 200),
     listReceiverCaptures(db),
     getTrustedNodeContext(),
     getWebLlmProviderPromotionState(db),
@@ -139,7 +141,7 @@ type ProactiveSnapshot = {
 async function captureProactiveSnapshot(): Promise<ProactiveSnapshot> {
   const [routings, drafts, actionBundles] = await Promise.all([
     listTabRoutings(db, { status: ['routed', 'drafted'], limit: 500 }),
-    listReviewDrafts(db),
+    listReviewDrafts(db, 200),
     listActionBundles(db),
   ]);
 
@@ -286,8 +288,17 @@ async function notifyProactiveDelta(input: {
 
 export async function runProactiveAgentCycle(input: { reason: string; onboardingKey?: string }) {
   const before = await captureProactiveSnapshot();
-  const { runCaptureCycle } = await import('./capture');
-  await runCaptureCycle();
+  const captureMode = await getLocalSetting(stateKeys.captureMode, 'manual');
+  if (captureMode === 'manual') {
+    await drainAgentCycles({
+      reason: input.reason,
+      maxPasses: 2,
+      syncBetweenPasses: true,
+    });
+  } else {
+    const { runCaptureCycle } = await import('./capture');
+    await runCaptureCycle();
+  }
   const after = await captureProactiveSnapshot();
   const delta = diffProactiveSnapshot(before, after);
   await notifyProactiveDelta({

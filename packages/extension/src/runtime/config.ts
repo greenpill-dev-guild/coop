@@ -47,7 +47,7 @@ export function resolveArchiveGatewayUrl(raw?: string) {
 }
 
 export function resolveReceiverAppUrl(raw?: string) {
-  return raw ?? 'http://127.0.0.1:3001';
+  return raw ?? 'http://127.0.0.1:3101';
 }
 
 export function resolveConfiguredPrivacyMode(raw?: string): 'off' | 'on' {

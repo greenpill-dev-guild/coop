@@ -253,6 +253,7 @@ vi.mock('@coop/shared', () => ({
   getPageExtract: mockGetPageExtract,
   getSkillRun: mockGetSkillRun,
   getTabRoutingByExtractAndCoop: mockGetTabRoutingByExtractAndCoop,
+  getUiPreferences: vi.fn(async () => ({ localInferenceOptIn: true })),
   listReviewDrafts: mockListReviewDrafts,
   listTabRoutings: mockListTabRoutings,
   queryMemoriesForSkill: mockQueryMemoriesForSkill,

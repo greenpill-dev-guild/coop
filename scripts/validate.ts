@@ -117,6 +117,26 @@ const suites: Record<string, Suite> = {
       'Focused extension sync browser coverage for popup sync resilience and degraded-state recovery.',
     steps: [{ label: 'e2e:sync', command: ['bun', 'run', 'test:e2e:sync'] }],
   },
+  'profile:extension-memory-smoke': {
+    description: 'Short idle extension memory profile that samples diagnostics and trend budgets.',
+    steps: [
+      {
+        label: 'profile:extension-memory-smoke',
+        command: [
+          'bun',
+          'run',
+          'profile:extension-memory',
+          '--',
+          '--profile',
+          'idle',
+          '--duration',
+          '75s',
+          '--sample-ms',
+          '5000',
+        ],
+      },
+    ],
+  },
   'unit:popup-actions': {
     description:
       'Popup action matrix coverage for popup flows, capture preflight, and popup-specific state transitions.',
@@ -258,6 +278,10 @@ const suites: Record<string, Suite> = {
     description:
       'Sync hardening validation: targeted sync unit coverage plus browser sync rehearsal.',
     includes: ['unit:sync-hardening', 'e2e:sync'],
+  },
+  'extension-memory-smoke': {
+    description: 'Extension memory diagnostics smoke: extension build plus short idle profile.',
+    includes: ['build:extension', 'profile:extension-memory-smoke'],
   },
   'onchain-ui': {
     description:

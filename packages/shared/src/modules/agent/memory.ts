@@ -179,7 +179,7 @@ export async function queryRecentMemories(
   options?: { limit?: number; domain?: string; type?: AgentMemory['type'] },
 ): Promise<AgentMemory[]> {
   const limit = options?.limit ?? 10;
-  let results = filterMemoriesByScope(await listAgentMemories(db), scope);
+  let results = filterMemoriesByScope(await listAgentMemories(db, Math.max(limit * 8, 80)), scope);
 
   if (options?.domain) {
     results = results.filter((m) => m.domain === options.domain);

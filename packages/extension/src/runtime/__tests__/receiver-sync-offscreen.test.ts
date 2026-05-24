@@ -308,9 +308,7 @@ describe('receiver sync offscreen runtime', () => {
         transport: 'websocket',
       }),
     });
-    expect(runtimeMocks.runAgentCycle).toHaveBeenCalledWith({
-      reason: 'offscreen-ready',
-    });
+    expect(runtimeMocks.runAgentCycle).not.toHaveBeenCalled();
     expect(onUnload).not.toBeNull();
     expect(onRuntimeMessage).not.toBeNull();
 
@@ -333,7 +331,7 @@ describe('receiver sync offscreen runtime', () => {
       },
     });
 
-    expect(runtimeMocks.runAgentCycle).toHaveBeenNthCalledWith(2, {
+    expect(runtimeMocks.runAgentCycle).toHaveBeenNthCalledWith(1, {
       force: true,
       reason: 'receiver-sync-refresh',
     });

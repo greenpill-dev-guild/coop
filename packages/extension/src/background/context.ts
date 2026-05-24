@@ -80,11 +80,14 @@ export type {
 
 export {
   ensureCoopSyncOffscreenDocument,
+  ensureSyncOffscreenDocumentForActiveWork,
   hasReceiverSyncOffscreenDocument,
   ensureReceiverSyncOffscreenDocument,
+  getAgentRuntimeDiagnostics,
   getCoopSyncConfig,
   getCoopSyncRuntime,
   getReceiverSyncRuntime,
+  reportAgentRuntimeDiagnostics,
   reportCoopSyncRuntime,
   reportReceiverSyncRuntime,
 } from './context-receiver';

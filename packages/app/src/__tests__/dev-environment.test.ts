@@ -13,19 +13,19 @@ const baseState: DevEnvironmentState = {
   updatedAt: '2026-03-20T12:00:00.000Z',
   accessToken: 'COOP1234',
   app: {
-    localUrl: 'http://127.0.0.1:3001',
+    localUrl: 'http://127.0.0.1:3101',
     publicUrl: 'https://coop-dev.trycloudflare.com',
     qrUrl: 'https://coop-dev.trycloudflare.com/?coop-dev-token=COOP1234',
     status: 'ready',
   },
   api: {
-    localUrl: 'http://127.0.0.1:4444',
+    localUrl: 'http://127.0.0.1:3103',
     websocketUrl: 'wss://signal-dev.trycloudflare.com',
     publicUrl: 'https://signal-dev.trycloudflare.com',
     status: 'ready',
   },
   docs: {
-    localUrl: 'http://127.0.0.1:3003',
+    localUrl: 'http://127.0.0.1:3102',
     status: 'ready',
   },
   extension: {

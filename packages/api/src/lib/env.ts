@@ -5,7 +5,7 @@ export interface ServerEnv {
 
 export function loadEnv(): ServerEnv {
   const rawPort = process.env.PORT?.trim();
-  const port = Number(rawPort || 4444);
+  const port = Number(rawPort || 3103);
   if (Number.isNaN(port) || port < 0 || port > 65535) {
     throw new Error(`Invalid PORT: ${process.env.PORT}`);
   }

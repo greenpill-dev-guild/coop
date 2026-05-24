@@ -78,9 +78,9 @@ export async function reconcileAgentObservations(input: {
 export async function syncAgentObservations() {
   const [coops, drafts, receiverCaptures, memories] = await Promise.all([
     getCoops(),
-    listReviewDrafts(db),
+    listReviewDrafts(db, 250),
     listReceiverCaptures(db),
-    listAgentMemories(db),
+    listAgentMemories(db, 250),
   ]);
 
   await reconcileAgentObservations({

@@ -94,7 +94,7 @@ describe('filterUsableSignalingUrls', () => {
   });
 
   it('keeps ws:// URLs', () => {
-    expect(filterUsableSignalingUrls(['ws://localhost:4444'])).toEqual(['ws://localhost:4444']);
+    expect(filterUsableSignalingUrls(['ws://localhost:3103'])).toEqual(['ws://localhost:3103']);
   });
 
   it('keeps wss:// URLs', () => {

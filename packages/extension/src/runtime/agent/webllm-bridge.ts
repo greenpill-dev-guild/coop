@@ -40,6 +40,7 @@ export class AgentWebLlmBridge {
   private initProgress = 0;
   private initMessage = '';
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleDeadlineAt: string | undefined;
 
   get status() {
     return {
@@ -48,6 +49,9 @@ export class AgentWebLlmBridge {
       initMessage: this.initMessage,
       error: this.lastError,
       model: WEBLLM_MODEL_ID,
+      initialized: Boolean(this.enginePromise),
+      workerActive: Boolean(this.worker),
+      idleDeadlineAt: this.idleDeadlineAt,
     };
   }
 
@@ -141,6 +145,7 @@ export class AgentWebLlmBridge {
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
     }
+    this.idleDeadlineAt = new Date(Date.now() + WEBLLM_IDLE_TIMEOUT_MS).toISOString();
     this.idleTimer = setTimeout(() => {
       this.teardown();
     }, WEBLLM_IDLE_TIMEOUT_MS);
@@ -152,6 +157,7 @@ export class AgentWebLlmBridge {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
+    this.idleDeadlineAt = undefined;
     this.worker?.terminate();
     this.worker = null;
     this.enginePromise = null;

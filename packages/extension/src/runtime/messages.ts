@@ -228,14 +228,21 @@ export interface ReceiverSyncRuntimeStatus {
   lastRefreshedAt?: string;
   lastBindingCreatedAt?: string;
   lastBindingDisconnectedAt?: string;
+  lastDisconnectReason?: string;
   lastDocUpdateAt?: string;
   lastEnvelopeCount?: number;
   lastIngestAttemptAt?: string;
   lastIngestSuccessAt?: string;
+  lastRefreshDurationMs?: number;
   lastError?: string;
   transport?: 'none' | 'indexeddb-only' | 'webrtc' | 'websocket';
   hasWebSocket?: boolean;
   hasRtcPeerConnection?: boolean;
+  bindingCount?: number;
+  timerCount?: number;
+  providerCount?: number;
+  docBytes?: number;
+  pendingQueueCount?: number;
   activePairingIds: string[];
   activeBindingKeys: string[];
 }
@@ -262,9 +269,11 @@ export interface CoopSyncRuntimeStatus {
   lastRefreshedAt?: string;
   lastBindingCreatedAt?: string;
   lastBindingDisconnectedAt?: string;
+  lastDisconnectReason?: string;
   lastDocUpdateAt?: string;
   lastPersistAt?: string;
   lastCompactionAt?: string;
+  lastRefreshDurationMs?: number;
   lastError?: string;
   mode?: 'none' | 'indexeddb-only' | 'webrtc' | 'websocket' | 'degraded';
   configuredSignalingCount?: number;
@@ -275,8 +284,83 @@ export interface CoopSyncRuntimeStatus {
   directPeerAvailable?: boolean;
   docBytes?: number;
   pendingUpdateCount?: number;
+  bindingCount?: number;
+  timerCount?: number;
+  providerCount?: number;
   activeCoopIds: string[];
   activeBindingKeys: string[];
+}
+
+export interface AgentRuntimeDiagnostics {
+  running: boolean;
+  lastStartedAt?: string;
+  lastCompletedAt?: string;
+  lastError?: string;
+  lastRequestId?: string;
+  lastRequestAt?: string;
+  lastReason?: string;
+  lastDurationMs?: number;
+  pendingObservationCount: number;
+  selectedProvider?: string;
+  modelStatus: {
+    transformers: {
+      ready: boolean;
+      initializing: boolean;
+      model: string;
+    };
+    webllm: {
+      ready: boolean;
+      initialized: boolean;
+      workerActive: boolean;
+      idleDeadlineAt?: string;
+      model?: string;
+      error?: string;
+    };
+    gemma4: {
+      ready: boolean;
+      initialized: boolean;
+      iframeActive: boolean;
+      idleDeadlineAt?: string;
+      model?: string;
+      error?: string;
+    };
+  };
+}
+
+export interface PerformanceDiagnosticsResponse {
+  timestamp: string;
+  extensionVersion?: string;
+  uiPreferences: Pick<
+    UiPreferences,
+    'agentCadenceMinutes' | 'localInferenceOptIn' | 'heartbeatEnabled' | 'captureOnClose'
+  > & {
+    captureMode: CaptureMode;
+  };
+  alarms: Array<{
+    name: string;
+    scheduledTime?: number;
+    periodInMinutes?: number;
+  }>;
+  offscreen: {
+    supported: boolean;
+    present: boolean;
+  };
+  receiverSync: ReceiverSyncRuntimeStatus;
+  coopSync: CoopSyncRuntimeStatus;
+  agent: AgentRuntimeDiagnostics;
+  storage: {
+    tableCounts: Record<string, number>;
+    graphSnapshots: {
+      count: number;
+      latestUpdatedAt?: string;
+    };
+  };
+  recentEvents: Array<{
+    source: 'background' | 'receiver-sync' | 'coop-sync' | 'agent';
+    type: string;
+    at: string;
+    detail?: string;
+  }>;
 }
 
 export interface PopupPreparedCapture {
@@ -357,6 +441,7 @@ export type RuntimeRequest =
   | { type: 'get-receiver-sync-runtime' }
   | { type: 'get-coop-sync-config' }
   | { type: 'get-coop-sync-runtime' }
+  | { type: 'get-performance-diagnostics' }
   | { type: 'manual-capture' }
   | {
       type: 'capture-active-tab';
@@ -637,6 +722,10 @@ export type RuntimeRequest =
   | {
       type: 'report-receiver-sync-runtime';
       payload: Partial<ReceiverSyncRuntimeStatus>;
+    }
+  | {
+      type: 'report-agent-runtime-diagnostics';
+      payload: Partial<AgentRuntimeDiagnostics>;
     }
   | {
       type: 'set-local-inference-opt-in';

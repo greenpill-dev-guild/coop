@@ -306,7 +306,7 @@ describe('landing page', () => {
             status: 'ready',
           },
           api: {
-            localUrl: 'http://127.0.0.1:4444',
+            localUrl: 'http://127.0.0.1:3103',
             websocketUrl: 'wss://signal-dev.trycloudflare.com',
             publicUrl: 'https://signal-dev.trycloudflare.com',
             status: 'ready',

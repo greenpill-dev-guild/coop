@@ -71,6 +71,9 @@ export type Gemma4BridgeStatus = {
   initMessage: string;
   error: string | undefined;
   model: string;
+  initialized: boolean;
+  iframeActive: boolean;
+  idleDeadlineAt?: string;
 };
 
 export class AgentGemma4Bridge {
@@ -97,6 +100,7 @@ export class AgentGemma4Bridge {
     }
   >();
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleDeadlineAt: string | undefined;
   private epoch = 0;
 
   get status(): Gemma4BridgeStatus {
@@ -106,6 +110,9 @@ export class AgentGemma4Bridge {
       initMessage: this.initMessage,
       error: this.lastError,
       model: this.modelId,
+      initialized: Boolean(this.initPromise),
+      iframeActive: Boolean(this.iframe),
+      idleDeadlineAt: this.idleDeadlineAt,
     };
   }
 
@@ -300,6 +307,7 @@ export class AgentGemma4Bridge {
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
     }
+    this.idleDeadlineAt = new Date(Date.now() + GEMMA4_IDLE_TIMEOUT_MS).toISOString();
     this.idleTimer = setTimeout(() => {
       this.teardown();
     }, GEMMA4_IDLE_TIMEOUT_MS);
@@ -311,6 +319,7 @@ export class AgentGemma4Bridge {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
+    this.idleDeadlineAt = undefined;
     for (const [, inflight] of this.inflight) {
       inflight.reject(new Error('Gemma4 sandbox torn down before completion.'));
     }

@@ -15,6 +15,7 @@ import {
   createSkillRun,
   failAgentPlan,
   failSkillRun,
+  getUiPreferences,
   listAgentObservations,
   nowIso,
   saveAgentObservation,
@@ -39,6 +40,7 @@ import {
   logSkillFailed,
   logSkillStart,
 } from './logger';
+import { teardownAgentModels } from './models';
 import { applySkillOutput } from './output-handlers';
 import { resolvePreferredProvider } from './provider-promotion';
 import { computeOutputConfidence } from './quality';
@@ -107,6 +109,11 @@ export async function runObservationPlan(
   }
 
   const autoRunSkillIds = new Set(await getAutoRunSkillIds());
+  const uiPreferences = await getUiPreferences(db);
+  const localInferenceEnabled = uiPreferences?.localInferenceOptIn !== false;
+  if (!localInferenceEnabled) {
+    teardownAgentModels();
+  }
   const skillIds = selectSkillIdsForObservation(
     observation,
     listRegisteredSkills().map((entry) => entry.manifest),
@@ -122,6 +129,9 @@ export async function runObservationPlan(
     }
   }
   const getPreferredProvider = (skillId: string) => {
+    if (!localInferenceEnabled) {
+      return 'heuristic';
+    }
     const preferredProvider = preferredProviders.get(skillId);
     if (preferredProvider) {
       return preferredProvider;

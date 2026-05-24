@@ -64,7 +64,7 @@ async function seedActivePairing() {
     coopDisplayName: 'Root Coop',
     memberId: 'mina',
     memberDisplayName: 'Mina',
-    signalingUrls: ['ws://127.0.0.1:4444'],
+    signalingUrls: ['ws://127.0.0.1:3103'],
   });
   const pairing = toReceiverPairingRecord(payload, '2026-03-17T12:00:00.000Z');
   await upsertReceiverPairing(receiverDb, pairing);
@@ -119,7 +119,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /no more chickens loose\./i,
+        name: /no more\s+chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -142,7 +142,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /no more chickens loose\./i,
+        name: /no more\s+chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -165,7 +165,7 @@ describe('root routing bootstrap', () => {
     });
     expect(
       await screen.findByRole('heading', {
-        name: /no more chickens loose\./i,
+        name: /no more\s+chickens loose\./i,
       }),
     ).toBeVisible();
     await waitFor(() => {
@@ -222,7 +222,7 @@ describe('root routing bootstrap', () => {
     expect(screen.queryByRole('heading', { name: /^Hatch$/i })).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', {
-        name: /no more chickens loose\./i,
+        name: /no more\s+chickens loose\./i,
       }),
     ).toBeVisible();
   });

@@ -137,7 +137,7 @@ bun run dev:stop
 Expected surfaces:
 
 - App / receiver PWA: `http://127.0.0.1:3001` or `https://local.coop.town`
-- Signaling: `ws://127.0.0.1:4444` or `wss://dev-api.coop.town`
+- Signaling: `ws://127.0.0.1:3103` or `wss://dev-api.coop.town`
 - Production fallback signaling: `wss://api.coop.town`
 - Extension bundle: `packages/extension/dist/chrome-mv3`
 

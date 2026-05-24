@@ -298,7 +298,9 @@ export async function getTabCandidate(db: CoopDexie, candidateId: string) {
 }
 
 export async function listTabCandidates(db: CoopDexie, limit?: number) {
-  const candidates = await db.tabCandidates.orderBy('capturedAt').reverse().toArray();
+  const query = db.tabCandidates.orderBy('capturedAt').reverse();
+  const candidates =
+    typeof limit === 'number' ? await query.limit(limit).toArray() : await query.toArray();
   const hydrated = await Promise.all(
     candidates.map((candidate) => hydrateTabCandidateRecord(db, candidate)),
   );
@@ -401,8 +403,10 @@ export async function getPageExtract(db: CoopDexie, extractId: string) {
   return hydratePageExtractRecord(db, await db.pageExtracts.get(extractId));
 }
 
-export async function listPageExtracts(db: CoopDexie) {
-  const extracts = await db.pageExtracts.orderBy('createdAt').reverse().toArray();
+export async function listPageExtracts(db: CoopDexie, limit?: number) {
+  const query = db.pageExtracts.orderBy('createdAt').reverse();
+  const extracts =
+    typeof limit === 'number' ? await query.limit(limit).toArray() : await query.toArray();
   const hydrated = await Promise.all(
     extracts.map((extract) => hydratePageExtractRecord(db, extract)),
   );
@@ -485,8 +489,10 @@ export async function getReviewDraft(db: CoopDexie, draftId: string) {
   return hydrateReviewDraftRecord(db, await db.reviewDrafts.get(draftId));
 }
 
-export async function listReviewDrafts(db: CoopDexie) {
-  const drafts = await db.reviewDrafts.orderBy('createdAt').reverse().toArray();
+export async function listReviewDrafts(db: CoopDexie, limit?: number) {
+  const query = db.reviewDrafts.orderBy('createdAt').reverse();
+  const drafts =
+    typeof limit === 'number' ? await query.limit(limit).toArray() : await query.toArray();
   const hydrated = await Promise.all(drafts.map((draft) => hydrateReviewDraftRecord(db, draft)));
   return hydrated.filter((draft): draft is ReviewDraft => Boolean(draft));
 }

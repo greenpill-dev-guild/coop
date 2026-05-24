@@ -20,6 +20,7 @@ import {
   recentQualityAverage,
 } from './config';
 import { logCycleEnd, logCycleStart } from './logger';
+import { getAgentModelDiagnostics } from './models';
 import {
   isObservationRunnableForAuthorizedCoops,
   prioritizeObservations,
@@ -86,6 +87,23 @@ export {
   inferTabRoutingsHeuristically,
 } from './runner-inference';
 
+async function reportAgentRuntimeDiagnostics(patch: Record<string, unknown>) {
+  if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+    return;
+  }
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'report-agent-runtime-diagnostics',
+      payload: {
+        ...patch,
+        modelStatus: getAgentModelDiagnostics(),
+      },
+    });
+  } catch {
+    // Diagnostics should never affect the agent loop.
+  }
+}
+
 export async function runAgentCycle(options: { force?: boolean; reason?: string } = {}) {
   const cycleState = await getCycleState();
   if (cycleState.running) {
@@ -115,6 +133,11 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     listAgentObservationsByStatus(db, ['pending']),
   ]);
   if (!options.force && pendingObservations.length === 0 && !request) {
+    void reportAgentRuntimeDiagnostics({
+      running: false,
+      lastReason: options.reason ?? 'scheduled',
+      pendingObservationCount: pendingObservations.length,
+    });
     return {
       processedObservationIds: [],
       createdPlanIds: [],
@@ -128,13 +151,22 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
 
   const cycleStart = Date.now();
   const traceId = await logCycleStart(pendingObservations.length);
+  const cycleStartedAt = nowIso();
 
   await setCycleState({
     running: true,
-    lastStartedAt: nowIso(),
+    lastStartedAt: cycleStartedAt,
     lastRequestId: request?.id,
     lastRequestAt: request?.requestedAt,
     lastError: undefined,
+  });
+  void reportAgentRuntimeDiagnostics({
+    running: true,
+    lastStartedAt: cycleStartedAt,
+    lastRequestId: request?.id,
+    lastRequestAt: request?.requestedAt,
+    lastReason: options.reason ?? 'scheduled',
+    pendingObservationCount: pendingObservations.length,
   });
   void notifyAgentEvent({
     type: 'AGENT_CYCLE_STARTED',
@@ -275,14 +307,23 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
     }
     const updatedQualityTrend = computeQualityTrend(updatedQualityScores);
 
+    const completedAt = nowIso();
+    const remainingPending = await listAgentObservationsByStatus(db, ['pending']);
     await setCycleState({
       running: false,
-      lastCompletedAt: nowIso(),
+      lastCompletedAt: completedAt,
       lastError: result.errors[0],
       consecutiveFailureCount:
         result.errors.length > 0 ? (cycleState.consecutiveFailureCount ?? 0) + 1 : 0,
       recentQualityScores: updatedQualityScores,
       qualityTrend: updatedQualityTrend,
+    });
+    void reportAgentRuntimeDiagnostics({
+      running: false,
+      lastCompletedAt: completedAt,
+      lastError: result.errors[0],
+      lastDurationMs: result.totalDurationMs ?? 0,
+      pendingObservationCount: remainingPending.length,
     });
     if (request) {
       await setSetting(AGENT_SETTING_KEYS.cycleRequest, null);
@@ -292,7 +333,6 @@ export async function runAgentCycle(options: { force?: boolean; reason?: string 
       errorCount: result.errors.length,
       durationMs: result.totalDurationMs,
     });
-    const remainingPending = await listAgentObservationsByStatus(db, ['pending']);
     if (
       remainingPending.some((observation) =>
         isObservationRunnableForAuthorizedCoops({

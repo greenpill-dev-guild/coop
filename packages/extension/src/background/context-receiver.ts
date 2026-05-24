@@ -4,11 +4,18 @@ import {
   getAuthSession,
   hydrateSyncRoomWithSecret,
   isRedactedSyncRoomSecret,
+  listAgentObservationsByStatus,
+  listReceiverPairings,
   listRetiredSyncRoomSecretRecords,
   redactSyncRoomSecrets,
+  selectActiveReceiverPairingsForSync,
   syncRoomSecretRecordToConfig,
 } from '@coop/shared';
-import type { CoopSyncRuntimeStatus, ReceiverSyncRuntimeStatus } from '../runtime/messages';
+import type {
+  AgentRuntimeDiagnostics,
+  CoopSyncRuntimeStatus,
+  ReceiverSyncRuntimeStatus,
+} from '../runtime/messages';
 import { configuredReceiverAppUrl, configuredWebsocketSyncUrl } from './context-config';
 import { db, getCoops, getLocalSetting, saveState, setLocalSetting, stateKeys } from './context-db';
 
@@ -43,6 +50,20 @@ export function getRequiredReceiverPermissionOrigins(receiverAppUrl = configured
 // ---- Offscreen Document ----
 
 let receiverSyncDocumentPromise: Promise<void> | null = null;
+
+async function hasActiveOffscreenWork() {
+  const [pairings, coops, pendingObservations] = await Promise.all([
+    listReceiverPairings(db),
+    getCoops(),
+    listAgentObservationsByStatus(db, ['pending']),
+  ]);
+
+  return {
+    activeReceiverPairingCount: selectActiveReceiverPairingsForSync(pairings).length,
+    syncableCoopCount: coops.length,
+    pendingObservationCount: pendingObservations.length,
+  };
+}
 
 export async function hasReceiverSyncOffscreenDocument(
   offscreenApi: typeof chrome.offscreen & {
@@ -106,6 +127,40 @@ export async function ensureReceiverSyncOffscreenDocument() {
 
 export const ensureCoopSyncOffscreenDocument = ensureReceiverSyncOffscreenDocument;
 
+export async function ensureSyncOffscreenDocumentForActiveWork() {
+  const work = await hasActiveOffscreenWork();
+  if (
+    work.activeReceiverPairingCount === 0 &&
+    work.syncableCoopCount === 0 &&
+    work.pendingObservationCount === 0
+  ) {
+    await Promise.all([
+      reportReceiverSyncRuntime({
+        activePairingIds: [],
+        activeBindingKeys: [],
+        bindingCount: 0,
+        providerCount: 0,
+        timerCount: 0,
+        transport: 'none',
+        lastDisconnectReason: 'no-active-work',
+      }),
+      reportCoopSyncRuntime({
+        activeCoopIds: [],
+        activeBindingKeys: [],
+        bindingCount: 0,
+        providerCount: 0,
+        timerCount: 0,
+        mode: 'none',
+        lastDisconnectReason: 'no-active-work',
+      }),
+    ]);
+    return false;
+  }
+
+  await ensureReceiverSyncOffscreenDocument();
+  return true;
+}
+
 // ---- Receiver Sync Runtime ----
 
 export async function getReceiverSyncRuntime() {
@@ -147,6 +202,64 @@ export async function reportCoopSyncRuntime(patch: Partial<CoopSyncRuntimeStatus
     activeBindingKeys: patch.activeBindingKeys ?? current.activeBindingKeys,
   } satisfies CoopSyncRuntimeStatus;
   await setLocalSetting(stateKeys.coopSyncRuntime, next);
+  return next;
+}
+
+export async function getAgentRuntimeDiagnostics() {
+  const pendingObservationCount = await listAgentObservationsByStatus(db, ['pending']).then(
+    (items) => items.length,
+  );
+  const current = await getLocalSetting<Partial<AgentRuntimeDiagnostics>>(
+    stateKeys.agentRuntimeDiagnostics,
+    {},
+  );
+  return {
+    running: current.running ?? false,
+    modelStatus: current.modelStatus ?? {
+      transformers: {
+        ready: false,
+        initializing: false,
+        model: 'onnx-community/Qwen2.5-0.5B-Instruct',
+      },
+      webllm: {
+        ready: false,
+        initialized: false,
+        workerActive: false,
+      },
+      gemma4: {
+        ready: false,
+        initialized: false,
+        iframeActive: false,
+      },
+    },
+    ...current,
+    pendingObservationCount,
+  } satisfies AgentRuntimeDiagnostics;
+}
+
+export async function reportAgentRuntimeDiagnostics(patch: Partial<AgentRuntimeDiagnostics>) {
+  const current = await getAgentRuntimeDiagnostics();
+  const next = {
+    ...current,
+    ...patch,
+    modelStatus: {
+      ...current.modelStatus,
+      ...patch.modelStatus,
+      transformers: {
+        ...current.modelStatus.transformers,
+        ...patch.modelStatus?.transformers,
+      },
+      webllm: {
+        ...current.modelStatus.webllm,
+        ...patch.modelStatus?.webllm,
+      },
+      gemma4: {
+        ...current.modelStatus.gemma4,
+        ...patch.modelStatus?.gemma4,
+      },
+    },
+  } satisfies AgentRuntimeDiagnostics;
+  await setLocalSetting(stateKeys.agentRuntimeDiagnostics, next);
   return next;
 }
 
