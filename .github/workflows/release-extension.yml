@@ -60,14 +60,18 @@ jobs:
 
       - name: Upload to Chrome Web Store
         if: >
-          (github.ref_type == 'tag' || github.event.inputs.publish == 'true')
-          && secrets.CHROME_EXTENSION_ID != ''
+          github.ref_type == 'tag' || github.event.inputs.publish == 'true'
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
+          if [ -z "${EXTENSION_ID}" ]; then
+            echo "Chrome Web Store upload skipped because CHROME_EXTENSION_ID is not configured."
+            exit 0
+          fi
+
           # Get access token
           ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
             -d "client_id=${CLIENT_ID}" \
