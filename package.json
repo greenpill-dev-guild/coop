@@ -4,6 +4,9 @@
   "type": "module",
   "packageManager": "bun@1.3.10",
   "workspaces": ["packages/*", "docs"],
+  "overrides": {
+    "protobufjs": "7.5.9"
+  },
   "scripts": {
     "dev": "bun run ./scripts/dev.ts",
     "dev:stop": "bun run ./scripts/dev-stop.ts",
