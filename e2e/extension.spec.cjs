@@ -580,7 +580,7 @@ async function waitForActionBundle(page, select, timeoutMs = 30000, label = 'act
 async function launchExtensionProfile(userDataDir) {
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
-    headless: true,
+    headless: process.env.COOP_EXTENSION_E2E_HEADLESS === '1',
     args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
   });
 
