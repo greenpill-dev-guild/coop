@@ -29,6 +29,7 @@ Stable fallback path: `/Users/afo/Code/dev-surfaces/bin/dev-surfaces.js`.
 - Default real-browser proof should use Brave or another Chromium-family browser on this machine.
 - Keep receiver PWA and signaling URLs aligned when launching the extension surface.
 - `app` depends on `api`, and `extension` depends on both, so the workbench brings signaling up before UI review surfaces that need it.
+- Docs require Node 20+; the repo scripts prepend `mise where node@22` before running Docusaurus so agent shells do not fall back to system Node 18.
 - After changing local port docs or dev scripts, run `dev-surfaces doctor`.
 
 Never kill unknown port occupants. If a port is busy and not owned by dev-surfaces, report the PID/command and ask for direction.

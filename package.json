@@ -15,7 +15,7 @@
     "dev:extension": "sh -lc 'cd packages/extension && bun run dev'",
     "dev:extension:local-live-sepolia": "bun run ./scripts/run-with-env-profile.ts local-live-sepolia -- sh -lc 'cd packages/extension && bun run dev'",
     "dev:api": "sh -lc 'HOST=127.0.0.1 PORT=${COOP_DEV_API_PORT:-3103} bun run --filter @coop/api dev'",
-    "dev:docs": "sh -lc 'mise exec -- bun run --filter @coop/docs start --host 127.0.0.1 --port ${COOP_DEV_DOCS_PORT:-3102} --no-open'",
+    "dev:docs": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs start --host 127.0.0.1 --port ${COOP_DEV_DOCS_PORT:-3102} --no-open'",
     "build:public-release": "bun run ./scripts/run-with-env-profile.ts public-release -- bun run build",
     "build:operator-live": "bun run ./scripts/run-with-env-profile.ts operator-live -- bun run build",
     "build:local-live-sepolia": "bun run ./scripts/run-with-env-profile.ts local-live-sepolia -- bun run build",
@@ -138,9 +138,9 @@
     "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/app/tsconfig.json && tsc --noEmit -p packages/extension/tsconfig.json",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "docs:dev": "sh -lc 'mise exec -- bun run --filter @coop/docs start --host 127.0.0.1 --port ${COOP_DEV_DOCS_PORT:-3102} --no-open'",
-    "docs:build": "mise exec -- bun run --filter @coop/docs build",
-    "docs:serve": "mise exec -- bun run --filter @coop/docs serve",
+    "docs:dev": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs start --host 127.0.0.1 --port ${COOP_DEV_DOCS_PORT:-3102} --no-open'",
+    "docs:build": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs build'",
+    "docs:serve": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs serve'",
     "postinstall": "sh -lc 'cd packages/extension && bun run prepare'"
   },
   "devDependencies": {
