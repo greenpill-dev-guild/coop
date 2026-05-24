@@ -1150,6 +1150,7 @@ test.describe('extension workflow', () => {
         knowledgePain: 'The real sidepanel path is easy to under-test.',
         knowledgeImprove: 'Capture the browser path in automated release checks.',
       });
+      await setSidepanelUiMode(creatorProfile.page, 'advanced');
       await waitForDashboardValue(
         creatorProfile.page,
         (dashboard) =>
