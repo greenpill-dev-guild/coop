@@ -190,6 +190,8 @@ This file is the canonical Coop core DesignMD source. Use it with the surface di
 
 The shipped runtime token source remains `packages/shared/src/styles/tokens.css`; when a token changes, update this file and the runtime CSS together. Docs mirror a subset in `docs/src/css/custom.css`.
 
+**Extension dialect gap:** Popup and Sidepanel currently inherit this core file plus `packages/shared/src/styles/tokens.css` and `packages/extension/src/global.css`. Do not create a new extension DesignMD dialect until it can be grounded in stable Popup/Sidepanel primitives, tab density, compact card states, and browser-extension constraints. The follow-up dialect should cover Popup, Sidepanel, onboarding, review, and extension empty/error states without redefining the Coop core palette or token names.
+
 ## Colors
 
 - **Primary / Coop Brown (#4f2e1f):** Primary text, wordmark color, dense UI chrome, filled primary actions, and serious governance/review surfaces.
