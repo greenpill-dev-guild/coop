@@ -1,6 +1,6 @@
 # Coop
 
-![Coop No more Chickens running loose](https://media.discordapp.net/attachments/1334366927094677575/1483276398956118127/signal-2026-03-11-173838.png?ex=69ba004b&is=69b8aecb&hm=f30d70ad2b2baa3c187601210d55b7a80b89a1e5b4cd9406b45f2f6105535d73&=&format=webp&quality=lossless&width=2240&height=298)
+![Coop cover banner: no more chickens running loose](./docs/assets/branding/coop-cover-banner.png)
 
 **A browser-first, local-first extension and companion receiver PWA for capture, review, local AI refinement, and shared coop memory.**
 
@@ -176,3 +176,7 @@ formation need to stay connected without centralizing raw context on a server-fi
 The product uses chicken metaphors throughout. Open browser tabs are **Loose Chickens**. The review
 queue is **Chickens**. The shared feed is the **Coop Feed**. Creating a new shared space is
 **Launching the Coop**. The success chime is the **Rooster Call**.
+
+<p align="center">
+  <img src="./docs/assets/branding/coop-logo-square.png" alt="Coop logo" width="180">
+</p>
