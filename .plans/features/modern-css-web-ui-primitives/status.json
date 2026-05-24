@@ -1,0 +1,75 @@
+{
+  "$schema": "status-schema",
+  "feature": "modern-css-web-ui-primitives",
+  "title": "Modern CSS Web UI Primitives",
+  "stage": "backlog",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "claude/ui/modern-css-web-ui-primitives",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "codex/state/modern-css-web-ui-primitives",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/modern-css-web-ui-primitives"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/modern-css-web-ui-primitives"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "codex/docs/modern-css-web-ui-primitives",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui", "state", "docs"],
+      "branch": "handoff/qa-codex/modern-css-web-ui-primitives",
+      "branch_trigger": "handoff/qa-codex/modern-css-web-ui-primitives",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/modern-css-web-ui-primitives",
+      "branch_trigger": "handoff/qa-claude/modern-css-web-ui-primitives",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Create a new feature pack instead of reopening ux-surface-clarity",
+      "rationale": "ux-surface-clarity is effectively a completed product-surface simplification pack; modern CSS adoption needs a separate architecture and primitive-tracking lane."
+    },
+    {
+      "id": "D2",
+      "choice": "Keep API and contracts n/a",
+      "rationale": "The planned work is CSS, UI primitives, validation, and durable guidance only."
+    },
+    {
+      "id": "D3",
+      "choice": "Treat overscroll gestures and HTML-in-Canvas as research-only",
+      "rationale": "They are not mature cross-browser primitives for Coop's production UI yet."
+    }
+  ],
+  "updated_at": "2026-05-24"
+}
