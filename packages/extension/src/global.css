@@ -724,9 +724,9 @@ button:disabled {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--coop-mist, #d8d4d0) 25%,
+    var(--coop-mist) 25%,
     rgba(255, 252, 249, 0.6) 50%,
-    var(--coop-mist, #d8d4d0) 75%
+    var(--coop-mist) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
@@ -781,7 +781,7 @@ button:disabled {
 }
 
 .onboarding-card {
-  background: var(--coop-cream, #fffcf9);
+  background: var(--coop-cream);
   border-radius: 22px;
   padding: 1.5rem;
   box-shadow: var(--coop-shadow);
@@ -808,16 +808,16 @@ button:disabled {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--coop-line, #e0ddd9);
+  background: var(--coop-line);
   transition: background-color 180ms ease;
 }
 
 .onboarding-dot.is-active {
-  background: var(--coop-orange, #fd8a01);
+  background: var(--coop-orange);
 }
 
 .onboarding-dot.is-done {
-  background: var(--coop-green, #5a7d10);
+  background: var(--coop-green);
 }
 
 /* ---- Shared button styles (mirrors popup-icon-button for sidepanel) ---- */
@@ -2014,7 +2014,7 @@ button.sidepanel-header__brand {
   padding: 0.5rem 0.75rem;
   border-radius: var(--coop-radius-chip);
   border: 1px solid rgba(253, 138, 1, 0.25);
-  background: var(--coop-cream, #fcf5ef);
+  background: var(--coop-cream);
   box-shadow: 0 2px 8px rgba(79, 46, 31, 0.12);
   font-size: 0.85rem;
   color: var(--coop-brown);
@@ -2357,10 +2357,10 @@ button.sidepanel-header__brand {
   background: var(--coop-green);
 }
 .source-card__health--stale {
-  background: var(--coop-yellow, #f0ad4e);
+  background: var(--coop-orange);
 }
 .source-card__health--error {
-  background: var(--coop-red, #d9534f);
+  background: var(--coop-error);
 }
 
 .confidence-tooltip__breakdown {
@@ -2370,8 +2370,8 @@ button.sidepanel-header__brand {
   padding: 4px 8px;
   font-size: 0.6875rem;
   white-space: nowrap;
-  background: var(--bg-primary, #333);
-  color: var(--text-on-dark, #fff);
+  background: var(--coop-ink);
+  color: var(--coop-cream);
   border-radius: 4px;
   margin-top: 4px;
 }

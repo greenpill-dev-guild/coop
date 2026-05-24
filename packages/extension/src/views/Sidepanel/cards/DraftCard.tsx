@@ -224,7 +224,7 @@ export function DraftCard({
       {draftEditor.refineResults[draft.id] ? (
         <div
           className="panel-card"
-          style={{ background: 'var(--surface-alt, #f0f0f0)', padding: '0.5rem' }}
+          style={{ background: 'var(--coop-surface-elevated)', padding: '0.5rem' }}
         >
           <strong>Polish suggestion</strong>
           <span className="badge">{draftEditor.refineResults[draft.id].provider}</span>

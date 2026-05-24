@@ -2489,17 +2489,17 @@ body::-webkit-scrollbar,
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.4;
-  color: var(--coop-orange, #fd8a01);
+  color: var(--coop-orange);
   font-weight: 600;
 }
 
 .popup-text-button--primary {
   font-weight: 700;
-  color: var(--coop-green, #5a7d10);
+  color: var(--coop-green);
 }
 
 .popup-text-button--danger {
-  color: var(--coop-error, #c0392b);
+  color: var(--coop-error);
   font-size: 0.78rem;
 }
 
@@ -2564,7 +2564,7 @@ body::-webkit-scrollbar,
   overflow: hidden;
   border-radius: var(--coop-radius-photo, 10px);
   border: 1px solid var(--coop-border);
-  background: var(--coop-panel, var(--coop-cream, #fcf5ef));
+  background: var(--coop-panel);
   box-shadow: 0 18px 40px rgba(10, 7, 5, 0.28);
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -2617,8 +2617,8 @@ body::-webkit-scrollbar,
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
-  background: var(--coop-brown, #4f2e1f);
-  color: var(--coop-cream, #fcf5ef);
+  background: var(--coop-brown);
+  color: var(--coop-cream);
   padding: 8px 16px;
   border-radius: var(--coop-radius-sm, 6px);
   font-size: 0.84rem;

@@ -129,7 +129,7 @@ export function NestMembersSection({
                       fontSize: '0.7rem',
                       wordBreak: 'break-all',
                       padding: '0.5rem',
-                      background: 'var(--surface-1, #1a1a1a)',
+                      background: 'var(--coop-panel)',
                       borderRadius: '4px',
                     }}
                   >
@@ -215,7 +215,7 @@ export function NestMembersSection({
             </p>
             <button
               className="secondary-button"
-              style={{ color: 'var(--coop-error, #c53030)' }}
+              style={{ color: 'var(--coop-error)' }}
               onClick={() => {
                 if (window.confirm(`Are you sure you want to leave ${activeCoop.profile.name}?`)) {
                   void orchestration.handleLeaveCoop();

@@ -346,7 +346,7 @@ export function NestInviteSection({
                   <li
                     key={invite.id}
                     style={{
-                      borderBottom: '1px solid var(--border, #333)',
+                      borderBottom: '1px solid var(--coop-line)',
                       paddingBottom: '0.5rem',
                     }}
                   >
@@ -365,12 +365,12 @@ export function NestInviteSection({
                             marginLeft: '0.5rem',
                             background:
                               status === 'active'
-                                ? 'var(--success, #2d6a4f)'
+                                ? 'var(--coop-green)'
                                 : status === 'revoked'
-                                  ? 'var(--danger, #c0392b)'
+                                  ? 'var(--coop-error)'
                                   : status === 'expired'
-                                    ? 'var(--muted, #555)'
-                                    : 'var(--info, #2980b9)',
+                                    ? 'var(--coop-text-soft)'
+                                    : 'var(--coop-brown-soft)',
                           }}
                         >
                           {status}

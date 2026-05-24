@@ -201,6 +201,32 @@ describe('lint-tokens', () => {
       });
     });
 
+    test('flags CSS variable fallback palette hex values', () => {
+      const violations = scanCssContent(
+        'component.css',
+        '.card { color: var(--coop-ink, #27140e); }',
+      );
+      expect(violations).toHaveLength(1);
+      expect(violations[0]).toMatchObject({
+        property: 'var-fallback',
+        raw: '#27140e',
+        token: 'var(--coop-ink)',
+      });
+    });
+
+    test('flags raw fallback values without a matching token', () => {
+      const violations = scanSourceContent(
+        'component.tsx',
+        "<span style={{ background: 'var(--surface-alt, #f0f0f0)' }} />",
+      );
+      expect(violations).toHaveLength(1);
+      expect(violations[0]).toMatchObject({
+        property: 'var-fallback',
+        raw: '#f0f0f0',
+        token: 'remove raw fallback or use a --coop-* token',
+      });
+    });
+
     test('flags SVG palette constants', () => {
       const violations = scanSourceContent('component.tsx', '<path stroke="#fd8a01" />');
       expect(violations).toHaveLength(1);

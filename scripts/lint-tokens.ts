@@ -78,10 +78,12 @@ const zIndexPattern = /z-index:\s*(\d+)\s*[;}]/g;
 // Captures the property name and the hex value in context.
 const hexInPropertyPattern =
   /([a-z-]+)\s*:\s*(?:(?!var\()[^;])*?(#[0-9a-fA-F]{3,6})(?:\b|[^0-9a-fA-F])/g;
+const cssVarFallbackPattern = /var\(\s*--[\w-]+\s*,\s*(#[0-9a-fA-F]{3,6})\s*\)/g;
 
 const inlineRadiusPattern = /\bborderRadius\s*:\s*['"](\d+(?:\.\d+)?)(px|rem)['"]/g;
 const inlineZIndexPattern = /\bzIndex\s*:\s*['"]?(\d+)['"]?/g;
 const sourceHexPattern = /#[0-9a-fA-F]{3,6}/g;
+const fallbackTokenSuggestion = 'remove raw fallback or use a --coop-* token';
 
 function stripCssComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, (match) => {
@@ -129,12 +131,23 @@ export function scanCssContent(file: string, content: string): Violation[] {
       }
     }
 
+    // Check CSS variable fallbacks because they hide missing token plumbing.
+    for (const match of line.matchAll(cssVarFallbackPattern)) {
+      const raw = match[1];
+      violations.push({
+        file,
+        line: lineNum,
+        property: 'var-fallback',
+        raw,
+        token: tokenForHex(raw) ?? fallbackTokenSuggestion,
+      });
+    }
+
     // Check hex colors in CSS properties (not in var() calls, not in custom property definitions)
     for (const match of line.matchAll(hexInPropertyPattern)) {
       const property = match[1];
-      const hex = match[2].toLowerCase();
-      const tokenName = hexColorTokens[hex];
-      if (!tokenName) continue;
+      const token = tokenForHex(match[2]);
+      if (!token) continue;
 
       // Skip custom property definitions (--*): check if the matched property
       // is preceded by -- in the original line
@@ -147,7 +160,7 @@ export function scanCssContent(file: string, content: string): Violation[] {
         line: lineNum,
         property,
         raw: match[2],
-        token: `var(${tokenName})`,
+        token,
       });
     }
   }
@@ -170,6 +183,11 @@ function tokenForRadius(value: string, unit: string): string | undefined {
   if (unit === 'px') return radiusTokens[normalizeDecimal(value)];
   if (unit === 'rem') return remRadiusTokens[normalizeDecimal(value)];
   return undefined;
+}
+
+function tokenForHex(hex: string): string | undefined {
+  const tokenName = hexColorTokens[normalizeHex(hex)];
+  return tokenName ? `var(${tokenName})` : undefined;
 }
 
 function propertyForHexLine(line: string, matchIndex: number): string {
@@ -219,14 +237,15 @@ export function scanSourceContent(file: string, content: string): Violation[] {
 
     for (const match of line.matchAll(sourceHexPattern)) {
       const raw = match[0];
-      const tokenName = hexColorTokens[normalizeHex(raw)];
-      if (!tokenName) continue;
+      const property = propertyForHexLine(line, match.index ?? 0);
+      const token = tokenForHex(raw);
+      if (!token && property !== 'var-fallback') continue;
       violations.push({
         file,
         line: lineNum,
-        property: propertyForHexLine(line, match.index ?? 0),
+        property,
         raw,
-        token: `var(${tokenName})`,
+        token: token ?? fallbackTokenSuggestion,
       });
     }
   }

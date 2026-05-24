@@ -325,7 +325,7 @@ export function NestSettingsSection({
               {dashboard?.recentCaptureRuns?.map((run) => (
                 <li
                   key={run.id}
-                  style={{ borderBottom: '1px solid var(--border, #333)', paddingBottom: '0.5rem' }}
+                  style={{ borderBottom: '1px solid var(--coop-line)', paddingBottom: '0.5rem' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>

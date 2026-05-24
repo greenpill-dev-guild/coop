@@ -471,7 +471,7 @@ pre {
   font-size: clamp(2.1rem, 7vw, 5.4rem);
   line-height: 1;
   letter-spacing: -0.015em;
-  color: var(--coop-ink, #27140e);
+  color: var(--coop-ink);
   max-inline-size: 18ch;
   min-width: 0;
   text-wrap: balance;
@@ -1015,7 +1015,7 @@ pre {
   border-radius: var(--coop-radius-pill);
   background: rgba(90, 125, 16, 0.08);
   border: 1px solid rgba(90, 125, 16, 0.18);
-  color: var(--coop-green, #5a7d10);
+  color: var(--coop-green);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1186,7 +1186,7 @@ pre {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: var(--coop-radius-pill);
-  background: var(--coop-error, #a63b20);
+  background: var(--coop-error);
   margin-right: 0.25rem;
 }
 

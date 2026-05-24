@@ -43,12 +43,12 @@ export function ArtifactCard({
           <span className="badge">{formatSaveStatusLabel(artifact.archiveStatus)}</span>
           {isArchiveWorthy(artifact) ? <span className="badge">worth saving</span> : null}
           {artifact.createdBy === 'anonymous-member' ? (
-            <span className="badge" style={{ background: 'var(--accent-subtle, #2d2d3d)' }}>
+            <span className="badge" style={{ background: 'var(--coop-active-bg)' }}>
               anonymous {artifact.membershipProof ? '(ZK verified)' : ''}
             </span>
           ) : null}
           {artifact.createdBy === 'unverified-anonymous' ? (
-            <span className="badge" style={{ background: 'var(--warning, #8b6914)' }}>
+            <span className="badge" style={{ background: 'var(--coop-orange-15)' }}>
               unverified anonymous
             </span>
           ) : null}
