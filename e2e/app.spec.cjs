@@ -325,7 +325,7 @@ test('landing page stays legible on mobile', async ({ page, isMobile }) => {
 });
 
 test('receiver route exposes the egg capture shell and Roost link', async ({ page }) => {
-  await page.goto('/receiver');
+  await page.goto('/app/receiver?presentation=pwa&qa=reset,mock-media');
 
   await expect(page.getByRole('heading', { name: /^Hatch$/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /start recording/i })).toBeVisible();

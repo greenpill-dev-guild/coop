@@ -1,0 +1,16 @@
+# Coop Docs
+
+Coop is a browser-first, local-first collaboration system for capturing scattered knowledge, reviewing it with humans, and publishing shared work only after explicit review.
+
+Public surfaces:
+- Public docs built from `docs/`.
+- Public architecture, builder, and product explanations.
+- Public release and readiness notes that are intentionally published.
+
+Agent guidance:
+- Treat docs as public explanatory material.
+- Respect the local-first privacy model and do not assume access to browser-local data.
+- Prefer semantic, accessible, Baseline Widely Available web patterns for docs and app guidance.
+
+Do not infer or expose:
+- Private local extension data, Dexie/Yjs contents, session permissions, signing or publish actions, hidden extension state, secrets, or operator-only workflows.

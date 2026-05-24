@@ -142,6 +142,13 @@ Before UI or CSS changes, load root `DESIGN.md`, the relevant surface dialect (`
 
 Run `bun run check:design-md` and `bun run check:design-tokens` for UI/CSS changes before the relevant app or extension build. Use existing `--coop-*` tokens for palette, radius, z-index, spacing, typography, and shadow values; add a new token only when a repeated raw value has no existing token and the design intent is stable.
 
+### Agentic Modern Web Standard
+
+- Baseline target: Baseline Widely Available. Before app, extension, docs, UI, CSS, accessibility, browser proof, or web-design changes, search and retrieve current Chrome Modern Web Guidance, then apply `DESIGN.md`, the relevant surface dialect, and `packages/shared/src/styles/tokens.css`.
+- Prefer semantic HTML, native controls, platform CSS, and browser primitives before custom JavaScript. Keep browser-extension and PWA surfaces clear in the DOM and accessibility tree: landmarks, headings, buttons, forms, labels, accessible names, visible focus, keyboard paths, touch targets, loading/error/empty states, and reduced-motion handling.
+- Run `bun run agentic:check` for advisory DesignMD, token, and quick validation coverage. Use `bun run agentic:browser-proof` for the app, Popup, Sidepanel, and Receiver PWA rendered report lane, or a narrower existing Playwright/visual suite when only one surface changed. The report lane writes screenshots and accessibility summaries to `output/playwright/agentic-browser-proof/`, including console/page errors, reduced-motion status, overflow checks, and WebMCP discovery. Keep `bun run test:visual` / `bun run agentic:verify` as the heavier popup and sidepanel snapshot lane.
+- WebMCP is strategy-only in v1. Do not ship runtime WebMCP tools unless explicitly requested; future tools must be visible, user-confirmable, local-first, and must not expose private local data, hidden extension state, session permissions, signing/publish actions, sync internals, destructive operations, or background-only actions.
+
 ### Onchain Integration
 
 Safe + ERC-4337 + passkey auth. Chain set by `VITE_COOP_CHAIN` (default: `sepolia`, production: `arbitrum`). Modes: `VITE_COOP_ONCHAIN_MODE` (mock|live), `VITE_COOP_ARCHIVE_MODE` (mock|live).
