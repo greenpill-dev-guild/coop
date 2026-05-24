@@ -645,6 +645,7 @@ test.describe('extension workflow', () => {
         knowledgePain: 'People repeat the same research.',
         knowledgeImprove: 'Create a shared knowledge commons.',
       });
+      await setSidepanelUiMode(creatorProfile.page, 'advanced');
       await waitForDashboardValue(
         creatorProfile.page,
         (dashboard) =>

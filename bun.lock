@@ -23,8 +23,8 @@
         "fake-indexeddb": "^6.0.0",
         "happy-dom": "^20.8.4",
         "permissionless": "^0.3.4",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
         "rollup-plugin-visualizer": "^7.0.1",
         "typescript": "^5.8.2",
         "viem": "^2.25.0",
@@ -79,8 +79,8 @@
         "@xyflow/react": "^12.10.1",
         "gsap": "^3.14.2",
         "qrcode": "^1.5.4",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
       },
     },
     "packages/extension": {
@@ -92,8 +92,8 @@
         "@mlc-ai/web-llm": "^0.2.79",
         "@rhinestone/module-sdk": "^0.4.0",
         "permissionless": "^0.3.4",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
         "viem": "^2.25.0",
       },
       "devDependencies": {
@@ -3824,8 +3824,6 @@
     "@babel/preset-env/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
     "@commander-js/extra-typings/commander": ["commander@12.1.0", "", {}, "sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA=="],
-
-    "@coop/extension/react": ["react@19.2.6", "", {}, "sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q=="],
 
     "@devicefarmer/adbkit/commander": ["commander@9.5.0", "", {}, "sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ=="],
 
