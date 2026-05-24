@@ -38,25 +38,20 @@ export function PopupOnboardingHero(props: {
             cy="82"
             rx="18"
             ry="7"
-            stroke="var(--coop-green, #5a7d10)"
+            stroke="var(--coop-green)"
             strokeWidth="1.6"
             opacity="0.35"
           />
           <path
             d="M62 82c0-8 8-14 18-14s18 6 18 14"
-            stroke="var(--coop-green, #5a7d10)"
+            stroke="var(--coop-green)"
             strokeWidth="1.6"
             opacity="0.25"
             fill="none"
           />
 
           {/* Grass tufts */}
-          <g
-            stroke="var(--coop-green, #5a7d10)"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.35"
-          >
+          <g stroke="var(--coop-green)" strokeWidth="1.5" strokeLinecap="round" opacity="0.35">
             <path d="M20 92c0-6 2-10 2-10" />
             <path d="M23 92c-1-5 1-9 1-9" />
             <path d="M140 92c0-6 2-10 2-10" />
@@ -92,12 +87,7 @@ export function PopupOnboardingHero(props: {
           <ellipse cx="80" cy="92" rx="70" ry="8" fill="currentColor" opacity="0.06" />
 
           {/* Grass tufts */}
-          <g
-            stroke="var(--coop-green, #5a7d10)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            opacity="0.4"
-          >
+          <g stroke="var(--coop-green)" strokeWidth="1.6" strokeLinecap="round" opacity="0.4">
             <path d="M24 92c0-8 3-14 3-14" />
             <path d="M27 92c-1-7 2-12 2-12" />
             <path d="M30 92c-2-6 0-10 0-10" />

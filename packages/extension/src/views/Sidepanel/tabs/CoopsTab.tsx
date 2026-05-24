@@ -204,13 +204,13 @@ export function CoopsTab({
                 cy="82"
                 rx="18"
                 ry="7"
-                stroke="var(--coop-green, #5a7d10)"
+                stroke="var(--coop-green)"
                 strokeWidth="1.6"
                 opacity="0.35"
               />
               <path
                 d="M62 82c0-8 8-14 18-14s18 6 18 14"
-                stroke="var(--coop-green, #5a7d10)"
+                stroke="var(--coop-green)"
                 strokeWidth="1.6"
                 opacity="0.25"
                 fill="none"

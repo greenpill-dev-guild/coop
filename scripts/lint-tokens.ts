@@ -20,6 +20,20 @@ const radiusTokens: Record<string, string> = {
   '6': '--coop-radius-xs',
 };
 
+const remRadiusTokens: Record<string, string> = {
+  '0.375': '--coop-radius-xs',
+  '0.5': '--coop-radius-sm',
+  '0.625': '--coop-radius-icon',
+  '0.75': '--coop-radius-chip',
+  '0.875': '--coop-radius-button',
+  '1': '--coop-radius-input',
+  '1.125': '--coop-radius-photo',
+  '1.25': '--coop-radius-input-lg',
+  '1.5': '--coop-radius-card',
+  '1.75': '--coop-radius-card-lg',
+  '1.875': '--coop-radius-card-xl',
+};
+
 const zIndexTokens: Record<string, string> = {
   '0': '--coop-z-base',
   '1': '--coop-z-sticky',
@@ -64,6 +78,10 @@ const zIndexPattern = /z-index:\s*(\d+)\s*[;}]/g;
 // Captures the property name and the hex value in context.
 const hexInPropertyPattern =
   /([a-z-]+)\s*:\s*(?:(?!var\()[^;])*?(#[0-9a-fA-F]{3,6})(?:\b|[^0-9a-fA-F])/g;
+
+const inlineRadiusPattern = /\bborderRadius\s*:\s*['"](\d+(?:\.\d+)?)(px|rem)['"]/g;
+const inlineZIndexPattern = /\bzIndex\s*:\s*['"]?(\d+)['"]?/g;
+const sourceHexPattern = /#[0-9a-fA-F]{3,6}/g;
 
 function stripCssComments(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, (match) => {
@@ -137,9 +155,105 @@ export function scanCssContent(file: string, content: string): Violation[] {
   return violations;
 }
 
+function normalizeDecimal(value: string): string {
+  return Number.parseFloat(value).toString();
+}
+
+function normalizeHex(hex: string): string {
+  const lower = hex.toLowerCase();
+  if (lower.length !== 4) return lower;
+  const [, r, g, b] = lower;
+  return `#${r}${r}${g}${g}${b}${b}`;
+}
+
+function tokenForRadius(value: string, unit: string): string | undefined {
+  if (unit === 'px') return radiusTokens[normalizeDecimal(value)];
+  if (unit === 'rem') return remRadiusTokens[normalizeDecimal(value)];
+  return undefined;
+}
+
+function propertyForHexLine(line: string, matchIndex: number): string {
+  const before = line.slice(0, matchIndex);
+  if (/var\([^)]*,\s*$/i.test(before)) return 'var-fallback';
+  const svgAttr = before.match(/\b(stroke|fill)=["'][^"']*$/i);
+  if (svgAttr) return svgAttr[1];
+  const styleProp = before.match(/\b([A-Za-z][\w-]*)\s*:\s*['"][^'"]*$/);
+  if (styleProp) return styleProp[1];
+  return 'source-color';
+}
+
+export function scanSourceContent(file: string, content: string): Violation[] {
+  const violations: Violation[] = [];
+  const lines = content.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    for (const match of line.matchAll(inlineRadiusPattern)) {
+      const value = match[1];
+      const unit = match[2];
+      const tokenName = tokenForRadius(value, unit);
+      if (!tokenName) continue;
+      violations.push({
+        file,
+        line: lineNum,
+        property: 'borderRadius',
+        raw: `${value}${unit}`,
+        token: `var(${tokenName})`,
+      });
+    }
+
+    for (const match of line.matchAll(inlineZIndexPattern)) {
+      const value = match[1];
+      const tokenName = zIndexTokens[value];
+      if (!tokenName) continue;
+      violations.push({
+        file,
+        line: lineNum,
+        property: 'zIndex',
+        raw: value,
+        token: `var(${tokenName})`,
+      });
+    }
+
+    for (const match of line.matchAll(sourceHexPattern)) {
+      const raw = match[0];
+      const tokenName = hexColorTokens[normalizeHex(raw)];
+      if (!tokenName) continue;
+      violations.push({
+        file,
+        line: lineNum,
+        property: propertyForHexLine(line, match.index ?? 0),
+        raw,
+        token: `var(${tokenName})`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 // ── File discovery ──
 
 const excludedFileNames = new Set(['tokens.css', 'a11y.css', 'catalog.css']);
+const excludedSourceSuffixes = [
+  '.test.ts',
+  '.test.tsx',
+  '.spec.ts',
+  '.spec.tsx',
+  '.stories.ts',
+  '.stories.tsx',
+];
+
+function shouldSkipDirectory(entryName: string): boolean {
+  return (
+    entryName === 'node_modules' ||
+    entryName === 'dist' ||
+    entryName === 'build' ||
+    entryName === 'coverage'
+  );
+}
 
 function collectCssFiles(dir: string): string[] {
   const files: string[] = [];
@@ -149,9 +263,7 @@ function collectCssFiles(dir: string): string[] {
       const fullPath = path.join(currentDir, entry.name);
 
       if (entry.isDirectory()) {
-        if (entry.name === 'node_modules' || entry.name === 'dist') {
-          continue;
-        }
+        if (shouldSkipDirectory(entry.name)) continue;
         walk(fullPath);
         continue;
       }
@@ -164,6 +276,38 @@ function collectCssFiles(dir: string): string[] {
 
   walk(dir);
   return files.sort();
+}
+
+function collectSourceFiles(dir: string): string[] {
+  const files: string[] = [];
+
+  function walk(currentDir: string) {
+    for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
+      const fullPath = path.join(currentDir, entry.name);
+
+      if (entry.isDirectory()) {
+        if (shouldSkipDirectory(entry.name) || entry.name === '__tests__') continue;
+        walk(fullPath);
+        continue;
+      }
+
+      if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) continue;
+      if (excludedSourceSuffixes.some((suffix) => entry.name.endsWith(suffix))) continue;
+      if (entry.name.includes('fixture')) continue;
+      files.push(fullPath);
+    }
+  }
+
+  walk(dir);
+  return files
+    .filter((file) => {
+      const rel = path
+        .relative(path.resolve(import.meta.dir, '..'), file)
+        .split(path.sep)
+        .join('/');
+      return rel.startsWith('packages/app/src/') || rel.startsWith('packages/extension/src/views/');
+    })
+    .sort();
 }
 
 // ── Main ──
@@ -179,6 +323,14 @@ function main() {
     const relativePath = path.relative(repoRoot, file);
     const content = readFileSync(file, 'utf8');
     const violations = scanCssContent(relativePath, content);
+    allViolations.push(...violations);
+  }
+
+  const sourceFiles = collectSourceFiles(packagesDir);
+  for (const file of sourceFiles) {
+    const relativePath = path.relative(repoRoot, file);
+    const content = readFileSync(file, 'utf8');
+    const violations = scanSourceContent(relativePath, content);
     allViolations.push(...violations);
   }
 

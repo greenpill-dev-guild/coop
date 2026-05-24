@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { scanCssContent } from '../lint-tokens';
+import { scanCssContent, scanSourceContent } from '../lint-tokens';
 
 describe('lint-tokens', () => {
   describe('border-radius detection', () => {
@@ -171,6 +171,52 @@ describe('lint-tokens', () => {
       expect(violations[0].property).toBe('border-radius');
       expect(violations[1].property).toBe('z-index');
       expect(violations[2].property).toBe('color');
+    });
+  });
+
+  describe('source detection', () => {
+    test('flags inline style radii matching tokens', () => {
+      const violations = scanSourceContent(
+        'component.tsx',
+        "<button style={{ borderRadius: '0.375rem' }}>Retry</button>",
+      );
+      expect(violations).toHaveLength(1);
+      expect(violations[0]).toMatchObject({
+        property: 'borderRadius',
+        raw: '0.375rem',
+        token: 'var(--coop-radius-xs)',
+      });
+    });
+
+    test('flags inline fallback palette hex values', () => {
+      const violations = scanSourceContent(
+        'component.tsx',
+        '<ellipse stroke="var(--coop-green, #5a7d10)" />',
+      );
+      expect(violations).toHaveLength(1);
+      expect(violations[0]).toMatchObject({
+        property: 'var-fallback',
+        raw: '#5a7d10',
+        token: 'var(--coop-green)',
+      });
+    });
+
+    test('flags SVG palette constants', () => {
+      const violations = scanSourceContent('component.tsx', '<path stroke="#fd8a01" />');
+      expect(violations).toHaveLength(1);
+      expect(violations[0]).toMatchObject({
+        property: 'stroke',
+        raw: '#fd8a01',
+        token: 'var(--coop-orange)',
+      });
+    });
+
+    test('does NOT flag currentColor or already tokenized CSS variables', () => {
+      const violations = scanSourceContent(
+        'component.tsx',
+        '<path stroke="currentColor" fill="var(--coop-green)" />',
+      );
+      expect(violations).toHaveLength(0);
     });
   });
 });

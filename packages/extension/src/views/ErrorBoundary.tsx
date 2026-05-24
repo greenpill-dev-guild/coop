@@ -34,7 +34,7 @@ export class ErrorBoundary extends React.Component<
               }}
               style={{
                 padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
+                borderRadius: 'var(--coop-radius-xs)',
                 border: '1px solid #ccc',
                 background: '#fff',
                 cursor: 'pointer',
