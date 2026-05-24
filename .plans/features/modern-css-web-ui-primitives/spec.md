@@ -51,6 +51,13 @@ Create an execution-ready modernization pack for Coop's CSS and browser-native U
 - Docs lane records the compatibility ladder and durable guidance once implementation scope is approved.
 - QA starts only after UI/state/docs lanes produce evidence or explicit deferrals.
 
+## Chrome Platform Follow-Up Tasks
+
+- Add a CWV/soft-navigation evidence contract before runtime instrumentation: route label, LCP, INP, CLS, `navigationType`, reduced-motion state, and interaction or route-transition context for app and Receiver PWA surfaces.
+- Prefer existing `web-vitals`, Playwright, and `bun run agentic:browser-proof` lanes. Do not add analytics dependencies unless a future implementation task proves a repo-local reason and the user approves it.
+- Use isolated or non-default Chrome DevTools MCP proof only for public app/Receiver/docs surfaces or a dedicated extension-safe session. Do not attach MCP to a personal Chrome profile or inspect hidden extension/background state.
+- Keep runtime WebMCP frozen. Any future Receiver/docs visible-tool candidate needs a written approval spec covering candidate visible tools, forbidden tools, confirmation rules, local-first privacy boundary, schema tests, wrong-tool/wrong-argument/stale-state evals, and proof commands.
+
 ## Lane Split
 
 | Lane | Agent | Expected Scope |

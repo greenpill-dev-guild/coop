@@ -69,6 +69,11 @@
       "id": "D3",
       "choice": "Treat overscroll gestures and HTML-in-Canvas as research-only",
       "rationale": "They are not mature cross-browser primitives for Coop's production UI yet."
+    },
+    {
+      "id": "D4",
+      "choice": "Record Chrome platform proof requirements before runtime work",
+      "rationale": "Coop's extension and local-first surfaces need explicit CWV, isolated DevTools MCP, and frozen WebMCP approval evidence before any future prototype is promoted."
     }
   ],
   "updated_at": "2026-05-24"
