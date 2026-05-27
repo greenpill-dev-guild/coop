@@ -70,12 +70,12 @@ For development with live-reload and all local services:
 
 ```bash
 bun install
-bun dev
+bun run dev
 ```
 
-This starts the extension, the receiver PWA, and the signaling server concurrently. The dev script
-automatically sets `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension
-build.
+This starts the extension, receiver PWA, docs, and signaling server through the repo-native dev coordinator.
+The lower-level scripts automatically set `VITE_COOP_SIGNALING_URLS` and
+`VITE_COOP_RECEIVER_APP_URL` for the extension build.
 
 If you only need the extension:
 

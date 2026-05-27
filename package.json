@@ -171,8 +171,5 @@
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
   },
-  "overrides": {
-    "protobufjs": "7.5.9"
-  },
   "trustedDependencies": ["@biomejs/biome"]
 }

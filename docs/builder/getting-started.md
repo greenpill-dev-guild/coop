@@ -78,15 +78,15 @@ Run these commands from the repository root:
 
 ```bash
 bun install
-bun dev
+bun run dev
 ```
 
 Useful split commands:
 
 ```bash
-bun dev:app
-bun dev:extension
-bun dev:api
+bun run dev:app
+bun run dev:extension
+bun run dev:api
 ```
 
 ## Keep One Root Environment File

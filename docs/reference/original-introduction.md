@@ -73,8 +73,8 @@ ERC-4337, ERC-1271, EIP-712, ERC-7579, ERC-5564, ERC-8004, Semaphore, Storacha/F
 
 ```bash
 bun install            # Install dependencies
-bun dev                # Start app + extension concurrently
-bun dev:api            # Start API server
+bun run dev            # Start the full repo-native local environment
+bun run dev:api        # Start API server
 bun run test           # Run tests
 bun run build          # Build everything
 bun run validate:production-readiness  # Staged-launch validation

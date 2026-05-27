@@ -304,7 +304,7 @@ async function assertPortAvailable(host: string, port: number, label: string) {
       : '';
 
   throw new Error(
-    `${label} port ${port} is already in use on ${host}.${ownerMessage} Stop the existing process or change the port before running bun dev.`,
+    `${label} port ${port} is already in use on ${host}.${ownerMessage} Stop the existing process or change the port before running bun run dev.`,
   );
 }
 

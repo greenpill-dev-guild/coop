@@ -6,10 +6,11 @@ This file provides guidance to Claude Code when working with this repository.
 
 ```bash
 bun install                  # Install dependencies
-bun dev                      # Start app + extension (concurrent)
-bun dev:app                  # Start app only
-bun dev:extension            # Start extension only (WXT dev + Chromium)
-bun dev:api                  # Start API server (signaling + routes)
+bun run dev                  # Start full repo-native local environment
+bun run dev:stop             # Stop repo-tracked local targets
+bun run dev:app              # Start app only
+bun run dev:extension        # Start extension only (WXT dev + Chromium)
+bun run dev:api              # Start API server (signaling + routes)
 cd packages/app && bun run build        # Build app only
 cd packages/extension && bun run build  # Build extension only
 bun format && bun lint       # Format (Biome) and lint workspace
@@ -180,8 +181,8 @@ Do not duplicate these. Import or apply existing classes.
 | `wss://api.coop.town/yws` | Fly.io Yjs document sync | WebSocket fallback for peer sync |
 | `https://coop.town` | Vercel PWA (landing + receiver) | Proxied through Cloudflare |
 | `https://docs.coop.town` | Vercel docs | Proxied through Cloudflare |
-| `wss://dev-api.coop.town` | Cloudflare tunnel -> localhost:3103 | Only up during `bun dev` |
-| `https://local.coop.town` | Cloudflare tunnel → localhost:3001 | Only up during `bun dev` |
+| `wss://dev-api.coop.town` | Cloudflare tunnel -> localhost:3103 | Only up during `bun run dev` or the coordinator fallback |
+| `https://local.coop.town` | Cloudflare tunnel -> localhost:3101 | Only up during `bun run dev` or the coordinator fallback |
 
 ## Environment
 
@@ -197,7 +198,7 @@ Single `.env.local` at root (never create package-specific .env). Env vars are b
 
 Full reference: `docs/builder/environment.md` (30+ vars covering TURN, Pimlico, FVM, Green Goods, trusted-node archive, tunnels)
 
-`bun dev` automatically sets `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension build. The extension gets both local and production signaling URLs for fallback.
+The lower-level dev scripts started by `bun run dev` set `VITE_COOP_SIGNALING_URLS` and `VITE_COOP_RECEIVER_APP_URL` for the extension build. The extension gets both local and production signaling URLs for fallback.
 
 ## Validation Suites
 

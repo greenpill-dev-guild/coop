@@ -1,35 +1,46 @@
 ---
-name: dev-surface
-description: Use when working in Coop and needing to start, reuse, open, inspect, validate, or clean up this repo's local development surfaces through the shared dev-surfaces workbench.
+name: coop-dev-surface
+description: Use when working in Coop and needing the local app, receiver PWA, docs, API/signaling server, or extension watcher.
 ---
 
 # Coop Dev Surface
 
-Use the global workbench CLI instead of starting duplicate servers manually:
+Inside this repo, use the repo-native command:
 
 ```sh
-dev-surfaces status
-dev-surfaces up coop
-dev-surfaces open coop
-dev-surfaces logs coop:<surface>
-dev-surfaces down coop
+bun install
+# configure repo env if needed
+bun run dev
 ```
 
-Stable fallback path: `/Users/afo/Code/dev-surfaces/bin/dev-surfaces.js`.
+`bun run dev` runs `scripts/dev.ts`. It starts the app, API/signaling server, docs, extension watcher, optional Cloudflare tunnel, and a dev browser profile when available. It writes runtime state to `packages/app/public/__coop_dev__/state.json`, streams logs, and cleans up child processes on Ctrl-C.
 
-## Surfaces
+Expected ports:
 
-- `app`: app / receiver PWA on `3101`
-- `docs`: docs on `3102`
-- `api`: API / signaling on `3103`
-- `extension`: extension dev server, if bound on `3104`
+- `3101`: app / receiver PWA
+- `3102`: docs
+- `3103`: API / signaling
+- `3104`: extension dev server, when bound
 
-## Validation Notes
+Useful native commands:
 
-- Default real-browser proof should use Brave or another Chromium-family browser on this machine.
-- Keep receiver PWA and signaling URLs aligned when launching the extension surface.
-- `app` depends on `api`, and `extension` depends on both, so the workbench brings signaling up before UI review surfaces that need it.
-- Docs require Node 20+; the repo scripts prepend `mise where node@22` before running Docusaurus so agent shells do not fall back to system Node 18.
-- After changing local port docs or dev scripts, run `dev-surfaces doctor`.
+```sh
+bun run dev
+bun run dev:stop
+bun run dev:app
+bun run dev:api
+bun run dev:docs
+bun run dev:extension
+```
 
-Never kill unknown port occupants. If a port is busy and not owned by dev-surfaces, report the PID/command and ask for direction.
+For cross-repo orchestration from anywhere, use the global workbench:
+
+```sh
+dev launch coop
+dev launch coop:app
+dev status coop
+dev health coop
+dev stop coop
+```
+
+Do not call `.dev-surfaces/run.mjs`; this repo should not have that wrapper.

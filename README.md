@@ -116,10 +116,11 @@ Essential commands:
 
 ```bash
 bun install                    # Install dependencies
-bun dev                        # Start app + extension concurrently
-bun dev:app                    # Start app only
-bun dev:extension              # Start extension only
-bun dev:api                    # Start API server
+bun run dev                    # Start full repo-native local environment
+bun run dev:stop               # Stop repo-tracked local targets
+bun run dev:app                # Start app only
+bun run dev:extension          # Start extension only
+bun run dev:api                # Start API server
 bun run test                   # Run unit tests with Vitest
 bun run build                  # Build shared -> app -> extension
 bun run validate smoke         # Fast confidence pass

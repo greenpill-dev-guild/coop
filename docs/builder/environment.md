@@ -36,7 +36,7 @@ prefixed variables are baked into bundles at build time by Vite -- rebuild after
 
 Notes:
 
-- `bun dev` injects `VITE_COOP_RECEIVER_APP_URL` and `VITE_COOP_SIGNALING_URLS` for the extension
+- `bun run dev` starts the workbench targets whose lower-level scripts inject `VITE_COOP_RECEIVER_APP_URL` and `VITE_COOP_SIGNALING_URLS` for the extension
   watcher so local dev can point at the active app and API processes.
 - `VITE_COOP_RECEIVER_APP_URL` is also used to derive the receiver bridge content-script matches in
   the extension manifest.

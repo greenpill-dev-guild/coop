@@ -8,10 +8,11 @@ For full details, see [`CLAUDE.md`](./CLAUDE.md).
 
 ```bash
 bun install                  # Install dependencies
-bun dev                      # Start app + extension (concurrent)
-bun dev:app                  # Start app only
-bun dev:extension            # Start extension only (WXT dev + Chromium)
-bun dev:api                  # Start API server (signaling + routes)
+bun run dev                  # Start full repo-native local environment
+bun run dev:stop             # Stop repo-tracked local targets
+bun run dev:app              # Start app only
+bun run dev:extension        # Start extension only (WXT dev + Chromium)
+bun run dev:api              # Start API server (signaling + routes)
 cd packages/app && bun run build        # Build app only
 cd packages/extension && bun run build  # Build extension only
 bun format && bun lint       # Format (Biome) and lint workspace

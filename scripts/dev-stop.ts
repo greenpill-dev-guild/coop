@@ -129,7 +129,7 @@ async function main() {
     console.warn(
       `[dev:stop] Refusing to stop untracked port listener PID(s): ${unknownPortPids.join(
         ', ',
-      )}. Stop them manually or use dev-surfaces status to inspect ownership.`,
+      )}. Stop them manually or use dev status coop to inspect ownership.`,
     );
   }
 

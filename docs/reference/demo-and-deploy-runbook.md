@@ -90,10 +90,10 @@ coordination patterns, and hardening live/operator rails.
   - `live`: bounded Smart Session execution for phase-1 Green Goods actions
 - Production passkeys must be created on the final production PWA domain.
 
-## Environment 1: Local Development (with `bun dev`)
+## Environment 1: Local Development (with `bun run dev`)
 
-Use `bun dev` to start all services concurrently. The dev script automatically configures the
-extension with the correct signaling and receiver URLs.
+Use `bun run dev` to start all local repo services through the repo-native dev coordinator. The lower-level
+dev scripts automatically configure the extension with the correct signaling and receiver URLs.
 
 ### Root `.env.local` (minimal)
 
@@ -125,7 +125,7 @@ run `bun run docs:dev` or `bun run docs:build`.
 
 ```bash
 bun install
-bun dev
+bun run dev
 ```
 
 To stop the full local dev environment and clean up orphan listeners:
@@ -141,7 +141,7 @@ Expected surfaces:
 - Production fallback signaling: `wss://api.coop.town`
 - Extension bundle: `packages/extension/dist/chrome-mv3`
 
-To run services individually instead of `bun dev`:
+To run services individually instead of `bun run dev`:
 
 ```bash
 bun run dev:app
