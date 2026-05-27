@@ -16,6 +16,7 @@ const sharedMocks = vi.hoisted(() => ({
 const contextMocks = vi.hoisted(() => ({
   agentOnboardingKey: vi.fn((coopId: string, memberId: string) => `${coopId}:${memberId}`),
   getAgentOnboardingState: vi.fn(),
+  getLocalSetting: vi.fn(async () => '5-min'),
   notifyExtensionEvent: vi.fn(async () => undefined),
   setAgentOnboardingState: vi.fn(async () => undefined),
 }));
@@ -73,8 +74,12 @@ vi.mock('../../context', () => ({
   },
   db: {},
   getAgentOnboardingState: contextMocks.getAgentOnboardingState,
+  getLocalSetting: contextMocks.getLocalSetting,
   notifyExtensionEvent: contextMocks.notifyExtensionEvent,
   setAgentOnboardingState: contextMocks.setAgentOnboardingState,
+  stateKeys: {
+    captureMode: 'capture-mode',
+  },
 }));
 
 vi.mock('../../operator', () => ({
@@ -155,6 +160,7 @@ describe('agent dashboard helpers', () => {
       skillRuns: input.skillRuns,
     }));
     contextMocks.getAgentOnboardingState.mockResolvedValue({});
+    contextMocks.getLocalSetting.mockResolvedValue('5-min');
     operatorMocks.getTrustedNodeContext.mockResolvedValue({
       ok: true,
       coop: {

@@ -3,7 +3,7 @@ feature: <feature-slug>
 title: <Feature Title> API lane
 lane: api
 agent: codex
-status: backlog
+status: n/a
 source_branch: <source-branch>
 work_branch: codex/api/<feature-slug>
 depends_on:
@@ -38,7 +38,9 @@ Keep changes inside `owned_paths` where possible. If work spills beyond them, ex
 
 ## Tasks
 
+- [ ] Complete the spec's `Agent Readiness` checklist for API/message-contract impact before coding.
 - [ ] Update request/response contracts
+- [ ] Preserve documented wire shapes or call out any migration explicitly before implementation
 - [ ] Implement route or handler changes
 - [ ] Add or update API tests
 - [ ] Keep work inside `owned_paths` or document justified spillover

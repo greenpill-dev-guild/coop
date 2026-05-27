@@ -38,7 +38,9 @@ Keep changes inside `owned_paths` where possible. If work spills beyond them, ex
 
 ## Tasks
 
+- [ ] Complete the spec's `Agent Readiness` checklist for state/storage impact before coding.
 - [ ] Update schemas/types first
+- [ ] If Dexie/Yjs or persisted state changes, write the schema delta and migration intent in `Handoff Notes`
 - [ ] Implement state transitions and persistence behavior
 - [ ] Add or update unit/integration coverage
 - [ ] Keep work inside `owned_paths` or document justified spillover

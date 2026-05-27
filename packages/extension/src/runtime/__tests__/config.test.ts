@@ -40,7 +40,7 @@ describe('runtime config helpers', () => {
     ]);
     expect(resolveArchiveGatewayUrl(undefined)).toBe('https://storacha.link');
     expect(resolveArchiveGatewayUrl('https://gateway.example')).toBe('https://gateway.example');
-    expect(resolveReceiverAppUrl(undefined)).toBe('http://127.0.0.1:3001');
+    expect(resolveReceiverAppUrl(undefined)).toBe('http://127.0.0.1:3101');
     expect(resolveReceiverAppUrl('https://receiver.example')).toBe('https://receiver.example');
     expect(isLocalEnhancementEnabled(undefined)).toBe(true);
     expect(isLocalEnhancementEnabled('off')).toBe(false);

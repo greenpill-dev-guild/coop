@@ -61,7 +61,7 @@ Single source of truth for all domain types. Every Zod schema lives here; types 
 | `schema-session.ts` | SessionCapability, SessionCapabilityLogEntry, EncryptedSessionMaterial |
 | `schema-greengoods.ts` | GreenGoodsMemberBinding, GardenState, WorkApproval, Assessment, HypercertMintRequest |
 | `schema-crypto.ts` | SignatureValidationResult, AuthorityClass, AuthorityActionMapping |
-| `schema-sync.ts` | SyncRoomConfig, SyncRoomBootstrap, CoopBlobRecord |
+| `schema-sync.ts` | SyncRoomConfig, SyncRoomBootstrap, ICE config, signaling messages, CoopBlobRecord |
 | `schema-privacy.ts` | PrivacyIdentity, StealthKeys, StealthMetaAddress, StealthAnnouncement, MembershipProof |
 | `schema-erc8004.ts` | ERC-8004 agent identity and reputation schemas |
 

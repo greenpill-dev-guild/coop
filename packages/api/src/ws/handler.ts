@@ -1,6 +1,6 @@
+import { signalingMessageSchema } from '@coop/shared';
 import type { WSContext, WSMessageReceive } from 'hono/ws';
 import type { TopicRegistry } from './topics';
-import type { MessageType } from './types';
 import { rawKey } from './ws-utils';
 
 const decoder = new TextDecoder();
@@ -79,28 +79,28 @@ export function createWSHandlers(registry: TopicRegistry) {
         return;
       }
 
-      let message: Record<string, unknown>;
+      let rawMessage: unknown;
       try {
         const raw =
           typeof evt.data === 'string' ? evt.data : decoder.decode(evt.data as ArrayBuffer);
-        message = JSON.parse(raw) as Record<string, unknown>;
+        rawMessage = JSON.parse(raw);
       } catch {
         console.warn('[ws] malformed JSON from client, dropping');
         return;
       }
 
-      if (!message?.type) {
+      const parsed = signalingMessageSchema.safeParse(rawMessage);
+      if (!parsed.success) {
         return;
       }
+      const message = parsed.data;
 
       const subscribedTopics = getSubscribedTopics(ws);
       const authorizedTopic = authorizedTopics.get(rawKey(ws));
-      const type = message.type as MessageType;
 
-      switch (type) {
+      switch (message.type) {
         case 'subscribe': {
-          const topics = (message.topics as unknown[]) ?? [];
-          for (const topicName of topics) {
+          for (const topicName of message.topics) {
             if (typeof topicName !== 'string') {
               continue;
             }
@@ -114,8 +114,7 @@ export function createWSHandlers(registry: TopicRegistry) {
         }
 
         case 'unsubscribe': {
-          const topics = (message.topics as unknown[]) ?? [];
-          for (const topicName of topics) {
+          for (const topicName of message.topics) {
             if (typeof topicName !== 'string') {
               continue;
             }
@@ -129,9 +128,6 @@ export function createWSHandlers(registry: TopicRegistry) {
         }
 
         case 'publish': {
-          if (typeof message.topic !== 'string' || !message.topic) {
-            break;
-          }
           const topicName = message.topic;
 
           if (authorizedTopic && topicName !== authorizedTopic) {

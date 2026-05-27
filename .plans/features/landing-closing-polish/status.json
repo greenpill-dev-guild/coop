@@ -1,0 +1,68 @@
+{
+  "$schema": "status-schema",
+  "feature": "landing-closing-polish",
+  "title": "Landing Closing Polish",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "backlog",
+      "depends_on": [],
+      "branch": "claude/ui/landing-closing-polish",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/state/landing-closing-polish"
+    },
+    "api": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/api/landing-closing-polish"
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/contracts/landing-closing-polish"
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "n/a",
+      "depends_on": [],
+      "branch": "codex/docs/landing-closing-polish"
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui"],
+      "branch": "handoff/qa-codex/landing-closing-polish",
+      "branch_trigger": "handoff/qa-codex/landing-closing-polish",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/landing-closing-polish",
+      "branch_trigger": "handoff/qa-claude/landing-closing-polish",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Preserve the flat polish note as a UI-only feature pack",
+      "rationale": "The original note is actionable landing-page UI work and should enter the Planning OS instead of remaining a flat legacy plan."
+    },
+    {
+      "id": "D2",
+      "choice": "Do not implement the landing polish in the agentic-flow-hardening pass",
+      "rationale": "The migration only removes legacy plan drift; product UI work should run through its own UI lane and QA."
+    }
+  ],
+  "updated_at": "2026-05-26"
+}

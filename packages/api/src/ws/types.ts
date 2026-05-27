@@ -1,24 +1,14 @@
+import type { SignalingMessage as SharedSignalingMessage } from '@coop/shared';
+
 export const MESSAGE_TYPES = ['subscribe', 'unsubscribe', 'publish', 'ping'] as const;
-export type MessageType = (typeof MESSAGE_TYPES)[number];
+export type MessageType = SharedSignalingMessage['type'];
 
-export interface SubscribeMessage {
-  type: 'subscribe';
-  topics: unknown[];
-}
+export type SubscribeMessage = Extract<SharedSignalingMessage, { type: 'subscribe' }>;
 
-export interface UnsubscribeMessage {
-  type: 'unsubscribe';
-  topics: unknown[];
-}
+export type UnsubscribeMessage = Extract<SharedSignalingMessage, { type: 'unsubscribe' }>;
 
-export interface PublishMessage {
-  type: 'publish';
-  topic: string;
-  [key: string]: unknown;
-}
+export type PublishMessage = Extract<SharedSignalingMessage, { type: 'publish' }>;
 
-export interface PingMessage {
-  type: 'ping';
-}
+export type PingMessage = Extract<SharedSignalingMessage, { type: 'ping' }>;
 
 export type SignalingMessage = SubscribeMessage | UnsubscribeMessage | PublishMessage | PingMessage;

@@ -1,3 +1,5 @@
+import { type IceConfigResponse, iceConfigResponseSchema } from './contracts/schema';
+
 /** Default signaling server URL. */
 export const defaultSignalingUrls: string[] = ['wss://api.coop.town'];
 
@@ -67,13 +69,6 @@ export function buildIceServers(turn?: {
   ];
 }
 
-export interface IceConfigResponse {
-  iceServers: RTCIceServer[];
-  expiresAt: string | null;
-  degraded: boolean;
-  reason?: string;
-}
-
 export function resolveSyncApiBaseUrl(websocketSyncUrl = defaultWebsocketSyncUrl) {
   const url = new URL(websocketSyncUrl);
   url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
@@ -99,13 +94,9 @@ export async function fetchServerMintedIceConfig(input?: {
       headers: { accept: 'application/json' },
     });
     if (!response.ok) return null;
-    const payload = (await response.json()) as IceConfigResponse;
-    return {
-      iceServers: Array.isArray(payload.iceServers) ? payload.iceServers : [],
-      expiresAt: payload.expiresAt ?? null,
-      degraded: Boolean(payload.degraded),
-      reason: payload.reason,
-    };
+    const parsed = iceConfigResponseSchema.safeParse(await response.json());
+    if (!parsed.success) return null;
+    return parsed.data;
   } catch {
     return null;
   }

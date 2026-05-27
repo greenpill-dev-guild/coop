@@ -9,8 +9,9 @@ The `@coop/app` package serves two purposes: (1) the public landing page for Coo
 ```
 packages/app/src/
   main.tsx              # Vite entry point, mounts <App />
-  app.tsx               # Root router (~800 lines): landing, pair, receiver, inbox, board
-  pairing-handoff.ts    # URL payload extraction for /pair route
+  app.tsx               # Root router: landing, app receiver routes, legacy receiver routes, board
+  receiver-routes.ts    # Canonical /app/* receiver routes and legacy aliases
+  pairing-handoff.ts    # URL payload extraction for receiver pairing routes
   board-handoff.ts      # URL payload extraction for /board/:coopId route
   views/
     Landing/index.tsx   # Static landing page with ritual guide
@@ -23,10 +24,13 @@ Routes are path-based, resolved from `window.location`:
 
 | Path | Component | Purpose |
 |------|-----------|---------|
-| `/` | Landing | Product story, setup ritual guide |
-| `/pair` | Receiver pairing | Accept pairing via URL payload |
-| `/pair` (after pairing) | Receiver capture | Audio/photo/file capture UI |
-| `/inbox` | Receiver inbox | Local capture list |
+| `/` | Landing or standalone receiver redirect | Browser landing page; installed PWA redirects to `/app/pair` or `/app/receiver` based on pairing |
+| `/landing` | Landing | Explicit product story route |
+| `/app` | Receiver app root | Installed PWA root; redirects into the active receiver state |
+| `/app/pair` | Receiver pairing | Accept pairing via URL payload |
+| `/app/receiver` | Receiver capture | Audio/photo/file capture UI |
+| `/app/inbox` | Receiver inbox | Local capture list |
+| `/pair`, `/receiver`, `/inbox` | Legacy receiver aliases | Legacy paths resolved by `receiverKindFromLegacyPath()` |
 | `/board/:coopId` | Board | React Flow visualization of coop state |
 
 ### Landing Page
@@ -104,9 +108,11 @@ export function bootstrapCoopBoardHandoff(targetWindow: Window): CoopBoardSnapsh
 
 ## Key Patterns
 
-### All Logic in @coop/shared
+### All Domain Logic in Shared Public Surfaces
 
-The app imports all domain logic from shared:
+The app imports domain and app-shell logic from shared public surfaces. App-specific receiver and
+landing helpers usually come from `@coop/shared/app`; package root imports are reserved for values
+that are deliberately exported from `@coop/shared`.
 
 ```typescript
 import {
@@ -115,7 +121,7 @@ import {
   buildCoopBoardGraph,
   connectReceiverSyncRelay,
   createReceiverSyncEnvelope,
-} from '@coop/shared';
+} from '@coop/shared/app';
 ```
 
 The app contains no business logic of its own. It only has view components, routing, and handoff utilities.
@@ -151,13 +157,13 @@ The app uses plain CSS with class-based styling. Key class naming:
 - **Never add routing libraries**. Routes are path-based with manual resolution. Keep it simple.
 - **Never add state management libraries**. The app uses React `useState`/`useEffect` directly.
 - **Never define domain logic in the app**. Import from `@coop/shared`.
-- **Never import from `@coop/shared` deep paths**. Use the barrel export.
+- **Never import from `@coop/shared` deep paths**. Use `@coop/shared`, `@coop/shared/app`, or another exported package subpath.
 
 ## Key Files
 
 - `app.tsx` — Root component with routing, receiver flows, sync management
 - `views/Landing/index.tsx` — Static landing page
 - `views/Board/index.tsx` — React Flow board visualization
-- `pairing-handoff.ts` — URL payload extraction for /pair
+- `pairing-handoff.ts` — URL payload extraction for `/app/pair` and legacy `/pair`
 - `board-handoff.ts` — URL payload extraction for /board/:coopId
 - `main.tsx` — Vite entry point

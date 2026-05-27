@@ -1,12 +1,12 @@
-# QA Report For <Feature Title>
+# QA Report For Landing Closing Polish
 
-## QA Pass 1: Codex
+## QA Pass 1: Claude
 
 - Status:
 - Commands:
 - Findings:
 
-## QA Pass 2: Claude
+## QA Pass 2: Codex
 
 - Status:
 - Commands:

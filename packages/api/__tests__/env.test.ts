@@ -14,7 +14,7 @@ describe('loadEnv', () => {
 
   it('returns defaults when no env vars are set', () => {
     const env = loadEnv();
-    expect(env.port).toBe(4444);
+    expect(env.port).toBe(3103);
     expect(env.host).toBe('127.0.0.1');
   });
 

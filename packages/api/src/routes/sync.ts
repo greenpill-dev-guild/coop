@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { iceConfigErrorSchema, iceConfigResponseSchema } from '@coop/shared';
 import { Hono } from 'hono';
 
 const sync = new Hono();
@@ -50,18 +51,20 @@ sync.get('/health', (c) =>
 sync.get('/ice', (c) => {
   const clientKey = getClientKey(c);
   if (!checkIceRateLimit(clientKey)) {
-    return c.json({ error: 'rate_limited' }, 429);
+    return c.json(iceConfigErrorSchema.parse({ error: 'rate_limited' }), 429);
   }
 
   const urls = parseTurnUrls(process.env.COOP_TURN_URLS);
   const sharedSecret = process.env.COOP_TURN_SHARED_SECRET?.trim();
   if (!urls?.length || !sharedSecret) {
-    return c.json({
-      iceServers: [],
-      expiresAt: null,
-      degraded: true,
-      reason: 'turn_not_configured',
-    });
+    return c.json(
+      iceConfigResponseSchema.parse({
+        iceServers: [],
+        expiresAt: null,
+        degraded: true,
+        reason: 'turn_not_configured',
+      }),
+    );
   }
 
   const ttlSeconds = Number(process.env.COOP_TURN_TTL_SECONDS ?? 3600);
@@ -73,17 +76,19 @@ sync.get('/ice', (c) => {
   const username = `${expiresAtSeconds}:${usernamePrefix}`;
   const credential = createHmac('sha1', sharedSecret).update(username).digest('base64');
 
-  return c.json({
-    iceServers: [
-      {
-        urls,
-        username,
-        credential,
-      },
-    ],
-    expiresAt: new Date(expiresAtSeconds * 1000).toISOString(),
-    degraded: false,
-  });
+  return c.json(
+    iceConfigResponseSchema.parse({
+      iceServers: [
+        {
+          urls,
+          username,
+          credential,
+        },
+      ],
+      expiresAt: new Date(expiresAtSeconds * 1000).toISOString(),
+      degraded: false,
+    }),
+  );
 });
 
 export { sync };

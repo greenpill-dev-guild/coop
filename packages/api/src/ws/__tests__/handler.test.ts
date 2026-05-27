@@ -52,6 +52,35 @@ describe('createWSHandlers', () => {
     expect(registry.getSubscriberCount('t2')).toBe(1);
   });
 
+  it('filters non-string subscribe topics after schema parsing', () => {
+    const ws = createMockWS();
+    handlers.onOpen(new Event('open'), ws);
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'subscribe', topics: ['room', 42, null] }),
+      }),
+      ws,
+    );
+
+    expect(registry.getSubscriberCount('room')).toBe(1);
+    expect(registry.getSubscriberCount('42')).toBe(0);
+  });
+
+  it('treats non-array subscribe topics as an empty topic list', () => {
+    const ws = createMockWS();
+    handlers.onOpen(new Event('open'), ws);
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'subscribe', topics: 'room' }),
+      }),
+      ws,
+    );
+
+    expect(registry.getSubscriberCount('room')).toBe(0);
+  });
+
   it('unsubscribe removes topics from the registry', () => {
     const ws = createMockWS();
     handlers.onOpen(new Event('open'), ws);
@@ -108,6 +137,36 @@ describe('createWSHandlers', () => {
     const parsed = readFirstSentJson(ws2);
     expect(parsed.payload).toBe('hi');
     expect(parsed.clients).toBe(3);
+  });
+
+  it('preserves extra publish fields from the signaling envelope', () => {
+    const ws = createMockWS();
+    handlers.onOpen(new Event('open'), ws);
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'subscribe', topics: ['room'] }),
+      }),
+      ws,
+    );
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'publish',
+          topic: 'room',
+          payload: { body: 'hi' },
+          sourceClientId: 'client-1',
+        }),
+      }),
+      ws,
+    );
+
+    expect(readFirstSentJson(ws)).toMatchObject({
+      payload: { body: 'hi' },
+      sourceClientId: 'client-1',
+      clients: 1,
+    });
   });
 
   it('publish delivers to the publishing client as well (publisher is also a subscriber)', () => {
@@ -352,6 +411,20 @@ describe('createWSHandlers', () => {
 
     handlers.onMessage(
       new MessageEvent('message', { data: JSON.stringify({ topic: 'room', payload: 'no type' }) }),
+      ws,
+    );
+
+    expect(ws.sent).toHaveLength(0);
+  });
+
+  it('ignores publish messages without a valid topic', () => {
+    const ws = createMockWS();
+    handlers.onOpen(new Event('open'), ws);
+
+    handlers.onMessage(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'publish', payload: 'missing topic' }),
+      }),
       ws,
     );
 

@@ -1,0 +1,87 @@
+{
+  "$schema": "status-schema",
+  "feature": "agentic-flow-hardening",
+  "title": "Agentic Flow Hardening",
+  "stage": "active",
+  "lanes": {
+    "ui": {
+      "owner": "claude",
+      "status": "done",
+      "depends_on": [],
+      "branch": "claude/ui/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "state": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/state/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "api": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["contracts"],
+      "branch": "codex/api/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "contracts": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": [],
+      "branch": "codex/contracts/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "docs": {
+      "owner": "codex",
+      "status": "done",
+      "depends_on": ["state", "contracts", "api", "ui"],
+      "branch": "codex/docs/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_1": {
+      "owner": "codex",
+      "status": "blocked",
+      "depends_on": ["ui", "state", "api", "contracts", "docs"],
+      "branch": "handoff/qa-codex/agentic-flow-hardening",
+      "branch_trigger": "handoff/qa-codex/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    },
+    "qa_pass_2": {
+      "owner": "claude",
+      "status": "blocked",
+      "depends_on": ["qa_pass_1"],
+      "branch": "handoff/qa-claude/agentic-flow-hardening",
+      "branch_trigger": "handoff/qa-claude/agentic-flow-hardening",
+      "ready_when_dependencies_met": true
+    }
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "choice": "Use one feature pack for the Syntax transcript hardening work",
+      "rationale": "The gaps are connected workflow issues and should compound the existing Planning OS instead of creating parallel truth surfaces."
+    },
+    {
+      "id": "D2",
+      "choice": "Keep the first import-boundary check advisory by default",
+      "rationale": "Agents need visibility into drift before the repo adds a brittle blocking gate."
+    },
+    {
+      "id": "D3",
+      "choice": "Keep Zod and the current sync/signaling wire shapes",
+      "rationale": "The gap is missing schema-first coverage at boundaries, not a validation-library or protocol migration."
+    },
+    {
+      "id": "D4",
+      "choice": "Keep Coop's token-backed plain CSS system",
+      "rationale": "The repo already has design tokens and reusable extension primitives; adding a UI framework would widen the surface without solving the identified gap."
+    },
+    {
+      "id": "D5",
+      "choice": "Keep import-boundary enforcement broad enough to include source and tests",
+      "rationale": "An advisory check only helps agent flow when it catches the common places agents introduce shared deep imports, including package-level tests and multiline imports."
+    }
+  ],
+  "updated_at": "2026-05-26"
+}

@@ -3,7 +3,7 @@ feature: <feature-slug>
 title: <Feature Title> contracts lane
 lane: contracts
 agent: codex
-status: backlog
+status: n/a
 source_branch: <source-branch>
 work_branch: codex/contracts/<feature-slug>
 depends_on:
@@ -38,7 +38,9 @@ Keep changes inside `owned_paths` where possible. If work spills beyond them, ex
 
 ## Tasks
 
+- [ ] Complete the spec's `Agent Readiness` checklist for schema/contract impact before coding.
 - [ ] Update schemas and typed contracts first
+- [ ] Document compatibility, migration, or persisted-state implications before changing consumers
 - [ ] Implement contract-facing logic
 - [ ] Add or update targeted tests
 - [ ] Keep work inside `owned_paths` or document justified spillover

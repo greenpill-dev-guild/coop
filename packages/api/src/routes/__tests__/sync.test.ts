@@ -1,3 +1,4 @@
+import { iceConfigErrorSchema, iceConfigResponseSchema } from '@coop/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sync } from '../sync';
 
@@ -30,6 +31,7 @@ describe('sync routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(iceConfigResponseSchema.safeParse(body).success).toBe(true);
     expect(body).toMatchObject({
       iceServers: [],
       expiresAt: null,
@@ -50,6 +52,7 @@ describe('sync routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(iceConfigResponseSchema.safeParse(body).success).toBe(true);
     expect(body.degraded).toBe(false);
     expect(body.expiresAt).toBe('2026-05-17T12:10:00.000Z');
     expect(body.iceServers[0]).toMatchObject({
@@ -73,6 +76,8 @@ describe('sync routes', () => {
     }
 
     expect(response?.status).toBe(429);
-    expect(await response?.json()).toEqual({ error: 'rate_limited' });
+    const body = await response?.json();
+    expect(iceConfigErrorSchema.safeParse(body).success).toBe(true);
+    expect(body).toEqual({ error: 'rate_limited' });
   });
 });

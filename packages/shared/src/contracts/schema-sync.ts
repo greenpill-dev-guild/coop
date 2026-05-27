@@ -106,6 +106,61 @@ export const roomRotationAnnouncementSchema = z.object({
   proof: z.string().min(1),
 });
 
+export const iceServerSchema = z
+  .object({
+    urls: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+    username: z.string().optional(),
+    credential: z.string().optional(),
+    credentialType: z.enum(['password', 'oauth']).optional(),
+  })
+  .passthrough();
+
+export const iceConfigResponseSchema = z.object({
+  iceServers: z.array(iceServerSchema).default([]),
+  expiresAt: z.string().datetime().nullable(),
+  degraded: z.boolean(),
+  reason: z.string().optional(),
+});
+
+export const iceConfigErrorSchema = z.object({
+  error: z.literal('rate_limited'),
+});
+
+const signalingTopicsSchema = z.preprocess(
+  (value) => (Array.isArray(value) ? value : []),
+  z.array(z.unknown()),
+);
+
+export const signalingSubscribeMessageSchema = z.object({
+  type: z.literal('subscribe'),
+  topics: signalingTopicsSchema.default([]),
+});
+
+export const signalingUnsubscribeMessageSchema = z.object({
+  type: z.literal('unsubscribe'),
+  topics: signalingTopicsSchema.default([]),
+});
+
+export const signalingPublishMessageSchema = z
+  .object({
+    type: z.literal('publish'),
+    topic: z.string().min(1),
+  })
+  .passthrough();
+
+export const signalingPingMessageSchema = z
+  .object({
+    type: z.literal('ping'),
+  })
+  .passthrough();
+
+export const signalingMessageSchema = z.discriminatedUnion('type', [
+  signalingSubscribeMessageSchema,
+  signalingUnsubscribeMessageSchema,
+  signalingPublishMessageSchema,
+  signalingPingMessageSchema,
+]);
+
 export type SyncRoomRotationProof = z.infer<typeof syncRoomRotationProofSchema>;
 export type SyncRoomBootstrap = z.infer<typeof syncRoomBootstrapSchema>;
 export type SyncRoomConfig = z.infer<typeof syncRoomConfigSchema>;
@@ -114,3 +169,11 @@ export type InviteHandoffRequest = z.infer<typeof inviteHandoffRequestSchema>;
 export type InviteHandoffResponse = z.infer<typeof inviteHandoffResponseSchema>;
 export type InviteHandoffPayload = z.infer<typeof inviteHandoffPayloadSchema>;
 export type RoomRotationAnnouncement = z.infer<typeof roomRotationAnnouncementSchema>;
+export type IceServer = z.infer<typeof iceServerSchema>;
+export type IceConfigResponse = z.infer<typeof iceConfigResponseSchema>;
+export type IceConfigError = z.infer<typeof iceConfigErrorSchema>;
+export type SignalingSubscribeMessage = z.infer<typeof signalingSubscribeMessageSchema>;
+export type SignalingUnsubscribeMessage = z.infer<typeof signalingUnsubscribeMessageSchema>;
+export type SignalingPublishMessage = z.infer<typeof signalingPublishMessageSchema>;
+export type SignalingPingMessage = z.infer<typeof signalingPingMessageSchema>;
+export type SignalingMessage = z.infer<typeof signalingMessageSchema>;

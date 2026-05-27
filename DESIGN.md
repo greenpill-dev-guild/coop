@@ -190,7 +190,16 @@ This file is the canonical Coop core DesignMD source. Use it with the surface di
 
 The shipped runtime token source remains `packages/shared/src/styles/tokens.css`; when a token changes, update this file and the runtime CSS together. Docs mirror a subset in `docs/src/css/custom.css`.
 
-**Extension dialect gap:** Popup and Sidepanel currently inherit this core file plus `packages/shared/src/styles/tokens.css` and `packages/extension/src/global.css`. Do not create a new extension DesignMD dialect until it can be grounded in stable Popup/Sidepanel primitives, tab density, compact card states, and browser-extension constraints. The follow-up dialect should cover Popup, Sidepanel, onboarding, review, and extension empty/error states without redefining the Coop core palette or token names.
+## Extension Appendix
+
+Popup and Sidepanel inherit this core file plus `packages/shared/src/styles/tokens.css` and `packages/extension/src/global.css`. Treat this appendix as the extension dialect until stable Popup/Sidepanel primitives justify a separate DesignMD file.
+
+- Use existing shared UI before adding primitives: `Tooltip`, `NotificationBanner`, `PopupThemePicker`, `.popup-icon-button`, `.panel-card`, `.draft-card`, `.artifact-card`, `.badge`, `.state-pill`, `.filter-popover`, and `.skeleton` patterns.
+- Keep extension CSS ownership in `packages/extension/src/global.css` for shared popup/sidepanel primitives and colocated view CSS only when a component has a narrow, non-reusable layout need.
+- Use `--coop-*` tokens for color, spacing, radius, shadow, z-index, and typography. Raw values are acceptable only for one-off geometry, media sizing, or values already exempted by `bun run check:design-tokens`.
+- Prefer dense, scannable runtime layouts over website composition: compact tab rows, stable card dimensions, visible counts, readable empty/error states, and obvious review/publish/private boundaries.
+- Before editing extension UI or CSS, inspect `packages/extension/src/views/shared/`, `packages/extension/src/global.css`, and this appendix. Add a new primitive only when reuse is clear and the existing class/component set cannot express the state.
+- Do not create a separate extension DesignMD dialect until it can be grounded in repeated Popup, Sidepanel, onboarding, review, and empty/error primitives without redefining the Coop palette or token names.
 
 ## Colors
 

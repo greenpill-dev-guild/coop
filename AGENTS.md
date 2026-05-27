@@ -138,7 +138,7 @@ Before creating new UI elements, check `packages/extension/src/views/shared/` an
 
 ### Design System Guardrails
 
-Before UI or CSS changes, load root `DESIGN.md`, the relevant surface dialect (`packages/app/DESIGN.pwa.md`, `packages/app/DESIGN.browser.md`, or `docs/DESIGN.md`), and `packages/shared/src/styles/tokens.css`. Extension UI inherits the root Coop design file in this pass; do not invent an extension-specific dialect.
+Before UI or CSS changes, load root `DESIGN.md`, the relevant surface dialect (`packages/app/DESIGN.pwa.md`, `packages/app/DESIGN.browser.md`, or `docs/DESIGN.md`), and `packages/shared/src/styles/tokens.css`. Extension UI uses the `DESIGN.md` Extension Appendix plus `packages/extension/src/global.css`; do not invent a separate extension dialect until repeated Popup/Sidepanel primitives justify it.
 
 Run `bun run check:design-md` and `bun run check:design-tokens` for UI/CSS changes before the relevant app or extension build. Use existing `--coop-*` tokens for palette, radius, z-index, spacing, typography, and shadow values; add a new token only when a repeated raw value has no existing token and the design intent is stable.
 

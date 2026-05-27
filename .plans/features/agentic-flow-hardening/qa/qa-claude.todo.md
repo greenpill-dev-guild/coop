@@ -1,11 +1,11 @@
 ---
-feature: <feature-slug>
-title: <Feature Title> QA pass 2
+feature: agentic-flow-hardening
+title: Agentic Flow Hardening QA pass 2
 lane: qa
 agent: claude
 status: blocked
-source_branch: <source-branch>
-work_branch: qa/claude/<feature-slug>
+source_branch: feature/agentic-flow-hardening
+work_branch: qa/claude/agentic-flow-hardening
 depends_on:
   - qa-codex.todo.md
 skills:
@@ -13,13 +13,13 @@ skills:
   - ui
   - e2e
 qa_order: 2
-handoff_in: handoff/qa-claude/<feature-slug>
-updated: <YYYY-MM-DD>
+handoff_in: handoff/qa-claude/agentic-flow-hardening
+updated: 2026-05-26
 ---
 
 # QA Pass 2
 
-Claude runs the second QA pass only after Codex QA is done and `handoff/qa-claude/<feature-slug>` exists.
+Claude runs the second QA pass only after Codex QA is done and `handoff/qa-claude/agentic-flow-hardening` exists.
 
 ## Focus
 

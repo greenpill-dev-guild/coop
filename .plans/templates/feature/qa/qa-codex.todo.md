@@ -3,7 +3,7 @@ feature: <feature-slug>
 title: <Feature Title> QA pass 1
 lane: qa
 agent: codex
-status: backlog
+status: blocked
 source_branch: <source-branch>
 work_branch: qa/codex/<feature-slug>
 skills:
