@@ -224,6 +224,14 @@ Automation entrypoints:
 - `bun run plans queue --agent claude --lane qa --handoff-ready`
 - `bun run plans queue --agent codex --lane qa --handoff-ready`
 
+### Linear-Spawned Issue Contract
+
+Linear (workspace `greenpill-dev-guild`) is the durable backlog; Codex work is labeled `agent:codex`. A Linear `agent:codex` issue maps to a lane in the feature pack above — `state` / `api` / `contracts` / `qa` pass 1. When dispatched from an issue, **that issue is your spec**: read it in full, plus the lane's `*.codex.todo.md` and the feature's `status.json`.
+
+- **Codex-ready gate.** Implement only if the issue gives all of: clear **acceptance criteria**, the target **lane / package**, and **validation** (explicit, or the Verification Tier that fits). If anything is missing, the scope is ambiguous, or it needs a cross-lane or architecture decision — **stop and comment on the issue; do not guess.** Sequencing across lanes lives in `status.json` + the human; you execute one lane, you don't reorder them.
+- **Branch + PR.** Use the lane's branch trigger / integration branch from `status.json` (e.g. `handoff/qa-codex/<slug>`), not an ad-hoc branch; the PR body must link the issue (`Closes PRD-NNN` / `Linear: PRD-NNN`). One issue per PR; never self-merge.
+- **Before the PR**, run the lightest Verification Tier that proves the change (typecheck → quick → smoke → build) plus `bun run test`, and produce evidence — not "should work." Keep PII out of issue/PR bodies and call out auth/session/permit/policy/contract changes for human review per the Agentic Engineering Loop.
+
 **Commits**: Conventional Commits with scope: `type(scope): description`
 - Types: feat, fix, refactor, chore, docs, test, perf, ci
 - Scopes: shared, extension, app, claude
