@@ -169,6 +169,11 @@ being exercised.
 - [Extension Install & Distribution](docs/reference/extension-install-and-distribution.md)
 - [Live Rails Operator Runbook](docs/reference/live-rails-operator-runbook.md)
 
+## License
+
+Coop is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0-only). Copyright (C)
+2026 Greenpill Dev Guild and contributors. See [LICENSE](LICENSE).
+
 ## Project Foundation & Brand
 
 Coop is built for community coordination work where context, evidence, governance, and capital
