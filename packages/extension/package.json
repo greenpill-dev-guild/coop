@@ -14,8 +14,8 @@
     "@mlc-ai/web-llm": "^0.2.79",
     "@rhinestone/module-sdk": "^0.4.0",
     "permissionless": "^0.3.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "viem": "^2.25.0"
   },
   "devDependencies": {
