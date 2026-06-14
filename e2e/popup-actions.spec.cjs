@@ -8,7 +8,7 @@ const closeTimeoutMs = 15_000;
 const popupSnapshotKey = 'coop:popup-snapshot';
 const appBaseUrl =
   process.env.COOP_PLAYWRIGHT_BASE_URL ||
-  `http://127.0.0.1:${process.env.COOP_PLAYWRIGHT_APP_PORT || process.env.COOP_DEV_APP_PORT || '3001'}`;
+  `http://127.0.0.1:${process.env.COOP_PLAYWRIGHT_APP_PORT || process.env.COOP_DEV_APP_PORT || '3101'}`;
 
 function withTimeout(promise, timeoutMs, label = 'operation') {
   return Promise.race([

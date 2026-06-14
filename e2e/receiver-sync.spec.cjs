@@ -8,7 +8,7 @@ const { createMockMemberIdentity } = require('./helpers/mock-auth.cjs');
 const closeTimeoutMs = 15000;
 const appBaseUrl =
   process.env.COOP_PLAYWRIGHT_BASE_URL ||
-  `http://127.0.0.1:${process.env.COOP_PLAYWRIGHT_APP_PORT || process.env.COOP_DEV_APP_PORT || '3001'}`;
+  `http://127.0.0.1:${process.env.COOP_PLAYWRIGHT_APP_PORT || process.env.COOP_DEV_APP_PORT || '3101'}`;
 const progressLogPath = path.join(os.tmpdir(), 'coop-receiver-sync-progress.log');
 
 function withTimeout(promise, timeoutMs, label = 'operation') {

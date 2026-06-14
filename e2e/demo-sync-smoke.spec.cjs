@@ -6,7 +6,7 @@ const { ensureExtensionBuilt, extensionDir } = require('./helpers/extension-buil
 const { createMockMemberIdentity } = require('./helpers/mock-auth.cjs');
 
 const closeTimeoutMs = 15_000;
-const apiPort = process.env.COOP_PLAYWRIGHT_API_PORT || process.env.COOP_DEV_API_PORT || '4444';
+const apiPort = process.env.COOP_PLAYWRIGHT_API_PORT || process.env.COOP_DEV_API_PORT || '3103';
 const signalingUrl = process.env.COOP_PLAYWRIGHT_SIGNALING_URL || `ws://127.0.0.1:${apiPort}`;
 const websocketSyncUrl =
   process.env.VITE_COOP_WEBSOCKET_SYNC_URL || `ws://127.0.0.1:${apiPort}/yws`;

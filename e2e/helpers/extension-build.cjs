@@ -39,14 +39,14 @@ function sleepMs(ms) {
 function resolveAppBaseUrl(env) {
   return (
     env.COOP_PLAYWRIGHT_BASE_URL ||
-    `http://127.0.0.1:${env.COOP_PLAYWRIGHT_APP_PORT || env.COOP_DEV_APP_PORT || '3001'}`
+    `http://127.0.0.1:${env.COOP_PLAYWRIGHT_APP_PORT || env.COOP_DEV_APP_PORT || '3101'}`
   );
 }
 
 function resolveSignalingUrl(env) {
   return (
     env.COOP_PLAYWRIGHT_SIGNALING_URL ||
-    `ws://127.0.0.1:${env.COOP_PLAYWRIGHT_API_PORT || env.COOP_DEV_API_PORT || '4444'}`
+    `ws://127.0.0.1:${env.COOP_PLAYWRIGHT_API_PORT || env.COOP_DEV_API_PORT || '3103'}`
   );
 }
 
