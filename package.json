@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.10",
-  "workspaces": ["packages/*", "docs"],
+  "workspaces": [
+    "packages/*",
+    "docs"
+  ],
   "overrides": {
     "protobufjs": "7.5.9"
   },
@@ -130,8 +133,8 @@
     "validate:receiver-pwa-eval": "bun run ./scripts/validate.ts e2e:receiver-pwa-eval",
     "validate:regen-community-evals": "bun run ./scripts/validate.ts regen-community-evals",
     "validate:full": "bun run ./scripts/validate.ts full",
-    "agentic:check": "bun run check:design-md && bun run check:design-tokens && bun run check:agentic-flow && bun run validate:quick",
-    "agentic:browser-proof": "bun run test:e2e:agentic-browser-report",
+    "agentic:check": "bun run check:browser-verification-policy && bun run check:design-md && bun run check:design-tokens && bun run check:agentic-flow && bun run validate:quick",
+    "agentic:browser-proof": "bun scripts/require-authenticated-browser-qa.mjs && bun run test:e2e:agentic-browser-report",
     "agentic:verify": "bun run test:e2e:app && bun run test:visual",
     "analyze": "ANALYZE=true bun run build",
     "analyze:extension": "sh -lc 'cd packages/extension && ANALYZE=true bun run build'",
@@ -142,7 +145,8 @@
     "docs:dev": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs start --host 127.0.0.1 --port ${COOP_DEV_DOCS_PORT:-3102} --no-open'",
     "docs:build": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs build'",
     "docs:serve": "sh -lc 'PATH=\"$(mise where node@22)/bin:$PATH\" bun run --filter @coop/docs serve'",
-    "postinstall": "sh -lc 'cd packages/extension && bun run prepare'"
+    "postinstall": "sh -lc 'cd packages/extension && bun run prepare'",
+    "check:browser-verification-policy": "bun scripts/check-browser-verification-policy.mjs"
   },
   "devDependencies": {
     "@google/design.md": "0.1.1",
@@ -171,5 +175,7 @@
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
   },
-  "trustedDependencies": ["@biomejs/biome"]
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ]
 }
