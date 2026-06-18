@@ -31,6 +31,7 @@ Use this page as the map before opening the longer reference archive.
 | Shelf | Use It For | Start Here |
 | --- | --- | --- |
 | Narrative & Strategy | Demo language, positioning, long-term story, and funding framing | [Coop Strategy](/reference/coop-strategy) |
+| Funding & Grants | Funder-specific proposal drafts and dated grant strategy snapshots | [NLnet Fediversity Coop Proposal](/reference/nlnet-fediversity-coop-proposal-2026-05-31) |
 | Architecture | Deep system design, agent runtime, sync, privacy, policy, and onchain references | [Agent Harness](/reference/agent-harness) |
 | Product | Product requirements, current action grouping, roadmap history, and mandate alignment | [Action Domain Map](/reference/action-domain-map) |
 | Operations | Release state, validation, deploys, install paths, and operator-only live rails | [Current Release Status](/reference/current-release-status) |
