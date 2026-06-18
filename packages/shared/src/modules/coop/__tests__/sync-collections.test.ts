@@ -130,4 +130,18 @@ describe('remaining shared collection sync migrations', () => {
 
     expect(onUpdate).not.toHaveBeenCalled();
   });
+
+  it('keeps archive receipts when a stale state snapshot is written later', () => {
+    const state = buildState();
+    const doc = new Y.Doc();
+
+    writeCoopState(doc, state);
+    writeCoopState(doc, {
+      ...state,
+      archiveReceipts: [],
+    });
+
+    const loaded = readCoopState(doc);
+    expect(loaded.archiveReceipts.map((receipt) => receipt.id)).toEqual(['receipt-1']);
+  });
 });

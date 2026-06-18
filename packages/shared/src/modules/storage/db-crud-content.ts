@@ -240,38 +240,25 @@ export async function mergeCoopStateUpdate(
       applyCoopStateUpdate(doc, encodedState);
       const parseResult = redactSyncRoomSecretsFromMergedDoc(doc, coopId, syncRoomGuard);
 
-      // Always persist the merged Y.Doc state — the CRDT merge itself is valid
-      // even when the materialized state temporarily violates Zod constraints.
+      if (!parseResult.success) {
+        console.warn(
+          `mergeCoopStateUpdate: rejected invalid remote update for coop ${coopId}.`,
+          parseResult.error.issues,
+        );
+        throw parseResult.error;
+      }
+
+      if (parseResult.data.profile.id !== coopId) {
+        throw new Error(`Persisted coop update target mismatch for ${coopId}.`);
+      }
+
       await db.coopDocs.put({
         id: coopId,
         encodedState: encodeCoopDoc(doc),
         updatedAt: nowIso(),
       });
       await mirrorSourcesFromYDocToDexie(db, doc, { coopId, pruneMissing: true });
-
-      // Try to parse the merged state. If Zod validation fails, return a
-      // partial result with a warning instead of throwing — transient states
-      // during concurrent joins may temporarily violate schema invariants
-      // but self-heal as sync converges.
-      if (parseResult.success) {
-        if (parseResult.data.profile.id !== coopId) {
-          throw new Error(`Persisted coop update target mismatch for ${coopId}.`);
-        }
-        return parseResult.data;
-      }
-
-      // Validation failed — log but don't throw. Return the raw state
-      // cast as CoopSharedState with a warning marker so callers know.
-      console.warn(
-        `mergeCoopStateUpdate: Zod validation failed for coop ${coopId}, persisting raw Y.Doc anyway.`,
-        parseResult.error.issues,
-      );
-      const raw = readCoopStateRaw(doc);
-      const partial = raw as CoopSharedState & { _validationWarning?: string };
-      partial._validationWarning = parseResult.error.issues
-        .map((i) => `${i.path.join('.')}: ${i.message}`)
-        .join('; ');
-      return partial;
+      return parseResult.data;
     } finally {
       doc.destroy();
     }

@@ -4,11 +4,9 @@ import type { CoopSharedState, Member } from '../../../contracts/schema';
 import { createCoop } from '../../coop/flows';
 import {
   createSyncRoomConfig,
-  encodeCoopDoc,
   hydrateCoopDoc,
   mergeCoopDocUpdates,
   readCoopState,
-  readCoopStateRaw,
   writeCoopState,
 } from '../../coop/sync';
 import { mergeCoopStateUpdate, saveCoopState } from '../db-crud-content';
@@ -381,79 +379,42 @@ describe('mergeCoopStateUpdate atomicity (R4)', () => {
 });
 
 describe('mergeCoopStateUpdate Zod recovery (R7)', () => {
-  it('persists raw Yjs update even when Zod validation fails for transient state', async () => {
+  it('rejects invalid remote updates without poisoning the stored coop doc', async () => {
     const db = freshDb();
     const state = buildTestState();
 
-    // Save initial state
     await saveCoopState(db, state);
 
-    // To force a Zod validation failure on the merged doc, we directly
-    // manipulate the stored Y.Doc. This simulates a peer sending an update
-    // that results in a transient invalid state (e.g. during a migration
-    // or concurrent edit that temporarily empties a required array).
     const record = await db.coopDocs.get(state.profile.id);
-    const doc = hydrateCoopDoc(
-      requireDefined(record, 'Expected stored coop doc before corruption test').encodedState,
-    );
+    const originalEncodedState = requireDefined(
+      record,
+      'Expected stored coop doc before invalid remote update test',
+    ).encodedState;
+    const doc = hydrateCoopDoc(originalEncodedState);
     const root = doc.getMap<string>('coop');
 
-    // Set rituals to empty array -- violates rituals: z.array(...).min(1)
     doc.transact(() => {
       root.set('rituals', JSON.stringify([]));
     });
 
-    // Encode the corrupted state as an update
-    const corruptedFullState = encodeCoopDoc(doc);
+    const invalidRemoteUpdate = Y.encodeStateAsUpdate(doc);
     doc.destroy();
 
-    // Store the corrupted state directly so the next merge reads it
-    await db.coopDocs.put({
-      id: state.profile.id,
-      encodedState: corruptedFullState,
-      updatedAt: new Date().toISOString(),
-    });
+    await expect(mergeCoopStateUpdate(db, state.profile.id, invalidRemoteUpdate)).rejects.toThrow();
 
-    // Now try to apply a benign incremental update on top.
-    // readCoopState will try to parse the merged doc which has empty rituals.
-    const incrementalDoc = hydrateCoopDoc(corruptedFullState);
-    const incrementalRoot = incrementalDoc.getMap<string>('coop');
-    incrementalDoc.transact(() => {
-      incrementalRoot.set(
-        'profile',
-        JSON.stringify({ ...state.profile, name: 'Incremental Update' }),
-      );
-    });
-    const incrementalUpdate = Y.encodeStateAsUpdate(incrementalDoc);
-    incrementalDoc.destroy();
-
-    // BEFORE fix: mergeCoopStateUpdate calls readCoopState which calls
-    // coopSharedStateSchema.parse() -- throws ZodError for empty rituals.
-    // AFTER fix: should NOT throw, should persist the raw Y.Doc bytes,
-    // and return a result with _validationWarning to indicate the concern.
-    const result = await mergeCoopStateUpdate(db, state.profile.id, incrementalUpdate);
-
-    // The raw Yjs bytes should still be persisted (the CRDT merge is valid)
     const finalRecord = await db.coopDocs.get(state.profile.id);
     expect(finalRecord).toBeDefined();
     expect(
-      requireDefined(finalRecord, 'Expected merged coop doc to remain persisted').encodedState
-        .length,
-    ).toBeGreaterThan(0);
+      requireDefined(finalRecord, 'Expected invalid remote update to leave stored doc intact')
+        .encodedState,
+    ).toEqual(originalEncodedState);
     const finalDoc = hydrateCoopDoc(
       requireDefined(finalRecord, 'Expected final coop doc for redaction check').encodedState,
     );
-    const finalRaw = readCoopStateRaw(finalDoc);
-    const finalSyncRoom = finalRaw.syncRoom as {
-      roomSecret?: string;
-      inviteSigningSecret?: string;
-    };
+    const loaded = readCoopState(finalDoc);
     finalDoc.destroy();
-    expect(isRedactedSyncRoomSecret(finalSyncRoom.roomSecret)).toBe(true);
-    expect(isRedactedSyncRoomSecret(finalSyncRoom.inviteSigningSecret)).toBe(true);
-
-    // The result should be defined (not thrown away) and carry a warning
-    expect(result).toBeDefined();
-    expect(result).toHaveProperty('_validationWarning');
+    expect(loaded.rituals).toHaveLength(state.rituals.length);
+    expect(isRedactedSyncRoomSecret(loaded.syncRoom.roomSecret)).toBe(true);
+    expect(isRedactedSyncRoomSecret(loaded.syncRoom.inviteSigningSecret)).toBe(true);
   });
 });

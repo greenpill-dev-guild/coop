@@ -60,25 +60,82 @@ async function hydrateLocalSyncRoom(coop: CoopSharedState) {
   return hydrateSyncRoomWithSecret(coop.syncRoom, secretRecord);
 }
 
+type InviteHandoffResponseData = {
+  coopId: string;
+  inviteId: string;
+  recipientMemberId: string;
+  roomEpoch: number;
+  roomId: string;
+  roomSecret: string;
+  inviteSigningSecret: string;
+  signalingUrls: string[];
+};
+
+const inviteHandoffRequestRetryDelaysMs = [100, 250, 500, 1000] as const;
+
+function waitForInviteHandoffRetry(delayMs: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+async function wakeCoopSyncRuntimeForInviteHandoff() {
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'invite-handoff-request' },
+    });
+  } catch {
+    // The follow-up request below retries while the offscreen runtime starts.
+  }
+}
+
+async function sendInviteHandoffRequest(input: {
+  inviteCode: string;
+  memberId: string;
+  memberDisplayName: string;
+}) {
+  const message = {
+    type: 'request-invite-handoff',
+    payload: input,
+  };
+  let lastSendError: unknown;
+
+  for (let attempt = 0; attempt <= inviteHandoffRequestRetryDelaysMs.length; attempt += 1) {
+    try {
+      const response = (await chrome.runtime.sendMessage(message)) as
+        | RuntimeActionResponse<InviteHandoffResponseData>
+        | undefined;
+      if (response) {
+        return response;
+      }
+    } catch (error) {
+      lastSendError = error;
+    }
+
+    const delayMs = inviteHandoffRequestRetryDelaysMs[attempt];
+    if (delayMs !== undefined) {
+      await waitForInviteHandoffRetry(delayMs);
+    }
+  }
+
+  return {
+    ok: false,
+    error:
+      lastSendError instanceof Error
+        ? lastSendError.message
+        : 'Invite handoff failed because the coop sync runtime did not respond.',
+  } satisfies RuntimeActionResponse<InviteHandoffResponseData>;
+}
+
 async function requestInviteHandoff(input: {
   inviteCode: string;
   memberId: string;
   memberDisplayName: string;
 }) {
   await ensureCoopSyncOffscreenDocument();
-  const response = (await chrome.runtime.sendMessage({
-    type: 'request-invite-handoff',
-    payload: input,
-  })) as RuntimeActionResponse<{
-    coopId: string;
-    inviteId: string;
-    recipientMemberId: string;
-    roomEpoch: number;
-    roomId: string;
-    roomSecret: string;
-    inviteSigningSecret: string;
-    signalingUrls: string[];
-  }>;
+  await wakeCoopSyncRuntimeForInviteHandoff();
+  const response = await sendInviteHandoffRequest(input);
 
   if (!response.ok || !response.data) {
     throw new Error(response.error ?? 'Invite handoff failed.');

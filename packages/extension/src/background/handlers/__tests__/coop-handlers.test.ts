@@ -732,7 +732,7 @@ describe('coop handlers', () => {
     });
     vi.mocked(getCoops).mockResolvedValueOnce([]);
     const sendMessage = chrome.runtime.sendMessage as unknown as ReturnType<typeof vi.fn>;
-    sendMessage.mockResolvedValueOnce({
+    sendMessage.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
       ok: true,
       data: {
         coopId: sourceState.profile.id,
@@ -766,7 +766,11 @@ describe('coop handlers', () => {
     });
 
     expect(joinResult.ok).toBe(true);
-    expect(sendMessage).toHaveBeenCalledWith({
+    expect(sendMessage).toHaveBeenNthCalledWith(1, {
+      type: 'refresh-coop-sync-bindings',
+      payload: { reason: 'invite-handoff-request' },
+    });
+    expect(sendMessage).toHaveBeenNthCalledWith(2, {
       type: 'request-invite-handoff',
       payload: {
         inviteCode: invite.code,
@@ -790,6 +794,117 @@ describe('coop handlers', () => {
     expect(savedState?.syncRoom.inviteSigningSecret).toMatch(
       /^encrypted:\/\/local\/sync-room-secret\//,
     );
+  });
+
+  it('retries external invite handoff while the offscreen sync runtime wakes', async () => {
+    const sourceState = makeCoopState({
+      profile: { id: 'coop-handoff-retry', name: 'Handoff Retry Coop' },
+      syncRoom: shared.createSyncRoomConfig('coop-handoff-retry'),
+    });
+    const invite = shared.generateInviteCode({
+      state: sourceState,
+      createdBy: sourceState.members[0].id,
+      type: 'member',
+    });
+    vi.mocked(getCoops).mockResolvedValueOnce([]);
+    const sendMessage = chrome.runtime.sendMessage as unknown as ReturnType<typeof vi.fn>;
+    sendMessage
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          coopId: sourceState.profile.id,
+          inviteId: invite.id,
+          recipientMemberId: 'member-kai',
+          roomEpoch: 2,
+          roomId: sourceState.syncRoom.roomId,
+          roomSecret: sourceState.syncRoom.roomSecret,
+          inviteSigningSecret: sourceState.syncRoom.inviteSigningSecret,
+          signalingUrls: sourceState.syncRoom.signalingUrls,
+        },
+      });
+
+    const joinResult = await handleJoinCoop({
+      type: 'join-coop',
+      payload: {
+        inviteCode: invite.code,
+        displayName: 'Kai',
+        seedContribution: 'I bring handoff retry validation.',
+        member: {
+          id: 'member-kai',
+          displayName: 'Kai',
+          role: 'member',
+          authMode: 'passkey',
+          address: '0x3333333333333333333333333333333333333333',
+          joinedAt: '2026-03-01T00:00:00.000Z',
+          identityWarning: '',
+          passkeyCredentialId: 'credential-kai',
+        },
+      },
+    });
+
+    expect(joinResult.ok).toBe(true);
+    const requestMessage = {
+      type: 'request-invite-handoff',
+      payload: {
+        inviteCode: invite.code,
+        memberId: 'member-kai',
+        memberDisplayName: 'Kai',
+      },
+    };
+    expect(sendMessage).toHaveBeenNthCalledWith(2, requestMessage);
+    expect(sendMessage).toHaveBeenNthCalledWith(3, requestMessage);
+  });
+
+  it('returns an invite handoff error after exhausting runtime wake retries', async () => {
+    const sourceState = makeCoopState({
+      profile: { id: 'coop-handoff-exhausted', name: 'Handoff Exhausted Coop' },
+      syncRoom: shared.createSyncRoomConfig('coop-handoff-exhausted'),
+    });
+    const invite = shared.generateInviteCode({
+      state: sourceState,
+      createdBy: sourceState.members[0].id,
+      type: 'member',
+    });
+    vi.mocked(getCoops).mockResolvedValueOnce([]);
+    const sendMessage = chrome.runtime.sendMessage as unknown as ReturnType<typeof vi.fn>;
+    sendMessage.mockResolvedValue(undefined);
+
+    const joinResult = await handleJoinCoop({
+      type: 'join-coop',
+      payload: {
+        inviteCode: invite.code,
+        displayName: 'Kai',
+        seedContribution: 'I bring handoff retry failure validation.',
+        member: {
+          id: 'member-kai',
+          displayName: 'Kai',
+          role: 'member',
+          authMode: 'passkey',
+          address: '0x3333333333333333333333333333333333333333',
+          joinedAt: '2026-03-01T00:00:00.000Z',
+          identityWarning: '',
+          passkeyCredentialId: 'credential-kai',
+        },
+      },
+    });
+
+    const requestMessage = {
+      type: 'request-invite-handoff',
+      payload: {
+        inviteCode: invite.code,
+        memberId: 'member-kai',
+        memberDisplayName: 'Kai',
+      },
+    };
+    expect(joinResult).toMatchObject({
+      ok: false,
+      error: 'Invite handoff failed because the coop sync runtime did not respond.',
+    });
+    expect(sendMessage).toHaveBeenCalledTimes(6);
+    expect(sendMessage).toHaveBeenNthCalledWith(2, requestMessage);
+    expect(sendMessage).toHaveBeenNthCalledWith(6, requestMessage);
   });
 
   it('predicts account and emits safe-add-owner-requested for trusted join without Safe mutation', async () => {
