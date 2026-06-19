@@ -598,6 +598,32 @@ function syncV2Map<T extends { id: string }>(
   }
 }
 
+function upsertV2Map<T extends { id: string }>(
+  v2Map: Y.Map<Y.Map<string>>,
+  items: T[],
+  getId: (item: T) => string,
+): void {
+  for (const item of items) {
+    const id = getId(item);
+    let fieldMap = v2Map.get(id);
+    if (!fieldMap) {
+      fieldMap = new Y.Map<string>();
+      v2Map.set(id, fieldMap);
+    }
+    const definedEntries = Object.entries(item).filter(([, v]) => v !== undefined);
+    const definedKeys = new Set(definedEntries.map(([k]) => k));
+    for (const key of fieldMap.keys()) {
+      if (!definedKeys.has(key)) fieldMap.delete(key);
+    }
+    for (const [key, value] of definedEntries) {
+      const serialized = JSON.stringify(value);
+      if (fieldMap.get(key) !== serialized) {
+        fieldMap.set(key, serialized);
+      }
+    }
+  }
+}
+
 function syncJsonMap<T extends { id: string }>(
   jsonMap: Y.Map<string>,
   items: T[],
@@ -698,7 +724,8 @@ export function writeCoopState(doc: Y.Doc, state: CoopSharedState) {
     syncV2Map(membersV2, state.members, (m) => m.id);
     syncV2Map(invitesV2, state.invites, (invite) => invite.id);
     syncV2Map(reviewBoardV2, state.reviewBoard, (group) => group.id);
-    syncV2Map(archiveReceiptsV2, state.archiveReceipts, (receipt) => receipt.id);
+    // Archive receipts are proof records; stale state snapshots must not erase them.
+    upsertV2Map(archiveReceiptsV2, state.archiveReceipts, (receipt) => receipt.id);
     syncV2Map(memberAccountsV2, state.memberAccounts, (account) => account.id);
   }, ORIGIN_LOCAL);
 }

@@ -568,18 +568,12 @@ export const handlerRegistry: HandlerRecord = {
   // ---- Coop state sync ----
   'persist-coop-state': async (message) => {
     try {
-      const merged = await mergeCoopStateUpdate(
+      await mergeCoopStateUpdate(
         db,
         message.payload.coopId,
         decodeRuntimeBytes(message.payload.docUpdate),
       );
       await refreshBadge();
-      // Transient Zod validation warnings are not fatal — the CRDT merge
-      // was persisted successfully and will self-heal as sync converges.
-      const warning = (merged as { _validationWarning?: string })._validationWarning;
-      if (warning) {
-        console.warn('persist-coop-state: transient validation warning:', warning);
-      }
       return { ok: true };
     } catch (error) {
       console.warn('persist-coop-state failed:', error);
